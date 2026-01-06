@@ -210,7 +210,7 @@ export default function OrderTracking() {
                 <div className="flex-1">
                   <p className="font-medium text-gray-800 line-clamp-1">{item.product_name}</p>
                   <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-                  <p className="font-semibold text-orange-600">${(item.price * item.quantity).toFixed(2)}</p>
+                  <p className="font-semibold text-orange-600">₵{(item.price * item.quantity).toFixed(2)}</p>
                 </div>
               </div>
             ))}
@@ -218,7 +218,7 @@ export default function OrderTracking() {
           <Separator className="my-4" />
           <div className="flex justify-between text-lg font-bold">
             <span>Total</span>
-            <span className="text-orange-600">${order.total_amount?.toFixed(2)}</span>
+            <span className="text-orange-600">₵{order.total_amount?.toFixed(2)}</span>
           </div>
         </Card>
 

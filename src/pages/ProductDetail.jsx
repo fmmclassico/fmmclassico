@@ -186,9 +186,9 @@ export default function ProductDetail() {
           </div>
 
           <div className="flex items-baseline gap-3">
-            <span className="text-4xl font-bold text-orange-600">${product.price?.toFixed(2)}</span>
+            <span className="text-4xl font-bold text-orange-600">₵{product.price?.toFixed(2)}</span>
             {product.original_price && (
-              <span className="text-xl text-gray-400 line-through">${product.original_price?.toFixed(2)}</span>
+              <span className="text-xl text-gray-400 line-through">₵{product.original_price?.toFixed(2)}</span>
             )}
           </div>
 

@@ -75,7 +75,7 @@ export default function Chat() {
       
       About FMM CLASSICO:
       - We sell phone cases, chargers, earphones, cables, power banks, screen protectors, phone holders, and speakers
-      - We offer free delivery on orders over $50
+      - We offer free delivery on orders over ₵50
       - We have a 30-day return policy
       - Our products come with warranty
       - We accept Cash on Delivery and Mobile Money payments

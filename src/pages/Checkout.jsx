@@ -296,7 +296,7 @@ export default function Checkout() {
                     <div className="flex-1">
                       <p className="font-medium text-sm text-gray-800 line-clamp-1">{item.product_name}</p>
                       <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-                      <p className="font-semibold text-orange-600">${(item.product_price * item.quantity).toFixed(2)}</p>
+                      <p className="font-semibold text-orange-600">₵{(item.product_price * item.quantity).toFixed(2)}</p>
                     </div>
                   </div>
                 ))}
@@ -307,16 +307,16 @@ export default function Checkout() {
               <div className="space-y-3">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>₵{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span>
-                  <span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
+                  <span>{shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold text-gray-800">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>₵{total.toFixed(2)}</span>
                 </div>
               </div>
 

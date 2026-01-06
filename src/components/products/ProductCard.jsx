@@ -56,9 +56,9 @@ export default function ProductCard({ product, onAddToCart }) {
           
           <div className="flex items-center justify-between mt-2">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-bold text-orange-600">${product.price?.toFixed(2)}</span>
+              <span className="text-lg font-bold text-orange-600">₵{product.price?.toFixed(2)}</span>
               {product.original_price && (
-                <span className="text-xs text-gray-400 line-through">${product.original_price?.toFixed(2)}</span>
+                <span className="text-xs text-gray-400 line-through">₵{product.original_price?.toFixed(2)}</span>
               )}
             </div>
             <Button

@@ -133,7 +133,7 @@ export default function Cart() {
                         </h3>
                       </Link>
                       <p className="text-lg font-bold text-orange-600 mt-1">
-                        ${item.product_price?.toFixed(2)}
+                        ₵{item.product_price?.toFixed(2)}
                       </p>
                       
                       <div className="flex items-center justify-between mt-3">
@@ -189,17 +189,17 @@ export default function Cart() {
             <div className="space-y-3">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal ({cartItems.length} items)</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>₵{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Shipping</span>
-                <span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
+                <span>{shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}</span>
               </div>
               
               {shipping > 0 && (
                 <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 p-2 rounded-lg">
                   <Truck className="h-4 w-4" />
-                  <span>Free shipping on orders over $50</span>
+                  <span>Free shipping on orders over ₵50</span>
                 </div>
               )}
               
@@ -207,7 +207,7 @@ export default function Cart() {
               
               <div className="flex justify-between text-lg font-bold text-gray-800">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>₵{total.toFixed(2)}</span>
               </div>
             </div>
 

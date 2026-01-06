@@ -148,7 +148,7 @@ export default function Orders() {
                         {order.items?.map(i => i.product_name).join(', ')}
                       </p>
                       <p className="text-lg font-bold text-orange-600 mt-1">
-                        ${order.total_amount?.toFixed(2)}
+                        ₵{order.total_amount?.toFixed(2)}
                       </p>
                     </div>
                   </div>

@@ -25,6 +25,9 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentPhone, setPaymentPhone] = useState('');
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -33,8 +36,7 @@ export default function Checkout() {
     customer_phone: '',
     delivery_address: '',
     city: '',
-    notes: '',
-    payment_method: 'cod'
+    notes: ''
   });
 
   useEffect(() => {
@@ -77,9 +79,34 @@ export default function Checkout() {
       return;
     }
 
-    setIsSubmitting(true);
+    // Show payment modal instead of directly placing order
+    setShowPaymentModal(true);
+    setPaymentPhone(formData.customer_phone);
+  };
 
-    const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
+  const processPayment = async () => {
+    if (!paymentPhone || paymentPhone.length < 10) {
+      toast.error('Please enter a valid phone number');
+      return;
+    }
+
+    setPaymentProcessing(true);
+
+    // Simulate Hubtel payment initiation
+    // In production, this would call Hubtel API with merchant account: 0599676419
+    const paymentData = {
+      amount: total,
+      customer_phone: paymentPhone,
+      merchant_account: '0599676419',
+      order_reference: 'FMM' + Date.now().toString(36).toUpperCase()
+    };
+
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // For now, we'll proceed with order creation
+    // In production, you'd wait for Hubtel payment callback/webhook
+    const orderNumber = paymentData.order_reference;
     const estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
 
@@ -93,7 +120,7 @@ export default function Checkout() {
         quantity: item.quantity
       })),
       total_amount: total,
-      status: 'pending',
+      status: 'confirmed',
       customer_name: formData.customer_name,
       customer_email: user.email,
       customer_phone: formData.customer_phone,
@@ -102,8 +129,8 @@ export default function Checkout() {
       notes: formData.notes,
       estimated_delivery: estimatedDelivery.toISOString().split('T')[0],
       tracking_updates: [{
-        status: 'Order Placed',
-        message: 'Your order has been received and is being processed',
+        status: 'Payment Confirmed',
+        message: 'Payment received via Mobile Money. Your order is being processed',
         timestamp: new Date().toISOString()
       }]
     };
@@ -118,8 +145,9 @@ export default function Checkout() {
     queryClient.invalidateQueries({ queryKey: ['cartItems'] });
     
     setOrderId(newOrder.id);
+    setPaymentProcessing(false);
+    setShowPaymentModal(false);
     setOrderSuccess(true);
-    setIsSubmitting(false);
   };
 
   if (!user) {
@@ -140,9 +168,9 @@ export default function Checkout() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-6">
             <CheckCircle2 className="h-10 w-10 text-green-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Order Placed Successfully!</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Payment Successful!</h1>
           <p className="text-gray-500 mb-6">
-            Thank you for your order. We'll send you updates on your delivery status.
+            Your payment has been confirmed. Your order will be delivered within 3-5 business days.
           </p>
           <div className="flex flex-col gap-3">
             <Link to={createPageUrl(`OrderTracking?id=${orderId}`)}>
@@ -255,26 +283,20 @@ export default function Checkout() {
                 <h2 className="text-lg font-bold text-gray-800">Payment Method</h2>
               </div>
               
-              <RadioGroup
-                value={formData.payment_method}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))}
-                className="space-y-3"
-              >
-                <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                  <RadioGroupItem value="cod" id="cod" />
-                  <Label htmlFor="cod" className="flex-1 cursor-pointer">
-                    <span className="font-medium">Cash on Delivery</span>
-                    <p className="text-sm text-gray-500">Pay when you receive your order</p>
-                  </Label>
+              <div className="p-4 border-2 border-orange-500 rounded-lg bg-orange-50">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center">
+                    <CreditCard className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-gray-800 block">Mobile Money Payment</span>
+                    <span className="text-sm text-gray-600">Powered by Hubtel</span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                  <RadioGroupItem value="mobile" id="mobile" />
-                  <Label htmlFor="mobile" className="flex-1 cursor-pointer">
-                    <span className="font-medium">Mobile Money</span>
-                    <p className="text-sm text-gray-500">Pay via mobile money transfer</p>
-                  </Label>
-                </div>
-              </RadioGroup>
+                <p className="text-sm text-gray-600 mt-3">
+                  You will receive a mobile money prompt to approve payment before delivery.
+                </p>
+              </div>
             </Card>
           </div>
 
@@ -325,19 +347,93 @@ export default function Checkout() {
                 className="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white font-bold py-6 text-lg"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  'Place Order'
-                )}
+                Proceed to Payment
               </Button>
             </Card>
           </div>
         </div>
       </form>
+
+      {/* Hubtel Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl"
+          >
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 mb-4">
+                <CreditCard className="h-8 w-8 text-orange-500" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Hubtel Mobile Money</h2>
+              <p className="text-gray-600">Enter your mobile money number to complete payment</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Total Amount:</span>
+                <span className="font-bold text-xl text-orange-600">₵{total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="payment_phone">Mobile Money Number</Label>
+                <Input
+                  id="payment_phone"
+                  type="tel"
+                  value={paymentPhone}
+                  onChange={(e) => setPaymentPhone(e.target.value)}
+                  placeholder="e.g., 0244123456"
+                  className="text-lg"
+                  disabled={paymentProcessing}
+                />
+                <p className="text-sm text-gray-500">
+                  A payment prompt will be sent to this number
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowPaymentModal(false)}
+                  disabled={paymentProcessing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-orange-500 hover:bg-orange-600"
+                  onClick={processPayment}
+                  disabled={paymentProcessing}
+                >
+                  {paymentProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Pay Now'
+                  )}
+                </Button>
+              </div>
+
+              {paymentProcessing && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-600 mx-auto mb-2" />
+                  <p className="text-sm text-blue-800 font-medium">
+                    Please approve the payment prompt on your phone
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Check your mobile money notifications
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

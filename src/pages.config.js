@@ -1,29 +1,29 @@
-import Home from './pages/Home';
-import Shop from './pages/Shop';
-import Categories from './pages/Categories';
-import ProductDetail from './pages/ProductDetail';
-import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
-import Orders from './pages/Orders';
-import OrderTracking from './pages/OrderTracking';
-import Chat from './pages/Chat';
 import About from './pages/About';
+import Cart from './pages/Cart';
+import Categories from './pages/Categories';
+import Chat from './pages/Chat';
+import Checkout from './pages/Checkout';
+import Home from './pages/Home';
+import OrderTracking from './pages/OrderTracking';
+import Orders from './pages/Orders';
+import ProductDetail from './pages/ProductDetail';
 import Settings from './pages/Settings';
+import Shop from './pages/Shop';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Home": Home,
-    "Shop": Shop,
-    "Categories": Categories,
-    "ProductDetail": ProductDetail,
-    "Cart": Cart,
-    "Checkout": Checkout,
-    "Orders": Orders,
-    "OrderTracking": OrderTracking,
-    "Chat": Chat,
     "About": About,
+    "Cart": Cart,
+    "Categories": Categories,
+    "Chat": Chat,
+    "Checkout": Checkout,
+    "Home": Home,
+    "OrderTracking": OrderTracking,
+    "Orders": Orders,
+    "ProductDetail": ProductDetail,
     "Settings": Settings,
+    "Shop": Shop,
 }
 
 export const pagesConfig = {

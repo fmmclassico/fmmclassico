@@ -20,14 +20,13 @@ import {
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
+const WHATSAPP_NUMBER = "233599676419"; // Your WhatsApp number (Ghana format)
+
 export default function Checkout() {
   const [user, setUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderId, setOrderId] = useState(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentPhone, setPaymentPhone] = useState('');
-  const [paymentProcessing, setPaymentProcessing] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -36,7 +35,7 @@ export default function Checkout() {
     customer_phone: '',
     delivery_address: '',
     city: '',
-    notes: ''
+    notes: '',
   });
 
   useEffect(() => {
@@ -79,34 +78,9 @@ export default function Checkout() {
       return;
     }
 
-    // Show payment modal instead of directly placing order
-    setShowPaymentModal(true);
-    setPaymentPhone(formData.customer_phone);
-  };
+    setIsSubmitting(true);
 
-  const processPayment = async () => {
-    if (!paymentPhone || paymentPhone.length < 10) {
-      toast.error('Please enter a valid phone number');
-      return;
-    }
-
-    setPaymentProcessing(true);
-
-    // Simulate Hubtel payment initiation
-    // In production, this would call Hubtel API with merchant account: 0599676419
-    const paymentData = {
-      amount: total,
-      customer_phone: paymentPhone,
-      merchant_account: '0599676419',
-      order_reference: 'FMM' + Date.now().toString(36).toUpperCase()
-    };
-
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // For now, we'll proceed with order creation
-    // In production, you'd wait for Hubtel payment callback/webhook
-    const orderNumber = paymentData.order_reference;
+    const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
     const estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
 
@@ -120,7 +94,7 @@ export default function Checkout() {
         quantity: item.quantity
       })),
       total_amount: total,
-      status: 'confirmed',
+      status: 'pending',
       customer_name: formData.customer_name,
       customer_email: user.email,
       customer_phone: formData.customer_phone,
@@ -129,8 +103,8 @@ export default function Checkout() {
       notes: formData.notes,
       estimated_delivery: estimatedDelivery.toISOString().split('T')[0],
       tracking_updates: [{
-        status: 'Payment Confirmed',
-        message: 'Payment received via Mobile Money. Your order is being processed',
+        status: 'Order Placed',
+        message: 'Order placed - awaiting payment via Mobile Money',
         timestamp: new Date().toISOString()
       }]
     };
@@ -144,10 +118,42 @@ export default function Checkout() {
     
     queryClient.invalidateQueries({ queryKey: ['cartItems'] });
     
+    // Create WhatsApp message with order details
+    const itemsList = cartItems.map(item => 
+      `• ${item.product_name} x${item.quantity} - ₵${(item.product_price * item.quantity).toFixed(2)}`
+    ).join('\n');
+
+    const whatsappMessage = encodeURIComponent(
+`🛒 *NEW ORDER - ${orderNumber}*
+
+*Customer Details:*
+Name: ${formData.customer_name}
+Phone: ${formData.customer_phone}
+Email: ${user.email}
+
+*Delivery Address:*
+${formData.delivery_address}
+City: ${formData.city}
+${formData.notes ? `Notes: ${formData.notes}` : ''}
+
+*Order Items:*
+${itemsList}
+
+*Subtotal:* ₵${subtotal.toFixed(2)}
+*Shipping:* ${shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}
+*TOTAL:* ₵${total.toFixed(2)}
+
+I would like to pay via Mobile Money. Please send me the payment details.`
+    );
+
+    const whatsappURL = `https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`;
+    
     setOrderId(newOrder.id);
-    setPaymentProcessing(false);
-    setShowPaymentModal(false);
+    setIsSubmitting(false);
     setOrderSuccess(true);
+
+    // Open WhatsApp in new tab
+    window.open(whatsappURL, '_blank');
   };
 
   if (!user) {
@@ -159,6 +165,9 @@ export default function Checkout() {
   }
 
   if (orderSuccess) {
+    const whatsappMessage = encodeURIComponent(`Hi, I just placed an order and would like to complete payment.`);
+    const whatsappURL = `https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`;
+    
     return (
       <div className="container mx-auto px-4 py-16 max-w-lg text-center">
         <motion.div
@@ -168,18 +177,23 @@ export default function Checkout() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-6">
             <CheckCircle2 className="h-10 w-10 text-green-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Payment Successful!</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Order Placed!</h1>
           <p className="text-gray-500 mb-6">
-            Your payment has been confirmed. Your order will be delivered within 3-5 business days.
+            Complete your payment via WhatsApp to confirm your order. We've opened WhatsApp for you - if it didn't open, click the button below.
           </p>
           <div className="flex flex-col gap-3">
+            <a href={whatsappURL} target="_blank" rel="noopener noreferrer">
+              <Button className="w-full bg-green-600 hover:bg-green-700">
+                💬 Complete Payment on WhatsApp
+              </Button>
+            </a>
             <Link to={createPageUrl(`OrderTracking?id=${orderId}`)}>
-              <Button className="w-full bg-orange-500 hover:bg-orange-600">
+              <Button variant="outline" className="w-full">
                 Track Your Order
               </Button>
             </Link>
             <Link to={createPageUrl('Shop')}>
-              <Button variant="outline" className="w-full">
+              <Button variant="ghost" className="w-full">
                 Continue Shopping
               </Button>
             </Link>
@@ -283,18 +297,18 @@ export default function Checkout() {
                 <h2 className="text-lg font-bold text-gray-800">Payment Method</h2>
               </div>
               
-              <div className="p-4 border-2 border-orange-500 rounded-lg bg-orange-50">
+              <div className="p-4 border-2 border-green-500 rounded-lg bg-green-50">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-white" />
+                  <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
+                    <span className="text-white text-xl">💬</span>
                   </div>
                   <div>
-                    <span className="font-bold text-gray-800 block">Mobile Money Payment</span>
-                    <span className="text-sm text-gray-600">Powered by Hubtel</span>
+                    <span className="font-bold text-gray-800 block">Mobile Money via WhatsApp</span>
+                    <span className="text-sm text-gray-600">Pay securely via MoMo</span>
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 mt-3">
-                  You will receive a mobile money prompt to approve payment before delivery.
+                  After placing your order, you'll be redirected to WhatsApp to complete payment via Mobile Money.
                 </p>
               </div>
             </Card>
@@ -344,96 +358,22 @@ export default function Checkout() {
 
               <Button 
                 type="submit"
-                className="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white font-bold py-6 text-lg"
+                className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-6 text-lg"
                 disabled={isSubmitting}
               >
-                Proceed to Payment
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  '💬 Place Order & Pay via WhatsApp'
+                )}
               </Button>
             </Card>
           </div>
         </div>
       </form>
-
-      {/* Hubtel Payment Modal */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl"
-          >
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 mb-4">
-                <CreditCard className="h-8 w-8 text-orange-500" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Hubtel Mobile Money</h2>
-              <p className="text-gray-600">Enter your mobile money number to complete payment</p>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Total Amount:</span>
-                <span className="font-bold text-xl text-orange-600">₵{total.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="payment_phone">Mobile Money Number</Label>
-                <Input
-                  id="payment_phone"
-                  type="tel"
-                  value={paymentPhone}
-                  onChange={(e) => setPaymentPhone(e.target.value)}
-                  placeholder="e.g., 0244123456"
-                  className="text-lg"
-                  disabled={paymentProcessing}
-                />
-                <p className="text-sm text-gray-500">
-                  A payment prompt will be sent to this number
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setShowPaymentModal(false)}
-                  disabled={paymentProcessing}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="flex-1 bg-orange-500 hover:bg-orange-600"
-                  onClick={processPayment}
-                  disabled={paymentProcessing}
-                >
-                  {paymentProcessing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Pay Now'
-                  )}
-                </Button>
-              </div>
-
-              {paymentProcessing && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-blue-600 mx-auto mb-2" />
-                  <p className="text-sm text-blue-800 font-medium">
-                    Please approve the payment prompt on your phone
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    Check your mobile money notifications
-                  </p>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 }

@@ -20,7 +20,7 @@ import {
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
-const WHATSAPP_NUMBER = "233599676419"; // Your WhatsApp number (Ghana format)
+const WHATSAPP_LINK = "https://wa.me/233599676419";
 
 export default function Checkout() {
   const [user, setUser] = useState(null);
@@ -146,7 +146,7 @@ ${itemsList}
 I would like to pay via Mobile Money. Please send me the payment details.`
     );
 
-    const whatsappURL = `https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`;
+    const whatsappURL = `${WHATSAPP_LINK}?text=${whatsappMessage}`;
     
     setOrderId(newOrder.id);
     setIsSubmitting(false);
@@ -166,7 +166,7 @@ I would like to pay via Mobile Money. Please send me the payment details.`
 
   if (orderSuccess) {
     const whatsappMessage = encodeURIComponent(`Hi, I just placed an order and would like to complete payment.`);
-    const whatsappURL = `https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`;
+    const whatsappURL = `${WHATSAPP_LINK}?text=${whatsappMessage}`;
     
     return (
       <div className="container mx-auto px-4 py-16 max-w-lg text-center">

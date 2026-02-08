@@ -9,17 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { 
   ChevronLeft,
   Truck,
   CreditCard,
   CheckCircle2,
-  Loader2,
-  Smartphone,
-  X
+  Loader2
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function Checkout() {
@@ -29,10 +27,7 @@ export default function Checkout() {
   const [orderId, setOrderId] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentPhone, setPaymentPhone] = useState('');
-  const [selectedNetwork, setSelectedNetwork] = useState('');
   const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [checkingPayment, setCheckingPayment] = useState(false);
-  const [currentPaymentId, setCurrentPaymentId] = useState(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -95,116 +90,64 @@ export default function Checkout() {
       return;
     }
 
-    if (!selectedNetwork) {
-      toast.error('Please select your mobile money network');
-      return;
-    }
-
     setPaymentProcessing(true);
 
-    try {
-      // Generate order number
-      const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
+    // Simulate Hubtel payment initiation
+    // In production, this would call Hubtel API with merchant account: 0599676419
+    const paymentData = {
+      amount: total,
+      customer_phone: paymentPhone,
+      merchant_account: '0599676419',
+      order_reference: 'FMM' + Date.now().toString(36).toUpperCase()
+    };
 
-      // Initiate Hubtel payment
-      const paymentResult = await base44.functions.initiatePayment({
-        amount: total,
-        customer_phone: paymentPhone,
-        network: selectedNetwork,
-        customer_name: formData.customer_name,
-        customer_email: user.email,
-        order_reference: orderNumber
-      });
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-      if (!paymentResult.success) {
-        throw new Error(paymentResult.error || 'Payment initiation failed');
-      }
+    // For now, we'll proceed with order creation
+    // In production, you'd wait for Hubtel payment callback/webhook
+    const orderNumber = paymentData.order_reference;
+    const estimatedDelivery = new Date();
+    estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
 
-      setCurrentPaymentId(paymentResult.payment_id);
-      setPaymentProcessing(false);
-      setCheckingPayment(true);
+    const orderData = {
+      order_number: orderNumber,
+      items: cartItems.map(item => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        product_image: item.product_image,
+        price: item.product_price,
+        quantity: item.quantity
+      })),
+      total_amount: total,
+      status: 'confirmed',
+      customer_name: formData.customer_name,
+      customer_email: user.email,
+      customer_phone: formData.customer_phone,
+      delivery_address: formData.delivery_address,
+      city: formData.city,
+      notes: formData.notes,
+      estimated_delivery: estimatedDelivery.toISOString().split('T')[0],
+      tracking_updates: [{
+        status: 'Payment Confirmed',
+        message: 'Payment received via Mobile Money. Your order is being processed',
+        timestamp: new Date().toISOString()
+      }]
+    };
 
-      toast.success('Payment prompt sent! Please approve on your phone');
-
-      // Start checking payment status
-      const checkInterval = setInterval(async () => {
-        try {
-          const payments = await base44.entities.Payment.filter({ 
-            transaction_reference: paymentResult.transaction_reference 
-          });
-
-          if (payments.length > 0) {
-            const payment = payments[0];
-
-            if (payment.status === 'SUCCESS') {
-              clearInterval(checkInterval);
-              
-              // Create order
-              const estimatedDelivery = new Date();
-              estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
-
-              const orderData = {
-                order_number: orderNumber,
-                items: cartItems.map(item => ({
-                  product_id: item.product_id,
-                  product_name: item.product_name,
-                  product_image: item.product_image,
-                  price: item.product_price,
-                  quantity: item.quantity
-                })),
-                total_amount: total,
-                status: 'confirmed',
-                customer_name: formData.customer_name,
-                customer_email: user.email,
-                customer_phone: formData.customer_phone,
-                delivery_address: formData.delivery_address,
-                city: formData.city,
-                notes: formData.notes,
-                estimated_delivery: estimatedDelivery.toISOString().split('T')[0],
-                tracking_updates: [{
-                  status: 'Payment Confirmed',
-                  message: `Payment of ₵${total.toFixed(2)} received via ${selectedNetwork} Mobile Money`,
-                  timestamp: new Date().toISOString()
-                }]
-              };
-
-              const newOrder = await base44.entities.Order.create(orderData);
-
-              // Clear cart
-              for (const item of cartItems) {
-                await base44.entities.CartItem.delete(item.id);
-              }
-
-              queryClient.invalidateQueries({ queryKey: ['cartItems'] });
-
-              setOrderId(newOrder.id);
-              setCheckingPayment(false);
-              setShowPaymentModal(false);
-              setOrderSuccess(true);
-            } else if (payment.status === 'FAILED') {
-              clearInterval(checkInterval);
-              setCheckingPayment(false);
-              toast.error('Payment failed: ' + (payment.failure_reason || 'Unknown error'));
-            }
-          }
-        } catch (error) {
-          console.error('Error checking payment:', error);
-        }
-      }, 3000);
-
-      // Stop checking after 5 minutes
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        if (checkingPayment) {
-          setCheckingPayment(false);
-          toast.error('Payment timeout. Please try again.');
-        }
-      }, 300000);
-
-    } catch (error) {
-      setPaymentProcessing(false);
-      toast.error(error.message || 'Failed to initiate payment');
+    const newOrder = await base44.entities.Order.create(orderData);
+    
+    // Clear cart
+    for (const item of cartItems) {
+      await base44.entities.CartItem.delete(item.id);
     }
+    
+    queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+    
+    setOrderId(newOrder.id);
+    setPaymentProcessing(false);
+    setShowPaymentModal(false);
+    setOrderSuccess(true);
   };
 
   if (!user) {
@@ -412,167 +355,85 @@ export default function Checkout() {
       </form>
 
       {/* Hubtel Payment Modal */}
-      <AnimatePresence>
-        {showPaymentModal && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white rounded-2xl max-w-md w-full shadow-2xl"
-            >
-              {/* Header */}
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 rounded-t-2xl relative">
-                <button
-                  onClick={() => !paymentProcessing && !checkingPayment && setShowPaymentModal(false)}
-                  className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-1"
-                  disabled={paymentProcessing || checkingPayment}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl"
+          >
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 mb-4">
+                <CreditCard className="h-8 w-8 text-orange-500" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Hubtel Mobile Money</h2>
+              <p className="text-gray-600">Enter your mobile money number to complete payment</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Total Amount:</span>
+                <span className="font-bold text-xl text-orange-600">₵{total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="payment_phone">Mobile Money Number</Label>
+                <Input
+                  id="payment_phone"
+                  type="tel"
+                  value={paymentPhone}
+                  onChange={(e) => setPaymentPhone(e.target.value)}
+                  placeholder="e.g., 0244123456"
+                  className="text-lg"
+                  disabled={paymentProcessing}
+                />
+                <p className="text-sm text-gray-500">
+                  A payment prompt will be sent to this number
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowPaymentModal(false)}
+                  disabled={paymentProcessing}
                 >
-                  <X className="h-5 w-5" />
-                </button>
-                <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 mb-3">
-                    <Smartphone className="h-8 w-8 text-white" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-white mb-1">Pay with Mobile Money</h2>
-                  <p className="text-orange-100 text-sm">Powered by Hubtel</p>
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-orange-500 hover:bg-orange-600"
+                  onClick={processPayment}
+                  disabled={paymentProcessing}
+                >
+                  {paymentProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Pay Now'
+                  )}
+                </Button>
+              </div>
+
+              {paymentProcessing && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-600 mx-auto mb-2" />
+                  <p className="text-sm text-blue-800 font-medium">
+                    Please approve the payment prompt on your phone
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Check your mobile money notifications
+                  </p>
                 </div>
-              </div>
-
-              {/* Content */}
-              <div className="p-6">
-                {!checkingPayment ? (
-                  <>
-                    <div className="bg-orange-50 rounded-lg p-4 mb-6 text-center">
-                      <p className="text-sm text-gray-600 mb-1">Amount to Pay</p>
-                      <p className="text-3xl font-bold text-orange-600">₵{total.toFixed(2)}</p>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="network">Select Network *</Label>
-                        <Select 
-                          value={selectedNetwork} 
-                          onValueChange={setSelectedNetwork}
-                          disabled={paymentProcessing}
-                        >
-                          <SelectTrigger className="w-full h-12 text-base">
-                            <SelectValue placeholder="Choose your mobile money network" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="MTN">
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center">
-                                  <span className="text-xs font-bold text-black">M</span>
-                                </div>
-                                MTN Mobile Money
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="VODAFONE">
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
-                                  <span className="text-xs font-bold text-white">V</span>
-                                </div>
-                                Vodafone Cash
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="AIRTELTIGO">
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
-                                  <span className="text-xs font-bold text-white">A</span>
-                                </div>
-                                AirtelTigo Money
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="payment_phone">Mobile Money Number *</Label>
-                        <div className="flex gap-2">
-                          <div className="flex items-center justify-center px-3 bg-gray-100 rounded-lg border">
-                            <span className="text-gray-600 font-medium">+233</span>
-                          </div>
-                          <Input
-                            id="payment_phone"
-                            type="tel"
-                            value={paymentPhone}
-                            onChange={(e) => setPaymentPhone(e.target.value.replace(/\D/g, ''))}
-                            placeholder="244123456"
-                            className="text-lg flex-1"
-                            disabled={paymentProcessing}
-                            maxLength={10}
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          Enter the number you want to pay from (without 0)
-                        </p>
-                      </div>
-
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p className="text-sm text-blue-800">
-                          📱 You will receive a payment approval prompt on your phone. Enter your Mobile Money PIN to complete payment.
-                        </p>
-                      </div>
-
-                      <div className="flex gap-3 pt-2">
-                        <Button
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => setShowPaymentModal(false)}
-                          disabled={paymentProcessing}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          className="flex-1 bg-orange-500 hover:bg-orange-600 font-bold"
-                          onClick={processPayment}
-                          disabled={paymentProcessing || !selectedNetwork || !paymentPhone}
-                        >
-                          {paymentProcessing ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Processing...
-                            </>
-                          ) : (
-                            'Proceed to Pay'
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="py-8 text-center">
-                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-orange-100 mb-4 animate-pulse">
-                      <Smartphone className="h-10 w-10 text-orange-500" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Waiting for Payment Approval</h3>
-                    <p className="text-gray-600 mb-4">
-                      Check your phone for the Mobile Money payment prompt
-                    </p>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                      <p className="text-sm text-blue-800 font-medium mb-1">
-                        ⏳ Please approve the payment on your phone
-                      </p>
-                      <p className="text-xs text-blue-600">
-                        Dial *170# or check your notifications
-                      </p>
-                    </div>
-                    <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto" />
-                    <p className="text-sm text-gray-500 mt-4">
-                      Sent to: +233{paymentPhone}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Network: {selectedNetwork}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

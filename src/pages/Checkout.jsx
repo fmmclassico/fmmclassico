@@ -147,12 +147,12 @@ export default function Checkout() {
           </div>
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Order Placed!</h1>
           <p className="text-gray-500 mb-6">
-            Complete your payment on Paystack to confirm your order. We've opened Paystack for you - if it didn't open, click the button below.
+            Your order has been placed successfully! If you haven't completed payment yet, click below to pay now.
           </p>
           <div className="flex flex-col gap-3">
             <a href={PAYSTACK_LINK} target="_blank" rel="noopener noreferrer">
               <Button className="w-full bg-green-600 hover:bg-green-700">
-                💳 Complete Payment on Paystack
+                💳 Pay Now with Paystack
               </Button>
             </a>
             <Link to={createPageUrl(`OrderTracking?id=${orderId}`)}>
@@ -166,6 +166,9 @@ export default function Checkout() {
               </Button>
             </Link>
           </div>
+          <p className="text-sm text-gray-400 mt-4">
+            Once payment is confirmed, your order status will be updated.
+          </p>
         </motion.div>
       </div>
     );

@@ -21,6 +21,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 const WHATSAPP_LINK = "https://wa.me/233599676419";
+const PAYSTACK_LINK = "https://paystack.shop/pay/kxcly-4zy4";
 
 export default function Checkout() {
   const [user, setUser] = useState(null);
@@ -104,7 +105,7 @@ export default function Checkout() {
       estimated_delivery: estimatedDelivery.toISOString().split('T')[0],
       tracking_updates: [{
         status: 'Order Placed',
-        message: 'Order placed - awaiting payment via Mobile Money',
+        message: 'Order placed - awaiting payment via Paystack',
         timestamp: new Date().toISOString()
       }]
     };
@@ -118,42 +119,12 @@ export default function Checkout() {
     
     queryClient.invalidateQueries({ queryKey: ['cartItems'] });
     
-    // Create WhatsApp message with order details
-    const itemsList = cartItems.map(item => 
-      `• ${item.product_name} x${item.quantity} - ₵${(item.product_price * item.quantity).toFixed(2)}`
-    ).join('\n');
-
-    const whatsappMessage = encodeURIComponent(
-`🛒 *NEW ORDER - ${orderNumber}*
-
-*Customer Details:*
-Name: ${formData.customer_name}
-Phone: ${formData.customer_phone}
-Email: ${user.email}
-
-*Delivery Address:*
-${formData.delivery_address}
-City: ${formData.city}
-${formData.notes ? `Notes: ${formData.notes}` : ''}
-
-*Order Items:*
-${itemsList}
-
-*Subtotal:* ₵${subtotal.toFixed(2)}
-*Shipping:* ${shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}
-*TOTAL:* ₵${total.toFixed(2)}
-
-I would like to pay via Mobile Money. Please send me the payment details.`
-    );
-
-    const whatsappURL = `${WHATSAPP_LINK}?text=${whatsappMessage}`;
-    
     setOrderId(newOrder.id);
     setIsSubmitting(false);
     setOrderSuccess(true);
 
-    // Open WhatsApp in new tab
-    window.open(whatsappURL, '_blank');
+    // Redirect to Paystack payment link
+    window.open(PAYSTACK_LINK, '_blank');
   };
 
   if (!user) {
@@ -165,9 +136,6 @@ I would like to pay via Mobile Money. Please send me the payment details.`
   }
 
   if (orderSuccess) {
-    const whatsappMessage = encodeURIComponent(`Hi, I just placed an order and would like to complete payment.`);
-    const whatsappURL = `${WHATSAPP_LINK}?text=${whatsappMessage}`;
-    
     return (
       <div className="container mx-auto px-4 py-16 max-w-lg text-center">
         <motion.div
@@ -179,12 +147,12 @@ I would like to pay via Mobile Money. Please send me the payment details.`
           </div>
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Order Placed!</h1>
           <p className="text-gray-500 mb-6">
-            Complete your payment via WhatsApp to confirm your order. We've opened WhatsApp for you - if it didn't open, click the button below.
+            Complete your payment on Paystack to confirm your order. We've opened Paystack for you - if it didn't open, click the button below.
           </p>
           <div className="flex flex-col gap-3">
-            <a href={whatsappURL} target="_blank" rel="noopener noreferrer">
+            <a href={PAYSTACK_LINK} target="_blank" rel="noopener noreferrer">
               <Button className="w-full bg-green-600 hover:bg-green-700">
-                💬 Complete Payment on WhatsApp
+                💳 Complete Payment on Paystack
               </Button>
             </a>
             <Link to={createPageUrl(`OrderTracking?id=${orderId}`)}>
@@ -298,19 +266,19 @@ I would like to pay via Mobile Money. Please send me the payment details.`
               </div>
               
               <div className="p-4 border-2 border-green-500 rounded-lg bg-green-50">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
-                    <span className="text-white text-xl">💬</span>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
+                        <span className="text-white text-xl">💳</span>
+                      </div>
+                      <div>
+                        <span className="font-bold text-gray-800 block">Pay with Paystack</span>
+                        <span className="text-sm text-gray-600">Mobile Money, Card & Bank Transfer</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-3">
+                      After placing your order, you'll be redirected to Paystack to complete your payment securely.
+                    </p>
                   </div>
-                  <div>
-                    <span className="font-bold text-gray-800 block">Mobile Money via WhatsApp</span>
-                    <span className="text-sm text-gray-600">Pay securely via MoMo</span>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600 mt-3">
-                  After placing your order, you'll be redirected to WhatsApp to complete payment via Mobile Money.
-                </p>
-              </div>
             </Card>
           </div>
 
@@ -367,7 +335,7 @@ I would like to pay via Mobile Money. Please send me the payment details.`
                     Processing...
                   </>
                 ) : (
-                  '💬 Place Order & Pay via WhatsApp'
+                  '💳 Place Order & Pay with Paystack'
                 )}
               </Button>
             </Card>

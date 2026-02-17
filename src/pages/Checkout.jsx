@@ -21,7 +21,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 const WHATSAPP_LINK = "https://wa.me/233599676419";
-const PAYSTACK_LINK = "https://paystack.shop/pay/kxcly-4zy4";
+const PAYSTACK_LINK = "https://paystack.shop/pay/czt-hppwn6";
 
 export default function Checkout() {
   const [user, setUser] = useState(null);

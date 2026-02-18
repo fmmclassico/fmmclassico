@@ -68,15 +68,18 @@ export default function Layout({ children, currentPageName }) {
     base44.auth.logout();
   };
 
-  const menuItems = [
-    { icon: Home, label: 'Home', page: 'Home' },
-    { icon: Grid3X3, label: 'Categories', page: 'Categories' },
-    { icon: ShoppingCart, label: 'Cart', page: 'Cart', badge: cartCount },
-    { icon: Package, label: 'My Orders', page: 'Orders' },
-    { icon: MessageCircle, label: 'Chat Support', page: 'Chat' },
-    { icon: Info, label: 'About Us', page: 'About' },
-    { icon: Settings, label: 'Settings', page: 'Settings' },
-  ];
+  const isAdmin = user?.role === 'admin';
+
+          const menuItems = [
+            { icon: Home, label: 'Home', page: 'Home' },
+            { icon: Grid3X3, label: 'Categories', page: 'Categories' },
+            { icon: ShoppingCart, label: 'Cart', page: 'Cart', badge: cartCount },
+            { icon: Package, label: 'My Orders', page: 'Orders' },
+            { icon: MessageCircle, label: 'Chat Support', page: 'Chat' },
+            { icon: Info, label: 'About Us', page: 'About' },
+            { icon: Settings, label: 'Settings', page: 'Settings' },
+            ...(isAdmin ? [{ icon: Settings, label: 'Admin Orders', page: 'AdminOrders' }] : []),
+          ];
 
   const categories = [
     { id: 'phone_cases', name: 'Phone Cases' },

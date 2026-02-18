@@ -21,7 +21,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 const WHATSAPP_LINK = "https://wa.me/233599676419";
-const PAYSTACK_LINK = "https://paystack.shop/pay/czt-hppwn6";
+const PAYSTACK_LINK = "https://paystack.shop/pay/1miimvhai8";
 
 export default function Checkout() {
   const [user, setUser] = useState(null);
@@ -104,8 +104,8 @@ export default function Checkout() {
       notes: formData.notes,
       estimated_delivery: estimatedDelivery.toISOString().split('T')[0],
       tracking_updates: [{
-        status: 'Order Placed',
-        message: 'Order placed - awaiting payment via Paystack',
+        status: 'Awaiting Payment',
+        message: 'Order created - awaiting payment confirmation',
         timestamp: new Date().toISOString()
       }]
     };
@@ -142,12 +142,12 @@ export default function Checkout() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
         >
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-6">
-            <CheckCircle2 className="h-10 w-10 text-green-600" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-orange-100 mb-6">
+            <CreditCard className="h-10 w-10 text-orange-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Order Placed!</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Complete Your Payment</h1>
           <p className="text-gray-500 mb-6">
-            Your order has been placed successfully! If you haven't completed payment yet, click below to pay now.
+            Please complete your payment via Paystack. Your order will be confirmed once payment is verified.
           </p>
           <div className="flex flex-col gap-3">
             <a href={PAYSTACK_LINK} target="_blank" rel="noopener noreferrer">
@@ -167,7 +167,7 @@ export default function Checkout() {
             </Link>
           </div>
           <p className="text-sm text-gray-400 mt-4">
-            Once payment is confirmed, your order status will be updated.
+            Your order status will show as "Order Placed" once we verify your payment.
           </p>
         </motion.div>
       </div>

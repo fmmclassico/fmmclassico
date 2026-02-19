@@ -19,6 +19,9 @@ const categoryNames = {
   screen_protectors: 'Screen Protectors',
   holders: 'Holders & Mounts',
   speakers: 'Speakers',
+  smart_watches: 'Smart Watches',
+  electronic_appliances: 'Electronic Appliances',
+  home_appliances: 'Home Appliances',
 };
 
 export default function Shop() {

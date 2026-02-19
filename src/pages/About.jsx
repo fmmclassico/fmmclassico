@@ -171,7 +171,7 @@ export default function About() {
               <Target className="h-10 w-10 mb-4" />
               <h3 className="text-xl font-bold mb-3">Our Mission</h3>
               <p className="text-white/90">
-                To provide every customer with access to premium quality phone accessories at affordable prices, backed by exceptional customer service and fast delivery.
+                To provide every customer with access to premium quality phone accessories, electronic appliances, and home appliances at affordable prices, backed by exceptional customer service and fast delivery.
               </p>
             </Card>
           </motion.div>
@@ -199,27 +199,34 @@ export default function About() {
             <h2 className="text-2xl md:text-3xl font-bold mb-2">Get in Touch</h2>
             <p className="text-gray-400">We'd love to hear from you</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             <div className="text-center">
               <div className="w-14 h-14 rounded-full bg-orange-500/20 flex items-center justify-center mx-auto mb-4">
                 <MapPin className="h-6 w-6 text-orange-500" />
               </div>
-              <h3 className="font-bold mb-2">Address</h3>
-              <p className="text-gray-400 text-sm">123 Tech Street, Digital City</p>
+              <h3 className="font-bold mb-2">Tarkwa Location</h3>
+              <p className="text-gray-400 text-sm">UMAT Main Campus, Tarkwa</p>
+            </div>
+            <div className="text-center">
+              <div className="w-14 h-14 rounded-full bg-orange-500/20 flex items-center justify-center mx-auto mb-4">
+                <MapPin className="h-6 w-6 text-orange-500" />
+              </div>
+              <h3 className="font-bold mb-2">Accra Location</h3>
+              <p className="text-gray-400 text-sm">Ashongman Estate, Accra</p>
             </div>
             <div className="text-center">
               <div className="w-14 h-14 rounded-full bg-orange-500/20 flex items-center justify-center mx-auto mb-4">
                 <Phone className="h-6 w-6 text-orange-500" />
               </div>
               <h3 className="font-bold mb-2">Phone</h3>
-              <p className="text-gray-400 text-sm">+1 234 567 8900</p>
+              <p className="text-gray-400 text-sm">0599676419</p>
             </div>
             <div className="text-center">
               <div className="w-14 h-14 rounded-full bg-orange-500/20 flex items-center justify-center mx-auto mb-4">
                 <Mail className="h-6 w-6 text-orange-500" />
               </div>
               <h3 className="font-bold mb-2">Email</h3>
-              <p className="text-gray-400 text-sm">support@fmmclassico.com</p>
+              <p className="text-gray-400 text-sm">fmmcompanylimited@gmail.com</p>
             </div>
           </div>
         </div>

@@ -90,6 +90,20 @@ export default function Layout({ children, currentPageName }) {
     { id: 'screen_protectors', name: 'Screen Protectors' },
     { id: 'holders', name: 'Holders & Mounts' },
     { id: 'speakers', name: 'Speakers' },
+    { id: 'smart_watches', name: 'Smart Watches' },
+    { id: 'electronic_appliances', name: 'Electronic Appliances' },
+    { id: 'home_appliances', name: 'Home Appliances' },
+  ];
+
+  const oldCategories = [
+    { id: 'phone_cases_old', name: 'Phone Cases' },
+    { id: 'chargers', name: 'Chargers' },
+    { id: 'earphones', name: 'Earphones' },
+    { id: 'cables', name: 'Cables' },
+    { id: 'power_banks', name: 'Power Banks' },
+    { id: 'screen_protectors', name: 'Screen Protectors' },
+    { id: 'holders', name: 'Holders & Mounts' },
+    { id: 'speakers', name: 'Speakers' },
   ];
 
   return (

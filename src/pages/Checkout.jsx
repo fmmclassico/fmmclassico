@@ -201,9 +201,19 @@ export default function Checkout() {
           {/* Delivery Info */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="p-6 shadow-md">
-              <div className="flex items-center gap-2 mb-4">
-                <Truck className="h-5 w-5 text-orange-500" />
-                <h2 className="text-lg font-bold text-gray-800">Delivery Information</h2>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-5 w-5 text-orange-500" />
+                  <h2 className="text-lg font-bold text-gray-800">Delivery Information</h2>
+                </div>
+                <DeliveryInfoModal 
+                  trigger={
+                    <Button variant="outline" size="sm" className="gap-1 text-orange-600 border-orange-200 hover:bg-orange-50">
+                      <Info className="h-4 w-4" />
+                      Delivery Rates
+                    </Button>
+                  }
+                />
               </div>
               
               <div className="grid md:grid-cols-2 gap-4">
@@ -229,20 +239,58 @@ export default function Checkout() {
                     required
                   />
                 </div>
+                
+                {/* Delivery Location Selection */}
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="delivery_address">Delivery Address *</Label>
+                  <Label>Delivery Location *</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {[
+                      { id: 'umat', label: 'UMAT Campus', sub: 'FREE - Instant' },
+                      { id: 'tarkwa', label: 'Tarkwa (Outside UMAT)', sub: '₵25 - Instant' },
+                      { id: 'accra', label: 'Within Accra', sub: '1-2 days' },
+                      { id: 'other', label: 'Other Location', sub: '2-3 days' },
+                    ].map((loc) => (
+                      <button
+                        key={loc.id}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, delivery_location: loc.id }))}
+                        className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          formData.delivery_location === loc.id 
+                            ? 'border-orange-500 bg-orange-50' 
+                            : 'border-gray-200 hover:border-orange-200'
+                        }`}
+                      >
+                        <span className="block font-medium text-sm text-gray-800">{loc.label}</span>
+                        <span className="block text-xs text-gray-500">{loc.sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {formData.delivery_location === 'accra' && (
+                  <div className="md:col-span-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      <strong>Accra Delivery:</strong> We use Yango for delivery within Accra. 
+                      Pickup from Ashongman Estate or Airport Residential Area. 
+                      Please check <a href="https://yango.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">Yango app</a> for exact delivery rates to your location.
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="delivery_address">Delivery Address / Landmark *</Label>
                   <Textarea
                     id="delivery_address"
                     name="delivery_address"
                     value={formData.delivery_address}
                     onChange={handleInputChange}
-                    placeholder="Enter your full delivery address"
+                    placeholder="Enter your full delivery address or meeting point"
                     rows={3}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="city">City *</Label>
+                  <Label htmlFor="city">City / Town *</Label>
                   <Input
                     id="city"
                     name="city"

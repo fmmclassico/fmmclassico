@@ -84,13 +84,13 @@ export default function Home() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="max-w-xl"
+            className="max-w-2xl"
           >
             <Badge className="bg-white/20 text-white hover:bg-white/30 mb-4">New Arrivals 🔥</Badge>
-            <h1 className="text-3xl md:text-5xl font-black text-white mb-4 leading-tight">
+            <h1 className="text-2xl md:text-4xl font-black text-white mb-4 leading-tight">
               Premium Phone Accessories, Electronic Appliances & Home Appliances
             </h1>
-            <p className="text-lg text-white/90 mb-6">
+            <p className="text-base md:text-lg text-white/90 mb-6">
               Discover the latest phone cases, chargers, earphones, smart watches, electronics and home appliances at unbeatable prices.
             </p>
             <div className="flex gap-3">

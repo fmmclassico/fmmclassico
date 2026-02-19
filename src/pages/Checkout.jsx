@@ -15,10 +15,12 @@ import {
   Truck,
   CreditCard,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Info
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import DeliveryInfoModal from '../components/delivery/DeliveryInfoModal';
 
 const WHATSAPP_LINK = "https://wa.me/233599676419";
 const PAYSTACK_LINK = "https://paystack.shop/pay/1miimvhai8";
@@ -36,6 +38,7 @@ export default function Checkout() {
     customer_phone: '',
     delivery_address: '',
     city: '',
+    delivery_location: '',
     notes: '',
   });
 

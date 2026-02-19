@@ -61,6 +61,27 @@ const categories = [
     image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600',
     color: 'from-red-500 to-orange-500'
   },
+  { 
+    id: 'smart_watches', 
+    name: 'Smart Watches', 
+    desc: 'Stay connected on your wrist',
+    image: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600',
+    color: 'from-slate-600 to-slate-800'
+  },
+  { 
+    id: 'electronic_appliances', 
+    name: 'Electronic Appliances', 
+    desc: 'Modern electronics for you',
+    image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600',
+    color: 'from-cyan-500 to-blue-600'
+  },
+  { 
+    id: 'home_appliances', 
+    name: 'Home Appliances', 
+    desc: 'Essential home solutions',
+    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600',
+    color: 'from-amber-500 to-yellow-600'
+  },
 ];
 
 export default function Categories() {
@@ -68,7 +89,7 @@ export default function Categories() {
     <div className="container mx-auto px-4 py-6">
       <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Shop by Category</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {categories.map((cat, i) => (
           <motion.div
             key={cat.id}

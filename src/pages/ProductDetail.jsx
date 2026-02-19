@@ -13,12 +13,13 @@ import {
   Shield, 
   RotateCcw, 
   ChevronLeft,
+  ChevronRight,
   Plus,
   Minus,
   Share2,
   Heart
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 const categoryNames = {
@@ -30,11 +31,15 @@ const categoryNames = {
   screen_protectors: 'Screen Protectors',
   holders: 'Holders & Mounts',
   speakers: 'Speakers',
+  smart_watches: 'Smart Watches',
+  electronic_appliances: 'Electronic Appliances',
+  home_appliances: 'Home Appliances',
 };
 
 export default function ProductDetail() {
   const [user, setUser] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const queryClient = useQueryClient();
   
   const urlParams = new URLSearchParams(window.location.search);
@@ -57,6 +62,17 @@ export default function ProductDetail() {
   });
 
   const product = products.find(p => p.id === productId);
+
+  // Build image gallery array
+  const allImages = product ? [
+    product.image_url,
+    ...(product.image_urls || [])
+  ].filter(Boolean).slice(0, 4) : [];
+
+  // If less than 4 images, use the main image as fallback
+  while (allImages.length < 4 && product?.image_url) {
+    allImages.push(product.image_url);
+  }
 
   const addToCartMutation = useMutation({
     mutationFn: async () => {
@@ -93,6 +109,14 @@ export default function ProductDetail() {
   const discount = product?.original_price 
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
+
+  const nextImage = () => {
+    setSelectedImageIndex((prev) => (prev + 1) % allImages.length);
+  };
+
+  const prevImage = () => {
+    setSelectedImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+  };
 
   if (isLoading) {
     return (
@@ -135,31 +159,84 @@ export default function ProductDetail() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Product Image */}
+        {/* Product Image Gallery */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="relative"
+          className="space-y-4"
         >
+          {/* Main Image with Navigation */}
           <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-lg">
-            <img
-              src={product.image_url || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=800'}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={selectedImageIndex}
+                src={allImages[selectedImageIndex] || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=800'}
+                alt={product.name}
+                className="w-full h-full object-cover"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              />
+            </AnimatePresence>
+            
             {discount > 0 && (
               <Badge className="absolute top-4 left-4 bg-red-500 hover:bg-red-500 text-white text-lg px-3 py-1">
                 -{discount}%
               </Badge>
             )}
+            
+            {/* Navigation Arrows */}
+            {allImages.length > 1 && (
+              <>
+                <Button 
+                  size="icon" 
+                  variant="secondary" 
+                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full shadow-md h-10 w-10"
+                  onClick={prevImage}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="secondary" 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full shadow-md h-10 w-10"
+                  onClick={nextImage}
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+              </>
+            )}
+            
+            <div className="absolute top-4 right-4 flex flex-col gap-2">
+              <Button size="icon" variant="secondary" className="rounded-full shadow-md">
+                <Heart className="h-5 w-5" />
+              </Button>
+              <Button size="icon" variant="secondary" className="rounded-full shadow-md">
+                <Share2 className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
-          <div className="absolute top-4 right-4 flex flex-col gap-2">
-            <Button size="icon" variant="secondary" className="rounded-full shadow-md">
-              <Heart className="h-5 w-5" />
-            </Button>
-            <Button size="icon" variant="secondary" className="rounded-full shadow-md">
-              <Share2 className="h-5 w-5" />
-            </Button>
+
+          {/* Thumbnail Gallery */}
+          <div className="grid grid-cols-4 gap-2">
+            {allImages.map((img, idx) => (
+              <button
+                key={idx}
+                onClick={() => setSelectedImageIndex(idx)}
+                className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                  selectedImageIndex === idx 
+                    ? 'border-orange-500 shadow-md' 
+                    : 'border-transparent hover:border-gray-300'
+                }`}
+              >
+                <img
+                  src={img}
+                  alt={`${product.name} view ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
           </div>
         </motion.div>
 
@@ -237,16 +314,16 @@ export default function ProductDetail() {
           {/* Features */}
           <div className="grid grid-cols-3 gap-3 pt-4 border-t">
             <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg">
-              <Truck className="h-6 w-6 text-orange-500 mb-1" />
-              <span className="text-xs text-gray-600">Free Delivery</span>
+              <Truck className="h-6 w-6 text-orange-500 mb-2" />
+              <span className="text-xs font-medium text-gray-600">Free Delivery</span>
             </div>
             <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg">
-              <Shield className="h-6 w-6 text-orange-500 mb-1" />
-              <span className="text-xs text-gray-600">Warranty</span>
+              <Shield className="h-6 w-6 text-orange-500 mb-2" />
+              <span className="text-xs font-medium text-gray-600">Genuine Product</span>
             </div>
             <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg">
-              <RotateCcw className="h-6 w-6 text-orange-500 mb-1" />
-              <span className="text-xs text-gray-600">Easy Returns</span>
+              <RotateCcw className="h-6 w-6 text-orange-500 mb-2" />
+              <span className="text-xs font-medium text-gray-600">Easy Returns</span>
             </div>
           </div>
         </motion.div>

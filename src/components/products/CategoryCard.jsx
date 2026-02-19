@@ -12,6 +12,9 @@ const categoryImages = {
   screen_protectors: 'https://images.unsplash.com/photo-1601972599720-36938d4ecd31?w=400',
   holders: 'https://images.unsplash.com/photo-1586953208270-767889fa9b0e?w=400',
   speakers: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400',
+  smart_watches: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400',
+  electronic_appliances: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400',
+  home_appliances: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400',
 };
 
 const categoryNames = {
@@ -23,9 +26,14 @@ const categoryNames = {
   screen_protectors: 'Screen Protectors',
   holders: 'Holders & Mounts',
   speakers: 'Speakers',
+  smart_watches: 'Smart Watches',
+  electronic_appliances: 'Electronics',
+  home_appliances: 'Home Appliances',
 };
 
-export default function CategoryCard({ category, index }) {
+export default function CategoryCard({ category, index, productImage }) {
+  const imageUrl = productImage || categoryImages[category];
+  
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -35,13 +43,13 @@ export default function CategoryCard({ category, index }) {
       <Link to={createPageUrl(`Shop?category=${category}`)}>
         <div className="group relative overflow-hidden rounded-2xl aspect-square shadow-md hover:shadow-xl transition-all duration-300">
           <img
-            src={categoryImages[category]}
+            src={imageUrl}
             alt={categoryNames[category]}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-4">
-            <h3 className="text-white font-bold text-sm md:text-base">{categoryNames[category]}</h3>
+          <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4">
+            <h3 className="text-white font-bold text-xs md:text-sm text-center">{categoryNames[category]}</h3>
           </div>
         </div>
       </Link>

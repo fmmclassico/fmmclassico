@@ -102,13 +102,13 @@ export default function About() {
           >
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Our Story</h2>
             <p className="text-gray-600 mb-4">
-              FMM CLASSICO was founded with a simple mission: to provide high-quality phone accessories at affordable prices. We understand the importance of protecting and enhancing your mobile devices.
+              FMM CLASSICO was founded with a simple mission: to provide high-quality phone accessories, electronic appliances, and home appliances at affordable prices. We understand the importance of protecting and enhancing your mobile devices while also delivering reliable electronic and household solutions for everyday living.
             </p>
             <p className="text-gray-600 mb-4">
-              Since our inception, we've served thousands of happy customers with our carefully curated selection of phone cases, chargers, earphones, and more. Every product in our catalog is tested for quality and durability.
+              Since our inception, we have served thousands of satisfied customers through both retail and wholesale, offering a carefully curated selection of phone cases, chargers, earphones, consumer electronics, and essential home appliances. Every product in our catalog is selected and tested to ensure quality, performance, and durability.
             </p>
             <p className="text-gray-600">
-              We believe everyone deserves access to premium accessories without breaking the bank. That's why we work directly with manufacturers to bring you the best products at competitive prices.
+              We believe everyone deserves access to premium products without excessive cost. That is why we work directly with manufacturers and trusted suppliers to deliver dependable products at competitive prices.
             </p>
           </motion.div>
           <motion.div

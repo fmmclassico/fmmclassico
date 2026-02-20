@@ -152,8 +152,9 @@ export default function Notifications() {
                       <Icon className={`h-5 w-5 ${config.color}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge className={`text-xs ${notif.isNew ? 'bg-orange-500' : 'bg-gray-400'}`}>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        {notif.isPaymentAlert && <Badge className="text-xs bg-red-500">🔔 Payment Alert</Badge>}
+                        <Badge className={`text-xs ${notif.isPaymentAlert ? 'bg-red-400' : notif.isNew ? 'bg-orange-500' : 'bg-gray-400'}`}>
                           {config.label}
                         </Badge>
                         {notif.isNew && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />}

@@ -15,6 +15,7 @@ import CategoryCard from '../components/products/CategoryCard';
 export default function Home() {
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const getUser = async () => {

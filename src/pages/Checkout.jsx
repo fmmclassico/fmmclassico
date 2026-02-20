@@ -337,14 +337,16 @@ export default function Checkout() {
                   />
                 </div>
                 
-                {/* Delivery fee note */}
-                <div className="md:col-span-2 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-800 space-y-1">
-                  <p><strong>🏫 UMAT Campus:</strong> Pickup/meeting point FREE · Doorstep ₵10.</p>
-                  <p><strong>🏪 FREE Pickup:</strong> Ashongman Estate (Pure Water) – Accra.</p>
-                  <p><strong>🏙️ Accra delivery:</strong> ₵22–₵50 depending on area.</p>
-                  <p><strong>🏘️ Tarkwa (outside UMAT):</strong> ₵25 (FREE on orders over ₵300).</p>
-                  <p><strong>📞 Order by call/WhatsApp:</strong> <a href="tel:0599676419" className="font-bold underline">0599676419</a></p>
-                </div>
+                {/* Cart delivery selection banner */}
+                {cartZoneId && cartZoneName && (
+                  <div className="md:col-span-2 p-3 bg-green-50 border border-green-300 rounded-lg flex items-center gap-3">
+                    <span className="text-2xl">🚚</span>
+                    <div>
+                      <p className="text-sm font-bold text-green-800">Delivery selected from cart:</p>
+                      <p className="text-sm text-green-700">{cartZoneName} — <strong>{cartZoneFee === 0 ? 'FREE' : `₵${cartZoneFee}`}</strong></p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="delivery_address">Delivery Address / Landmark *</Label>

@@ -36,6 +36,7 @@ const statusConfig = {
 
 export default function Orders() {
   const [user, setUser] = useState(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const getUser = async () => {
@@ -53,7 +54,42 @@ export default function Orders() {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', user?.email],
     queryFn: () => base44.entities.Order.filter({ customer_email: user?.email }, '-created_date'),
-    enabled: !!user?.email
+    enabled: !!user?.email,
+    refetchInterval: 20000,
+  });
+
+  const claimPaymentMutation = useMutation({
+    mutationFn: async (order) => {
+      const newTracking = [
+        ...(order.tracking_updates || []),
+        {
+          status: 'Payment Claimed',
+          message: 'Customer confirmed payment – awaiting FMM CLASSICO verification',
+          timestamp: new Date().toISOString()
+        }
+      ];
+      await base44.entities.Order.update(order.id, { tracking_updates: newTracking });
+      await Promise.all([
+        base44.integrations.Core.SendEmail({
+          to: 'fmmclassico@gmail.com',
+          subject: `💳 PAYMENT COMPLETED – ${order.customer_name} | ₵${order.total_amount?.toFixed(2)}`,
+          body: `Customer says they've paid!\n\n📦 Order: ${order.order_number}\n👤 Customer: ${order.customer_name}\n📞 Phone: ${order.customer_phone}\n💰 Total: ₵${order.total_amount?.toFixed(2)}\n\nPlease verify on Paystack and confirm in Admin Orders.`
+        }),
+        base44.entities.Notification.create({
+          user_email: order.customer_email,
+          title: '⏳ Payment Being Verified',
+          message: `We received your payment claim for order #${order.order_number}. We'll confirm within 2–5 minutes.`,
+          type: 'payment_pending',
+          order_id: order.id,
+          order_number: order.order_number,
+          is_read: false
+        })
+      ]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Payment claim sent! We\'ll verify and confirm shortly.');
+    }
   });
 
   if (!user) {

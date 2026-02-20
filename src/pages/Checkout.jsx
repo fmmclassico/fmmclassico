@@ -352,8 +352,11 @@ export default function Checkout() {
                 </div>
                 
                 {/* Delivery fee note */}
-                <div className="md:col-span-2 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-800">
-                  <strong>📦 Delivery Rates:</strong> Free delivery on UMAT Campus only. Tarkwa: ₵25 (FREE on orders over ₵300). Within Accra: ₵10–₵45 via Yango. Outside Accra/Tarkwa: ₵50 (FREE on orders over ₵500).
+                <div className="md:col-span-2 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-800 space-y-1">
+                  <p><strong>🏪 FREE Pickup:</strong> Ashongman Estate (Pure Water) & UMAT Main Campus.</p>
+                  <p><strong>🏙️ Accra delivery:</strong> ₵22–₵50 depending on area.</p>
+                  <p><strong>🏘️ Tarkwa:</strong> ₵25 (FREE on orders over ₵300).</p>
+                  <p><strong>📞 Order by call/WhatsApp:</strong> <a href="tel:0599676419" className="font-bold underline">0599676419</a></p>
                 </div>
 
                 <div className="space-y-2 md:col-span-2">

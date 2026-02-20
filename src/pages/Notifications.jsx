@@ -23,6 +23,7 @@ const typeConfig = {
 
 export default function Notifications() {
   const [user, setUser] = useState(null);
+  const [selectedNotifs, setSelectedNotifs] = useState([]);
   const queryClient = useQueryClient();
 
   useEffect(() => {

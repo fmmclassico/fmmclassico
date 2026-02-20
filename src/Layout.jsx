@@ -86,6 +86,7 @@ export default function Layout({ children, currentPageName }) {
           ];
 
   const categories = [
+    { id: 'phones', name: 'Phones' },
     { id: 'phone_cases', name: 'Phone Cases' },
     { id: 'chargers', name: 'Chargers' },
     { id: 'earphones', name: 'Earphones' },

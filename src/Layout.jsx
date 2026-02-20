@@ -80,6 +80,7 @@ export default function Layout({ children, currentPageName }) {
             { icon: Package, label: 'My Orders', page: 'Orders' },
             { icon: Bell, label: 'Notifications', page: 'Notifications' },
             { icon: MessageCircle, label: 'Chat Support', page: 'Chat' },
+            { icon: MessageCircle, label: 'Feedback / Report Issue', page: 'Feedback' },
             { icon: Info, label: 'About Us', page: 'About' },
             { icon: Settings, label: 'Settings', page: 'Settings' },
             ...(isAdmin ? [{ icon: Settings, label: 'Admin Orders', page: 'AdminOrders' }] : []),

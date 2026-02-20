@@ -18,8 +18,8 @@ const ALL_CATEGORIES = [
 const features = [
   { icon: Truck, title: 'Fast Delivery', desc: 'Across Ghana' },
   { icon: Shield, title: 'Quality', desc: '100% authentic' },
-  { icon: Clock, title: '24/7 Support', desc: 'Always here' },
-  { icon: CreditCard, title: 'Secure Pay', desc: 'Safe checkout' },
+  { icon: Clock, title: 'Live Support', desc: 'AI assistant 24/7' },
+  { icon: CreditCard, title: 'Paystack', desc: 'Mobile Money & Card' },
 ];
 
 export default function Home() {

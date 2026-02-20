@@ -79,7 +79,7 @@ export default function Home() {
     <div className="pb-6">
       {/* Hero Banner */}
       <section className="relative bg-gradient-to-r from-orange-500 via-orange-400 to-yellow-400 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=1200')] bg-cover bg-center opacity-20" />
+        <div className="absolute inset-0 bg-[url('https://i.pinimg.com/1200x/f0/19/79/f0197921512896ac8afb70512afdfe7f.jpg')] bg-cover bg-center opacity-20" />
         <div className="container mx-auto px-4 py-12 md:py-20 relative">
           <motion.div
             initial={{ opacity: 0, y: 30 }}

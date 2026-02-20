@@ -67,8 +67,32 @@ export default function Cart() {
     }
   });
 
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
-  const shipping = subtotal > 50 ? 0 : 5.99;
+
+  const deliveryZones = [
+    { id: 'umat_pickup', label: '🏫 UMAT Campus – Pickup/Meeting Point', fee: 0, note: 'FREE – collect on campus' },
+    { id: 'umat_doorstep', label: '🏠 UMAT Campus – Doorstep Delivery', fee: 10, note: '₵10 to your door' },
+    { id: 'tarkwa', label: '🏘️ Tarkwa (Outside UMAT)', fee: subtotal >= 300 ? 0 : 25, note: subtotal >= 300 ? 'FREE – order over ₵300' : '₵25 delivery fee' },
+    { id: 'ashongman', label: '🛍️ Ashongman Estate (Accra)', fee: 0, note: 'FREE – pickup from our shop' },
+    { id: 'airport', label: '✈️ Airport Residential (Accra)', fee: 22, note: '₵22 via Yango/dispatch' },
+    { id: 'accra_mall', label: '🏬 Accra Mall Area', fee: 25, note: '₵25 via Yango/dispatch' },
+    { id: 'madina', label: '📍 Madina (Accra)', fee: 30, note: '₵30 via Yango/dispatch' },
+    { id: 'east_legon', label: '📍 East Legon (Accra)', fee: 30, note: '₵30 via Yango/dispatch' },
+    { id: 'osu', label: '📍 Osu (Accra)', fee: 30, note: '₵30 via Yango/dispatch' },
+    { id: 'circle', label: '📍 Circle (Accra)', fee: 30, note: '₵30 via Yango/dispatch' },
+    { id: 'adenta', label: '📍 Adenta (Accra)', fee: 35, note: '₵35 via Yango/dispatch' },
+    { id: 'accra_station', label: '📍 Accra Station Area', fee: 35, note: '₵35 via Yango/dispatch' },
+    { id: 'makola', label: '📍 Makola (Accra)', fee: 35, note: '₵35 via Yango/dispatch' },
+    { id: 'spintex', label: '📍 Spintex (Accra)', fee: 40, note: '₵40 via Yango/dispatch' },
+    { id: 'other_accra', label: '📍 Other Accra Areas', fee: 50, note: '₵50 via Yango/dispatch' },
+    { id: 'other', label: '📦 Outside Accra & Tarkwa', fee: subtotal >= 500 ? 0 : 50, note: subtotal >= 500 ? 'FREE – order over ₵500' : '₵50 flat rate' },
+  ];
+
+  const selectedZone = deliveryZones.find(z => z.id === selectedLocation);
+  const shipping = selectedZone ? selectedZone.fee : 0;
   const total = subtotal + shipping;
 
   if (!user) {

@@ -61,8 +61,20 @@ export default function Layout({ children, currentPageName }) {
     queryKey: ['notifications', user?.email],
     queryFn: () => base44.entities.Notification.filter({ user_email: user?.email }, '-created_date', 50),
     enabled: !!user?.email,
-    refetchInterval: 15000,
+    refetchInterval: 10000,
   });
+
+  // Real-time notification updates
+  useEffect(() => {
+    if (!user?.email) return;
+    const unsubscribe = base44.entities.Notification.subscribe((event) => {
+      if (event.data.user_email === user.email) {
+        const queryClient = useQueryClient();
+        queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
+      }
+    });
+    return unsubscribe;
+  }, [user?.email]);
 
   const cartCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
   const unreadNotifCount = userNotifications.filter(n => !n.is_read).length;

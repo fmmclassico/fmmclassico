@@ -163,8 +163,24 @@ export default function Checkout() {
 
     const newOrder = await base44.entities.Order.create(orderData);
     
-    // Clear cart in parallel
-    await Promise.all(cartItems.map(item => base44.entities.CartItem.delete(item.id)));
+    // Clear cart + send order placed notification in parallel
+    await Promise.all([
+      ...cartItems.map(item => base44.entities.CartItem.delete(item.id)),
+      base44.entities.Notification.create({
+        user_email: user.email,
+        title: '🛍️ Order Placed Successfully',
+        message: `Your order #${orderNumber} has been placed and is awaiting payment confirmation. Total: ₵${total.toFixed(2)}`,
+        type: 'order_placed',
+        order_id: newOrder.id,
+        order_number: orderNumber,
+        is_read: false
+      }),
+      base44.integrations.Core.SendEmail({
+        to: user.email,
+        subject: `🛍️ Order Placed – FMM CLASSICO #${orderNumber}`,
+        body: `Hi ${formData.customer_name},\n\nYour order #${orderNumber} has been placed successfully on FMM CLASSICO!\n\nOrder Total: ₵${total.toFixed(2)}\nDelivery Address: ${formData.delivery_address}, ${formData.city}\n\nNext step: Complete your payment on Paystack, then click "Payment Completed". We will verify and confirm your order within 2–5 minutes.\n\nYou can track your order on the website under "My Orders".\n\nThank you for shopping with FMM CLASSICO!\n📞 Contact: 0599676419`
+      })
+    ]);
     
     queryClient.invalidateQueries({ queryKey: ['cartItems'] });
     

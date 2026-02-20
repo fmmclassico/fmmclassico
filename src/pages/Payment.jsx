@@ -59,6 +59,13 @@ export default function Payment() {
     select: (data) => data?.[0],
   });
 
+  const { data: userNotifications = [] } = useQuery({
+    queryKey: ['notifications', user?.email, paymentClicked],
+    queryFn: () => base44.entities.Notification.filter({ user_email: user?.email }, '-created_date', 10),
+    enabled: !!user?.email && paymentClicked,
+    refetchInterval: 3000,
+  });
+
   // Auto-detect when admin confirms payment and show success to customer
   useEffect(() => {
     if (!orderId || !paymentClicked) return;

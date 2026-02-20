@@ -193,10 +193,9 @@ export default function Checkout() {
     ]);
 
     queryClient.invalidateQueries({ queryKey: ['cartItems'] });
-    setOrderId(newOrder.id);
-    setOrderData(builtOrderData);
     setIsSubmitting(false);
-    setOrderSuccess(true);
+    // Redirect to Payment page where Paystack opens in an iframe
+    navigate(createPageUrl(`Payment?orderId=${newOrder.id}&orderNumber=${orderNumber}&amount=${total.toFixed(2)}`));
   };
 
   const handlePaymentCompleted = async () => {

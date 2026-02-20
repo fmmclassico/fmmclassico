@@ -254,10 +254,12 @@ export default function Chat() {
         <p className="text-sm text-gray-500 mb-3">Quick questions:</p>
         <div className="flex flex-wrap gap-2">
           {[
-            "What's your return policy?",
+            "What products do you sell?",
             "How long does delivery take?",
-            "Do you offer warranty?",
-            "What payment methods do you accept?"
+            "What are your delivery charges?",
+            "What payment methods do you accept?",
+            "I want to place an order",
+            "Show me your best products"
           ].map((question) => (
             <Button
               key={question}

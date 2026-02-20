@@ -366,10 +366,25 @@ export default function Checkout() {
                     name="delivery_address"
                     value={formData.delivery_address}
                     onChange={handleInputChange}
-                    placeholder="Enter your full delivery address or meeting point"
-                    rows={3}
+                    placeholder="Enter your full delivery address or landmark"
+                    rows={2}
                     required
                   />
+                  <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <span className="text-lg">📍</span>
+                    <div className="flex-1 text-xs text-blue-700">
+                      <span className="font-semibold">Share your exact location</span> so we can find you easily.
+                    </div>
+                    <a
+                      href="https://maps.google.com?action=mylocation"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-shrink-0 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Pin Location
+                    </a>
+                  </div>
+                  <p className="text-xs text-gray-400">Open Google Maps, copy your location link and paste it in the address field or send to <strong>0599676419</strong> on WhatsApp.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">City / Town *</Label>

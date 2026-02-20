@@ -8,7 +8,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Package, MapPin, Loader2, ExternalLink, Bell, CheckIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { useQuery } from '@tanstack/react-query';
 
 const PAYSTACK_BASE = "https://paystack.shop/pay/1miimvhai8";
 

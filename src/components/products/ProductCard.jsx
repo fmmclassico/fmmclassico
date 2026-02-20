@@ -66,6 +66,16 @@ export default function ProductCard({ product, onAddToCart }) {
                 Featured
               </Badge>
             )}
+            {product.stock != null && product.stock <= 5 && product.stock > 0 && (
+              <Badge className="absolute bottom-2 right-2 bg-yellow-500 hover:bg-yellow-500 text-white text-[10px]">
+                Only {product.stock} left
+              </Badge>
+            )}
+            {product.stock === 0 && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <span className="bg-white text-gray-800 text-xs font-bold px-2 py-1 rounded">Out of Stock</span>
+              </div>
+            )}
           </div>
         </Link>
         

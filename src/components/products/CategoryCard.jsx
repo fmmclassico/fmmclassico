@@ -4,10 +4,10 @@ import { createPageUrl } from '../../utils';
 import { motion } from 'framer-motion';
 
 const categoryImages = {
-  phone_cases: 'https://images.unsplash.com/photo-1601593346740-925612772716?w=400',
+  phone_cases: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=400',
   chargers: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=400',
   earphones: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400',
-  cables: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
+  cables: 'https://images.unsplash.com/photo-1544866092-1677b7de5e6c?w=400',
   power_banks: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=400',
   screen_protectors: 'https://images.unsplash.com/photo-1601972599720-36938d4ecd31?w=400',
   holders: 'https://images.unsplash.com/photo-1586953208270-767889fa9b0e?w=400',
@@ -18,7 +18,7 @@ const categoryImages = {
 };
 
 const categoryNames = {
-  phone_cases: 'Phone Cases',
+  phone_cases: 'Phones',
   chargers: 'Chargers',
   earphones: 'Earphones',
   cables: 'Cables',

@@ -334,9 +334,14 @@ export default function Checkout() {
                     name="city"
                     value={formData.city}
                     onChange={handleInputChange}
-                    placeholder="Enter your city"
+                    placeholder="e.g. Tarkwa, Accra, Tema, Madina..."
                     required
                   />
+                  {formData.city && (
+                    <p className={`text-xs font-medium mt-1 ${shipping === 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                      📍 {detectedLoc === 'umat' ? 'UMAT Campus' : detectedLoc === 'tarkwa' ? 'Tarkwa' : detectedLoc === 'accra' ? `Within Accra` : 'Outside Accra/Tarkwa'} → Delivery: {getShippingLabel()}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="notes">Order Notes (Optional)</Label>

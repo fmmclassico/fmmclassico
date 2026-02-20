@@ -98,27 +98,21 @@ export default function Layout({ children, currentPageName }) {
 
 
 
-  // SEO: set page title and meta tags (no external packages needed)
+  // SEO: set page title and meta tags
   useEffect(() => {
-    document.title = 'FMMCLASSICO – Premium Phone Accessories, Electronics & Home Appliances in Ghana';
-
-    const setMeta = (selector, attr, attrVal, content) => {
-      let el = document.querySelector(selector);
-      if (!el) { el = document.createElement('meta'); if (attr === 'property') el.setAttribute('property', attrVal); else el[attr] = attrVal; document.head.appendChild(el); }
-      el.content = content;
-    };
-
-    setMeta('meta[name="description"]', 'name', 'description', 'FMMCLASSICO offers premium phone accessories, electronic appliances and home appliances in Ghana. Shop iPhone cases, Samsung cases, chargers, earphones, smart watches, cables and more. Locations in Tarkwa (UMAT Campus) and Accra (Ashongman Estate). Search FMMCLASSICO online.');
-    setMeta('meta[name="keywords"]', 'name', 'keywords', 'FMMCLASSICO, FMM Classico, FMM CLASSICO, phone accessories Ghana, chargers Ghana, earphones Ghana, iPhone accessories Ghana, Samsung accessories Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa, UMAT, Accra, Ashongman, phone cases Ghana, smart watches Ghana');
-    setMeta('meta[name="robots"]', 'name', 'robots', 'index, follow');
-    setMeta('meta[name="author"]', 'name', 'author', 'FMMCLASSICO Ghana');
-    setMeta('meta[property="og:title"]', 'property', 'og:title', 'FMMCLASSICO – Premium Phone Accessories & Electronics in Ghana');
-    setMeta('meta[property="og:description"]', 'property', 'og:description', 'Shop premium phone accessories, electronics and home appliances at FMMCLASSICO. Serving Tarkwa (UMAT Campus) and Accra (Ashongman Estate). Search FMMCLASSICO online.');
-    setMeta('meta[property="og:type"]', 'property', 'og:type', 'website');
-    setMeta('meta[property="og:site_name"]', 'property', 'og:site_name', 'FMMCLASSICO');
-    setMeta('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image');
-    setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', 'FMMCLASSICO Ghana – Phone Accessories & Electronics');
-    setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', 'Shop phone accessories, electronics and home appliances at FMMCLASSICO. Serving UMAT Tarkwa and Accra.');
+    document.title = 'FMMClassico – Premium Phone Accessories, Electronics & Home Appliances in Ghana';
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) { metaDesc = document.createElement('meta'); metaDesc.name = 'description'; document.head.appendChild(metaDesc); }
+    metaDesc.content = 'FMMClassico offers premium phone accessories, electronic appliances and home appliances in Ghana. Shop phone cases, chargers, earphones, smart watches and more. Locations in Tarkwa (UMAT Campus) and Accra (Ashongman Estate). Search FMMCLASSICO.';
+    let metaKw = document.querySelector('meta[name="keywords"]');
+    if (!metaKw) { metaKw = document.createElement('meta'); metaKw.name = 'keywords'; document.head.appendChild(metaKw); }
+    metaKw.content = 'FMMCLASSICO, FMM Classico, phone accessories Ghana, chargers Ghana, earphones Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa, UMAT, Accra, Ashongman, phone cases';
+    let ogTitle = document.querySelector('meta[property="og:title"]');
+    if (!ogTitle) { ogTitle = document.createElement('meta'); ogTitle.setAttribute('property','og:title'); document.head.appendChild(ogTitle); }
+    ogTitle.content = 'FMMClassico – Premium Phone Accessories & Electronics in Ghana';
+    let ogDesc = document.querySelector('meta[property="og:description"]');
+    if (!ogDesc) { ogDesc = document.createElement('meta'); ogDesc.setAttribute('property','og:description'); document.head.appendChild(ogDesc); }
+    ogDesc.content = 'Shop premium phone accessories, electronics and home appliances at FMMClassico. Serving Tarkwa (UMAT Campus) and Accra (Ashongman Estate). Search FMMCLASSICO online.';
   }, []);
 
   return (

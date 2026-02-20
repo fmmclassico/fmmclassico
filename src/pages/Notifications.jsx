@@ -146,8 +146,8 @@ export default function Notifications() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
               >
-                <Link to={createPageUrl(`OrderTracking?id=${notif.orderId}`)}>
-                  <div className={`flex items-start gap-4 p-4 rounded-xl border ${notif.isNew ? 'border-orange-200 bg-orange-50' : 'border-gray-100 bg-white'} hover:shadow-md transition-all`}>
+                <Link to={createPageUrl(isAdmin ? `AdminOrders` : `OrderTracking?id=${notif.orderId}`)}>
+                  <div className={`flex items-start gap-4 p-4 rounded-xl border ${notif.isPaymentAlert ? 'border-red-300 bg-red-50' : notif.isNew ? 'border-orange-200 bg-orange-50' : 'border-gray-100 bg-white'} hover:shadow-md transition-all`}>
                     <div className={`p-2 rounded-full ${config.bg} flex-shrink-0`}>
                       <Icon className={`h-5 w-5 ${config.color}`} />
                     </div>

@@ -155,6 +155,8 @@ export default function Checkout() {
     }
 
     setIsSubmitting(true);
+    // Open Paystack immediately so browser doesn't block popup
+    const paystackWindow = window.open(PAYSTACK_LINK, '_blank');
 
     const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
     const estimatedDelivery = new Date();

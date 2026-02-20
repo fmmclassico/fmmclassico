@@ -62,6 +62,7 @@ import Orders from './pages/Orders';
 import ProductDetail from './pages/ProductDetail';
 import Settings from './pages/Settings';
 import Shop from './pages/Shop';
+import Payment from './pages/Payment';
 import __Layout from './Layout.jsx';
 
 
@@ -81,6 +82,7 @@ export const PAGES = {
     "ProductDetail": ProductDetail,
     "Settings": Settings,
     "Shop": Shop,
+    "Payment": Payment,
 }
 
 export const pagesConfig = {

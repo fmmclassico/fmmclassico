@@ -77,6 +77,15 @@ export default function Home() {
 
   return (
     <div className="pb-6">
+      {/* Back/Forward Navigation */}
+      <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-8 w-8 rounded-full bg-white shadow border hover:bg-orange-50">
+          <ChevronLeft className="h-4 w-4 text-gray-600" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => navigate(1)} className="h-8 w-8 rounded-full bg-white shadow border hover:bg-orange-50">
+          <ChevronRight className="h-4 w-4 text-gray-600" />
+        </Button>
+      </div>
       {/* Hero Banner */}
       <section className="relative bg-gradient-to-r from-orange-500 via-orange-400 to-yellow-400 overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=1200')] bg-cover bg-center opacity-20" />

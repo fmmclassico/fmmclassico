@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
 import { Card } from "@/components/ui/card";
@@ -8,9 +8,27 @@ import { Star, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function ProductCard({ product, onAddToCart }) {
+  const [scrollPos, setScrollPos] = useState(0);
+
   const discount = product.original_price 
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
+
+  const allImages = product ? [
+    product.image_url,
+    ...(product.image_urls || [])
+  ].filter(Boolean) : [];
+
+  const handleMouseMove = (e) => {
+    if (allImages.length <= 1) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const pct = x / rect.width;
+    const idx = Math.min(Math.floor(pct * allImages.length), allImages.length - 1);
+    setScrollPos(idx);
+  };
+
+  const currentImage = allImages[scrollPos] || allImages[0] || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=400';
 
   return (
     <motion.div
@@ -21,12 +39,23 @@ export default function ProductCard({ product, onAddToCart }) {
     >
       <Card className="group overflow-hidden bg-white hover:shadow-xl transition-all duration-300 border-0 shadow-sm">
         <Link to={createPageUrl(`ProductDetail?id=${product.id}`)}>
-          <div className="relative aspect-square overflow-hidden bg-gray-100">
+          <div
+            className="relative aspect-square overflow-hidden bg-gray-100"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={() => setScrollPos(0)}
+          >
             <img
-              src={product.image_url || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=400'}
+              src={currentImage}
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
             />
+            {allImages.length > 1 && (
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {allImages.map((_, i) => (
+                  <div key={i} className={`h-1 rounded-full transition-all ${i === scrollPos ? 'w-4 bg-white' : 'w-1 bg-white/60'}`} />
+                ))}
+              </div>
+            )}
             {discount > 0 && (
               <Badge className="absolute top-2 left-2 bg-red-500 hover:bg-red-500 text-white font-bold">
                 -{discount}%

@@ -10,7 +10,7 @@ const categoryImages = {
   earphones: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400',
   cables: 'https://images.unsplash.com/photo-1544866092-1677b7de5e6c?w=400',
   power_banks: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=400',
-  screen_protectors: 'https://images.unsplash.com/photo-1567581935884-3349723552ad?w=400',
+  screen_protectors: 'https://i.pinimg.com/1200x/7f/d8/eb/7fd8ebd8ca145f5bca3fb81bf6b78b82.jpg',
   holders: 'https://images.unsplash.com/photo-1586953208270-767889fa9b0e?w=400',
   speakers: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400',
   smart_watches: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400',

@@ -57,7 +57,15 @@ export default function Layout({ children, currentPageName }) {
     enabled: !!user?.email
   });
 
+  const { data: userNotifications = [] } = useQuery({
+    queryKey: ['notifications', user?.email],
+    queryFn: () => base44.entities.Notification.filter({ user_email: user?.email }, '-created_date', 50),
+    enabled: !!user?.email,
+    refetchInterval: 15000,
+  });
+
   const cartCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  const unreadNotifCount = userNotifications.filter(n => !n.is_read).length;
 
   const handleSearch = (e) => {
     e.preventDefault();

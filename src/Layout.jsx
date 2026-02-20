@@ -278,6 +278,18 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Spacer for bottom nav */}
       <div className="md:hidden h-20" />
+
+      {/* Floating AI Chat Button */}
+      {currentPageName !== 'Chat' && (
+        <Link
+          to={createPageUrl('Chat')}
+          className="fixed bottom-24 md:bottom-8 right-4 z-50 flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95"
+          style={{ boxShadow: '0 4px 20px rgba(249,115,22,0.5)' }}
+        >
+          <Bot className="h-5 w-5" />
+          <span className="text-sm font-bold hidden sm:inline">AI Support</span>
+        </Link>
+      )}
     </div>
   );
 }

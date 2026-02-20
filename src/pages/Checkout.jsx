@@ -246,60 +246,93 @@ export default function Checkout() {
   }
 
   if (orderSuccess) {
+    const paystackUrl = buildPaystackUrl(orderData?.total_amount || total);
     return (
-      <div className="container mx-auto px-4 py-12 max-w-lg">
+      <div className="container mx-auto px-4 py-8 max-w-lg">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
         >
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-4">
-            <CreditCard className="h-10 w-10 text-green-600" />
+          {/* Order confirmed header */}
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-3">
+              <CheckCircle2 className="h-10 w-10 text-green-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800">Order Placed!</h1>
+            <p className="text-gray-500 text-sm mt-1">Order #{orderData?.order_number}</p>
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Complete Your Payment</h1>
-          <p className="text-gray-500 mb-4">
-            A Paystack page has opened. Please complete your payment there.
-          </p>
-          <a href={PAYSTACK_LINK} target="_blank" rel="noopener noreferrer">
-            <Button className="w-full bg-green-600 hover:bg-green-700 mb-6">
-              💳 Open Paystack Again
-            </Button>
-          </a>
 
-          <div className="border-t pt-6">
+          {/* Amount box */}
+          <div className="bg-orange-50 border-2 border-orange-300 rounded-xl p-4 mb-5 text-center">
+            <p className="text-sm text-gray-600 mb-1">Amount to pay</p>
+            <p className="text-4xl font-black text-orange-600">₵{(orderData?.total_amount || total).toFixed(2)}</p>
+            <p className="text-xs text-gray-400 mt-1">This exact amount will be loaded on Paystack for you</p>
+          </div>
+
+          {/* Step 1: Pay */}
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-6 h-6 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center">1</span>
+              <span className="font-semibold text-gray-800">Complete Payment on Paystack</span>
+            </div>
+            <a href={paystackUrl} target="_blank" rel="noopener noreferrer" className="block">
+              <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-6 text-lg gap-2">
+                <CreditCard className="h-5 w-5" />
+                Pay ₵{(orderData?.total_amount || total).toFixed(2)} on Paystack
+              </Button>
+            </a>
+            <p className="text-xs text-gray-400 mt-1 text-center">Opens Paystack with your exact amount pre-filled</p>
+          </div>
+
+          {/* Step 2: Confirm */}
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center">2</span>
+              <span className="font-semibold text-gray-800">After paying, click below</span>
+            </div>
             {!paymentClicked ? (
               <>
-                <p className="text-sm text-gray-600 mb-3 font-medium">✅ Done paying on Paystack?</p>
                 <Button
                   onClick={handlePaymentCompleted}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-5 text-base"
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-6 text-lg"
                 >
-                  ✅ Payment Completed
+                  ✅ I've Completed Payment
                 </Button>
-                <p className="text-xs text-gray-400 mt-2">Click this after you've completed payment on Paystack</p>
+                <p className="text-xs text-gray-400 mt-1 text-center">Click this only after completing payment on Paystack</p>
               </>
             ) : (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-orange-50 border border-orange-200 rounded-xl p-5"
+                className="bg-orange-50 border-2 border-orange-300 rounded-xl p-5 text-center"
               >
                 <div className="text-3xl mb-2">⏳</div>
-                <h3 className="font-bold text-gray-800 mb-1">Awaiting Payment Confirmation</h3>
+                <h3 className="font-bold text-gray-800 mb-2">FMM CLASSICO is Verifying Your Payment</h3>
                 <p className="text-sm text-gray-600">
-                  FMM CLASSICO is verifying your payment. This takes <strong>2–5 minutes</strong>. You will receive a notification in your <strong>🔔 Notifications</strong> box on this website once we confirm your payment.
+                  This takes <strong>2–5 minutes</strong>. You will receive a <strong>🔔 notification</strong> on this website and an <strong>email</strong> once your payment is confirmed.
                 </p>
               </motion.div>
             )}
           </div>
 
-          <div className="flex flex-col gap-2 mt-4">
-            <Link to={createPageUrl(`OrderTracking?id=${orderId}`)}>
-              <Button variant="outline" className="w-full">📦 Track Your Order</Button>
-            </Link>
-            <Link to={createPageUrl('Shop')}>
-              <Button variant="ghost" className="w-full">Continue Shopping</Button>
-            </Link>
+          {/* Step 3: Track */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-6 h-6 rounded-full bg-gray-400 text-white text-xs font-bold flex items-center justify-center">3</span>
+              <span className="font-semibold text-gray-800">Track your order</span>
+            </div>
+            <div className="flex gap-2">
+              <Link to={createPageUrl('Orders')} className="flex-1">
+                <Button variant="outline" className="w-full border-orange-300 text-orange-600 hover:bg-orange-50">
+                  📦 My Orders
+                </Button>
+              </Link>
+              <Link to={createPageUrl(`OrderTracking?id=${orderId}`)} className="flex-1">
+                <Button variant="outline" className="w-full">
+                  🔍 Track Order
+                </Button>
+              </Link>
+            </div>
           </div>
         </motion.div>
       </div>

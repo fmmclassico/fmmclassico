@@ -47,8 +47,15 @@ export default function AdminOrders() {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['adminOrders'],
     queryFn: () => base44.entities.Order.list('-created_date', 100),
-    enabled: isAdmin
+    enabled: isAdmin,
+    refetchInterval: 30000, // auto-refresh every 30s
   });
+
+  // New payment alerts = pending orders where customer clicked "Payment Completed"
+  const paymentAlerts = orders.filter(o => 
+    o.status === 'pending' && 
+    o.tracking_updates?.some(t => t.status === 'Payment Claimed')
+  );
 
   const confirmPaymentMutation = useMutation({
     mutationFn: async (order) => {

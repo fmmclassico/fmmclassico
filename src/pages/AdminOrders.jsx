@@ -68,12 +68,6 @@ export default function AdminOrders() {
         }
       ];
       
-      await base44.entities.Order.update(order.id, {
-        status: 'confirmed',
-        tracking_updates: newTrackingUpdates
-      });
-
-      // Estimate delivery days based on city
       const cityLower = (order.city || '').toLowerCase();
       let deliveryDays = '3–7 business days';
       if (cityLower.includes('umat') || cityLower.includes('tarkwa')) {
@@ -84,18 +78,21 @@ export default function AdminOrders() {
         deliveryDays = '2–4 days';
       }
 
-      const trackingUrl = `${window.location.origin}${window.location.pathname.split('/').slice(0, -1).join('/')}?page=OrderTracking&id=${order.id}`;
-
-      // Send confirmation notification to customer
-      await base44.entities.Notification.create({
-        user_email: order.customer_email,
-        title: '✅ Payment Confirmed – Order Processing!',
-        message: `🎉 Payment confirmed for order #${order.order_number}! Total: ₵${order.total_amount?.toFixed(2)}. Your order is now being prepared. Estimated delivery: ${deliveryDays}. We'll notify you when it ships!`,
-        type: 'payment_confirmed',
-        order_id: order.id,
-        order_number: order.order_number,
-        is_read: false
-      });
+      await Promise.all([
+        base44.entities.Order.update(order.id, {
+          status: 'confirmed',
+          tracking_updates: newTrackingUpdates
+        }),
+        base44.entities.Notification.create({
+          user_email: order.customer_email,
+          title: '✅ Payment Confirmed – Order Processing!',
+          message: `🎉 Payment confirmed for order #${order.order_number}! Total: ₵${order.total_amount?.toFixed(2)}. Your order is now being prepared. Estimated delivery: ${deliveryDays}. We'll notify you when it ships!`,
+          type: 'payment_confirmed',
+          order_id: order.id,
+          order_number: order.order_number,
+          is_read: false
+        })
+      ]);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminOrders'] });

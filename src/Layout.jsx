@@ -285,9 +285,9 @@ export default function Layout({ children, currentPageName }) {
             )}
             <span className="text-xs mt-1">Cart</span>
           </Link>
-          <Link to={createPageUrl('Chat')} className={`flex flex-col items-center p-2 ${currentPageName === 'Chat' ? 'text-orange-500' : 'text-gray-500'}`}>
-            <MessageCircle className="h-5 w-5" />
-            <span className="text-xs mt-1">Chat</span>
+          <Link to={createPageUrl('Notifications')} className={`flex flex-col items-center p-2 ${currentPageName === 'Notifications' ? 'text-orange-500' : 'text-gray-500'}`}>
+            <Bell className="h-5 w-5" />
+            <span className="text-xs mt-1">Alerts</span>
           </Link>
           <Link to={createPageUrl('Settings')} className={`flex flex-col items-center p-2 ${currentPageName === 'Settings' ? 'text-orange-500' : 'text-gray-500'}`}>
             <User className="h-5 w-5" />

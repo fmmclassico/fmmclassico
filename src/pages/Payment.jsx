@@ -15,6 +15,7 @@ export default function Payment() {
   const [user, setUser] = useState(null);
   const [paymentDone, setPaymentDone] = useState(false);
   const [paymentClicked, setPaymentClicked] = useState(false);
+  const [paymentConfirmedByAdmin, setPaymentConfirmedByAdmin] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const queryClient = useQueryClient();

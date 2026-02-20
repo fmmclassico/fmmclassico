@@ -16,7 +16,9 @@ import {
   MapPin,
   XCircle,
   CreditCard,
-  ExternalLink
+  ExternalLink,
+  Trash2,
+  Check
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
@@ -36,6 +38,7 @@ const statusConfig = {
 
 export default function Orders() {
   const [user, setUser] = useState(null);
+  const [selectedOrders, setSelectedOrders] = useState([]);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -69,28 +72,55 @@ export default function Orders() {
         }
       ];
       await base44.entities.Order.update(order.id, { tracking_updates: newTracking });
-      await Promise.all([
-        base44.integrations.Core.SendEmail({
-          to: 'fmmclassico@gmail.com',
-          subject: `💳 PAYMENT COMPLETED – ${order.customer_name} | ₵${order.total_amount?.toFixed(2)}`,
-          body: `Customer says they've paid!\n\n📦 Order: ${order.order_number}\n👤 Customer: ${order.customer_name}\n📞 Phone: ${order.customer_phone}\n💰 Total: ₵${order.total_amount?.toFixed(2)}\n\nPlease verify on Paystack and confirm in Admin Orders.`
-        }),
-        base44.entities.Notification.create({
-          user_email: order.customer_email,
-          title: '⏳ Payment Being Verified',
-          message: `We received your payment claim for order #${order.order_number}. We'll confirm within 2–5 minutes.`,
-          type: 'payment_pending',
-          order_id: order.id,
-          order_number: order.order_number,
-          is_read: false
-        })
-      ]);
+      await base44.entities.Notification.create({
+           user_email: order.customer_email,
+           title: '⏳ Payment Being Verified',
+           message: `We received your payment claim for order #${order.order_number}. We'll confirm within 2–5 minutes.`,
+           type: 'payment_pending',
+           order_id: order.id,
+           order_number: order.order_number,
+           is_read: false
+         });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success('Payment claim sent! We\'ll verify and confirm shortly.');
     }
   });
+
+  const deleteOrdersMutation = useMutation({
+    mutationFn: async (orderIds) => {
+      await Promise.all(orderIds.map(id => base44.entities.Order.delete(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      setSelectedOrders([]);
+      toast.success('Orders deleted successfully');
+    }
+  });
+
+  const handleToggleSelect = (orderId) => {
+    setSelectedOrders(prev => 
+      prev.includes(orderId) 
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedOrders.length === orders.length) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(orders.map(o => o.id));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedOrders.length === 0) return;
+    if (confirm(`Delete ${selectedOrders.length} order(s)? This cannot be undone.`)) {
+      deleteOrdersMutation.mutate(selectedOrders);
+    }
+  };
 
   if (!user) {
     return (
@@ -100,146 +130,182 @@ export default function Orders() {
     );
   }
 
-  return (
-    <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">My Orders</h1>
+  if (orders.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 mb-4">
+          <Package className="h-8 w-8 text-orange-600" />
+        </div>
+        <h3 className="text-lg font-medium text-gray-800 mb-2">No orders yet</h3>
+        <p className="text-gray-500 mb-4">Start shopping to see your orders here</p>
+        <Link to={createPageUrl('Shop')}>
+          <Button className="bg-orange-600 hover:bg-orange-700">Go to Shop</Button>
+        </Link>
+      </div>
+    );
+  }
 
-      {isLoading ? (
-        <div className="space-y-4">
-          {Array(3).fill(0).map((_, i) => (
-            <Card key={i} className="p-6">
-              <div className="flex justify-between mb-4">
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-6 w-24" />
-              </div>
-              <div className="flex gap-4">
-                <Skeleton className="w-20 h-20 rounded-lg" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-              </div>
-            </Card>
-          ))}
+  return (
+    <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-orange-100 rounded-full">
+            <Package className="h-6 w-6 text-orange-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">My Orders</h1>
+            <p className="text-sm text-gray-500">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+          </div>
         </div>
-      ) : orders.length === 0 ? (
-        <div className="text-center py-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gray-100 mb-6">
-              <Package className="h-12 w-12 text-gray-400" />
+
+        {selectedOrders.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-600">{selectedOrders.length} selected</span>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={handleDeleteSelected}
+              className="gap-1"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Selection Controls */}
+      {orders.length > 0 && (
+        <div className="mb-4 flex items-center gap-2">
+          <input 
+            type="checkbox" 
+            checked={selectedOrders.length === orders.length && orders.length > 0}
+            onChange={handleSelectAll}
+            className="w-4 h-4 cursor-pointer"
+          />
+          <label className="text-sm font-medium text-gray-600 cursor-pointer">
+            Select All ({selectedOrders.length}/{orders.length})
+          </label>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {isLoading ? (
+          Array(3).fill(0).map((_, i) => (
+            <div key={i} className="space-y-3">
+              <Skeleton className="h-32 rounded-lg" />
             </div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">No orders yet</h2>
-            <p className="text-gray-500 mb-6">Start shopping to see your orders here</p>
-            <Link to={createPageUrl('Shop')}>
-              <Button className="bg-orange-500 hover:bg-orange-600">
-                Start Shopping
-              </Button>
-            </Link>
-          </motion.div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {orders.map((order, index) => {
-            const status = statusConfig[order.status] || statusConfig.pending;
-            const StatusIcon = status.icon;
+          ))
+        ) : (
+          orders.map((order) => {
+            const StatusIcon = statusConfig[order.status]?.icon || Package;
+            const isSelected = selectedOrders.includes(order.id);
 
             return (
               <motion.div
                 key={order.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
               >
-                <Card className="p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                    <div>
-                      <p className="font-bold text-gray-800">Order #{order.order_number}</p>
-                      <p className="text-sm text-gray-500">
-                        {format(new Date(order.created_date), 'MMM d, yyyy')}
-                      </p>
+                <Card className="p-6 shadow-md hover:shadow-lg transition-shadow">
+                  <div className="flex items-start gap-4">
+                    {/* Checkbox */}
+                    <div className="pt-1">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelect(order.id)}
+                        className="w-4 h-4 cursor-pointer"
+                      />
                     </div>
-                    <Badge className={`${status.color} flex items-center gap-1`}>
-                      <StatusIcon className="h-3 w-3" />
-                      {status.label}
-                    </Badge>
-                  </div>
 
-                  <div className="flex gap-4 mb-4">
-                    <div className="flex -space-x-2">
-                      {order.items?.slice(0, 3).map((item, i) => (
-                        <div key={i} className="w-14 h-14 rounded-lg overflow-hidden border-2 border-white bg-gray-100">
-                          <img
-                            src={item.product_image || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=100'}
-                            alt={item.product_name}
-                            className="w-full h-full object-cover"
-                          />
+                    {/* Order Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-lg text-gray-800">{order.order_number}</h3>
+                          <Badge className={statusConfig[order.status]?.color || 'bg-gray-100 text-gray-800'}>
+                            <StatusIcon className="h-3 w-3 mr-1" />
+                            {statusConfig[order.status]?.label || order.status}
+                          </Badge>
                         </div>
-                      ))}
-                      {order.items?.length > 3 && (
-                        <div className="w-14 h-14 rounded-lg bg-gray-200 border-2 border-white flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-600">+{order.items.length - 3}</span>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-orange-600">₵{order.total_amount?.toFixed(2)}</p>
+                          <p className="text-sm text-gray-500">{format(new Date(order.created_date), 'MMM d, yyyy')}</p>
+                        </div>
+                      </div>
+
+                      {/* Order Items */}
+                      <div className="mb-3 space-y-1">
+                        {order.items?.map((item, idx) => (
+                          <p key={idx} className="text-sm text-gray-600">
+                            • {item.product_name} x{item.quantity} – ₵{(item.price * item.quantity).toFixed(2)}
+                          </p>
+                        ))}
+                      </div>
+
+                      {/* Delivery Info */}
+                      <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+                        <div>
+                          <p className="text-gray-500">Delivery To:</p>
+                          <p className="font-medium text-gray-800">{order.delivery_address}, {order.city}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Estimated Delivery:</p>
+                          <p className="font-medium text-gray-800">{format(new Date(order.estimated_delivery), 'MMM d, yyyy')}</p>
+                        </div>
+                      </div>
+
+                      {/* Tracking Timeline */}
+                      {order.tracking_updates && order.tracking_updates.length > 0 && (
+                        <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-500 mb-2">TRACKING HISTORY</p>
+                          <div className="space-y-1 max-h-24 overflow-y-auto">
+                            {[...order.tracking_updates].reverse().map((update, idx) => (
+                              <p key={idx} className="text-xs text-gray-600">
+                                <span className="font-medium">{update.status}</span> – {update.message} <span className="text-gray-400">{format(new Date(update.timestamp), 'MMM d, HH:mm')}</span>
+                              </p>
+                            ))}
+                          </div>
                         </div>
                       )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {order.items?.map(i => i.product_name).join(', ')}
-                      </p>
-                      <p className="text-lg font-bold text-orange-600 mt-1">
-                        ₵{order.total_amount?.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
 
-                  {/* Pending payment action */}
-                  {order.status === 'pending' && (
-                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg space-y-2">
-                      <p className="text-sm font-semibold text-yellow-800">⚠️ Payment required to confirm this order</p>
+                      {/* Actions */}
                       <div className="flex gap-2 flex-wrap">
-                        <a href={PAYSTACK_LINK} target="_blank" rel="noopener noreferrer" className="flex-1">
-                          <Button className="w-full bg-green-600 hover:bg-green-700 text-white gap-2" size="sm">
-                            <ExternalLink className="h-4 w-4" /> Pay on Paystack
+                        <Link to={createPageUrl(`OrderTracking?id=${order.id}`)}>
+                          <Button variant="outline" size="sm" className="gap-1">
+                            <ChevronRight className="h-4 w-4" />
+                            Track Order
                           </Button>
-                        </a>
-                        {!order.tracking_updates?.some(t => t.status === 'Payment Claimed') ? (
-                          <Button
-                            size="sm"
-                            className="flex-1 bg-orange-500 hover:bg-orange-600 text-white gap-2"
+                        </Link>
+
+                        {order.status === 'pending' && !order.tracking_updates?.some(t => t.status === 'Payment Claimed') && (
+                          <Button 
+                            size="sm" 
+                            className="gap-1 bg-green-600 hover:bg-green-700"
                             onClick={() => claimPaymentMutation.mutate(order)}
                             disabled={claimPaymentMutation.isPending}
                           >
-                            <CreditCard className="h-4 w-4" /> I've Paid ✓
+                            <CreditCard className="h-4 w-4" />
+                            {claimPaymentMutation.isPending ? 'Sending...' : 'Payment Completed'}
                           </Button>
-                        ) : (
-                          <div className="flex-1 text-center py-1 text-sm text-orange-700 font-medium bg-orange-100 rounded-md">
-                            ⏳ Verifying payment...
-                          </div>
+                        )}
+
+                        {order.status === 'pending' && order.tracking_updates?.some(t => t.status === 'Payment Claimed') && (
+                          <Button variant="outline" size="sm" disabled className="gap-1 text-orange-600">
+                            <Clock className="h-4 w-4" />
+                            Awaiting Verification
+                          </Button>
                         )}
                       </div>
                     </div>
-                  )}
-
-                  <div className="flex items-center justify-between pt-4 border-t mt-3">
-                    <p className="text-sm text-gray-500">
-                      {order.estimated_delivery && (
-                        <>Est. delivery: {format(new Date(order.estimated_delivery), 'MMM d, yyyy')}</>
-                      )}
-                    </p>
-                    <Link to={createPageUrl(`OrderTracking?id=${order.id}`)}>
-                      <Button variant="ghost" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
-                        Track Order <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </Link>
                   </div>
                 </Card>
               </motion.div>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </div>
     </div>
   );
 }

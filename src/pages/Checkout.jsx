@@ -187,19 +187,44 @@ export default function Checkout() {
 
     const newOrder = await base44.entities.Order.create(orderData);
     
-    // Clear cart
-    for (const item of cartItems) {
-      await base44.entities.CartItem.delete(item.id);
-    }
+    // Clear cart in parallel
+    await Promise.all(cartItems.map(item => base44.entities.CartItem.delete(item.id)));
     
     queryClient.invalidateQueries({ queryKey: ['cartItems'] });
     
     setOrderId(newOrder.id);
+    setOrderData(orderData);
     setIsSubmitting(false);
     setOrderSuccess(true);
 
-    // Redirect to Paystack payment link
+    // Immediately redirect to Paystack
     window.open(PAYSTACK_LINK, '_blank');
+  };
+
+  const handlePaymentCompleted = async () => {
+    setPaymentClicked(true);
+    // Update order with payment_claimed tracking
+    if (orderId) {
+      await base44.entities.Order.update(orderId, {
+        tracking_updates: [
+          ...(orderData?.tracking_updates || []),
+          {
+            status: 'Payment Claimed',
+            message: 'Customer clicked "Payment Completed" - awaiting FMM CLASSICO verification',
+            timestamp: new Date().toISOString()
+          }
+        ]
+      });
+    }
+    // Notify owner via LLM (sends email alert since SMS requires backend functions)
+    const customerPhone = orderData?.customer_phone || 'N/A';
+    const customerName = orderData?.customer_name || 'Customer';
+    const amount = orderData?.total_amount || 'N/A';
+    await base44.integrations.Core.SendEmail({
+      to: 'fmmclassico@gmail.com',
+      subject: `💳 PAYMENT COMPLETED - ${customerName} (${customerPhone})`,
+      body: `A customer has clicked "Payment Completed" on the FMM CLASSICO app.\n\nCustomer: ${customerName}\nPhone: ${customerPhone}\nOrder Total: ₵${amount}\nOrder #: ${orderData?.order_number}\n\nPlease verify payment on Paystack and confirm the order.\n\nSend SMS confirmation to: ${customerPhone}`
+    });
   };
 
   if (!user) {

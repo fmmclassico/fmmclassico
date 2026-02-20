@@ -66,10 +66,10 @@ export default function Home() {
   });
 
   const featuredProducts = products.filter(p => p.featured);
-  const categories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers', 'smart_watches', 'electronic_appliances', 'home_appliances'];
+  const categories = ['phones', 'phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers', 'smart_watches', 'electronic_appliances', 'home_appliances'];
 
   const features = [
-    { icon: Truck, title: 'Fast Delivery', desc: 'Same-day delivery in Tarkwa & Accra. Free on UMAT Campus.' },
+    { icon: Truck, title: 'Fast Delivery', desc: 'Quick delivery across Ghana' },
     { icon: Shield, title: 'Quality Guarantee', desc: '100% authentic products' },
     { icon: Clock, title: '24/7 Support', desc: 'Always here to help' },
     { icon: CreditCard, title: 'Secure Payment', desc: 'Safe transactions' },

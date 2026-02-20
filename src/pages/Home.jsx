@@ -137,7 +137,7 @@ export default function Home() {
       {(isLoading || featuredProducts.length > 0) && (
         <div className="mx-3">
           <ProductRow
-            title="⭐ Featured Products"
+            title="🏆 Top Selling Items"
             products={featuredProducts}
             isLoading={isLoading}
             viewAllLink={createPageUrl('Shop?featured=true')}
@@ -149,7 +149,7 @@ export default function Home() {
       {/* Phone Accessories Row */}
       <div className="mx-3">
         <ProductRow
-          title="📱 Phone Accessories"
+          title="🔥 Flash Sale Deals"
           products={phoneProducts}
           isLoading={isLoading}
           viewAllLink={createPageUrl('Shop?category=phones')}
@@ -160,7 +160,7 @@ export default function Home() {
       {/* Electronics Row */}
       <div className="mx-3">
         <ProductRow
-          title="⚡ Electronics"
+          title="✨ New Arrivals"
           products={electronicsProducts}
           isLoading={isLoading}
           viewAllLink={createPageUrl('Shop?category=electronic_appliances')}

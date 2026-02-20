@@ -80,18 +80,31 @@ export default function AdminOrders() {
         body: `A payment has been confirmed on FMM CLASSICO.\n\n📦 Order: ${order.order_number}\n👤 Customer: ${order.customer_name}\n📧 Email: ${order.customer_email}\n📞 Phone: ${order.customer_phone}\n💰 Total: ₵${order.total_amount?.toFixed(2)}\n📍 Address: ${order.delivery_address}, ${order.city}\n\nItems:\n${order.items?.map(i => `• ${i.product_name} x${i.quantity} – ₵${(i.price * i.quantity).toFixed(2)}`).join('\n')}\n\nOrder is now confirmed and visible to the customer.`
       });
 
+      // Estimate delivery days based on city
+      const cityLower = (order.city || '').toLowerCase();
+      let deliveryDays = '3–7 business days';
+      if (cityLower.includes('umat') || cityLower.includes('tarkwa')) {
+        deliveryDays = '1–2 days (same or next day for UMAT Campus)';
+      } else if (cityLower.includes('ashongman') || cityLower.includes('accra') || cityLower.includes('tema') || cityLower.includes('madina') || cityLower.includes('adenta') || cityLower.includes('spintex') || cityLower.includes('east legon') || cityLower.includes('osu') || cityLower.includes('lapaz') || cityLower.includes('kasoa') || cityLower.includes('dome') || cityLower.includes('dansoman') || cityLower.includes('labone') || cityLower.includes('cantonments') || cityLower.includes('teshie') || cityLower.includes('nungua')) {
+        deliveryDays = '1–3 days';
+      } else if (cityLower.includes('kumasi') || cityLower.includes('takoradi')) {
+        deliveryDays = '2–4 days';
+      }
+
+      const trackingUrl = `${window.location.origin}${window.location.pathname.split('/').slice(0, -1).join('/')}?page=OrderTracking&id=${order.id}`;
+
       // Send confirmation email + in-app notification to customer
       await Promise.all([
         base44.integrations.Core.SendEmail({
           to: order.customer_email,
           from_name: 'FMM CLASSICO',
           subject: `✅ Payment Confirmed – Your FMM CLASSICO Order #${order.order_number}`,
-          body: `Hi ${order.customer_name},\n\nGreat news! 🎉 Your payment has been confirmed and your order is now being processed.\n\n📦 Order Number: ${order.order_number}\n💰 Total Paid: ₵${order.total_amount?.toFixed(2)}\n📍 Delivery to: ${order.delivery_address}, ${order.city}\n\nYou will receive updates as your order progresses. Track your order on the FMM CLASSICO app.\n\nFor any questions, call/WhatsApp: 0599676419\n\nThank you for shopping with FMM CLASSICO! 🛍️`
+          body: `Hi ${order.customer_name},\n\nGreat news! 🎉 Your payment has been confirmed and your order is now being processed.\n\n📦 Order Number: ${order.order_number}\n💰 Total Paid: ₵${order.total_amount?.toFixed(2)}\n📍 Delivery to: ${order.delivery_address}, ${order.city}\n🚚 Estimated Delivery: ${deliveryDays}\n\nYou will receive updates as your order progresses. You can track your order in the FMM CLASSICO app.\n\nFor any questions, call/WhatsApp: 0599676419\n\nThank you for shopping with FMM CLASSICO! 🛍️`
         }),
         base44.entities.Notification.create({
           user_email: order.customer_email,
-          title: '✅ Payment Confirmed!',
-          message: `Great news! Your payment for order #${order.order_number} has been confirmed. Total: ₵${order.total_amount?.toFixed(2)}. Your order is now being prepared.`,
+          title: '✅ Payment Confirmed – Order Processing!',
+          message: `🎉 Payment confirmed for order #${order.order_number}! Total: ₵${order.total_amount?.toFixed(2)}. Your order is now being prepared. Estimated delivery: ${deliveryDays}. We'll notify you when it ships!`,
           type: 'payment_confirmed',
           order_id: order.id,
           order_number: order.order_number,

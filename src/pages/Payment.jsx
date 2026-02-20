@@ -78,22 +78,15 @@ export default function Payment() {
       ]
     });
 
-    await Promise.all([
-      base44.integrations.Core.SendEmail({
-        to: 'fmmclassico@gmail.com',
-        subject: `💳 PAYMENT COMPLETED – Order #${orderNumber} | ₵${amount.toFixed(2)}`,
-        body: `A customer has confirmed payment on FMM CLASSICO.\n\n📦 Order: ${orderNumber}\n👤 Customer: ${currentOrder?.customer_name}\n📞 Phone: ${currentOrder?.customer_phone}\n💰 Total: ₵${amount.toFixed(2)}\n📍 Address: ${currentOrder?.delivery_address}, ${currentOrder?.city}\n\nPlease verify payment on Paystack and confirm in Admin Orders.`
-      }),
-      base44.entities.Notification.create({
-        user_email: user.email,
-        title: '⏳ Payment Being Verified',
-        message: `We received your payment claim for order #${orderNumber}. FMM CLASSICO is verifying your payment. You'll get a confirmation here within 2–5 minutes.`,
-        type: 'payment_pending',
-        order_id: orderId,
-        order_number: orderNumber,
-        is_read: false
-      })
-    ]);
+    await base44.entities.Notification.create({
+      user_email: user.email,
+      title: '⏳ Payment Being Verified',
+      message: `We received your payment claim for order #${orderNumber}. FMM CLASSICO is verifying your payment. You'll get a confirmation here within 2–5 minutes.`,
+      type: 'payment_pending',
+      order_id: orderId,
+      order_number: orderNumber,
+      is_read: false
+    });
 
     setIsSubmitting(false);
     setPaymentClicked(true);

@@ -194,7 +194,35 @@ export default function Orders() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t">
+                  {/* Pending payment action */}
+                  {order.status === 'pending' && (
+                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg space-y-2">
+                      <p className="text-sm font-semibold text-yellow-800">⚠️ Payment required to confirm this order</p>
+                      <div className="flex gap-2 flex-wrap">
+                        <a href={PAYSTACK_LINK} target="_blank" rel="noopener noreferrer" className="flex-1">
+                          <Button className="w-full bg-green-600 hover:bg-green-700 text-white gap-2" size="sm">
+                            <ExternalLink className="h-4 w-4" /> Pay on Paystack
+                          </Button>
+                        </a>
+                        {!order.tracking_updates?.some(t => t.status === 'Payment Claimed') ? (
+                          <Button
+                            size="sm"
+                            className="flex-1 bg-orange-500 hover:bg-orange-600 text-white gap-2"
+                            onClick={() => claimPaymentMutation.mutate(order)}
+                            disabled={claimPaymentMutation.isPending}
+                          >
+                            <CreditCard className="h-4 w-4" /> I've Paid ✓
+                          </Button>
+                        ) : (
+                          <div className="flex-1 text-center py-1 text-sm text-orange-700 font-medium bg-orange-100 rounded-md">
+                            ⏳ Verifying payment...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-4 border-t mt-3">
                     <p className="text-sm text-gray-500">
                       {order.estimated_delivery && (
                         <>Est. delivery: {format(new Date(order.estimated_delivery), 'MMM d, yyyy')}</>

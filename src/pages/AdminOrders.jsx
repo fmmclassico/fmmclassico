@@ -120,10 +120,39 @@ export default function AdminOrders() {
         status: newStatus,
         tracking_updates: newTrackingUpdates
       });
+
+      // Notification messages per status
+      const notifMap = {
+        processing: { title: '📦 Order Being Prepared', msg: `Your order #${order.order_number} is being prepared for dispatch.`, type: 'order_processing' },
+        shipped: { title: '🚚 Order Shipped!', msg: `Your order #${order.order_number} has been shipped and is on its way to you!`, type: 'order_shipped' },
+        in_transit: { title: '🛵 Out for Delivery!', msg: `Your order #${order.order_number} is out for delivery. Expect it very soon!`, type: 'order_shipped' },
+        delivered: { title: '🎉 Order Delivered!', msg: `Your order #${order.order_number} has been delivered. Enjoy your purchase! Thank you for shopping with FMM CLASSICO.`, type: 'order_delivered' },
+        cancelled: { title: '❌ Order Cancelled', msg: `Your order #${order.order_number} has been cancelled. Contact us at 0599676419 for assistance.`, type: 'order_cancelled' },
+      };
+      const notif = notifMap[newStatus];
+      if (notif) {
+        await Promise.all([
+          base44.entities.Notification.create({
+            user_email: order.customer_email,
+            title: notif.title,
+            message: notif.msg,
+            type: notif.type,
+            order_id: order.id,
+            order_number: order.order_number,
+            is_read: false
+          }),
+          base44.integrations.Core.SendEmail({
+            to: order.customer_email,
+            from_name: 'FMM CLASSICO',
+            subject: `${notif.title} – FMM CLASSICO Order #${order.order_number}`,
+            body: `Hi ${order.customer_name},\n\n${notif.msg}\n\n📦 Order: #${order.order_number}\n💰 Total: ₵${order.total_amount?.toFixed(2)}\n📍 Delivery: ${order.delivery_address}, ${order.city}\n\nTrack your order on the FMM CLASSICO website.\n\nFor help: call/WhatsApp 0599676419\n\nFMM CLASSICO Team`
+          })
+        ]);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
-      toast.success('Order status updated!');
+      toast.success('Order status updated! Customer notified.');
     }
   });
 

@@ -14,7 +14,10 @@ import {
   Minus, 
   ArrowRight,
   ShoppingBag,
-  Truck
+  Truck,
+  ChevronDown,
+  MapPin,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';

@@ -212,20 +212,39 @@ export default function Payment() {
                   Only tap this after your payment was successful on Paystack
                 </p>
               </>
+            ) : paymentConfirmedByAdmin ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-green-50 border-2 border-green-400 rounded-2xl p-6 text-center mb-4"
+              >
+                <div className="text-5xl mb-3">🎉</div>
+                <h3 className="font-bold text-green-700 text-xl mb-2">Payment Confirmed!</h3>
+                <p className="text-sm text-gray-700 mb-2">
+                  FMM CLASSICO has confirmed your payment for order <strong>#{orderNumber}</strong>.
+                </p>
+                <p className="text-sm text-gray-600 mb-3">
+                  Your order is now being processed and will be delivered to you. Track your order below.
+                </p>
+                <div className="flex items-center justify-center gap-2 text-xs text-green-700 bg-green-100 rounded-lg p-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Your order is confirmed and being prepared!</span>
+                </div>
+              </motion.div>
             ) : (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-green-50 border-2 border-green-300 rounded-2xl p-6 text-center mb-4"
+                className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-6 text-center mb-4"
               >
                 <div className="text-4xl mb-3">⏳</div>
                 <h3 className="font-bold text-gray-800 text-lg mb-2">FMM CLASSICO is Verifying Your Payment</h3>
                 <p className="text-sm text-gray-600 mb-3">
-                  This takes <strong>2–5 minutes</strong>. Once confirmed, you'll receive a <strong>🔔 notification</strong> here and an <strong>email</strong>.
+                  This takes <strong>2–5 minutes</strong>. This page will automatically update once confirmed. You'll also get a <strong>🔔 notification</strong> and an <strong>email</strong>.
                 </p>
-                <div className="flex items-center justify-center gap-2 text-xs text-green-700 bg-green-100 rounded-lg p-2">
+                <div className="flex items-center justify-center gap-2 text-xs text-yellow-700 bg-yellow-100 rounded-lg p-2">
                   <Bell className="h-3 w-3" />
-                  <span>Watch your notification bell at the top of the page</span>
+                  <span>Page updates automatically – no need to refresh</span>
                 </div>
               </motion.div>
             )}

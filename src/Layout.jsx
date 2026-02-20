@@ -91,7 +91,10 @@ export default function Layout({ children, currentPageName }) {
             { icon: MessageCircle, label: 'Feedback / Report Issue', page: 'Feedback' },
             { icon: Info, label: 'About Us', page: 'About' },
             { icon: Settings, label: 'Settings', page: 'Settings' },
-            ...(isAdmin ? [{ icon: Settings, label: 'Admin Orders', page: 'AdminOrders' }] : []),
+            ...(isAdmin ? [
+            { icon: Settings, label: 'Admin Orders', page: 'AdminOrders' },
+            { icon: MessageCircle, label: 'Customer Messages', page: 'AdminMessages' },
+          ] : []),
           ];
 
   const categories = [

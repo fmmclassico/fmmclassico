@@ -80,8 +80,8 @@ export default function Payment() {
 
     await base44.entities.Notification.create({
       user_email: user.email,
-      title: '⏳ Payment Being Verified',
-      message: `We received your payment claim for order #${orderNumber}. FMM CLASSICO is verifying your payment. You'll get a confirmation here within 2–5 minutes.`,
+      title: '✅ Payment Sent – Awaiting Verification',
+      message: `Your payment for order #${orderNumber} has been sent. FMM CLASSICO will verify and confirm within 2–5 minutes.`,
       type: 'payment_pending',
       order_id: orderId,
       order_number: orderNumber,
@@ -91,7 +91,7 @@ export default function Payment() {
     setIsSubmitting(false);
     setPaymentClicked(true);
     queryClient.invalidateQueries({ queryKey: ['order', orderId] });
-    toast.success('Payment claim sent! We\'ll verify shortly.');
+    toast.success('Payment sent! We\'ll verify shortly.');
   };
 
   if (!user || !orderId) {
@@ -211,58 +211,39 @@ export default function Payment() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="bg-green-50 border-2 border-green-400 rounded-2xl p-6 text-center mb-4"
               >
-                <div className="text-5xl mb-3">🎉</div>
-                <h3 className="font-bold text-green-700 text-xl mb-2">Payment Confirmed!</h3>
-                <p className="text-sm text-gray-700 mb-2">
-                  FMM CLASSICO has confirmed your payment for order <strong>#{orderNumber}</strong>.
+                <div className="text-4xl mb-3">🎉</div>
+                <h2 className="text-xl font-bold text-green-700 mb-2">Payment Confirmed!</h2>
+                <p className="text-sm text-green-600 mb-4">
+                  Your payment has been verified. Your order is now being prepared for shipment.
                 </p>
-                <p className="text-sm text-gray-600 mb-3">
-                  Your order is now being processed and will be delivered to you. Track your order below.
+                <p className="text-xs text-green-500 mb-4">
+                  📦 Track your order in your notifications and account
                 </p>
-                <div className="flex items-center justify-center gap-2 text-xs text-green-700 bg-green-100 rounded-lg p-2">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Your order is confirmed and being prepared!</span>
-                </div>
+                <Link to={createPageUrl('Orders')}>
+                  <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold">
+                    View Order & Track Shipment
+                  </Button>
+                </Link>
               </motion.div>
             ) : (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-6 text-center mb-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-6 text-center"
               >
-                <div className="text-4xl mb-3">⏳</div>
-                <h3 className="font-bold text-gray-800 text-lg mb-2">FMM CLASSICO is Verifying Your Payment</h3>
-                <p className="text-sm text-gray-600 mb-3">
-                  This takes <strong>2–5 minutes</strong>. This page will automatically update once confirmed. You'll also get a <strong>🔔 notification</strong> and an <strong>email</strong>.
-                </p>
-                <div className="flex items-center justify-center gap-2 text-xs text-yellow-700 bg-yellow-100 rounded-lg p-2">
-                  <Bell className="h-3 w-3" />
-                  <span>Page updates automatically – no need to refresh</span>
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-amber-200 mx-auto mb-3">
+                  <Loader2 className="h-6 w-6 text-amber-600 animate-spin" />
                 </div>
+                <h2 className="text-lg font-bold text-amber-700 mb-2">Verifying Payment...</h2>
+                <p className="text-sm text-amber-600 mb-3">
+                  FMM CLASSICO is confirming your payment. This usually takes 2–5 minutes.
+                </p>
+                <p className="text-xs text-amber-500">
+                  ✅ A notification will appear here once confirmed. Don't leave this page.
+                </p>
               </motion.div>
             )}
-
-            {/* Quick actions */}
-            <div className="grid grid-cols-2 gap-3">
-              <Link to={createPageUrl('Notifications')}>
-                <Button variant="outline" className="w-full gap-2 border-orange-200 text-orange-600 hover:bg-orange-50">
-                  <Bell className="h-4 w-4" />
-                  Notifications
-                </Button>
-              </Link>
-              <Link to={createPageUrl(`OrderTracking?id=${orderId}`)}>
-                <Button variant="outline" className="w-full gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Track Order
-                </Button>
-              </Link>
-              <Link to={createPageUrl('Orders')} className="col-span-2">
-                <Button variant="ghost" className="w-full gap-2 text-gray-600">
-                  <Package className="h-4 w-4" />
-                  My Orders
-                </Button>
-              </Link>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

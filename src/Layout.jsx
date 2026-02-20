@@ -174,25 +174,52 @@ export default function Layout({ children, currentPageName }) {
 
     let jsonLd = document.querySelector('#fmm-jsonld');
     if (!jsonLd) { jsonLd = document.createElement('script'); jsonLd.id = 'fmm-jsonld'; jsonLd.type = 'application/ld+json'; document.head.appendChild(jsonLd); }
-    jsonLd.textContent = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "Store",
-      "name": "FMM CLASSICO",
-      "alternateName": ["FMMCLASSICO", "FMMClassico"],
-      "description": "FMM CLASSICO is an online store for premium phone accessories, electronic appliances and home appliances in Ghana. Serving Tarkwa (UMAT Campus) and Accra (Ashongman Estate).",
-      "url": window.location.origin,
-      "logo": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg",
-      "image": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg",
-      "telephone": "+233599676419",
-      "email": "fmmclassico@gmail.com",
-      "address": [
-        { "@type": "PostalAddress", "streetAddress": "UMAT Campus", "addressLocality": "Tarkwa", "addressCountry": "GH" },
-        { "@type": "PostalAddress", "streetAddress": "Ashongman Estate", "addressLocality": "Accra", "addressCountry": "GH" }
-      ],
-      "areaServed": "Ghana",
-      "priceRange": "₵₵",
-      "openingHours": "Mo-Su 08:00-20:00"
-    });
+    jsonLd.textContent = JSON.stringify([
+      {
+        "@context": "https://schema.org",
+        "@type": "OnlineStore",
+        "name": "FMM CLASSICO",
+        "alternateName": ["FMMCLASSICO", "FMMClassico", "fmmclassico"],
+        "description": "FMM CLASSICO is an online store for premium phone accessories, electronic appliances and home appliances in Ghana. Serving Tarkwa (UMAT Campus) and Accra (Ashongman Estate).",
+        "url": window.location.origin,
+        "logo": { "@type": "ImageObject", "url": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg", "width": 1200, "height": 1200 },
+        "image": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg",
+        "telephone": "+233599676419",
+        "email": "fmmclassico@gmail.com",
+        "address": [
+          { "@type": "PostalAddress", "streetAddress": "UMAT Campus", "addressLocality": "Tarkwa", "addressRegion": "Western Region", "addressCountry": "GH" },
+          { "@type": "PostalAddress", "streetAddress": "Ashongman Estate", "addressLocality": "Accra", "addressRegion": "Greater Accra", "addressCountry": "GH" }
+        ],
+        "areaServed": { "@type": "Country", "name": "Ghana" },
+        "priceRange": "₵₵",
+        "openingHours": "Mo-Su 08:00-20:00",
+        "currenciesAccepted": "GHS",
+        "paymentAccepted": "Mobile Money, Credit Card, Bank Transfer",
+        "hasOfferCatalog": {
+          "@type": "OfferCatalog",
+          "name": "FMM CLASSICO Products",
+          "itemListElement": [
+            { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Phone Accessories Ghana" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Electronic Appliances Ghana" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Home Appliances Ghana" } }
+          ]
+        },
+        "sameAs": [
+          "https://wa.me/233599676419"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "FMM CLASSICO",
+        "url": window.location.origin,
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": { "@type": "EntryPoint", "urlTemplate": `${window.location.origin}?page=Shop&search={search_term_string}` },
+          "query-input": "required name=search_term_string"
+        }
+      }
+    ]);
   }, []);
 
   return (

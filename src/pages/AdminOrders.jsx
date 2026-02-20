@@ -73,13 +73,6 @@ export default function AdminOrders() {
         tracking_updates: newTrackingUpdates
       });
 
-      // Send email notification to admin
-      await base44.integrations.Core.SendEmail({
-        to: 'fmmclassico@gmail.com',
-        subject: `✅ PAYMENT CONFIRMED – ${order.customer_name} | ₵${order.total_amount?.toFixed(2)}`,
-        body: `A payment has been confirmed on FMM CLASSICO.\n\n📦 Order: ${order.order_number}\n👤 Customer: ${order.customer_name}\n📧 Email: ${order.customer_email}\n📞 Phone: ${order.customer_phone}\n💰 Total: ₵${order.total_amount?.toFixed(2)}\n📍 Address: ${order.delivery_address}, ${order.city}\n\nItems:\n${order.items?.map(i => `• ${i.product_name} x${i.quantity} – ₵${(i.price * i.quantity).toFixed(2)}`).join('\n')}\n\nOrder is now confirmed and visible to the customer.`
-      });
-
       // Estimate delivery days based on city
       const cityLower = (order.city || '').toLowerCase();
       let deliveryDays = '3–7 business days';

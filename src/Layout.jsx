@@ -347,11 +347,11 @@ export default function Layout({ children, currentPageName }) {
                 </Button>
               </Link>
               <Link to={createPageUrl('Cart')} className="relative">
-                <Button variant="ghost" size="icon" className="text-white hover:bg-orange-600">
+                <Button variant="ghost" size="icon" className="text-white hover:bg-orange-600 relative">
                   <ShoppingCart className="h-6 w-6" />
                   {cartCount > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-white text-orange-600 text-xs font-bold">
-                      {cartCount}
+                    <Badge className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center p-0 bg-white text-orange-600 text-xs font-bold">
+                      {cartCount > 99 ? '99+' : cartCount}
                     </Badge>
                   )}
                 </Button>

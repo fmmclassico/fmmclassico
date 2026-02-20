@@ -35,12 +35,18 @@ export default function Checkout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // Read delivery selection passed from Cart via URL params
+  const urlParams = new URLSearchParams(window.location.search);
+  const cartZoneId = urlParams.get('zone') || '';
+  const cartZoneName = urlParams.get('zoneName') ? decodeURIComponent(urlParams.get('zoneName')) : '';
+  const cartZoneFee = urlParams.get('fee') !== null ? Number(urlParams.get('fee')) : null;
+
   const [formData, setFormData] = useState({
     customer_name: '',
     customer_phone: '',
     delivery_address: '',
     city: '',
-    delivery_location: '',
+    delivery_location: cartZoneId,
     notes: '',
   });
 
@@ -69,54 +75,43 @@ export default function Checkout() {
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
 
-  // Auto-detect location from city/town field
-  const detectLocation = () => {
-    const city = formData.city?.toLowerCase().trim() || '';
-    if (!city) return formData.delivery_location || '';
-    if (city.includes('umat')) return 'umat';
-    if (city.includes('tarkwa')) return 'tarkwa';
-    const accraKeywords = ['accra','ashongman','airport','east legon','legon','adenta','madina','tema','spintex','achimota','lapaz','kasoa','teshie','nungua','osu','labone','cantonments','dansoman','circle','community','weija','dome','pokuase','abeka','greater accra'];
-    if (accraKeywords.some(k => city.includes(k))) return 'accra';
-    if (city.length > 0) return 'other';
-    return formData.delivery_location || '';
-  };
-
-  // Delivery fee logic based on auto-detected location from city
+  // If cart passed a delivery zone, use that fee directly; otherwise auto-detect from city
   const getDeliveryFee = () => {
-    const loc = detectLocation();
-    const city = formData.city?.toLowerCase() || '';
-    if (loc === 'umat') return 10; // doorstep; pickup/meeting point is free
-    if (loc === 'tarkwa') {
-      return subtotal >= 300 ? 0 : 25;
+    if (cartZoneFee !== null && cartZoneId) return cartZoneFee;
+    const city = formData.city?.toLowerCase().trim() || '';
+    if (!city) return 0;
+    if (city.includes('umat')) return 10;
+    if (city.includes('tarkwa')) return subtotal >= 300 ? 0 : 25;
+    const accraAreaFees = [
+      { keywords: ['ashongman'], fee: 0 },
+      { keywords: ['airport residential','airport'], fee: 22 },
+      { keywords: ['east legon'], fee: 30 },
+      { keywords: ['madina'], fee: 30 },
+      { keywords: ['adenta'], fee: 35 },
+      { keywords: ['accra mall'], fee: 25 },
+      { keywords: ['osu'], fee: 30 },
+      { keywords: ['circle'], fee: 30 },
+      { keywords: ['accra station','station'], fee: 35 },
+      { keywords: ['makola'], fee: 35 },
+      { keywords: ['spintex'], fee: 40 },
+      { keywords: ['accra','tema','lapaz','kasoa','teshie','nungua','labone','cantonments','dansoman','dome','pokuase','abeka','weija'], fee: 50 },
+    ];
+    for (const entry of accraAreaFees) {
+      if (entry.keywords.some(k => city.includes(k))) return entry.fee;
     }
-    if (loc === 'accra') {
-      const accraAreaFees = [
-        { keywords: ['ashongman'], fee: 0 },
-        { keywords: ['airport residential','airport'], fee: 22 },
-        { keywords: ['east legon'], fee: 30 },
-        { keywords: ['madina'], fee: 30 },
-        { keywords: ['adenta'], fee: 35 },
-        { keywords: ['accra mall'], fee: 25 },
-        { keywords: ['osu'], fee: 30 },
-        { keywords: ['circle'], fee: 30 },
-        { keywords: ['accra station','station'], fee: 35 },
-        { keywords: ['makola'], fee: 35 },
-        { keywords: ['spintex'], fee: 40 },
-      ];
-      for (const entry of accraAreaFees) {
-        if (entry.keywords.some(k => city.includes(k))) return entry.fee;
-      }
-      return 50;
-    }
-    if (loc === 'other') {
-      return subtotal >= 500 ? 0 : 50;
-    }
-    return 0;
+    return subtotal >= 500 ? 0 : 50;
   };
 
-  const detectedLoc = detectLocation();
   const shipping = getDeliveryFee();
   const total = subtotal + shipping;
+
+  const getShippingDisplayLabel = () => {
+    if (cartZoneId && cartZoneName) {
+      return `${cartZoneName} – ${shipping === 0 ? 'FREE' : `₵${shipping}`}`;
+    }
+    if (!formData.city) return 'Enter city/town to calculate';
+    return shipping === 0 ? 'FREE' : `₵${shipping}`;
+  };
 
   const getShippingLabel = () => {
     if (!formData.city) return 'Enter city/town to calculate';

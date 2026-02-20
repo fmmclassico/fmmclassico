@@ -26,6 +26,15 @@ export default function Payment() {
   const amountRaw = urlParams.get('amount');
   const amount = amountRaw ? parseFloat(amountRaw) : 0;
 
+  // Validate amount > 0 to prevent payment processing issues
+  if (amount <= 0) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <p className="text-red-500 font-semibold">Invalid order amount. Please return to checkout and try again.</p>
+      </div>
+    );
+  }
+
   const amountPesewas = Math.round(amount * 100);
   const paystackUrl = `${PAYSTACK_BASE}?amount=${amountPesewas}`;
 

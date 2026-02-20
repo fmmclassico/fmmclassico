@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { base44 } from '@/api/base44Client';
@@ -98,6 +97,23 @@ export default function Layout({ children, currentPageName }) {
   ];
 
 
+
+  // SEO: set page title and meta tags
+  useEffect(() => {
+    document.title = 'FMMClassico – Premium Phone Accessories, Electronics & Home Appliances in Ghana';
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) { metaDesc = document.createElement('meta'); metaDesc.name = 'description'; document.head.appendChild(metaDesc); }
+    metaDesc.content = 'FMMClassico offers premium phone accessories, electronic appliances and home appliances in Ghana. Shop phone cases, chargers, earphones, smart watches and more. Locations in Tarkwa (UMAT Campus) and Accra (Ashongman Estate). Search FMMCLASSICO.';
+    let metaKw = document.querySelector('meta[name="keywords"]');
+    if (!metaKw) { metaKw = document.createElement('meta'); metaKw.name = 'keywords'; document.head.appendChild(metaKw); }
+    metaKw.content = 'FMMCLASSICO, FMM Classico, phone accessories Ghana, chargers Ghana, earphones Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa, UMAT, Accra, Ashongman, phone cases';
+    let ogTitle = document.querySelector('meta[property="og:title"]');
+    if (!ogTitle) { ogTitle = document.createElement('meta'); ogTitle.setAttribute('property','og:title'); document.head.appendChild(ogTitle); }
+    ogTitle.content = 'FMMClassico – Premium Phone Accessories & Electronics in Ghana';
+    let ogDesc = document.querySelector('meta[property="og:description"]');
+    if (!ogDesc) { ogDesc = document.createElement('meta'); ogDesc.setAttribute('property','og:description'); document.head.appendChild(ogDesc); }
+    ogDesc.content = 'Shop premium phone accessories, electronics and home appliances at FMMClassico. Serving Tarkwa (UMAT Campus) and Accra (Ashongman Estate). Search FMMCLASSICO online.';
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">

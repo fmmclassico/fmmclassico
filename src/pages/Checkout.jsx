@@ -310,40 +310,17 @@ export default function Checkout() {
                   />
                 </div>
                 
-                {/* Delivery Location Selection */}
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Delivery Location *</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {[
-                      { id: 'umat', label: 'UMAT Campus', sub: 'FREE - Instant' },
-                      { id: 'tarkwa', label: 'Tarkwa (Outside UMAT)', sub: '₵25 - Instant' },
-                      { id: 'accra', label: 'Within Accra', sub: '1-2 days' },
-                      { id: 'other', label: 'Other Location', sub: '2-3 days' },
-                    ].map((loc) => (
-                      <button
-                        key={loc.id}
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, delivery_location: loc.id }))}
-                        className={`p-3 rounded-lg border-2 text-left transition-all ${
-                          formData.delivery_location === loc.id 
-                            ? 'border-orange-500 bg-orange-50' 
-                            : 'border-gray-200 hover:border-orange-200'
-                        }`}
-                      >
-                        <span className="block font-medium text-sm text-gray-800">{loc.label}</span>
-                        <span className="block text-xs text-gray-500">{loc.sub}</span>
-                      </button>
-                    ))}
-                  </div>
+                {/* Delivery fee note */}
+                <div className="md:col-span-2 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-800">
+                  <strong>📦 Free Delivery on UMAT Campus only.</strong> Tarkwa (outside UMAT): ₵25 (free on orders over ₵300). Within Accra: ₵10–₵45 via Yango. Outside Accra/Tarkwa: ₵50 (free on orders over ₵500).
                 </div>
 
-                {formData.delivery_location === 'accra' && (
-                  <div className="md:col-span-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-700">
-                      <strong>Accra Delivery:</strong> We use Yango for delivery within Accra. 
-                      Pickup from Ashongman Estate or Airport Residential Area. 
-                      Please check <a href="https://yango.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">Yango app</a> for exact delivery rates to your location.
-                    </p>
+                {formData.city && (
+                  <div className={`md:col-span-2 p-3 rounded-lg border text-sm font-medium ${shipping === 0 ? 'bg-green-50 border-green-300 text-green-700' : 'bg-blue-50 border-blue-200 text-blue-700'}`}>
+                    📍 Detected location: <strong>{detectedLoc === 'umat' ? 'UMAT Campus' : detectedLoc === 'tarkwa' ? 'Tarkwa' : detectedLoc === 'accra' ? `Within Accra (${formData.city})` : `Other – ${formData.city}`}</strong> → Delivery fee: <strong>{getShippingLabel()}</strong>
+                    {detectedLoc === 'accra' && (
+                      <span className="block mt-1 text-xs text-blue-600">We use Yango for Accra deliveries. Pickup from Ashongman Estate / Airport Residential.</span>
+                    )}
                   </div>
                 )}
 

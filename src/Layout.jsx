@@ -154,6 +154,20 @@ export default function Layout({ children, currentPageName }) {
     if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical); }
     canonical.href = window.location.origin;
 
+    // Bing/Yahoo verification placeholder (add your own verification code if needed)
+    setMeta('name', 'msvalidate.01', '');
+    setMeta('name', 'yandex-verification', '');
+
+    // Prompt search engines to index
+    let pingGoogle = document.querySelector('#ping-google');
+    if (!pingGoogle) {
+      pingGoogle = document.createElement('link');
+      pingGoogle.id = 'ping-google';
+      pingGoogle.rel = 'preconnect';
+      pingGoogle.href = 'https://www.google.com';
+      document.head.appendChild(pingGoogle);
+    }
+
     let jsonLd = document.querySelector('#fmm-jsonld');
     if (!jsonLd) { jsonLd = document.createElement('script'); jsonLd.id = 'fmm-jsonld'; jsonLd.type = 'application/ld+json'; document.head.appendChild(jsonLd); }
     jsonLd.textContent = JSON.stringify({

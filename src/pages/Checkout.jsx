@@ -120,7 +120,7 @@ export default function Checkout() {
 
   const getShippingLabel = () => {
     if (!formData.city) return 'Enter city/town to calculate';
-    if (detectedLoc === 'umat') return 'FREE (UMAT Campus)';
+    if (detectedLoc === 'umat') return '₵10 doorstep (FREE for pickup/meeting point on campus)';
     if (detectedLoc === 'tarkwa' && subtotal >= 300) return 'FREE (order over ₵300)';
     if (detectedLoc === 'other' && subtotal >= 500) return 'FREE (order over ₵500)';
     if (detectedLoc === 'accra') return `₵${shipping} (Yango estimate to ${formData.city})`;

@@ -282,17 +282,23 @@ export default function Cart() {
             </div>
 
             <Button 
-              className="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white font-bold py-6 text-lg"
+              className={`w-full mt-6 font-bold py-6 text-lg ${selectedZone ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+              disabled={!selectedZone}
               onClick={() => {
-                const params = selectedZone
-                  ? `?zone=${selectedZone.id}&zoneName=${encodeURIComponent(selectedZone.label)}&fee=${selectedZone.fee}`
-                  : '';
+                if (!selectedZone) {
+                  toast.error('Please select your delivery location first');
+                  return;
+                }
+                const params = `?zone=${selectedZone.id}&zoneName=${encodeURIComponent(selectedZone.label)}&fee=${selectedZone.fee}`;
                 navigate(createPageUrl('Checkout') + params);
               }}
             >
               Proceed to Checkout
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
+            {!selectedZone && (
+              <p className="text-xs text-center text-red-500 mt-2 font-medium">⚠️ Please select a delivery location to continue</p>
+            )}
 
             <Link to={createPageUrl('Shop')}>
               <Button variant="ghost" className="w-full mt-2">

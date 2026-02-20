@@ -2,37 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
-import { Bell, Package, CheckCircle2, Clock, Truck, ChevronRight } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Bell, Package, CheckCircle2, Clock, Truck, ChevronRight, Check } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from 'framer-motion';
 
-const statusConfig = {
-  pending: { icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-50', label: 'Awaiting Payment' },
-  confirmed: { icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50', label: 'Payment Confirmed' },
-  processing: { icon: Package, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Processing' },
-  shipped: { icon: Truck, color: 'text-purple-500', bg: 'bg-purple-50', label: 'Shipped' },
-  in_transit: { icon: Truck, color: 'text-orange-500', bg: 'bg-orange-50', label: 'On the Way' },
-  delivered: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', label: 'Delivered' },
-  cancelled: { icon: Clock, color: 'text-red-500', bg: 'bg-red-50', label: 'Cancelled' },
-};
-
-const getStatusMessage = (status, orderNumber) => {
-  switch (status) {
-    case 'pending': return `Order ${orderNumber} is awaiting payment confirmation from FMM CLASSICO.`;
-    case 'confirmed': return `✅ Payment confirmed for order ${orderNumber}! Your order is now placed.`;
-    case 'processing': return `📦 Order ${orderNumber} is being prepared for dispatch.`;
-    case 'shipped': return `🚚 Order ${orderNumber} has been shipped and is on its way!`;
-    case 'in_transit': return `🛵 Order ${orderNumber} is out for delivery. Expect it soon!`;
-    case 'delivered': return `🎉 Order ${orderNumber} has been delivered. Enjoy your purchase!`;
-    case 'cancelled': return `Order ${orderNumber} has been cancelled.`;
-    default: return `Order ${orderNumber} status updated.`;
-  }
+const typeConfig = {
+  order_placed: { icon: Package, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Order Placed' },
+  payment_confirmed: { icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50', label: 'Payment Confirmed' },
+  payment_pending: { icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-50', label: 'Awaiting Verification' },
+  order_processing: { icon: Package, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Processing' },
+  order_shipped: { icon: Truck, color: 'text-purple-500', bg: 'bg-purple-50', label: 'Shipped' },
+  order_delivered: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', label: 'Delivered' },
+  order_cancelled: { icon: Clock, color: 'text-red-500', bg: 'bg-red-50', label: 'Cancelled' },
+  delivery_update: { icon: Truck, color: 'text-orange-500', bg: 'bg-orange-50', label: 'Delivery Update' },
+  general: { icon: Bell, color: 'text-gray-500', bg: 'bg-gray-50', label: 'Notice' },
 };
 
 export default function Notifications() {
   const [user, setUser] = useState(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const getUser = async () => {
@@ -49,39 +40,38 @@ export default function Notifications() {
 
   const isAdmin = user?.role === 'admin';
 
-  const { data: orders = [], isLoading } = useQuery({
-    queryKey: ['orders-notifications', user?.email, isAdmin],
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: ['notifications', user?.email],
     queryFn: () => isAdmin
-      ? base44.entities.Order.list('-updated_date', 50)
-      : base44.entities.Order.filter({ customer_email: user.email }, '-updated_date', 20),
+      ? base44.entities.Notification.list('-created_date', 100)
+      : base44.entities.Notification.filter({ user_email: user.email }, '-created_date', 50),
     enabled: !!user?.email,
-    refetchInterval: 20000, // Auto-refresh every 20s
+    refetchInterval: 15000,
   });
 
-  // Admin sees payment alerts first
-  const paymentClaimed = isAdmin
+  // Also fetch orders for admin payment alerts
+  const { data: orders = [] } = useQuery({
+    queryKey: ['orders-admin-alerts', isAdmin],
+    queryFn: () => base44.entities.Order.list('-updated_date', 50),
+    enabled: !!isAdmin,
+  });
+
+  const paymentAlerts = isAdmin
     ? orders.filter(o => o.status === 'pending' && o.tracking_updates?.some(t => t.status === 'Payment Claimed'))
     : [];
 
-  const notifications = orders.flatMap(order => {
-    const events = [];
-    events.push({
-      id: order.id + '-status',
-      orderId: order.id,
-      orderNumber: order.order_number,
-      status: order.status,
-      customerName: order.customer_name,
-      customerPhone: order.customer_phone,
-      totalAmount: order.total_amount,
-      message: isAdmin
-        ? `${order.customer_name} (${order.customer_phone}) – ₵${order.total_amount?.toFixed(2)} – ${getStatusMessage(order.status, order.order_number)}`
-        : getStatusMessage(order.status, order.order_number),
-      time: order.updated_date,
-      isNew: order.status === 'confirmed' || order.status === 'in_transit' || order.status === 'delivered' || (isAdmin && paymentClaimed.some(p => p.id === order.id)),
-      isPaymentAlert: isAdmin && paymentClaimed.some(p => p.id === order.id),
-    });
-    return events;
+  const markReadMutation = useMutation({
+    mutationFn: (id) => base44.entities.Notification.update(id, { is_read: true }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
+
+  const markAllRead = async () => {
+    const unread = notifications.filter(n => !n.is_read);
+    await Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { is_read: true })));
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  };
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (!user) {
     return (
@@ -93,25 +83,37 @@ export default function Notifications() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-2xl">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 bg-orange-100 rounded-full">
-          <Bell className="h-6 w-6 text-orange-600" />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-orange-100 rounded-full relative">
+            <Bell className="h-6 w-6 text-orange-600" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {unreadCount}
+              </span>
+            )}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Notifications</h1>
+            <p className="text-sm text-gray-500">{unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Notifications</h1>
-          <p className="text-sm text-gray-500">{isAdmin ? 'All orders & payment alerts' : 'Your order updates & payment confirmations'}</p>
-        </div>
+        {unreadCount > 0 && (
+          <Button variant="outline" size="sm" onClick={markAllRead} className="text-orange-600 border-orange-200">
+            <Check className="h-4 w-4 mr-1" /> Mark all read
+          </Button>
+        )}
       </div>
 
       {/* Admin Payment Alert Banner */}
-      {isAdmin && paymentClaimed.length > 0 && (
+      {isAdmin && paymentAlerts.length > 0 && (
         <div className="mb-4 p-4 bg-red-50 border-2 border-red-400 rounded-xl flex items-start gap-3">
           <span className="text-2xl animate-bounce">🔔</span>
           <div>
-            <p className="font-bold text-red-700">Payment Alert! {paymentClaimed.length} customer{paymentClaimed.length > 1 ? 's' : ''} clicked "Payment Completed"</p>
+            <p className="font-bold text-red-700">Payment Alert! {paymentAlerts.length} customer{paymentAlerts.length > 1 ? 's' : ''} clicked "Payment Completed"</p>
             <p className="text-sm text-red-600 mt-1">Check Paystack and confirm in <Link to={createPageUrl('AdminOrders')} className="underline font-bold">Admin Orders</Link>.</p>
             <div className="mt-2 space-y-1">
-              {paymentClaimed.map(o => (
+              {paymentAlerts.map(o => (
                 <p key={o.id} className="text-sm text-red-700">• <strong>{o.customer_name}</strong> – ₵{o.total_amount?.toFixed(2)} – 📞 {o.customer_phone}</p>
               ))}
             </div>
@@ -121,9 +123,7 @@ export default function Notifications() {
 
       {isLoading ? (
         <div className="space-y-3">
-          {Array(4).fill(0).map((_, i) => (
-            <Skeleton key={i} className="h-20 rounded-xl" />
-          ))}
+          {Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
         </div>
       ) : notifications.length === 0 ? (
         <div className="text-center py-16">
@@ -137,36 +137,42 @@ export default function Notifications() {
       ) : (
         <div className="space-y-3">
           {notifications.map((notif, i) => {
-            const config = statusConfig[notif.status] || statusConfig.pending;
+            const config = typeConfig[notif.type] || typeConfig.general;
             const Icon = config.icon;
             return (
               <motion.div
                 key={notif.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
+                transition={{ delay: i * 0.04 }}
               >
-                <Link to={createPageUrl(isAdmin ? `AdminOrders` : `OrderTracking?id=${notif.orderId}`)}>
-                  <div className={`flex items-start gap-4 p-4 rounded-xl border ${notif.isPaymentAlert ? 'border-red-300 bg-red-50' : notif.isNew ? 'border-orange-200 bg-orange-50' : 'border-gray-100 bg-white'} hover:shadow-md transition-all`}>
-                    <div className={`p-2 rounded-full ${config.bg} flex-shrink-0`}>
-                      <Icon className={`h-5 w-5 ${config.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        {notif.isPaymentAlert && <Badge className="text-xs bg-red-500">🔔 Payment Alert</Badge>}
-                        <Badge className={`text-xs ${notif.isPaymentAlert ? 'bg-red-400' : notif.isNew ? 'bg-orange-500' : 'bg-gray-400'}`}>
-                          {config.label}
-                        </Badge>
-                        {notif.isNew && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />}
-                      </div>
-                      <p className="text-sm text-gray-700">{notif.message}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {new Date(notif.time).toLocaleString()}
-                      </p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0 mt-1" />
+                <div
+                  className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${!notif.is_read ? 'border-orange-200 bg-orange-50' : 'border-gray-100 bg-white'}`}
+                  onClick={() => { if (!notif.is_read) markReadMutation.mutate(notif.id); }}
+                >
+                  <div className={`p-2 rounded-full ${config.bg} flex-shrink-0`}>
+                    <Icon className={`h-5 w-5 ${config.color}`} />
                   </div>
-                </Link>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <Badge className={`text-xs ${!notif.is_read ? 'bg-orange-500' : 'bg-gray-400'}`}>
+                        {config.label}
+                      </Badge>
+                      {!notif.is_read && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />}
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800">{notif.title}</p>
+                    <p className="text-sm text-gray-600 mt-0.5">{notif.message}</p>
+                    <p className="text-xs text-gray-400 mt-1">{new Date(notif.created_date).toLocaleString()}</p>
+                  </div>
+                  {notif.order_id && (
+                    <Link
+                      to={createPageUrl(isAdmin ? 'AdminOrders' : `OrderTracking?id=${notif.order_id}`)}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <ChevronRight className="h-4 w-4 text-gray-400 mt-1 hover:text-orange-500" />
+                    </Link>
+                  )}
+                </div>
               </motion.div>
             );
           })}
@@ -174,7 +180,7 @@ export default function Notifications() {
       )}
 
       <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
-        <strong>💡 Tip:</strong> When FMM CLASSICO confirms your payment, your order status will update here and you'll also receive an SMS on the phone number you used for checkout.
+        <strong>💡 Tip:</strong> All order updates (payment confirmed, shipped, delivered) will appear here instantly. You'll also receive email alerts to your registered email.
       </div>
     </div>
   );

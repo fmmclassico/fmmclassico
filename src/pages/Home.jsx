@@ -68,7 +68,7 @@ export default function Home() {
   const categories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers', 'smart_watches', 'electronic_appliances', 'home_appliances'];
 
   const features = [
-    { icon: Truck, title: 'Free Delivery on UMAT Campus', desc: 'Free delivery on UMAT campus only. Tarkwa: ₵25 (free over ₵300). Accra: ₵25–₵40. Other: ₵50 (free over ₵500).' },
+    { icon: Truck, title: 'Fast Delivery', desc: 'Same-day delivery in Tarkwa & Accra. Free on UMAT Campus.' },
     { icon: Shield, title: 'Quality Guarantee', desc: '100% authentic products' },
     { icon: Clock, title: '24/7 Support', desc: 'Always here to help' },
     { icon: CreditCard, title: 'Secure Payment', desc: 'Safe transactions' },

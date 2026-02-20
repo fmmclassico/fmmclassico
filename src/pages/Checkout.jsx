@@ -194,43 +194,7 @@ export default function Checkout() {
     navigate(createPageUrl(`Payment?orderId=${newOrder.id}&orderNumber=${orderNumber}&amount=${total.toFixed(2)}`));
   };
 
-  const handlePaymentCompleted = async () => {
-    setPaymentClicked(true);
-    // Update order with payment_claimed tracking
-    if (orderId) {
-      await base44.entities.Order.update(orderId, {
-        tracking_updates: [
-          ...(orderData?.tracking_updates || []),
-          {
-            status: 'Payment Claimed',
-            message: 'Customer clicked "Payment Completed" - awaiting FMM CLASSICO verification',
-            timestamp: new Date().toISOString()
-          }
-        ]
-      });
-    }
-    // Notify owner via LLM (sends email alert since SMS requires backend functions)
-    const customerPhone = orderData?.customer_phone || 'N/A';
-    const customerName = orderData?.customer_name || 'Customer';
-    const amount = orderData?.total_amount || 'N/A';
-    await Promise.all([
-      base44.integrations.Core.SendEmail({
-        to: 'fmmclassico@gmail.com',
-        subject: `💳 PAYMENT COMPLETED - ${customerName} (${customerPhone})`,
-        body: `A customer has clicked "Payment Completed" on the FMM CLASSICO app.\n\nCustomer: ${customerName}\nPhone: ${customerPhone}\nOrder Total: ₵${amount}\nOrder #: ${orderData?.order_number}\n\nPlease verify payment on Paystack and confirm the order.`
-      }),
-      // Notify customer on website
-      base44.entities.Notification.create({
-        user_email: user.email,
-        title: '⏳ Payment Being Verified',
-        message: `We received your payment claim for order #${orderData?.order_number}. FMM CLASSICO is verifying your payment. You'll get a confirmation notification here within 2–5 minutes.`,
-        type: 'payment_pending',
-        order_id: orderId,
-        order_number: orderData?.order_number,
-        is_read: false
-      })
-    ]);
-  };
+
 
   if (!user) {
     return (

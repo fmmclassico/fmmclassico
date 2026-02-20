@@ -53,6 +53,7 @@ import Cart from './pages/Cart';
 import Categories from './pages/Categories';
 import Chat from './pages/Chat';
 import Checkout from './pages/Checkout';
+import Feedback from './pages/Feedback';
 import Home from './pages/Home';
 import Notifications from './pages/Notifications';
 import OrderTracking from './pages/OrderTracking';
@@ -60,7 +61,6 @@ import Orders from './pages/Orders';
 import ProductDetail from './pages/ProductDetail';
 import Settings from './pages/Settings';
 import Shop from './pages/Shop';
-import Feedback from './pages/Feedback';
 import __Layout from './Layout.jsx';
 
 
@@ -71,6 +71,7 @@ export const PAGES = {
     "Categories": Categories,
     "Chat": Chat,
     "Checkout": Checkout,
+    "Feedback": Feedback,
     "Home": Home,
     "Notifications": Notifications,
     "OrderTracking": OrderTracking,
@@ -78,7 +79,6 @@ export const PAGES = {
     "ProductDetail": ProductDetail,
     "Settings": Settings,
     "Shop": Shop,
-    "Feedback": Feedback,
 }
 
 export const pagesConfig = {

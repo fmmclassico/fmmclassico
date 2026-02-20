@@ -38,11 +38,11 @@ export default function DeliveryInfoModal({ trigger }) {
             <ul className="space-y-2 text-sm text-green-700">
               <li className="flex items-start gap-2">
                 <span className="font-semibold text-green-600">FREE</span>
-                <span>- Delivery within UMAT Campus (meeting point/pickup)</span>
+                <span>- UMAT Campus only (meeting point/pickup) — <em>no minimum order</em></span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="font-semibold">₵25</span>
-                <span>- Delivery within Tarkwa (outside UMAT)</span>
+                <span>- Within Tarkwa (outside UMAT). FREE on orders over ₵300</span>
               </li>
             </ul>
             <div className="mt-3 flex items-center gap-2 text-xs text-green-600">
@@ -82,8 +82,8 @@ export default function DeliveryInfoModal({ trigger }) {
             </div>
             <ul className="space-y-2 text-sm text-orange-700">
               <li className="flex items-start gap-2">
-                <span className="font-semibold">₵30 - ₵50</span>
-                <span>- Depending on location and item size</span>
+                <span className="font-semibold">₵50</span>
+                <span>- Standard delivery to other locations. FREE on orders over ₵500</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="font-semibold">₵30 - ₵45</span>

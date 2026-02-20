@@ -48,6 +48,19 @@ export default function Payment() {
     select: (data) => data?.[0],
   });
 
+  // Auto-detect when admin confirms payment and show success to customer
+  useEffect(() => {
+    if (!orderId || !paymentClicked) return;
+    const unsubscribe = base44.entities.Order.subscribe((event) => {
+      if (event.id === orderId && event.data?.status === 'confirmed') {
+        setPaymentConfirmedByAdmin(true);
+      }
+    });
+    return unsubscribe;
+  }, [orderId, paymentClicked]);
+
+  const [paymentConfirmedByAdmin, setPaymentConfirmedByAdmin] = useState(false);
+
   const handlePaymentCompleted = async () => {
     if (!orderId || !user) return;
     setIsSubmitting(true);

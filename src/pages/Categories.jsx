@@ -14,9 +14,9 @@ const phoneSubCategories = [
 const categories = [
   { 
     id: 'phone_cases', 
-    name: 'Phones & Accessories', 
+    name: 'Phones', 
     desc: 'iPhones, Samsung, Android & more',
-    image: 'https://images.unsplash.com/photo-1601593346740-925612772716?w=600',
+    image: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=600',
     color: 'from-pink-500 to-rose-500',
     hasSubcategories: true
   },

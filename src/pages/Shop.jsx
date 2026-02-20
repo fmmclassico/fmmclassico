@@ -77,9 +77,16 @@ export default function Shop() {
           user_email: user.email
         });
       }
+      // Deduct stock
+      if (product.stock != null) {
+        await base44.entities.Product.update(product.id, {
+          stock: Math.max(0, product.stock - 1)
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Added to cart!');
     }
   });

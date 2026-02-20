@@ -129,14 +129,15 @@ export default function Checkout() {
     }
 
     setIsSubmitting(true);
-    // Open Paystack immediately so browser doesn't block popup
+
+    // Open Paystack IMMEDIATELY (must be triggered directly from click, not after async)
     const paystackWindow = window.open(PAYSTACK_LINK, '_blank');
 
     const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
     const estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
 
-    const orderData = {
+    const builtOrderData = {
       order_number: orderNumber,
       items: cartItems.map(item => ({
         product_id: item.product_id,
@@ -161,15 +162,19 @@ export default function Checkout() {
       }]
     };
 
-    const newOrder = await base44.entities.Order.create(orderData);
+    // Create order first so customer sees it immediately
+    const newOrder = await base44.entities.Order.create(builtOrderData);
     
-    // Clear cart + send order placed notification in parallel
-    await Promise.all([
+    // Clear cart immediately and redirect customer to My Orders
+    queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+    
+    // Fire-and-forget: clear cart + notifications + email (non-blocking)
+    Promise.all([
       ...cartItems.map(item => base44.entities.CartItem.delete(item.id)),
       base44.entities.Notification.create({
         user_email: user.email,
-        title: '🛍️ Order Placed Successfully',
-        message: `Your order #${orderNumber} has been placed and is awaiting payment confirmation. Total: ₵${total.toFixed(2)}`,
+        title: '🛍️ Order Placed – Pay on Paystack',
+        message: `Your order #${orderNumber} is placed! Complete payment on Paystack then click "Payment Completed". Total: ₵${total.toFixed(2)}`,
         type: 'order_placed',
         order_id: newOrder.id,
         order_number: orderNumber,
@@ -178,20 +183,25 @@ export default function Checkout() {
       base44.integrations.Core.SendEmail({
         to: user.email,
         subject: `🛍️ Order Placed – FMM CLASSICO #${orderNumber}`,
-        body: `Hi ${formData.customer_name},\n\nYour order #${orderNumber} has been placed successfully on FMM CLASSICO!\n\nOrder Total: ₵${total.toFixed(2)}\nDelivery Address: ${formData.delivery_address}, ${formData.city}\n\nNext step: Complete your payment on Paystack, then click "Payment Completed". We will verify and confirm your order within 2–5 minutes.\n\nYou can track your order on the website under "My Orders".\n\nThank you for shopping with FMM CLASSICO!\n📞 Contact: 0599676419`
+        body: `Hi ${formData.customer_name},\n\nYour order #${orderNumber} has been placed!\n\nOrder Total: ₵${total.toFixed(2)}\nDelivery Address: ${formData.delivery_address}, ${formData.city}\n\nPlease complete your payment on Paystack (the page opened in your browser). Then go to My Orders and click "I've Paid".\n\nThank you!\n📞 FMM CLASSICO: 0599676419`
+      }),
+      base44.integrations.Core.SendEmail({
+        to: 'fmmclassico@gmail.com',
+        subject: `🆕 NEW ORDER – ${formData.customer_name} | ₵${total.toFixed(2)}`,
+        body: `New order on FMM CLASSICO!\n\n📦 Order: ${orderNumber}\n👤 Customer: ${formData.customer_name}\n📧 Email: ${user.email}\n📞 Phone: ${formData.customer_phone}\n💰 Total: ₵${total.toFixed(2)}\n📍 Address: ${formData.delivery_address}, ${formData.city}\n\nItems:\n${cartItems.map(i => `• ${i.product_name} x${i.quantity} – ₵${(i.product_price * i.quantity).toFixed(2)}`).join('\n')}`
       })
     ]);
-    
-    queryClient.invalidateQueries({ queryKey: ['cartItems'] });
-    
-    setOrderId(newOrder.id);
-    setOrderData(orderData);
-    setIsSubmitting(false);
-    setOrderSuccess(true);
 
-    // If popup was blocked, open again
+    // Redirect to My Orders immediately
+    setIsSubmitting(false);
+    toast.success('Order placed! Complete your payment on Paystack.');
+    navigate(createPageUrl(`Orders`));
+
+    // If Paystack popup was blocked, alert customer
     if (!paystackWindow || paystackWindow.closed) {
-      window.open(PAYSTACK_LINK, '_blank');
+      setTimeout(() => {
+        window.open(PAYSTACK_LINK, '_blank');
+      }, 500);
     }
   };
 

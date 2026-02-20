@@ -113,16 +113,7 @@ export default function Checkout() {
     return shipping === 0 ? 'FREE' : `₵${shipping}`;
   };
 
-  const getShippingLabel = () => {
-    if (!formData.city) return 'Enter city/town to calculate';
-    if (detectedLoc === 'umat') return '₵10 doorstep (FREE for pickup/meeting point on campus)';
-    if (detectedLoc === 'tarkwa' && subtotal >= 300) return 'FREE (order over ₵300)';
-    if (detectedLoc === 'other' && subtotal >= 500) return 'FREE (order over ₵500)';
-    if (detectedLoc === 'accra') return `₵${shipping} (Yango estimate to ${formData.city})`;
-    if (detectedLoc === 'tarkwa') return `₵${shipping} (Tarkwa – free over ₵300)`;
-    if (detectedLoc === 'other') return `₵${shipping} (Outside Accra/Tarkwa – free over ₵500)`;
-    return `₵${shipping}`;
-  };
+  const getShippingLabel = () => getShippingDisplayLabel();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

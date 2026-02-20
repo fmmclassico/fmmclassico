@@ -414,12 +414,14 @@ export default function Layout({ children, currentPageName }) {
             <span className="text-xs mt-1">Categories</span>
           </Link>
           <Link to={createPageUrl('Cart')} className={`flex flex-col items-center p-2 relative ${currentPageName === 'Cart' ? 'text-orange-500' : 'text-gray-500'}`}>
-            <ShoppingCart className="h-5 w-5" />
-            {cartCount > 0 && (
-              <Badge className="absolute -top-0 right-2 h-4 w-4 flex items-center justify-center p-0 bg-orange-500 text-white text-[10px]">
-                {cartCount}
-              </Badge>
-            )}
+            <div className="relative">
+              <ShoppingCart className="h-6 w-6" />
+              {cartCount > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-orange-500 text-white text-[11px] font-bold">
+                  {cartCount > 9 ? '9+' : cartCount}
+                </Badge>
+              )}
+            </div>
             <span className="text-xs mt-1">Cart</span>
           </Link>
           <Link to={createPageUrl('Notifications')} className={`flex flex-col items-center p-2 ${currentPageName === 'Notifications' ? 'text-orange-500' : 'text-gray-500'}`}>

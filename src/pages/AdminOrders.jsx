@@ -130,7 +130,18 @@ export default function AdminOrders() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Admin - Manage Orders</h1>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Admin – Manage Orders</h1>
+
+      {/* 🔔 Payment Alert Banner */}
+      {paymentAlerts.length > 0 && (
+        <div className="mb-6 p-4 bg-red-50 border-2 border-red-400 rounded-xl flex items-start gap-3 animate-pulse">
+          <span className="text-2xl">🔔</span>
+          <div>
+            <p className="font-bold text-red-700 text-base">Payment Alert! {paymentAlerts.length} customer{paymentAlerts.length > 1 ? 's' : ''} clicked "Payment Completed"</p>
+            <p className="text-sm text-red-600 mt-1">Please check Paystack and confirm below. Customer names: <strong>{paymentAlerts.map(o => o.customer_name).join(', ')}</strong></p>
+          </div>
+        </div>
+      )}
 
       {/* Pending Payment Orders */}
       <div className="mb-8">

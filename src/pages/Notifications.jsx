@@ -93,15 +93,31 @@ export default function Notifications() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-2xl">
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-4">
         <div className="p-2 bg-orange-100 rounded-full">
           <Bell className="h-6 w-6 text-orange-600" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Notifications</h1>
-          <p className="text-sm text-gray-500">Order updates & payment confirmations</p>
+          <p className="text-sm text-gray-500">{isAdmin ? 'All orders & payment alerts' : 'Your order updates & payment confirmations'}</p>
         </div>
       </div>
+
+      {/* Admin Payment Alert Banner */}
+      {isAdmin && paymentClaimed.length > 0 && (
+        <div className="mb-4 p-4 bg-red-50 border-2 border-red-400 rounded-xl flex items-start gap-3">
+          <span className="text-2xl animate-bounce">🔔</span>
+          <div>
+            <p className="font-bold text-red-700">Payment Alert! {paymentClaimed.length} customer{paymentClaimed.length > 1 ? 's' : ''} clicked "Payment Completed"</p>
+            <p className="text-sm text-red-600 mt-1">Check Paystack and confirm in <Link to={createPageUrl('AdminOrders')} className="underline font-bold">Admin Orders</Link>.</p>
+            <div className="mt-2 space-y-1">
+              {paymentClaimed.map(o => (
+                <p key={o.id} className="text-sm text-red-700">• <strong>{o.customer_name}</strong> – ₵{o.total_amount?.toFixed(2)} – 📞 {o.customer_phone}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">

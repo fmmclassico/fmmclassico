@@ -129,15 +129,42 @@ export default function Notifications() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Notifications</h1>
-            <p className="text-sm text-gray-500">{unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}</p>
+            <p className="text-sm text-gray-500">{selectedNotifs.length > 0 ? `${selectedNotifs.length} selected` : (unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!')}</p>
           </div>
         </div>
-        {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={markAllRead} className="text-orange-600 border-orange-200">
-            <Check className="h-4 w-4 mr-1" /> Mark all read
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {selectedNotifs.length > 0 && (
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={handleDeleteSelected}
+              className="gap-1"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete ({selectedNotifs.length})
+            </Button>
+          )}
+          {unreadCount > 0 && (
+            <Button variant="outline" size="sm" onClick={markAllRead} className="text-orange-600 border-orange-200">
+              <Check className="h-4 w-4 mr-1" /> Mark all read
+            </Button>
+          )}
+        </div>
       </div>
+
+      {notifications.length > 0 && (
+        <div className="mb-4 flex items-center gap-2">
+          <input 
+            type="checkbox" 
+            checked={selectedNotifs.length === notifications.length && notifications.length > 0}
+            onChange={handleSelectAll}
+            className="w-4 h-4 cursor-pointer"
+          />
+          <label className="text-sm font-medium text-gray-600 cursor-pointer">
+            Select All ({selectedNotifs.length}/{notifications.length})
+          </label>
+        </div>
+      )}
 
       {/* Admin Payment Alert Banner */}
       {isAdmin && paymentAlerts.length > 0 && (
@@ -173,6 +200,7 @@ export default function Notifications() {
           {notifications.map((notif, i) => {
             const config = typeConfig[notif.type] || typeConfig.general;
             const Icon = config.icon;
+            const isSelected = selectedNotifs.includes(notif.id);
             return (
               <motion.div
                 key={notif.id}
@@ -181,13 +209,23 @@ export default function Notifications() {
                 transition={{ delay: i * 0.04 }}
               >
                 <div
-                  className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${!notif.is_read ? 'border-orange-200 bg-orange-50' : 'border-gray-100 bg-white'}`}
-                  onClick={() => { if (!notif.is_read) markReadMutation.mutate(notif.id); }}
+                  className={`flex items-start gap-3 p-4 rounded-xl border transition-all hover:shadow-md ${
+                    isSelected ? 'bg-blue-50 border-blue-300' : (!notif.is_read ? 'border-orange-200 bg-orange-50' : 'border-gray-100 bg-white')
+                  }`}
                 >
-                  <div className={`p-2 rounded-full ${config.bg} flex-shrink-0`}>
-                    <Icon className={`h-5 w-5 ${config.color}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
+                  <input 
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => handleToggleSelect(notif.id)}
+                    className="w-4 h-4 mt-1 cursor-pointer flex-shrink-0"
+                  />
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => { if (!notif.is_read && !isSelected) markReadMutation.mutate(notif.id); }}
+                  >
+                    <div className={`p-2 rounded-full ${config.bg} flex-shrink-0 w-fit mb-2`}>
+                      <Icon className={`h-5 w-5 ${config.color}`} />
+                    </div>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <Badge className={`text-xs ${!notif.is_read ? 'bg-orange-500' : 'bg-gray-400'}`}>
                         {config.label}
@@ -212,10 +250,6 @@ export default function Notifications() {
           })}
         </div>
       )}
-
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
-        <strong>💡 Tip:</strong> All order updates (payment confirmed, shipped, delivered) will appear here instantly. You'll also receive email alerts to your registered email.
-      </div>
     </div>
   );
 }

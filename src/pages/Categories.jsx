@@ -1,16 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ChevronDown } from 'lucide-react';
+
+const phoneSubCategories = [
+  { id: 'iphone', name: 'iPhones', desc: 'Apple iPhone accessories' },
+  { id: 'samsung', name: 'Samsung Phones', desc: 'Samsung accessories' },
+  { id: 'android_typec', name: 'Android Type-C', desc: 'Type-C Android accessories' },
+  { id: 'android_general', name: 'Android Phones', desc: 'General Android accessories' },
+];
 
 const categories = [
   { 
     id: 'phone_cases', 
-    name: 'Phone Cases', 
-    desc: 'Protect your phone in style',
+    name: 'Phones & Accessories', 
+    desc: 'iPhones, Samsung, Android & more',
     image: 'https://images.unsplash.com/photo-1601593346740-925612772716?w=600',
-    color: 'from-pink-500 to-rose-500'
+    color: 'from-pink-500 to-rose-500',
+    hasSubcategories: true
   },
   { 
     id: 'chargers', 
@@ -85,6 +93,8 @@ const categories = [
 ];
 
 export default function Categories() {
+  const [phoneExpanded, setPhoneExpanded] = useState(false);
+
   return (
     <div className="container mx-auto px-4 py-6">
       <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Shop by Category</h1>
@@ -97,23 +107,61 @@ export default function Categories() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.08 }}
           >
-            <Link to={createPageUrl(`Shop?category=${cat.id}`)}>
-              <div className="group relative overflow-hidden rounded-2xl h-48 shadow-lg hover:shadow-xl transition-all duration-300">
-                <img
-                  src={cat.image}
-                  alt={cat.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className={`absolute inset-0 bg-gradient-to-r ${cat.color} opacity-70 group-hover:opacity-80 transition-opacity`} />
-                <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                  <h3 className="text-2xl font-bold text-white mb-1">{cat.name}</h3>
-                  <p className="text-white/80 text-sm mb-3">{cat.desc}</p>
-                  <div className="flex items-center text-white font-medium text-sm opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300">
-                    Shop Now <ChevronRight className="h-4 w-4 ml-1" />
+            {cat.hasSubcategories ? (
+              <div>
+                <div
+                  className="group relative overflow-hidden rounded-2xl h-48 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                  onClick={() => setPhoneExpanded(prev => !prev)}
+                >
+                  <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  <div className={`absolute inset-0 bg-gradient-to-r ${cat.color} opacity-70 group-hover:opacity-80 transition-opacity`} />
+                  <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                    <h3 className="text-2xl font-bold text-white mb-1">{cat.name}</h3>
+                    <p className="text-white/80 text-sm mb-3">{cat.desc}</p>
+                    <div className="flex items-center text-white font-medium text-sm">
+                      {phoneExpanded ? 'Hide subcategories' : 'Browse subcategories'}
+                      <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${phoneExpanded ? 'rotate-180' : ''}`} />
+                    </div>
                   </div>
                 </div>
+                {phoneExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="grid grid-cols-2 gap-2 mt-2"
+                  >
+                    {phoneSubCategories.map(sub => (
+                      <Link key={sub.id} to={createPageUrl(`Shop?category=phone_cases&sub=${sub.id}`)}>
+                        <div className="bg-pink-50 border border-pink-200 rounded-xl p-3 hover:bg-pink-100 transition-colors">
+                          <p className="font-semibold text-gray-800 text-sm">{sub.name}</p>
+                          <p className="text-xs text-gray-500">{sub.desc}</p>
+                        </div>
+                      </Link>
+                    ))}
+                    <Link to={createPageUrl(`Shop?category=phone_cases`)}>
+                      <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 hover:bg-rose-100 transition-colors col-span-2">
+                        <p className="font-semibold text-gray-800 text-sm">All Phone Accessories</p>
+                        <p className="text-xs text-gray-500">View everything</p>
+                      </div>
+                    </Link>
+                  </motion.div>
+                )}
               </div>
-            </Link>
+            ) : (
+              <Link to={createPageUrl(`Shop?category=${cat.id}`)}>
+                <div className="group relative overflow-hidden rounded-2xl h-48 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  <div className={`absolute inset-0 bg-gradient-to-r ${cat.color} opacity-70 group-hover:opacity-80 transition-opacity`} />
+                  <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                    <h3 className="text-2xl font-bold text-white mb-1">{cat.name}</h3>
+                    <p className="text-white/80 text-sm mb-3">{cat.desc}</p>
+                    <div className="flex items-center text-white font-medium text-sm opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300">
+                      Shop Now <ChevronRight className="h-4 w-4 ml-1" />
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            )}
           </motion.div>
         ))}
       </div>

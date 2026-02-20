@@ -16,7 +16,8 @@ import {
   MessageCircle,
   Package,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Bot
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

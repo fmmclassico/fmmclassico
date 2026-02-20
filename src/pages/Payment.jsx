@@ -60,8 +60,6 @@ export default function Payment() {
     return unsubscribe;
   }, [orderId, paymentClicked]);
 
-  const [paymentConfirmedByAdmin, setPaymentConfirmedByAdmin] = useState(false);
-
   const handlePaymentCompleted = async () => {
     if (!orderId || !user) return;
     setIsSubmitting(true);

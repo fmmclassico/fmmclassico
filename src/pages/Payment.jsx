@@ -234,16 +234,58 @@ export default function Payment() {
                 </div>
               </>
             ) : (
-              <>
-                <Card className="p-6 bg-blue-50 border-blue-200 text-center">
-                  <Bell className="h-12 w-12 text-blue-600 mx-auto mb-3" />
-                  <h2 className="text-lg font-bold text-blue-900 mb-2">✅ Payment Received</h2>
-                  <p className="text-sm text-blue-700 mb-4">
-                    Your payment notification has been sent. Check your notification inbox below for confirmation. FMM CLASSICO will verify within 2–5 minutes.
-                  </p>
-                </Card>
+               <>
+                 <Card className="p-6 bg-blue-50 border-blue-200 text-center">
+                   <Bell className="h-12 w-12 text-blue-600 mx-auto mb-3" />
+                   <h2 className="text-lg font-bold text-blue-900 mb-2">✅ Payment Received</h2>
+                   <p className="text-sm text-blue-700 mb-4">
+                     Your payment notification has been sent. FMM CLASSICO will verify within 2–5 minutes and notify you below.
+                   </p>
+                 </Card>
 
-                {paymentConfirmedByAdmin ? (
+                 {/* Notifications List */}
+                 <div className="mt-6 space-y-3">
+                   <div className="flex items-center justify-between">
+                     <p className="text-xs text-gray-600 font-semibold flex items-center gap-1.5">
+                       <Bell className="h-4 w-4 text-blue-600" />
+                       Your Notifications
+                     </p>
+                     {userNotifications.length > 0 && (
+                       <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">{userNotifications.length}</span>
+                     )}
+                   </div>
+
+                   <div className="space-y-2 max-h-48 overflow-y-auto">
+                     {userNotifications.length > 0 ? (
+                       userNotifications.map((notif) => (
+                         <motion.div
+                           key={notif.id}
+                           initial={{ opacity: 0, x: -10 }}
+                           animate={{ opacity: 1, x: 0 }}
+                           className={`p-3 rounded-lg border text-sm ${notif.is_read ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'}`}
+                         >
+                           <div className="flex items-start gap-2">
+                             <CheckIcon className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                             <div className="flex-1">
+                               <p className="font-semibold text-gray-800">{notif.title}</p>
+                               <p className="text-xs text-gray-600 mt-0.5">{notif.message}</p>
+                               <p className="text-xs text-gray-400 mt-1">
+                                 {new Date(notif.created_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                               </p>
+                             </div>
+                           </div>
+                         </motion.div>
+                       ))
+                     ) : (
+                       <div className="text-center py-4">
+                         <Bell className="h-6 w-6 text-gray-300 mx-auto mb-2" />
+                         <p className="text-xs text-gray-500">No notifications yet. Checking...</p>
+                       </div>
+                     )}
+                   </div>
+                 </div>
+
+                 {paymentConfirmedByAdmin ? (
                   <>
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}

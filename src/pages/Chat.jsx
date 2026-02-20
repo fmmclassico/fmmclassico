@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+import { useQuery } from '@tanstack/react-query';
 
 export default function Chat() {
   const [user, setUser] = useState(null);
@@ -20,6 +21,11 @@ export default function Chat() {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef(null);
+
+  const { data: products = [] } = useQuery({
+    queryKey: ['products-chat'],
+    queryFn: () => base44.entities.Product.list('-created_date', 100),
+  });
 
   useEffect(() => {
     const getUser = async () => {
@@ -69,30 +75,39 @@ export default function Chat() {
 
     setIsLoading(true);
 
+    // Build product catalog string for AI context
+    const productCatalog = products.slice(0, 50).map(p =>
+      `- ${p.name} | Category: ${p.category} | Price: ₵${p.price}${p.original_price ? ` (was ₵${p.original_price})` : ''} | ${p.description || ''} | In stock: ${p.stock ?? 'yes'}`
+    ).join('\n');
+
     // Get AI response
     const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a helpful customer support assistant for FMM CLASSICO, an online store selling phone accessories, electronic appliances, and home appliances. 
+      prompt: `You are a helpful AI shopping assistant for FMM CLASSICO, an online store selling phone accessories, electronic appliances, and home appliances. 
       
       About FMM CLASSICO:
       - CEO: Miss Fedra
-      - We sell phone cases, chargers, earphones, cables, power banks, screen protectors, phone holders, speakers, smart watches, electronic appliances, and home appliances
-      - We have two locations: UMAT Main Campus (Tarkwa) and Ashongman Estate (Accra)
-      - Phone: 0599676419
-      - Email: fmmcompanylimited@gmail.com
-      - We accept Cash on Delivery, Mobile Money, and Paystack payments
+      - Locations: UMAT Main Campus (Tarkwa) and Ashongman Estate (Accra)
+      - Phone: 0599676419 | Email: fmmcompanylimited@gmail.com
+      - Payments: Mobile Money, Paystack
       
-      Delivery Information:
-      - UMAT Campus delivery: FREE (meeting point/pickup)
-      - Within Tarkwa (outside UMAT): 25 GHS
-      - Within Accra: 1-2 days delivery, price varies by location (via Yango from Ashongman Estate or Airport Residential)
-      - Outside Accra: 30-50 GHS depending on location and item size
-      - Via Speedaf courier: 30-45 GHS depending on weight
-      - Delivery within UMAT/Tarkwa: Instant
-      - Delivery outside Tarkwa/Accra: 2-3 days
+      Delivery Rates:
+      - UMAT Campus: FREE (instant)
+      - Tarkwa (outside UMAT): ₵25 or FREE on orders over ₵300 (instant)
+      - Within Accra: ₵25-₵40 via Yango (1-2 days)
+      - Outside Accra/Tarkwa: ₵50 or FREE on orders over ₵500 (2-3 days)
       
-      Customer question: ${userMessage}
+      CURRENT PRODUCT CATALOG:
+      ${productCatalog || 'No products listed yet.'}
       
-      Provide a helpful, friendly, and concise response. If the customer asks about specific products, suggest checking our shop. If they have order issues, suggest checking the Orders page or contacting us. If asked about the CEO, say it's Miss Fedra.`,
+      IMPORTANT CAPABILITIES:
+      - You CAN answer questions about specific products, prices, descriptions, availability.
+      - You CAN help a customer place an order by collecting: their name, phone, delivery address, city, and which product they want. Tell them to go to the Cart/Checkout page to complete payment.
+      - You CAN tell them about any product price, specs, or description from the catalog above.
+      - Always be friendly and helpful.
+      
+      Customer message: ${userMessage}
+      
+      If asked about the CEO, say it's Miss Fedra. Keep responses concise and helpful.`,
     });
 
     const assistantMessage = typeof response === 'string' ? response : response.response || "I'm sorry, I couldn't process that request. Please try again.";

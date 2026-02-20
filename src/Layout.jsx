@@ -143,6 +143,10 @@ export default function Layout({ children, currentPageName }) {
     setMeta('property', 'og:title', 'FMM CLASSICO – Phone Accessories, Electronics & Home Appliances in Ghana');
     setMeta('property', 'og:description', 'Shop premium phone accessories, electronics and home appliances at FMM CLASSICO. Fast delivery across Ghana. Tarkwa (UMAT Campus) & Accra (Ashongman Estate).');
     setMeta('property', 'og:image', 'https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg');
+    setMeta('property', 'og:image:alt', 'FMM CLASSICO – Phone Accessories, Electronics & Home Appliances Ghana');
+    setMeta('property', 'og:image:width', '1200');
+    setMeta('property', 'og:image:height', '630');
+    setMeta('property', 'og:url', window.location.origin);
     setMeta('property', 'og:locale', 'en_GH');
 
     setMeta('name', 'twitter:card', 'summary_large_image');

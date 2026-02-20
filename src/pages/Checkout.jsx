@@ -119,6 +119,17 @@ export default function Checkout() {
       return;
     }
 
+    // Verify total makes sense: subtotal must match cart
+    const expectedSubtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
+    if (Math.abs(expectedSubtotal - subtotal) > 0.01) {
+      toast.error('Cart total mismatch detected. Please go back to your cart and try again.');
+      return;
+    }
+    if (total <= 0 || isNaN(total)) {
+      toast.error('Order total is invalid. Please check your cart and delivery details.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();

@@ -67,42 +67,56 @@ export default function Checkout() {
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
 
-  // Delivery fee logic based on location
+  // Auto-detect location from city/town field
+  const detectLocation = () => {
+    const city = formData.city?.toLowerCase().trim() || '';
+    if (!city) return formData.delivery_location || '';
+    if (city.includes('umat')) return 'umat';
+    if (city.includes('tarkwa')) return 'tarkwa';
+    const accraKeywords = ['accra','ashongman','airport','east legon','legon','adenta','madina','tema','spintex','achimota','lapaz','kasoa','teshie','nungua','osu','labone','cantonments','dansoman','circle','community','weija','dome','pokuase','abeka','greater accra'];
+    if (accraKeywords.some(k => city.includes(k))) return 'accra';
+    if (city.length > 0) return 'other';
+    return formData.delivery_location || '';
+  };
+
+  // Delivery fee logic based on auto-detected location from city
   const getDeliveryFee = () => {
-    const loc = formData.delivery_location;
+    const loc = detectLocation();
     const city = formData.city?.toLowerCase() || '';
-    if (loc === 'umat') return 0; // Free on UMAT campus
+    if (loc === 'umat') return 0;
     if (loc === 'tarkwa') {
       return subtotal >= 300 ? 0 : 25;
     }
     if (loc === 'accra') {
-      // Accra via Yango - estimate based on area (user can see exact on Yango)
-      const accraAreas = {
-        'ashongman': 0, // pickup point
-        'airport': 10,
-        'east legon': 25,
-        'legon': 20,
-        'adenta': 30,
-        'madina': 25,
-        'tema': 40,
-        'spintex': 30,
-        'achimota': 20,
-        'lapaz': 20,
-        'kasoa': 40,
-        'teshie': 35,
-        'nungua': 35,
-        'community': 30,
-        'osu': 25,
-        'labone': 25,
-        'cantonments': 25,
-        'dansoman': 35,
-        'circle': 20,
-        'accra': 30,
-      };
-      for (const [area, fee] of Object.entries(accraAreas)) {
-        if (city.includes(area)) return fee;
+      const accraAreaFees = [
+        { keywords: ['ashongman'], fee: 0 },
+        { keywords: ['airport residential','airport'], fee: 10 },
+        { keywords: ['east legon'], fee: 25 },
+        { keywords: ['legon'], fee: 20 },
+        { keywords: ['adenta'], fee: 30 },
+        { keywords: ['madina'], fee: 25 },
+        { keywords: ['tema'], fee: 40 },
+        { keywords: ['spintex'], fee: 30 },
+        { keywords: ['achimota'], fee: 20 },
+        { keywords: ['lapaz','la paz'], fee: 20 },
+        { keywords: ['kasoa'], fee: 45 },
+        { keywords: ['teshie'], fee: 35 },
+        { keywords: ['nungua'], fee: 35 },
+        { keywords: ['osu'], fee: 25 },
+        { keywords: ['labone'], fee: 25 },
+        { keywords: ['cantonments'], fee: 25 },
+        { keywords: ['dansoman'], fee: 35 },
+        { keywords: ['circle'], fee: 20 },
+        { keywords: ['community'], fee: 30 },
+        { keywords: ['weija'], fee: 40 },
+        { keywords: ['dome'], fee: 25 },
+        { keywords: ['pokuase'], fee: 35 },
+        { keywords: ['abeka'], fee: 25 },
+      ];
+      for (const entry of accraAreaFees) {
+        if (entry.keywords.some(k => city.includes(k))) return entry.fee;
       }
-      return 30; // default accra fee
+      return 30;
     }
     if (loc === 'other') {
       return subtotal >= 500 ? 0 : 50;
@@ -110,16 +124,18 @@ export default function Checkout() {
     return 0;
   };
 
+  const detectedLoc = detectLocation();
   const shipping = getDeliveryFee();
   const total = subtotal + shipping;
 
   const getShippingLabel = () => {
-    const loc = formData.delivery_location;
-    if (!loc) return 'Select location';
-    if (loc === 'umat') return 'FREE (UMAT Campus)';
-    if (loc === 'tarkwa' && subtotal >= 300) return 'FREE (over ₵300)';
-    if (loc === 'other' && subtotal >= 500) return 'FREE (over ₵500)';
-    if (loc === 'accra') return `₵${shipping} (Yango estimate)`;
+    if (!formData.city) return 'Enter city/town to calculate';
+    if (detectedLoc === 'umat') return 'FREE (UMAT Campus)';
+    if (detectedLoc === 'tarkwa' && subtotal >= 300) return 'FREE (order over ₵300)';
+    if (detectedLoc === 'other' && subtotal >= 500) return 'FREE (order over ₵500)';
+    if (detectedLoc === 'accra') return `₵${shipping} (Yango estimate to ${formData.city})`;
+    if (detectedLoc === 'tarkwa') return `₵${shipping} (Tarkwa – free over ₵300)`;
+    if (detectedLoc === 'other') return `₵${shipping} (Outside Accra/Tarkwa – free over ₵500)`;
     return `₵${shipping}`;
   };
 

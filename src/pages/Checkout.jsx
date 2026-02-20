@@ -85,7 +85,7 @@ export default function Checkout() {
   const getDeliveryFee = () => {
     const loc = detectLocation();
     const city = formData.city?.toLowerCase() || '';
-    if (loc === 'umat') return 0;
+    if (loc === 'umat') return 10; // doorstep; pickup/meeting point is free
     if (loc === 'tarkwa') {
       return subtotal >= 300 ? 0 : 25;
     }

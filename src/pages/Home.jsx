@@ -42,6 +42,14 @@ export default function Home() {
     queryFn: () => base44.entities.Product.list('-created_date', 100),
   });
 
+  // Real-time updates: subscribe to product changes from admin
+  useEffect(() => {
+    const unsubscribe = base44.entities.Product.subscribe((event) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    });
+    return unsubscribe;
+  }, [queryClient]);
+
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {
       if (!user) {

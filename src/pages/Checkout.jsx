@@ -326,15 +326,16 @@ export default function Checkout() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customer_phone">Phone Number *</Label>
+                  <Label htmlFor="customer_phone">Active Phone Number * <span className="text-xs text-orange-600 font-normal">(must be reachable)</span></Label>
                   <Input
                     id="customer_phone"
                     name="customer_phone"
                     value={formData.customer_phone}
                     onChange={handleInputChange}
-                    placeholder="Enter your phone number"
+                    placeholder="e.g. 0244123456 – must be active"
                     required
                   />
+                  <p className="text-xs text-gray-400">We'll call/SMS this number for delivery. Make sure it's switched on and reachable.</p>
                 </div>
                 
                 {/* Cart delivery selection banner */}

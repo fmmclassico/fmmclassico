@@ -72,6 +72,39 @@ export default function Notifications() {
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
   };
 
+  const deleteNotificationsMutation = useMutation({
+    mutationFn: async (notifIds) => {
+      await Promise.all(notifIds.map(id => base44.entities.Notification.delete(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      setSelectedNotifs([]);
+    }
+  });
+
+  const handleToggleSelect = (notifId) => {
+    setSelectedNotifs(prev => 
+      prev.includes(notifId) 
+        ? prev.filter(id => id !== notifId)
+        : [...prev, notifId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedNotifs.length === notifications.length) {
+      setSelectedNotifs([]);
+    } else {
+      setSelectedNotifs(notifications.map(n => n.id));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedNotifs.length === 0) return;
+    if (confirm(`Delete ${selectedNotifs.length} notification(s)?`)) {
+      deleteNotificationsMutation.mutate(selectedNotifs);
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (!user) {

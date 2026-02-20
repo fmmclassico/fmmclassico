@@ -30,6 +30,8 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const [orderData, setOrderData] = useState(null);
+  const [paymentClicked, setPaymentClicked] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 

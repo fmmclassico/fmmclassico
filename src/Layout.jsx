@@ -78,6 +78,7 @@ export default function Layout({ children, currentPageName }) {
             { icon: Grid3X3, label: 'Categories', page: 'Categories' },
             { icon: ShoppingCart, label: 'Cart', page: 'Cart', badge: cartCount },
             { icon: Package, label: 'My Orders', page: 'Orders' },
+            { icon: Bell, label: 'Notifications', page: 'Notifications' },
             { icon: MessageCircle, label: 'Chat Support', page: 'Chat' },
             { icon: Info, label: 'About Us', page: 'About' },
             { icon: Settings, label: 'Settings', page: 'Settings' },

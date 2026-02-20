@@ -282,7 +282,7 @@ export default function Cart() {
             </div>
 
             <Button 
-              className={`w-full mt-6 font-bold py-6 text-lg ${selectedZone ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+              className={`w-full mt-6 font-bold py-6 text-lg ${selectedZone ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
               disabled={!selectedZone}
               onClick={() => {
                 if (!selectedZone) {
@@ -293,7 +293,7 @@ export default function Cart() {
                 navigate(createPageUrl('Checkout') + params);
               }}
             >
-              Proceed to Checkout
+              💳 Place Order & Pay with Paystack
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             {!selectedZone && (

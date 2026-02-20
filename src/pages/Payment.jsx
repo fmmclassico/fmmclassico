@@ -76,26 +76,27 @@ export default function Payment() {
     const currentOrder = orderData;
     const existingTracking = currentOrder?.tracking_updates || [];
 
-    await base44.entities.Order.update(orderId, {
-      tracking_updates: [
-        ...existingTracking,
-        {
-          status: 'Payment Claimed',
-          message: 'Customer confirmed payment – awaiting FMM CLASSICO verification',
-          timestamp: new Date().toISOString()
-        }
-      ]
-    });
-
-    await base44.entities.Notification.create({
-      user_email: user.email,
-      title: '✅ Payment Sent – Awaiting Verification',
-      message: `Your payment for order #${orderNumber} has been sent. FMM CLASSICO will verify and confirm within 2–5 minutes.`,
-      type: 'payment_pending',
-      order_id: orderId,
-      order_number: orderNumber,
-      is_read: false
-    });
+    await Promise.all([
+      base44.entities.Order.update(orderId, {
+        tracking_updates: [
+          ...existingTracking,
+          {
+            status: 'Payment Claimed',
+            message: 'Customer confirmed payment – awaiting FMM CLASSICO verification',
+            timestamp: new Date().toISOString()
+          }
+        ]
+      }),
+      base44.entities.Notification.create({
+        user_email: user.email,
+        title: '✅ Next Message Will Be Sent',
+        message: `Your payment for order #${orderNumber} has been received. FMM CLASSICO will verify and send you confirmation shortly.`,
+        type: 'payment_pending',
+        order_id: orderId,
+        order_number: orderNumber,
+        is_read: false
+      })
+    ]);
 
     setIsSubmitting(false);
     setPaymentClicked(true);
@@ -213,45 +214,92 @@ export default function Payment() {
                 <p className="text-xs text-center text-gray-400 mb-6">
                   Only tap this after your payment was successful on Paystack
                 </p>
-              </>
-            ) : paymentConfirmedByAdmin ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-green-50 border-2 border-green-400 rounded-2xl p-6 text-center mb-4"
-              >
-                <div className="text-4xl mb-3">🎉</div>
-                <h2 className="text-xl font-bold text-green-700 mb-2">Payment Confirmed!</h2>
-                <p className="text-sm text-green-600 mb-4">
-                  Your payment has been verified. Your order is now being prepared for shipment.
-                </p>
-                <p className="text-xs text-green-500 mb-4">
-                  📦 Track your order in your notifications and account
-                </p>
-                <Link to={createPageUrl('Orders')}>
-                  <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold">
-                    View Order & Track Shipment
-                  </Button>
-                </Link>
-              </motion.div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-6 text-center"
-              >
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-amber-200 mx-auto mb-3">
-                  <Loader2 className="h-6 w-6 text-amber-600 animate-spin" />
+
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-600 font-medium">Need help?</p>
+                  <a href="https://wa.me/233599676419" target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" className="w-full gap-2 text-sm">
+                      <Bell className="h-4 w-4" />
+                      WhatsApp Support
+                    </Button>
+                  </a>
                 </div>
-                <h2 className="text-lg font-bold text-amber-700 mb-2">Verifying Payment...</h2>
-                <p className="text-sm text-amber-600 mb-3">
-                  FMM CLASSICO is confirming your payment. This usually takes 2–5 minutes.
-                </p>
-                <p className="text-xs text-amber-500">
-                  ✅ A notification will appear here once confirmed. Don't leave this page.
-                </p>
-              </motion.div>
+              </>
+            ) : (
+              <>
+                <Card className="p-6 bg-blue-50 border-blue-200 text-center">
+                  <Bell className="h-12 w-12 text-blue-600 mx-auto mb-3" />
+                  <h2 className="text-lg font-bold text-blue-900 mb-2">✅ Payment Received</h2>
+                  <p className="text-sm text-blue-700 mb-4">
+                    Your payment notification has been sent. Check your notification inbox below for confirmation. FMM CLASSICO will verify within 2–5 minutes.
+                  </p>
+                </Card>
+
+                {paymentConfirmedByAdmin ? (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-6"
+                    >
+                      <Card className="p-6 bg-green-50 border-green-300 text-center">
+                        <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-3" />
+                        <h2 className="text-xl font-bold text-green-900 mb-2">🎉 Order Confirmed!</h2>
+                        <p className="text-sm text-green-700 mb-4">
+                          Your payment has been verified. Your order is now processing and will be prepared for shipment.
+                        </p>
+                        <Link to={createPageUrl('Orders')}>
+                          <Button className="w-full bg-green-600 hover:bg-green-700">
+                            <Package className="mr-2 h-4 w-4" />
+                            View My Orders
+                          </Button>
+                        </Link>
+                      </Card>
+                    </motion.div>
+                  </>
+                ) : (
+                  <div className="mt-6 text-center">
+                    <p className="text-sm text-gray-600 mb-4">Waiting for FMM CLASSICO to verify...</p>
+                    <div className="flex items-center justify-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
+                      <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-6 pt-6 border-t">
+                  <p className="text-xs text-gray-600 font-medium mb-3">Order Details:</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Order Number</span>
+                      <span className="font-semibold text-gray-800">#{orderNumber}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Amount Paid</span>
+                      <span className="font-semibold text-orange-600">₵{amount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Payment Method</span>
+                      <span className="font-semibold text-gray-800">Paystack</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-2">
+                  <a href="https://wa.me/233599676419" target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" className="w-full gap-2">
+                      <Bell className="h-4 w-4" />
+                      Contact Support on WhatsApp
+                    </Button>
+                  </a>
+                  <Link to={createPageUrl('Home')} className="block">
+                    <Button variant="ghost" className="w-full">
+                      Return to Home
+                    </Button>
+                  </Link>
+                </div>
+              </>
             )}
           </motion.div>
         )}

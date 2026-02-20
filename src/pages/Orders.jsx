@@ -24,7 +24,7 @@ import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
-// Paystack link removed - payment flow now goes through Payment.jsx with proper amount parameterization
+const PAYSTACK_LINK = "https://paystack.shop/pay/1miimvhai8";
 
 const statusConfig = {
   pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },

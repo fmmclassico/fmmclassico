@@ -80,13 +80,24 @@ export default function AdminOrders() {
         body: `A payment has been confirmed on FMM CLASSICO.\n\n📦 Order: ${order.order_number}\n👤 Customer: ${order.customer_name}\n📧 Email: ${order.customer_email}\n📞 Phone: ${order.customer_phone}\n💰 Total: ₵${order.total_amount?.toFixed(2)}\n📍 Address: ${order.delivery_address}, ${order.city}\n\nItems:\n${order.items?.map(i => `• ${i.product_name} x${i.quantity} – ₵${(i.price * i.quantity).toFixed(2)}`).join('\n')}\n\nOrder is now confirmed and visible to the customer.`
       });
 
-      // Send confirmation email to customer
-      await base44.integrations.Core.SendEmail({
-        to: order.customer_email,
-        from_name: 'FMM CLASSICO',
-        subject: `✅ Payment Confirmed – Your FMM CLASSICO Order #${order.order_number}`,
-        body: `Hi ${order.customer_name},\n\nGreat news! 🎉 Your payment has been confirmed and your order is now being processed.\n\n📦 Order Number: ${order.order_number}\n💰 Total Paid: ₵${order.total_amount?.toFixed(2)}\n📍 Delivery to: ${order.delivery_address}, ${order.city}\n\nYou will receive updates as your order progresses. Track your order on the FMM CLASSICO app.\n\nFor any questions, call/WhatsApp: 0599676419\n\nThank you for shopping with FMM CLASSICO! 🛍️`
-      });
+      // Send confirmation email + in-app notification to customer
+      await Promise.all([
+        base44.integrations.Core.SendEmail({
+          to: order.customer_email,
+          from_name: 'FMM CLASSICO',
+          subject: `✅ Payment Confirmed – Your FMM CLASSICO Order #${order.order_number}`,
+          body: `Hi ${order.customer_name},\n\nGreat news! 🎉 Your payment has been confirmed and your order is now being processed.\n\n📦 Order Number: ${order.order_number}\n💰 Total Paid: ₵${order.total_amount?.toFixed(2)}\n📍 Delivery to: ${order.delivery_address}, ${order.city}\n\nYou will receive updates as your order progresses. Track your order on the FMM CLASSICO app.\n\nFor any questions, call/WhatsApp: 0599676419\n\nThank you for shopping with FMM CLASSICO! 🛍️`
+        }),
+        base44.entities.Notification.create({
+          user_email: order.customer_email,
+          title: '✅ Payment Confirmed!',
+          message: `Great news! Your payment for order #${order.order_number} has been confirmed. Total: ₵${order.total_amount?.toFixed(2)}. Your order is now being prepared.`,
+          type: 'payment_confirmed',
+          order_id: order.id,
+          order_number: order.order_number,
+          is_read: false
+        })
+      ]);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminOrders'] });

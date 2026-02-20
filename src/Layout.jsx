@@ -70,12 +70,11 @@ export default function Layout({ children, currentPageName }) {
     if (!user?.email) return;
     const unsubscribe = base44.entities.Notification.subscribe((event) => {
       if (event.data.user_email === user.email) {
-        const queryClient = useQueryClient();
         queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
       }
     });
     return unsubscribe;
-  }, [user?.email]);
+  }, [user?.email, queryClient]);
 
   const cartCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
   const unreadNotifCount = userNotifications.filter(n => !n.is_read).length;

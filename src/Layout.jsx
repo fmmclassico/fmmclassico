@@ -18,7 +18,8 @@ import {
   Package,
   LogOut,
   ChevronRight,
-  Bot
+  Bot,
+  Bell
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

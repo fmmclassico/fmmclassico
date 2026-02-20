@@ -263,6 +263,17 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Main Content */}
       <main className="min-h-[calc(100vh-4rem)]">
+        {currentPageName !== 'Home' && (
+          <div className="container mx-auto px-4 pt-3">
+            <button
+              onClick={() => window.history.back()}
+              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-orange-600 transition-colors group"
+            >
+              <ChevronRight className="h-4 w-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
+              <span>Back</span>
+            </button>
+          </div>
+        )}
         {children}
       </main>
 

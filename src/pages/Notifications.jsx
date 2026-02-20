@@ -47,11 +47,15 @@ export default function Notifications() {
     getUser();
   }, []);
 
+  const isAdmin = user?.role === 'admin';
+
   const { data: orders = [], isLoading } = useQuery({
-    queryKey: ['orders-notifications', user?.email],
-    queryFn: () => base44.entities.Order.filter({ customer_email: user.email }, '-updated_date', 20),
+    queryKey: ['orders-notifications', user?.email, isAdmin],
+    queryFn: () => isAdmin
+      ? base44.entities.Order.list('-updated_date', 50)
+      : base44.entities.Order.filter({ customer_email: user.email }, '-updated_date', 20),
     enabled: !!user?.email,
-    refetchInterval: 30000, // Auto-refresh every 30s
+    refetchInterval: 20000, // Auto-refresh every 20s
   });
 
   const notifications = orders.flatMap(order => {

@@ -127,9 +127,16 @@ export default function Layout({ children, currentPageName }) {
     setMeta('name', 'description', 'FMM CLASSICO (FMMCLASSICO) – Your trusted online store for premium phone accessories, electronic appliances and home appliances in Ghana. Shop chargers, earphones, phone cases, smart watches and more. Fast delivery to Tarkwa (UMAT Campus), Accra (Ashongman Estate) and across Ghana.');
     setMeta('name', 'keywords', 'FMMCLASSICO, FMM CLASSICO, fmmclassico, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Ashongman Estate, online shopping Ghana');
     setMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+    setMeta('name', 'googlebot', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+    setMeta('name', 'bingbot', 'index, follow');
     setMeta('name', 'author', 'FMM CLASSICO');
+    setMeta('name', 'revisit-after', '3 days');
+    setMeta('name', 'language', 'English');
+    setMeta('name', 'rating', 'General');
     setMeta('name', 'geo.region', 'GH');
     setMeta('name', 'geo.placename', 'Ghana');
+    setMeta('name', 'geo.position', '5.0;-1.0');
+    setMeta('name', 'ICBM', '5.0, -1.0');
 
     setMeta('property', 'og:type', 'website');
     setMeta('property', 'og:site_name', 'FMM CLASSICO');

@@ -68,7 +68,7 @@ export default function Home() {
   const categories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers', 'smart_watches', 'electronic_appliances', 'home_appliances'];
 
   const features = [
-    { icon: Truck, title: 'Free Delivery', desc: 'On orders over ₵50' },
+    { icon: Truck, title: 'Free Delivery', desc: 'On UMAT Campus only' },
     { icon: Shield, title: 'Quality Guarantee', desc: '100% authentic products' },
     { icon: Clock, title: '24/7 Support', desc: 'Always here to help' },
     { icon: CreditCard, title: 'Secure Payment', desc: 'Safe transactions' },

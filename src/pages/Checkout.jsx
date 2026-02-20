@@ -66,8 +66,62 @@ export default function Checkout() {
   });
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
-  const shipping = subtotal > 50 ? 0 : 5.99;
+
+  // Delivery fee logic based on location
+  const getDeliveryFee = () => {
+    const loc = formData.delivery_location;
+    const city = formData.city?.toLowerCase() || '';
+    if (loc === 'umat') return 0; // Free on UMAT campus
+    if (loc === 'tarkwa') {
+      return subtotal >= 300 ? 0 : 25;
+    }
+    if (loc === 'accra') {
+      // Accra via Yango - estimate based on area (user can see exact on Yango)
+      const accraAreas = {
+        'ashongman': 0, // pickup point
+        'airport': 10,
+        'east legon': 25,
+        'legon': 20,
+        'adenta': 30,
+        'madina': 25,
+        'tema': 40,
+        'spintex': 30,
+        'achimota': 20,
+        'lapaz': 20,
+        'kasoa': 40,
+        'teshie': 35,
+        'nungua': 35,
+        'community': 30,
+        'osu': 25,
+        'labone': 25,
+        'cantonments': 25,
+        'dansoman': 35,
+        'circle': 20,
+        'accra': 30,
+      };
+      for (const [area, fee] of Object.entries(accraAreas)) {
+        if (city.includes(area)) return fee;
+      }
+      return 30; // default accra fee
+    }
+    if (loc === 'other') {
+      return subtotal >= 500 ? 0 : 50;
+    }
+    return 0;
+  };
+
+  const shipping = getDeliveryFee();
   const total = subtotal + shipping;
+
+  const getShippingLabel = () => {
+    const loc = formData.delivery_location;
+    if (!loc) return 'Select location';
+    if (loc === 'umat') return 'FREE (UMAT Campus)';
+    if (loc === 'tarkwa' && subtotal >= 300) return 'FREE (over ₵300)';
+    if (loc === 'other' && subtotal >= 500) return 'FREE (over ₵500)';
+    if (loc === 'accra') return `₵${shipping} (Yango estimate)`;
+    return `₵${shipping}`;
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -368,8 +422,10 @@ export default function Checkout() {
                   <span>₵{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
-                  <span>Shipping</span>
-                  <span>{shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}</span>
+                  <span>Delivery</span>
+                  <span className={shipping === 0 ? 'text-green-600 font-medium' : ''}>
+                    {getShippingLabel()}
+                  </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold text-gray-800">

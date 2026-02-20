@@ -237,38 +237,60 @@ export default function Checkout() {
 
   if (orderSuccess) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-lg text-center">
+      <div className="container mx-auto px-4 py-12 max-w-lg">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
         >
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-orange-100 mb-6">
-            <CreditCard className="h-10 w-10 text-orange-600" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-4">
+            <CreditCard className="h-10 w-10 text-green-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Complete Your Payment</h1>
-          <p className="text-gray-500 mb-6">
-            Please complete your payment via Paystack. Your order will be confirmed once payment is verified.
+          <p className="text-gray-500 mb-4">
+            A Paystack page has opened. Please complete your payment there.
           </p>
-          <div className="flex flex-col gap-3">
-            <a href={PAYSTACK_LINK} target="_blank" rel="noopener noreferrer">
-              <Button className="w-full bg-green-600 hover:bg-green-700">
-                💳 Pay Now with Paystack
-              </Button>
-            </a>
+          <a href={PAYSTACK_LINK} target="_blank" rel="noopener noreferrer">
+            <Button className="w-full bg-green-600 hover:bg-green-700 mb-6">
+              💳 Open Paystack Again
+            </Button>
+          </a>
+
+          <div className="border-t pt-6">
+            {!paymentClicked ? (
+              <>
+                <p className="text-sm text-gray-600 mb-3 font-medium">✅ Done paying on Paystack?</p>
+                <Button
+                  onClick={handlePaymentCompleted}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-5 text-base"
+                >
+                  ✅ Payment Completed
+                </Button>
+                <p className="text-xs text-gray-400 mt-2">Click this after you've completed payment on Paystack</p>
+              </>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-orange-50 border border-orange-200 rounded-xl p-5"
+              >
+                <div className="text-3xl mb-2">⏳</div>
+                <h3 className="font-bold text-gray-800 mb-1">Awaiting Payment Confirmation</h3>
+                <p className="text-sm text-gray-600">
+                  FMM CLASSICO is verifying your payment. This takes <strong>2–5 minutes</strong>. You'll receive an SMS confirmation on your phone number once we confirm receipt of your payment.
+                </p>
+              </motion.div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 mt-4">
             <Link to={createPageUrl(`OrderTracking?id=${orderId}`)}>
-              <Button variant="outline" className="w-full">
-                Track Your Order
-              </Button>
+              <Button variant="outline" className="w-full">📦 Track Your Order</Button>
             </Link>
             <Link to={createPageUrl('Shop')}>
-              <Button variant="ghost" className="w-full">
-                Continue Shopping
-              </Button>
+              <Button variant="ghost" className="w-full">Continue Shopping</Button>
             </Link>
           </div>
-          <p className="text-sm text-gray-400 mt-4">
-            Your order status will show as "Order Placed" once we verify your payment.
-          </p>
         </motion.div>
       </div>
     );

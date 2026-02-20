@@ -38,7 +38,7 @@ const categories = [
     id: 'cables', 
     name: 'Cables', 
     desc: 'All types & lengths',
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600',
+    image: 'https://images.unsplash.com/photo-1544866092-1677b7de5e6c?w=600',
     color: 'from-green-500 to-emerald-500'
   },
   { 

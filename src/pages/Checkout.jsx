@@ -255,7 +255,7 @@ export default function Checkout() {
                 <div className="text-3xl mb-2">⏳</div>
                 <h3 className="font-bold text-gray-800 mb-1">Awaiting Payment Confirmation</h3>
                 <p className="text-sm text-gray-600">
-                  FMM CLASSICO is verifying your payment. This takes <strong>2–5 minutes</strong>. You'll receive an SMS confirmation on your phone number once we confirm receipt of your payment.
+                  FMM CLASSICO is verifying your payment. This takes <strong>2–5 minutes</strong>. You will receive a notification in your <strong>🔔 Notifications</strong> box on this website once we confirm your payment.
                 </p>
               </motion.div>
             )}

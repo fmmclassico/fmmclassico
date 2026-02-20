@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,10 +14,15 @@ import {
   CheckCircle2,
   Truck,
   MapPin,
-  XCircle
+  XCircle,
+  CreditCard,
+  ExternalLink
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+
+const PAYSTACK_LINK = "https://paystack.shop/pay/1miimvhai8";
 
 const statusConfig = {
   pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },

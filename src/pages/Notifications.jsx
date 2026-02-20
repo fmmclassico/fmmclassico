@@ -58,17 +58,27 @@ export default function Notifications() {
     refetchInterval: 20000, // Auto-refresh every 20s
   });
 
+  // Admin sees payment alerts first
+  const paymentClaimed = isAdmin
+    ? orders.filter(o => o.status === 'pending' && o.tracking_updates?.some(t => t.status === 'Payment Claimed'))
+    : [];
+
   const notifications = orders.flatMap(order => {
     const events = [];
-    // Latest status always shown
     events.push({
       id: order.id + '-status',
       orderId: order.id,
       orderNumber: order.order_number,
       status: order.status,
-      message: getStatusMessage(order.status, order.order_number),
+      customerName: order.customer_name,
+      customerPhone: order.customer_phone,
+      totalAmount: order.total_amount,
+      message: isAdmin
+        ? `${order.customer_name} (${order.customer_phone}) – ₵${order.total_amount?.toFixed(2)} – ${getStatusMessage(order.status, order.order_number)}`
+        : getStatusMessage(order.status, order.order_number),
       time: order.updated_date,
-      isNew: order.status === 'confirmed' || order.status === 'in_transit' || order.status === 'delivered',
+      isNew: order.status === 'confirmed' || order.status === 'in_transit' || order.status === 'delivered' || (isAdmin && paymentClaimed.some(p => p.id === order.id)),
+      isPaymentAlert: isAdmin && paymentClaimed.some(p => p.id === order.id),
     });
     return events;
   });

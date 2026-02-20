@@ -92,33 +92,21 @@ export default function Checkout() {
     if (loc === 'accra') {
       const accraAreaFees = [
         { keywords: ['ashongman'], fee: 0 },
-        { keywords: ['airport residential','airport'], fee: 10 },
-        { keywords: ['east legon'], fee: 25 },
-        { keywords: ['legon'], fee: 20 },
-        { keywords: ['adenta'], fee: 30 },
-        { keywords: ['madina'], fee: 25 },
-        { keywords: ['tema'], fee: 40 },
-        { keywords: ['spintex'], fee: 30 },
-        { keywords: ['achimota'], fee: 20 },
-        { keywords: ['lapaz','la paz'], fee: 20 },
-        { keywords: ['kasoa'], fee: 45 },
-        { keywords: ['teshie'], fee: 35 },
-        { keywords: ['nungua'], fee: 35 },
-        { keywords: ['osu'], fee: 25 },
-        { keywords: ['labone'], fee: 25 },
-        { keywords: ['cantonments'], fee: 25 },
-        { keywords: ['dansoman'], fee: 35 },
-        { keywords: ['circle'], fee: 20 },
-        { keywords: ['community'], fee: 30 },
-        { keywords: ['weija'], fee: 40 },
-        { keywords: ['dome'], fee: 25 },
-        { keywords: ['pokuase'], fee: 35 },
-        { keywords: ['abeka'], fee: 25 },
+        { keywords: ['airport residential','airport'], fee: 22 },
+        { keywords: ['east legon'], fee: 30 },
+        { keywords: ['madina'], fee: 30 },
+        { keywords: ['adenta'], fee: 35 },
+        { keywords: ['accra mall'], fee: 25 },
+        { keywords: ['osu'], fee: 30 },
+        { keywords: ['circle'], fee: 30 },
+        { keywords: ['accra station','station'], fee: 35 },
+        { keywords: ['makola'], fee: 35 },
+        { keywords: ['spintex'], fee: 40 },
       ];
       for (const entry of accraAreaFees) {
         if (entry.keywords.some(k => city.includes(k))) return entry.fee;
       }
-      return 30;
+      return 50;
     }
     if (loc === 'other') {
       return subtotal >= 500 ? 0 : 50;

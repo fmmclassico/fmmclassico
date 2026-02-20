@@ -199,8 +199,10 @@ export default function Checkout() {
     setIsSubmitting(false);
     setOrderSuccess(true);
 
-    // Immediately redirect to Paystack
-    window.open(PAYSTACK_LINK, '_blank');
+    // If popup was blocked, open again
+    if (!paystackWindow || paystackWindow.closed) {
+      window.open(PAYSTACK_LINK, '_blank');
+    }
   };
 
   const handlePaymentCompleted = async () => {

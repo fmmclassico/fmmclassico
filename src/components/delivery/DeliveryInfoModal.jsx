@@ -81,7 +81,7 @@ export default function DeliveryInfoModal({ trigger }) {
 
           {/* Pickup Points */}
           <AccordionSection
-            title="🏪 Pickup Points (FREE)"
+            title="🏪 Pickup & Meeting Points (FREE)"
             icon={ShoppingBag}
             colorClass="text-green-700"
             borderClass="border-green-200"
@@ -92,35 +92,52 @@ export default function DeliveryInfoModal({ trigger }) {
               <div className="flex items-start gap-3 bg-green-50 rounded-lg p-3">
                 <MapPin className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="font-bold text-green-800 text-sm">Ashongman Estate (Pure Water)</p>
-                  <p className="text-xs text-green-700">Accra – Come pick up directly from us. FREE!</p>
+                  <p className="font-bold text-green-800 text-sm">Ashongman Estate (Pure Water) – Accra</p>
+                  <p className="text-xs text-green-700">Come pick up directly from us. FREE!</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 bg-green-50 rounded-lg p-3">
                 <MapPin className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="font-bold text-green-800 text-sm">UMAT Main Campus</p>
-                  <p className="text-xs text-green-700">Tarkwa – Pickup from our campus agent. FREE!</p>
+                  <p className="font-bold text-green-800 text-sm">UMAT Main Campus – Tarkwa</p>
+                  <p className="text-xs text-green-700">Pickup or meeting point on campus. FREE!</p>
                 </div>
               </div>
             </div>
           </AccordionSection>
 
-          {/* Tarkwa Delivery */}
+          {/* UMAT / Tarkwa Delivery */}
           <AccordionSection
-            title="🏘️ Tarkwa Delivery"
+            title="🏘️ UMAT & Tarkwa Delivery"
             icon={Truck}
             colorClass="text-blue-700"
             borderClass="border-blue-200"
             bgClass="bg-blue-50"
           >
-            <div className="space-y-2 mt-3">
-              <div className="flex justify-between items-center py-2 border-b border-blue-100">
-                <span className="text-sm text-gray-700">Within Tarkwa (outside UMAT)</span>
-                <span className="font-bold text-blue-700">₵25</span>
+            <div className="space-y-1 mt-3">
+              <div className="flex justify-between items-center py-2 px-2 rounded-lg bg-green-50 border border-green-200">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">UMAT Campus – Pickup / Meeting Point</p>
+                  <p className="text-xs text-green-600">Collect on campus or agreed spot</p>
+                </div>
+                <span className="font-bold text-green-600 ml-2">FREE</span>
               </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-sm text-gray-700">Orders over ₵300</span>
+              <div className="flex justify-between items-center py-2 px-2 border-b border-blue-100">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">UMAT Campus – Doorstep Delivery</p>
+                  <p className="text-xs text-gray-500">We bring it right to your door</p>
+                </div>
+                <span className="font-bold text-blue-700 ml-2">₵10</span>
+              </div>
+              <div className="flex justify-between items-center py-2 px-2 border-b border-blue-100">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">Tarkwa (Outside UMAT)</p>
+                  <p className="text-xs text-gray-500">Within Tarkwa town</p>
+                </div>
+                <span className="font-bold text-blue-700 ml-2">₵25</span>
+              </div>
+              <div className="flex justify-between items-center py-2 px-2">
+                <span className="text-sm text-gray-700">Tarkwa orders over ₵300</span>
                 <span className="font-bold text-green-600">FREE</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-blue-600 mt-1">

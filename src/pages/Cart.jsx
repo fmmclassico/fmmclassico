@@ -283,7 +283,12 @@ export default function Cart() {
 
             <Button 
               className="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white font-bold py-6 text-lg"
-              onClick={() => navigate(createPageUrl('Checkout'))}
+              onClick={() => {
+                const params = selectedZone
+                  ? `?zone=${selectedZone.id}&zoneName=${encodeURIComponent(selectedZone.label)}&fee=${selectedZone.fee}`
+                  : '';
+                navigate(createPageUrl('Checkout') + params);
+              }}
             >
               Proceed to Checkout
               <ArrowRight className="ml-2 h-5 w-5" />

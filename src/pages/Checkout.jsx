@@ -14,11 +14,9 @@ import {
   ChevronLeft,
   Truck,
   CreditCard,
-  CheckCircle2,
   Loader2,
   Info
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import DeliveryInfoModal from '../components/delivery/DeliveryInfoModal';
 

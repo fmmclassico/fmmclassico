@@ -14,7 +14,7 @@ const categoryImages = {
   holders: 'https://images.unsplash.com/photo-1586953208270-767889fa9b0e?w=400',
   speakers: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400',
   smart_watches: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400',
-  electronic_appliances: 'https://i.pinimg.com/1200x/15/91/f2/1591f2734496bcf1eb48fbc48deb5993.jpg',
+  electronic_appliances: 'https://i.pinimg.com/1200x/f0/19/79/f0197921512896ac8afb70512afdfe7f.jpg',
   home_appliances: 'https://images.unsplash.com/photo-1556909211-36987daf7b4d?w=400',
 };
 

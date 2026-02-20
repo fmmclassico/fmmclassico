@@ -12,9 +12,9 @@ const slides = [
     title: 'Premium Phone Accessories',
     subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
     bg: 'from-orange-600 via-orange-500 to-amber-400',
-    image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600',
+    image: 'https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg',
     link: createPageUrl('Shop?category=phones'),
-    cta: 'Shop Phones',
+    cta: 'Shop Now',
   },
   {
     id: 2,
@@ -22,9 +22,9 @@ const slides = [
     title: 'Electronic Appliances',
     subtitle: 'Top quality electronics for your everyday needs',
     bg: 'from-blue-600 via-blue-500 to-indigo-400',
-    image: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600',
+    image: 'https://m.media-amazon.com/images/I/519qw7On-vL.jpg',
     link: createPageUrl('Shop?category=electronic_appliances'),
-    cta: 'Shop Electronics',
+    cta: 'Shop Now',
   },
   {
     id: 3,
@@ -32,9 +32,9 @@ const slides = [
     title: 'Home Appliances',
     subtitle: 'Quality home appliances delivered to your door',
     bg: 'from-green-600 via-emerald-500 to-teal-400',
-    image: 'https://images.unsplash.com/photo-1556909211-36987daf7b4d?w=600',
+    image: 'https://i.pinimg.com/1200x/60/53/2f/60532f215514eb6e5068ec232e1428c1.jpg',
     link: createPageUrl('Shop?category=home_appliances'),
-    cta: 'Shop Home',
+    cta: 'Shop Now',
   },
 ];
 

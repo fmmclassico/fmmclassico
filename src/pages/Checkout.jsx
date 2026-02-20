@@ -20,15 +20,6 @@ import {
 import { toast } from 'sonner';
 import DeliveryInfoModal from '../components/delivery/DeliveryInfoModal';
 
-const PAYSTACK_BASE = "https://paystack.shop/pay/1miimvhai8";
-const OWNER_PHONE = "233599676419";
-
-// Build Paystack URL with the exact amount (in pesewas = cedis * 100)
-const buildPaystackUrl = (totalCedis) => {
-  const amountPesewas = Math.round(totalCedis * 100);
-  return `${PAYSTACK_BASE}?amount=${amountPesewas}`;
-};
-
 export default function Checkout() {
   const [user, setUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import ProductCard from '../components/products/ProductCard';
 
 const categoryNames = {
+  phones: 'Phones',
   phone_cases: 'Phone Cases',
   chargers: 'Chargers',
   earphones: 'Earphones',

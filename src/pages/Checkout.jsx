@@ -458,16 +458,21 @@ export default function Checkout() {
                   <span>Subtotal</span>
                   <span>₵{subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Delivery</span>
-                  <span className={shipping === 0 ? 'text-green-600 font-medium' : ''}>
-                    {getShippingLabel()}
-                  </span>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Delivery</span>
+                    <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-semibold text-orange-600'}>
+                      {shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}
+                    </span>
+                  </div>
+                  {cartZoneName && (
+                    <p className="text-xs text-gray-400 text-right">{cartZoneName}</p>
+                  )}
                 </div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold text-gray-800">
                   <span>Total</span>
-                  <span>₵{total.toFixed(2)}</span>
+                  <span className="text-orange-600">₵{total.toFixed(2)}</span>
                 </div>
               </div>
 

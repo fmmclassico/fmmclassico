@@ -268,7 +268,17 @@ export default function Layout({ children, currentPageName }) {
             </form>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <Link to={createPageUrl('Notifications')} className="relative">
+                <Button variant="ghost" size="icon" className="text-white hover:bg-orange-600">
+                  <Bell className="h-6 w-6" />
+                  {unreadNotifCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold animate-pulse">
+                      {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                    </span>
+                  )}
+                </Button>
+              </Link>
               <Link to={createPageUrl('Cart')} className="relative">
                 <Button variant="ghost" size="icon" className="text-white hover:bg-orange-600">
                   <ShoppingCart className="h-6 w-6" />

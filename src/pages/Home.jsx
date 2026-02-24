@@ -111,7 +111,7 @@ export default function Home() {
       <HeroBanner />
 
       {/* Features Bar */}
-      <div className="bg-white border-b mb-3">
+      <div className="bg-white border-b mb-2">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-around">
             {features.map((f, i) => (

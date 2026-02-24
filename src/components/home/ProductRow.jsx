@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import ProductCard from '../products/ProductCard';
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function ProductRow({ title, products, isLoading, viewAllLink, onAddToCart }) {
+export default function ProductRow({ title, products, isLoading, viewAllLink }) {
   const scrollRef = useRef(null);
 
   const scroll = (dir) => {

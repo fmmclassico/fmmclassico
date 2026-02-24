@@ -56,14 +56,30 @@ export default function Home() {
         base44.auth.redirectToLogin(window.location.href);
         return;
       }
+      // Optimistic UI: show toast immediately
+      toast.success('Added to cart!');
+      queryClient.setQueryData(['cartItems', user?.email], (old = []) => {
+        const existing = old.find(i => i.product_id === product.id);
+        if (existing) {
+          return old.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+        }
+        return [...old, {
+          id: 'optimistic-' + product.id,
+          product_id: product.id,
+          product_name: product.name,
+          product_image: product.image_url,
+          product_price: product.price,
+          quantity: 1,
+          user_email: user.email
+        }];
+      });
+      // Background API calls
       const existingItems = await base44.entities.CartItem.filter({
         user_email: user.email,
         product_id: product.id
       });
       if (existingItems.length > 0) {
-        await base44.entities.CartItem.update(existingItems[0].id, {
-          quantity: existingItems[0].quantity + 1
-        });
+        await base44.entities.CartItem.update(existingItems[0].id, { quantity: existingItems[0].quantity + 1 });
       } else {
         await base44.entities.CartItem.create({
           product_id: product.id,
@@ -74,17 +90,13 @@ export default function Home() {
           user_email: user.email
         });
       }
-      // Deduct stock
       if (product.stock != null) {
-        await base44.entities.Product.update(product.id, {
-          stock: Math.max(0, product.stock - 1)
-        });
+        base44.entities.Product.update(product.id, { stock: Math.max(0, product.stock - 1) });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast.success('Added to cart!');
     }
   });
 

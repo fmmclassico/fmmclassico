@@ -1,8 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
-import { Badge } from "@/components/ui/badge";
-import { Star } from 'lucide-react';
 
 export default function ProductCard({ product }) {
   const discount = product.original_price
@@ -12,31 +10,28 @@ export default function ProductCard({ product }) {
   const stockLeft = product.stock ?? null;
   const isOutOfStock = stockLeft === 0;
 
-  // Stock bar color
-  const stockPercent = stockLeft != null && stockLeft <= 20
-    ? Math.max(5, Math.round((stockLeft / 20) * 100))
-    : 100;
+  const stockPercent = stockLeft != null && stockLeft > 0
+    ? Math.min(100, Math.max(5, Math.round((Math.min(stockLeft, 20) / 20) * 100)))
+    : 0;
 
   const stockBarColor =
-    stockLeft <= 5 ? 'bg-red-500' :
-    stockLeft <= 10 ? 'bg-orange-400' :
+    stockLeft <= 3 ? 'bg-red-500' :
+    stockLeft <= 8 ? 'bg-orange-400' :
     'bg-yellow-400';
 
   return (
-    <Link
-      to={createPageUrl(`ProductDetail?id=${product.id}`)}
-      className="block group"
-    >
+    <Link to={createPageUrl(`ProductDetail?id=${product.id}`)} className="block">
       <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col h-full">
+
         {/* Image */}
-        <div className="relative aspect-square overflow-hidden bg-gray-50">
+        <div className="relative w-full aspect-square bg-white overflow-hidden">
           <img
             src={product.image_url || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=400'}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-contain p-1"
           />
           {discount > 0 && (
-            <div className="absolute top-2 left-2 bg-orange-100 text-orange-600 text-xs font-bold px-1.5 py-0.5 rounded">
+            <div className="absolute top-1.5 right-1.5 bg-orange-50 border border-orange-200 text-orange-600 text-[11px] font-extrabold px-1.5 py-0.5 rounded">
               -{discount}%
             </div>
           )}
@@ -48,41 +43,32 @@ export default function ProductCard({ product }) {
         </div>
 
         {/* Info */}
-        <div className="p-2.5 flex flex-col gap-1 flex-1">
-          {/* Product name */}
-          <h3 className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2 min-h-[2.5rem]">
+        <div className="px-2.5 pt-2 pb-3 flex flex-col gap-1 flex-1">
+          {/* Product name — like Jumia: medium weight, truncated */}
+          <p className="text-[13px] font-medium text-gray-700 leading-snug line-clamp-2" style={{ minHeight: '2.4rem' }}>
             {product.name}
-          </h3>
+          </p>
 
-          {/* Price */}
-          <div className="flex items-baseline gap-1.5 flex-wrap mt-0.5">
-            <span className="text-base font-black text-gray-900">
-              ₵{product.price?.toFixed(2)}
-            </span>
-            {product.original_price && (
-              <span className="text-xs text-gray-400 line-through">
-                ₵{product.original_price?.toFixed(2)}
-              </span>
-            )}
-          </div>
+          {/* Price — like Jumia: very bold, large, dark */}
+          <p className="text-[15px] font-black text-gray-900 leading-tight mt-0.5">
+            ₵{product.price?.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
 
-          {/* Rating */}
-          {product.rating && (
-            <div className="flex items-center gap-0.5">
-              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-              <span className="text-xs text-gray-500">{product.rating?.toFixed(1)}</span>
-            </div>
+          {product.original_price && (
+            <p className="text-[11px] text-gray-400 line-through -mt-0.5">
+              ₵{product.original_price?.toFixed(2)}
+            </p>
           )}
 
-          {/* Stock */}
+          {/* Stock — like Jumia: "X items left" + progress bar */}
           {stockLeft != null && stockLeft > 0 && (
-            <div className="mt-auto pt-1">
-              <p className="text-xs text-gray-500 mb-1">
+            <div className="mt-auto pt-2">
+              <p className="text-[12px] text-gray-500 font-medium mb-1">
                 {stockLeft} item{stockLeft !== 1 ? 's' : ''} left
               </p>
-              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full ${stockBarColor}`}
+                  className={`h-full rounded-full ${stockBarColor} transition-all duration-300`}
                   style={{ width: `${stockPercent}%` }}
                 />
               </div>

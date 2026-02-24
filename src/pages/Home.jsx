@@ -131,7 +131,7 @@ export default function Home() {
       </div>
 
       {/* Category Icons */}
-      <div className="bg-white rounded-xl shadow-sm mx-3 mb-3 p-4">
+      <div className="bg-white shadow-sm mb-2 p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm md:text-base font-bold text-gray-800">Shop by Category</h2>
           <Link to={createPageUrl('Categories')} className="text-orange-600 text-xs font-semibold hover:underline flex items-center">

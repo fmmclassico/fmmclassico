@@ -101,6 +101,7 @@ export default function Layout({ children, currentPageName }) {
             { icon: Bell, label: 'Notifications', page: 'Notifications' },
             { icon: MessageCircle, label: 'Chat Support', page: 'Chat' },
             { icon: MessageCircle, label: 'Feedback / Report Issue', page: 'Feedback' },
+            { icon: Info, label: 'How to Use the Site', page: 'HowToUse' },
             { icon: Info, label: 'About Us', page: 'About' },
             { icon: Settings, label: 'Settings', page: 'Settings' },
             ...(isAdmin ? [

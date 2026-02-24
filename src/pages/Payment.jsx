@@ -174,7 +174,9 @@ export default function Payment() {
                 </a>
                 <Button
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
-                  onClick={() => setPaymentDone(true)}
+                  onClick={() => {
+                    window.location.href = createPageUrl(`PaymentConfirmed?orderId=${orderId}&orderNumber=${orderNumber}&amount=${amount.toFixed(2)}`);
+                  }}
                 >
                   ✅ I've Paid – Continue
                 </Button>

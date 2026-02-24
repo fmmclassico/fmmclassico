@@ -153,64 +153,54 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Featured Products Row */}
+      {/* Featured Products — horizontal scroll like Jumia flash sales */}
       {(isLoading || featuredProducts.length > 0) && (
-        <div className="mx-3">
-          <ProductRow
-            title="🏆 Top Selling Items"
-            products={featuredProducts}
-            isLoading={isLoading}
-            viewAllLink={createPageUrl('Shop?featured=true')}
-            onAddToCart={(p) => addToCartMutation.mutate(p)}
-          />
-        </div>
+        <ProductRow
+          title="⚡ Top Selling Items"
+          products={featuredProducts}
+          isLoading={isLoading}
+          viewAllLink={createPageUrl('Shop?featured=true')}
+          layout="scroll"
+        />
       )}
 
-      {/* Phone Accessories Row */}
-      <div className="mx-3">
-        <ProductRow
-          title="🔥 Flash Sale Deals"
-          products={phoneProducts}
-          isLoading={isLoading}
-          viewAllLink={createPageUrl('Shop?category=phones')}
-          onAddToCart={(p) => addToCartMutation.mutate(p)}
-        />
-      </div>
+      {/* Flash Sale — horizontal scroll */}
+      <ProductRow
+        title="🔥 Flash Sale Deals"
+        products={phoneProducts}
+        isLoading={isLoading}
+        viewAllLink={createPageUrl('Shop?category=phones')}
+        layout="scroll"
+      />
 
-      {/* Electronics Row */}
-      <div className="mx-3">
-        <ProductRow
-          title="✨ New Arrivals"
-          products={electronicsProducts}
-          isLoading={isLoading}
-          viewAllLink={createPageUrl('Shop?category=electronic_appliances')}
-          onAddToCart={(p) => addToCartMutation.mutate(p)}
-        />
-      </div>
+      {/* New Arrivals — 2-column grid like Jumia */}
+      <ProductRow
+        title="✨ New Arrivals"
+        products={electronicsProducts}
+        isLoading={isLoading}
+        viewAllLink={createPageUrl('Shop?category=electronic_appliances')}
+        layout="grid"
+      />
 
-      {/* Home Appliances Row */}
+      {/* Home Appliances — 2-column grid */}
       {(isLoading || homeProducts.length > 0) && (
-        <div className="mx-3">
-          <ProductRow
-            title="🏠 Home Appliances"
-            products={homeProducts}
-            isLoading={isLoading}
-            viewAllLink={createPageUrl('Shop?category=home_appliances')}
-            onAddToCart={(p) => addToCartMutation.mutate(p)}
-          />
-        </div>
+        <ProductRow
+          title="🏠 Home Appliances"
+          products={homeProducts}
+          isLoading={isLoading}
+          viewAllLink={createPageUrl('Shop?category=home_appliances')}
+          layout="grid"
+        />
       )}
 
-      {/* All Products Row */}
-      <div className="mx-3">
-        <ProductRow
-          title="🛍️ All Products"
-          products={products}
-          isLoading={isLoading}
-          viewAllLink={createPageUrl('Shop')}
-          onAddToCart={(p) => addToCartMutation.mutate(p)}
-        />
-      </div>
+      {/* All Products — 2-column grid like Jumia main listing */}
+      <ProductRow
+        title="🛍️ All Products"
+        products={products}
+        isLoading={isLoading}
+        viewAllLink={createPageUrl('Shop')}
+        layout="grid"
+      />
 
       {/* Promo Banner */}
       <div className="mx-3 mb-4">

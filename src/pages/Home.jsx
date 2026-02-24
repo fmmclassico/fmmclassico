@@ -106,7 +106,7 @@ export default function Home() {
   const homeProducts = products.filter(p => p.category === 'home_appliances');
 
   return (
-    <div className="pb-4 bg-gray-100 min-h-screen">
+    <div className="pb-4 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
       {/* Hero Slider */}
       <HeroBanner />
 

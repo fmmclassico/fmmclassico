@@ -33,17 +33,6 @@ export default function Shop() {
   const search = searchParams.get('search');
   const featured = searchParams.get('featured');
 
-  useEffect(() => {
-    const getUser = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
-      if (isAuth) {
-        const userData = await base44.auth.me();
-        setUser(userData);
-      }
-    };
-    getUser();
-  }, []);
-
   const { data: allProducts = [], isLoading } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list('-created_date', 100),

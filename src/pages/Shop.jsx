@@ -26,10 +26,8 @@ const categoryNames = {
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [user, setUser] = useState(null);
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState('grid');
-  const queryClient = useQueryClient();
 
   const category = searchParams.get('category');
   const search = searchParams.get('search');

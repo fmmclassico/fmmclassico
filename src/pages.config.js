@@ -64,6 +64,7 @@ import ProductDetail from './pages/ProductDetail';
 import Settings from './pages/Settings';
 import Shop from './pages/Shop';
 import PaymentConfirmed from './pages/PaymentConfirmed';
+import HowToUse from './pages/HowToUse';
 import __Layout from './Layout.jsx';
 
 
@@ -85,6 +86,7 @@ export const PAGES = {
     "Settings": Settings,
     "Shop": Shop,
     "PaymentConfirmed": PaymentConfirmed,
+    "HowToUse": HowToUse,
 }
 
 export const pagesConfig = {

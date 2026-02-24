@@ -90,11 +90,25 @@ export default function Chat() {
       - Phone: 0599676419 | Email: fmmcompanylimited@gmail.com
       - Payments: Mobile Money, Paystack
       
+      Our Locations:
+      1. Ashongman Estate, Accra (Close to Awo Dede - Purewater / Pure water)
+      2. Airport Residential Area, Accra (at Libi Kraal)
+      
       Delivery Rates:
-      - UMAT Campus: FREE (instant)
-      - Tarkwa (outside UMAT): ₵25 or FREE on orders over ₵300 (instant)
-      - Within Accra: ₵25-₵40 via Yango (1-2 days)
-      - Outside Accra/Tarkwa: ₵50 or FREE on orders over ₵500 (2-3 days)
+      - UMAT Campus Pickup/Meeting Point: FREE
+      - UMAT Campus Doorstep Delivery: ₵10
+      - Tarkwa – Delivery to a Station/Car: ₵20
+      - Tarkwa (Outside UMAT) Doorstep: ₵25
+      - Ashongman Estate Pickup (our location): FREE
+      - Airport Residential Pickup (our location): FREE
+      - Accra – Delivery to a Station/Car: ₵25
+      - Delivery Within Accra: ₵25
+      - Yango Delivery (customer pays Yango fee when product arrives): Yango fee on delivery
+      - Outside Accra & Tarkwa: ₵50
+      
+      If anyone asks where we are located / our location / where to find us / address, tell them:
+      1. Ashongman Estate, Accra – Close to Awo Dede (Pure water / Purewater)
+      2. Airport Residential Area, Accra – at Libi Kraal
       
       CURRENT PRODUCT CATALOG:
       ${productCatalog || 'No products listed yet.'}

@@ -12,7 +12,8 @@ import {
   Truck, 
   XCircle,
   Eye,
-  CreditCard
+  CreditCard,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -30,6 +31,7 @@ const statusConfig = {
 export default function AdminOrders() {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedOrders, setSelectedOrders] = useState([]);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -160,12 +162,60 @@ export default function AdminOrders() {
     );
   }
 
+  const deleteOrdersMutation = useMutation({
+    mutationFn: async (orderIds) => {
+      await Promise.all(orderIds.map(id => base44.entities.Order.delete(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
+      setSelectedOrders([]);
+      toast.success('Orders deleted successfully');
+    }
+  });
+
+  const handleToggleSelect = (orderId) => {
+    setSelectedOrders(prev =>
+      prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
+    );
+  };
+
+  const handleSelectAll = (orderList) => {
+    const ids = orderList.map(o => o.id);
+    const allSelected = ids.every(id => selectedOrders.includes(id));
+    if (allSelected) {
+      setSelectedOrders(prev => prev.filter(id => !ids.includes(id)));
+    } else {
+      setSelectedOrders(prev => [...new Set([...prev, ...ids])]);
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedOrders.length === 0) return;
+    if (confirm(`Delete ${selectedOrders.length} order(s)? This cannot be undone.`)) {
+      deleteOrdersMutation.mutate(selectedOrders);
+    }
+  };
+
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const otherOrders = orders.filter(o => o.status !== 'pending');
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Admin – Manage Orders</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Admin – Manage Orders</h1>
+        {selectedOrders.length > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="gap-2"
+            onClick={handleDeleteSelected}
+            disabled={deleteOrdersMutation.isPending}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete {selectedOrders.length} Selected
+          </Button>
+        )}
+      </div>
 
       {/* 🔔 Payment Alert Banner */}
       {paymentAlerts.length > 0 && (
@@ -195,9 +245,25 @@ export default function AdminOrders() {
           </Card>
         ) : (
           <div className="space-y-4">
+            {pendingOrders.length > 0 && (
+              <div className="flex items-center gap-2 mb-1">
+                <input type="checkbox"
+                  checked={pendingOrders.every(o => selectedOrders.includes(o.id))}
+                  onChange={() => handleSelectAll(pendingOrders)}
+                  className="w-4 h-4 cursor-pointer"
+                />
+                <span className="text-xs text-gray-500">Select all pending</span>
+              </div>
+            )}
             {pendingOrders.map((order) => (
               <Card key={order.id} className="p-4 shadow-md border-l-4 border-yellow-500">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    <input type="checkbox"
+                      checked={selectedOrders.includes(order.id)}
+                      onChange={() => handleToggleSelect(order.id)}
+                      className="w-4 h-4 mt-1 cursor-pointer flex-shrink-0"
+                    />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-bold text-gray-800">{order.order_number}</span>
@@ -217,6 +283,7 @@ export default function AdminOrders() {
                     <p className="text-xs text-gray-400 mt-1">
                       {order.created_date && format(new Date(order.created_date), 'MMM d, yyyy h:mm a')}
                     </p>
+                  </div>
                   </div>
                   <div className="flex flex-col gap-2">
                     <Button 
@@ -250,7 +317,19 @@ export default function AdminOrders() {
 
       {/* All Other Orders */}
       <div>
-        <h2 className="text-lg font-bold text-gray-800 mb-4">All Orders ({otherOrders.length})</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-800">All Orders ({otherOrders.length})</h2>
+          {otherOrders.length > 0 && (
+            <div className="flex items-center gap-2">
+              <input type="checkbox"
+                checked={otherOrders.length > 0 && otherOrders.every(o => selectedOrders.includes(o.id))}
+                onChange={() => handleSelectAll(otherOrders)}
+                className="w-4 h-4 cursor-pointer"
+              />
+              <span className="text-xs text-gray-500">Select all</span>
+            </div>
+          )}
+        </div>
         
         {isLoading ? (
           <div className="space-y-4">
@@ -267,6 +346,12 @@ export default function AdminOrders() {
               return (
                 <Card key={order.id} className="p-4 shadow-sm">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <input type="checkbox"
+                        checked={selectedOrders.includes(order.id)}
+                        onChange={() => handleToggleSelect(order.id)}
+                        className="w-4 h-4 mt-1 cursor-pointer flex-shrink-0"
+                      />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-bold text-gray-800">{order.order_number}</span>
@@ -279,6 +364,7 @@ export default function AdminOrders() {
                       <p className="text-xs text-gray-400">
                         {order.created_date && format(new Date(order.created_date), 'MMM d, yyyy')}
                       </p>
+                    </div>
                     </div>
                     <div className="flex gap-2 flex-wrap">
                       {order.status === 'confirmed' && (

@@ -31,7 +31,7 @@ const slides = [
     badge: '🏡 Home Deals',
     title: 'Home Appliances',
     subtitle: 'Quality home appliances delivered to your door',
-    bg: 'from-green-600 via-emerald-500 to-teal-400',
+    bg: 'from-gray-800 via-gray-700 to-gray-600',
     image: 'https://i.pinimg.com/1200x/60/53/2f/60532f215514eb6e5068ec232e1428c1.jpg',
     link: createPageUrl('Shop?category=home_appliances'),
     cta: 'Shop Now',

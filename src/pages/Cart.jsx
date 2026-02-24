@@ -75,20 +75,14 @@ export default function Cart() {
   const deliveryZones = [
     { id: 'umat_pickup', label: '🏫 UMAT Campus – Pickup/Meeting Point', fee: 0, note: 'FREE – collect on campus' },
     { id: 'umat_doorstep', label: '🏠 UMAT Campus – Doorstep Delivery', fee: 10, note: '₵10 to your door' },
-    { id: 'tarkwa', label: '🏘️ Tarkwa (Outside UMAT)', fee: subtotal >= 300 ? 0 : 25, note: subtotal >= 300 ? 'FREE – order over ₵300' : '₵25 delivery fee' },
-    { id: 'ashongman', label: '🛍️ Ashongman Estate (Accra)', fee: 0, note: 'FREE – pickup from our shop' },
-    { id: 'airport', label: '✈️ Airport Residential (Accra)', fee: 22, note: '₵22 via Yango/dispatch' },
-    { id: 'accra_mall', label: '🏬 Accra Mall Area', fee: 25, note: '₵25 via Yango/dispatch' },
-    { id: 'madina', label: '📍 Madina (Accra)', fee: 30, note: '₵30 via Yango/dispatch' },
-    { id: 'east_legon', label: '📍 East Legon (Accra)', fee: 30, note: '₵30 via Yango/dispatch' },
-    { id: 'osu', label: '📍 Osu (Accra)', fee: 30, note: '₵30 via Yango/dispatch' },
-    { id: 'circle', label: '📍 Circle (Accra)', fee: 30, note: '₵30 via Yango/dispatch' },
-    { id: 'adenta', label: '📍 Adenta (Accra)', fee: 35, note: '₵35 via Yango/dispatch' },
-    { id: 'accra_station', label: '📍 Accra Station Area', fee: 35, note: '₵35 via Yango/dispatch' },
-    { id: 'makola', label: '📍 Makola (Accra)', fee: 35, note: '₵35 via Yango/dispatch' },
-    { id: 'spintex', label: '📍 Spintex (Accra)', fee: 40, note: '₵40 via Yango/dispatch' },
-    { id: 'other_accra', label: '📍 Other Accra Areas', fee: 50, note: '₵50 via Yango/dispatch' },
-    { id: 'other', label: '📦 Outside Accra & Tarkwa', fee: subtotal >= 500 ? 0 : 50, note: subtotal >= 500 ? 'FREE – order over ₵500' : '₵50 flat rate' },
+    { id: 'tarkwa_station', label: '🚌 Tarkwa – Delivery to a Station/Car', fee: 20, note: '₵20 to a station/car' },
+    { id: 'tarkwa', label: '🏘️ Tarkwa (Outside UMAT) – Doorstep', fee: 25, note: '₵25 delivery fee' },
+    { id: 'ashongman', label: '🏠 Ashongman Estate – Pickup Point (Close to Awo Dede - Purewater)', fee: 0, note: 'FREE – pickup from our location' },
+    { id: 'airport', label: '🏠 Airport Residential Area – Pickup Point (Libi Kraal)', fee: 0, note: 'FREE – pickup from our location' },
+    { id: 'accra_station', label: '🚌 Accra – Delivery to a Station/Car', fee: 25, note: '₵25 to a station/car' },
+    { id: 'accra_delivery', label: '🚗 Delivery Within Accra', fee: 25, note: '₵25 delivery fee' },
+    { id: 'yango', label: '🛵 Request Yango Delivery (Pay on Delivery)', fee: 0, note: 'Yango fee paid when product arrives' },
+    { id: 'other', label: '📦 Outside Accra & Tarkwa', fee: 50, note: '₵50 flat rate' },
   ];
 
   const selectedZone = deliveryZones.find(z => z.id === selectedLocation);

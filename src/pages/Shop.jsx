@@ -187,7 +187,6 @@ export default function Shop() {
             <ProductCard 
               key={product.id} 
               product={product}
-              onAddToCart={() => addToCartMutation.mutate(product)}
             />
           ))
         )}

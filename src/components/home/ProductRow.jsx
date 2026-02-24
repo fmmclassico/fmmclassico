@@ -50,10 +50,7 @@ export default function ProductRow({ title, products, isLoading, viewAllLink }) 
               ))
             : products.map((product) => (
                 <div key={product.id} className="flex-shrink-0 w-36 md:w-44">
-                  <ProductCard
-                    product={product}
-                    onAddToCart={() => onAddToCart?.(product)}
-                  />
+                  <ProductCard product={product} />
                 </div>
               ))}
         </div>

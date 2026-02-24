@@ -12,7 +12,7 @@ const slides = [
     title: 'Premium Phone Accessories',
     subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
     bg: 'from-orange-600 via-orange-500 to-amber-400',
-    image: 'https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg',
+    image: 'https://i.pinimg.com/1200x/99/64/a2/9964a202c67115b1f40714082848c312.jpg',
     link: createPageUrl('Shop?category=phones'),
     cta: 'Shop Now',
   },
@@ -44,7 +44,7 @@ export default function HeroBanner() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrent(prev => (prev + 1) % slides.length);
-    }, 4000);
+    }, 7000);
     return () => clearInterval(timer);
   }, []);
 

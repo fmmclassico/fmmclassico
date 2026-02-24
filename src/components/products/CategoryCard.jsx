@@ -8,14 +8,14 @@ const categoryImages = {
   phone_cases: 'https://images.unsplash.com/photo-1601972599720-36938d4ecd31?w=400',
   chargers: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=400',
   earphones: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400',
-  cables: 'https://images.unsplash.com/photo-1544866092-1677b7de5e6c?w=400',
-  power_banks: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=400',
+  cables: 'https://i.pinimg.com/1200x/93/e7/04/93e704ca6c1d795acb2e5cd5f2e24611.jpg',
+  power_banks: 'https://i.pinimg.com/736x/db/b2/3a/dbb23a535b8017ec1300444d30ac6c16.jpg',
   screen_protectors: 'https://i.pinimg.com/1200x/7f/d8/eb/7fd8ebd8ca145f5bca3fb81bf6b78b82.jpg',
-  holders: 'https://images.unsplash.com/photo-1586953208270-767889fa9b0e?w=400',
+  holders: 'https://i.pinimg.com/1200x/1c/7a/69/1c7a69cf4f2bbbaf092761d17b87df00.jpg',
   speakers: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400',
   smart_watches: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400',
   electronic_appliances: 'https://i.pinimg.com/1200x/f0/19/79/f0197921512896ac8afb70512afdfe7f.jpg',
-  home_appliances: 'https://images.unsplash.com/photo-1556909211-36987daf7b4d?w=400',
+  home_appliances: 'https://i.pinimg.com/1200x/9c/9c/9a/9c9c9af5b47d23db3ee71fbc32575dd3.jpg',
 };
 
 const categoryNames = {
@@ -26,7 +26,7 @@ const categoryNames = {
   cables: 'Cables',
   power_banks: 'Power Banks',
   screen_protectors: 'Screen Protectors',
-  holders: 'Holders',
+  holders: 'Phone Holders',
   speakers: 'Speakers',
   smart_watches: 'Smart Watches',
   electronic_appliances: 'Electronics',

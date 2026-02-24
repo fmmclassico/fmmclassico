@@ -107,6 +107,7 @@ export default function Layout({ children, currentPageName }) {
             ...(isAdmin ? [
             { icon: Settings, label: 'Admin Orders', page: 'AdminOrders' },
             { icon: MessageCircle, label: 'Customer Messages', page: 'AdminMessages' },
+            { icon: Settings, label: 'Invoices', page: 'AdminInvoice' },
           ] : []),
           ];
 

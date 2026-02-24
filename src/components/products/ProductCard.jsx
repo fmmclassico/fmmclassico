@@ -93,23 +93,23 @@ export default function ProductCard({ product, onAddToCart }) {
             </span>
           </div>
           
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-bold text-orange-600">₵{product.price?.toFixed(2)}</span>
+          <div className="flex items-center justify-between mt-2 gap-2">
+            <div className="flex items-baseline gap-1.5 min-w-0">
+              <span className="text-base md:text-lg font-bold text-orange-600">₵{product.price?.toFixed(2)}</span>
               {product.original_price && (
-                <span className="text-xs text-gray-400 line-through">₵{product.original_price?.toFixed(2)}</span>
+                <span className="text-xs text-gray-400 line-through hidden sm:inline">₵{product.original_price?.toFixed(2)}</span>
               )}
             </div>
-            <Button
-              size="icon"
-              className="h-8 w-8 rounded-full bg-orange-500 hover:bg-orange-600 shadow-md"
+            <button
+              className="flex-shrink-0 flex items-center justify-center w-10 h-10 md:w-9 md:h-9 rounded-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 shadow-md transition-colors touch-manipulation"
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 onAddToCart?.(product);
               }}
             >
-              <ShoppingCart className="h-4 w-4" />
-            </Button>
+              <ShoppingCart className="h-5 w-5 md:h-4 md:w-4 text-white" />
+            </button>
           </div>
         </div>
       </Card>

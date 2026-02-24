@@ -1,118 +1,95 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Star, ShoppingCart } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Star } from 'lucide-react';
 
-export default function ProductCard({ product, onAddToCart }) {
-  const [scrollPos, setScrollPos] = useState(0);
-
-  const discount = product.original_price 
+export default function ProductCard({ product }) {
+  const discount = product.original_price
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
 
-  const allImages = product ? [
-    product.image_url,
-    ...(product.image_urls || [])
-  ].filter(Boolean) : [];
+  const stockLeft = product.stock ?? null;
+  const isOutOfStock = stockLeft === 0;
 
-  const handleMouseMove = (e) => {
-    if (allImages.length <= 1) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const pct = x / rect.width;
-    const idx = Math.min(Math.floor(pct * allImages.length), allImages.length - 1);
-    setScrollPos(idx);
-  };
+  // Stock bar color
+  const stockPercent = stockLeft != null && stockLeft <= 20
+    ? Math.max(5, Math.round((stockLeft / 20) * 100))
+    : 100;
 
-  const currentImage = allImages[scrollPos] || allImages[0] || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=400';
+  const stockBarColor =
+    stockLeft <= 5 ? 'bg-red-500' :
+    stockLeft <= 10 ? 'bg-orange-400' :
+    'bg-yellow-400';
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4 }}
-      transition={{ duration: 0.2 }}
+    <Link
+      to={createPageUrl(`ProductDetail?id=${product.id}`)}
+      className="block group"
     >
-      <Card className="group overflow-hidden bg-white hover:shadow-xl transition-all duration-300 border-0 shadow-sm">
-        <Link to={createPageUrl(`ProductDetail?id=${product.id}`)}>
-          <div
-            className="relative aspect-square overflow-hidden bg-gray-100"
-            onMouseMove={handleMouseMove}
-            onMouseLeave={() => setScrollPos(0)}
-          >
-            <img
-              src={currentImage}
-              alt={product.name}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-            />
-            {allImages.length > 1 && (
-              <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                {allImages.map((_, i) => (
-                  <div key={i} className={`h-1 rounded-full transition-all ${i === scrollPos ? 'w-4 bg-white' : 'w-1 bg-white/60'}`} />
-                ))}
-              </div>
-            )}
-            {discount > 0 && (
-              <Badge className="absolute top-2 left-2 bg-red-500 hover:bg-red-500 text-white font-bold">
-                -{discount}%
-              </Badge>
-            )}
-            {product.featured && (
-              <Badge className="absolute top-2 right-2 bg-orange-500 hover:bg-orange-500 text-white">
-                Featured
-              </Badge>
-            )}
-            {product.stock != null && product.stock <= 5 && product.stock > 0 && (
-              <Badge className="absolute bottom-2 right-2 bg-yellow-500 hover:bg-yellow-500 text-white text-[10px]">
-                Only {product.stock} left
-              </Badge>
-            )}
-            {product.stock === 0 && (
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <span className="bg-white text-gray-800 text-xs font-bold px-2 py-1 rounded">Out of Stock</span>
-              </div>
-            )}
-          </div>
-        </Link>
-        
-        <div className="p-3">
-          <Link to={createPageUrl(`ProductDetail?id=${product.id}`)}>
-            <h3 className="font-medium text-gray-800 text-sm line-clamp-2 hover:text-orange-600 transition-colors min-h-[40px]">
-              {product.name}
-            </h3>
-          </Link>
-          
-          <div className="flex items-center gap-1 mt-1">
-            <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-            <span className="text-xs text-gray-600">
-              {product.rating?.toFixed(1) || '4.5'} ({product.reviews_count || 0})
-            </span>
-          </div>
-          
-          <div className="flex items-center justify-between mt-2 gap-2">
-            <div className="flex items-baseline gap-1.5 min-w-0">
-              <span className="text-base md:text-lg font-bold text-orange-600">₵{product.price?.toFixed(2)}</span>
-              {product.original_price && (
-                <span className="text-xs text-gray-400 line-through hidden sm:inline">₵{product.original_price?.toFixed(2)}</span>
-              )}
+      <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col h-full">
+        {/* Image */}
+        <div className="relative aspect-square overflow-hidden bg-gray-50">
+          <img
+            src={product.image_url || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=400'}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+          {discount > 0 && (
+            <div className="absolute top-2 left-2 bg-orange-100 text-orange-600 text-xs font-bold px-1.5 py-0.5 rounded">
+              -{discount}%
             </div>
-            <button
-              className="flex-shrink-0 flex items-center justify-center w-10 h-10 md:w-9 md:h-9 rounded-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 shadow-md transition-colors touch-manipulation"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onAddToCart?.(product);
-              }}
-            >
-              <ShoppingCart className="h-5 w-5 md:h-4 md:w-4 text-white" />
-            </button>
-          </div>
+          )}
+          {isOutOfStock && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <span className="bg-white text-gray-800 text-xs font-bold px-3 py-1 rounded-full">Out of Stock</span>
+            </div>
+          )}
         </div>
-      </Card>
-    </motion.div>
+
+        {/* Info */}
+        <div className="p-2.5 flex flex-col gap-1 flex-1">
+          {/* Product name */}
+          <h3 className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2 min-h-[2.5rem]">
+            {product.name}
+          </h3>
+
+          {/* Price */}
+          <div className="flex items-baseline gap-1.5 flex-wrap mt-0.5">
+            <span className="text-base font-black text-gray-900">
+              ₵{product.price?.toFixed(2)}
+            </span>
+            {product.original_price && (
+              <span className="text-xs text-gray-400 line-through">
+                ₵{product.original_price?.toFixed(2)}
+              </span>
+            )}
+          </div>
+
+          {/* Rating */}
+          {product.rating && (
+            <div className="flex items-center gap-0.5">
+              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+              <span className="text-xs text-gray-500">{product.rating?.toFixed(1)}</span>
+            </div>
+          )}
+
+          {/* Stock */}
+          {stockLeft != null && stockLeft > 0 && (
+            <div className="mt-auto pt-1">
+              <p className="text-xs text-gray-500 mb-1">
+                {stockLeft} item{stockLeft !== 1 ? 's' : ''} left
+              </p>
+              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${stockBarColor}`}
+                  style={{ width: `${stockPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </Link>
   );
 }

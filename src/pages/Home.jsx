@@ -130,12 +130,12 @@ export default function Home() {
             const img = products.find(cat.match)?.image_url;
             return (
               <Link key={cat.id} to={cat.link} className="flex flex-col items-center gap-2 group">
-                <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl overflow-hidden shadow-sm border-2 border-white group-hover:scale-105 transition-transform ${cat.color} flex items-center justify-center`}>
+                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden shadow-sm border-2 border-white group-hover:scale-105 transition-transform ${cat.color} flex items-center justify-center`}>
                   {img
                     ? <img src={img} alt={cat.label} className="w-full h-full object-cover" />
-                    : <cat.icon className="h-7 w-7 opacity-70" />}
+                    : <cat.icon className="h-8 w-8 opacity-70" />}
                 </div>
-                <span className="text-[11px] md:text-xs font-semibold text-gray-700 text-center leading-tight">{cat.label}</span>
+                <span className="text-xs md:text-sm font-semibold text-gray-700 text-center leading-tight">{cat.label}</span>
               </Link>
             );
           })}

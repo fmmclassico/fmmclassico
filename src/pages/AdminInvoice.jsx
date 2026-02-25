@@ -17,7 +17,9 @@ export default function AdminInvoice() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [search, setSearch] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [selectedInvoices, setSelectedInvoices] = useState([]);
   const invoiceRef = useRef(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const checkAdmin = async () => {

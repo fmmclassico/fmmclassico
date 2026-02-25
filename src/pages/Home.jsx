@@ -124,7 +124,7 @@ export default function Home() {
 
       {/* ── CATEGORIES ── */}
       <div className="bg-white mt-3 mx-2 md:mx-4 rounded-2xl shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="font-black text-gray-900 text-base">Shop by Category</h2>
           <Link to={createPageUrl('Categories')} className="text-orange-500 text-xs font-semibold flex items-center hover:underline">
             All <ChevronRight className="h-3 w-3" />
@@ -132,18 +132,30 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-4 gap-3">
           {HOME_CATEGORIES.map(cat => {
-            const img = products.find(cat.match)?.image_url;
+            const displayImg = cat.image || products.find(cat.match)?.image_url;
             return (
               <Link key={cat.id} to={cat.link} className="flex flex-col items-center gap-2 group">
-                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden shadow-sm border-2 border-white group-hover:scale-105 transition-transform ${cat.color} flex items-center justify-center`}>
-                  {img
-                    ? <img src={img} alt={cat.label} className="w-full h-full object-cover" />
-                    : <cat.icon className="h-8 w-8 opacity-70" />}
+                <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden shadow-sm border-2 border-white group-hover:scale-105 transition-transform ${cat.color} flex items-center justify-center`}>
+                  {displayImg
+                    ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
+                    : <cat.icon className="h-10 w-10 opacity-70" />}
                 </div>
-                <span className="text-xs md:text-sm font-semibold text-gray-700 text-center leading-tight">{cat.label}</span>
+                <span className="text-xs md:text-sm font-bold text-gray-800 text-center leading-tight">{cat.label}</span>
               </Link>
             );
           })}
+        </div>
+        {/* Phone Accessories sub-categories */}
+        <div className="mt-4 pt-3 border-t border-gray-100">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone Accessories</p>
+          <div className="flex flex-wrap gap-2">
+            {HOME_CATEGORIES.find(c => c.id === 'phone_accessories')?.subCategories?.map(sub => (
+              <Link key={sub.label} to={sub.link}
+                className="text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-full px-3 py-1 hover:bg-orange-100 transition-colors">
+                {sub.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -144,11 +144,11 @@ export default function Payment() {
             </div>
 
             {/* Iframe */}
-            <div className="relative" style={{ height: 'calc(100vh - 180px)', minHeight: '400px' }}>
+            <div className="relative" style={{ height: 'calc(100vh - 160px)', minHeight: '500px' }}>
               {!iframeLoaded && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-                  <p className="text-sm text-gray-500">Loading Paystack...</p>
+                  <p className="text-sm text-gray-500">Opening Paystack securely...</p>
                 </div>
               )}
               <iframe
@@ -156,23 +156,24 @@ export default function Payment() {
                 title="Paystack Payment"
                 className="w-full h-full border-0"
                 onLoad={() => setIframeLoaded(true)}
-                allow="payment"
+                allow="payment *"
+                loading="eager"
               />
             </div>
 
             {/* Bottom bar */}
-            <div className="bg-white border-t px-4 py-3 space-y-2 shadow-lg">
-              <p className="text-xs text-center text-gray-500">
-                After completing payment above, tap the button below
-              </p>
+            <div className="bg-white border-t px-4 py-2 shadow-lg">
               <Button
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 text-base"
                 onClick={() => {
                   window.location.href = createPageUrl(`PaymentConfirmed?orderId=${orderId}&orderNumber=${orderNumber}&amount=${amount.toFixed(2)}`);
                 }}
               >
-                ✅ Payment Completed – Continue
+                ✅ I've Completed Payment – Continue
               </Button>
+              <p className="text-xs text-center text-gray-400 mt-1 pb-1">
+                Tap after your Paystack payment is done
+              </p>
             </div>
           </motion.div>
         ) : (

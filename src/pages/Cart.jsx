@@ -82,15 +82,17 @@ export default function Cart() {
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
 
   const deliveryZones = [
-    { id: 'umat_pickup', label: '🏫 UMAT Campus – Pickup/Meeting Point', fee: 0, note: 'FREE – collect on campus' },
+    { id: 'umat_pickup', label: '🏫 UMAT Campus – Pickup / Meeting Point', fee: 0, note: 'FREE – collect on campus' },
     { id: 'umat_doorstep', label: '🏠 UMAT Campus – Doorstep Delivery', fee: 10, note: '₵10 to your door' },
-    { id: 'tarkwa_station', label: '🚌 Tarkwa – Delivery to a Station/Car', fee: 20, note: '₵20 to a station/car' },
+    { id: 'tarkwa_station', label: '🚌 Tarkwa – Delivery to a Station / Car', fee: 20, note: '₵20 to a station or car' },
     { id: 'tarkwa', label: '🏘️ Tarkwa (Outside UMAT) – Doorstep', fee: 25, note: '₵25 delivery fee' },
-    { id: 'ashongman', label: '🏠 Ashongman Estate – Pickup Point (Close to Awo Dede - Purewater)', fee: 0, note: 'FREE – pickup from our location' },
+    { id: 'ashongman', label: '🏠 Ashongman Estate – Pickup Point (Close to Awo Dede – Purewater)', fee: 0, note: 'FREE – pickup from our location' },
     { id: 'airport', label: '🏠 Airport Residential Area – Pickup Point (Libi Kraal)', fee: 0, note: 'FREE – pickup from our location' },
-    { id: 'accra_station', label: '🚌 Accra – Delivery to a Station/Car', fee: 25, note: '₵25 to a station/car' },
+    { id: 'accra_station', label: '🚌 Accra – Delivery to a Station / Car', fee: 25, note: '₵25 to a station or car' },
     { id: 'accra_delivery', label: '🚗 Delivery Within Accra', fee: 25, note: '₵25 delivery fee' },
-    { id: 'yango', label: '🛵 Request Yango Delivery (Pay on Delivery)', fee: 0, note: 'Yango fee paid when product arrives' },
+    { id: 'yango', label: '🛵 Yango Delivery – Pay on Delivery', fee: 0, note: 'Yango rider fee paid when product arrives' },
+    { id: 'uber', label: '🚗 Uber Delivery – Pay on Delivery', fee: 0, note: 'Uber rider fee paid when product arrives' },
+    { id: 'bolt', label: '⚡ Bolt Delivery – Pay on Delivery', fee: 0, note: 'Bolt rider fee paid when product arrives' },
     { id: 'other', label: '📦 Outside Accra & Tarkwa', fee: 50, note: '₵50 flat rate' },
   ];
 

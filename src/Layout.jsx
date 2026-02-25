@@ -18,6 +18,7 @@ import {
   Package,
   LogOut,
   ChevronRight,
+  ChevronUp,
   Bot,
   Bell,
   Send
@@ -38,6 +39,11 @@ export default function Layout({ children, currentPageName }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const helpRef = React.useRef(null);
+  const accountRef = React.useRef(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 

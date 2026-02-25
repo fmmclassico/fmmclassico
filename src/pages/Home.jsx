@@ -102,13 +102,13 @@ export default function Home() {
   const homeProducts = products.filter(p => p.category === 'home_appliances');
   const allAccessoryAndPhone = products.filter(p => ['phones', ...phoneAccessoryCategories].includes(p.category));
   // Flash sale = discounted or featured items
-  const flashSaleProducts = products.filter(p => p.original_price && p.original_price > p.price).slice(0, 8);
-  const fallbackFlash = products.filter(p => p.featured).slice(0, 8);
-  const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : fallbackFlash;
-  // New arrivals = latest added
-  const newArrivals = [...products].sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 8);
-  // Falaa deals = cheapest priced products
-  const falaaDeals = [...products].filter(p => p.price > 0).sort((a, b) => a.price - b.price).slice(0, 8);
+  const flashSaleProducts = products.filter(p => p.original_price && p.original_price > p.price).slice(0, 5);
+  const fallbackFlash = products.filter(p => p.featured).slice(0, 5);
+  const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : fallbackFlash.length > 0 ? fallbackFlash : products.slice(0, 5);
+  // New arrivals = latest added (exclude home_appliances)
+  const newArrivals = [...products].filter(p => p.category !== 'home_appliances').sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 8);
+  // Falaa deals = cheapest priced products (exclude home_appliances)
+  const falaaDeals = [...products].filter(p => p.price > 0 && p.category !== 'home_appliances').sort((a, b) => a.price - b.price).slice(0, 8);
 
   return (
     <div className="pb-6 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>

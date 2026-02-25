@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { 
   CheckCircle2, 
   Clock, 
   Package, 
   Truck, 
   XCircle,
-  Eye,
+  FileText,
   CreditCard,
   Trash2
 } from 'lucide-react';

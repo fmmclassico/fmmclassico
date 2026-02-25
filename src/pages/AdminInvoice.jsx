@@ -51,6 +51,29 @@ export default function AdminInvoice() {
     }
   }, [orders]);
 
+  const deleteOrdersMutation = useMutation({
+    mutationFn: async (ids) => {
+      await Promise.all(ids.map(id => base44.entities.Order.delete(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
+      setSelectedInvoices([]);
+      if (selectedOrder && selectedInvoices.includes(selectedOrder.id)) setSelectedOrder(null);
+      toast.success('Deleted successfully');
+    }
+  });
+
+  const handleToggleInvoice = (id) => {
+    setSelectedInvoices(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedInvoices.length === 0) return;
+    if (confirm(`Delete ${selectedInvoices.length} order(s)/invoice(s)? This cannot be undone.`)) {
+      deleteOrdersMutation.mutate(selectedInvoices);
+    }
+  };
+
   const filteredOrders = orders.filter(o =>
     o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
     o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||

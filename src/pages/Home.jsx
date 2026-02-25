@@ -7,7 +7,7 @@ import { ChevronRight, Zap, Star, Tag, Home as HomeIcon, Smartphone, Headphones,
 import { toast } from 'sonner';
 import HeroBanner from '../components/home/HeroBanner';
 
-// 4 merged categories shown on home page
+// Main categories shown on home page
 const HOME_CATEGORIES = [
   {
     id: 'phones',
@@ -15,6 +15,7 @@ const HOME_CATEGORIES = [
     icon: Smartphone,
     color: 'bg-blue-100 text-blue-700',
     link: createPageUrl('Shop?category=phones'),
+    image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
     match: (p) => p.category === 'phones',
   },
   {
@@ -23,7 +24,16 @@ const HOME_CATEGORIES = [
     icon: Headphones,
     color: 'bg-orange-100 text-orange-700',
     link: createPageUrl('Shop?category=phone_cases'),
+    image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=400',
     match: (p) => ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category),
+    subCategories: [
+      { label: 'Cases', link: createPageUrl('Shop?category=phone_cases') },
+      { label: 'Chargers', link: createPageUrl('Shop?category=chargers') },
+      { label: 'Holders', link: createPageUrl('Shop?category=holders') },
+      { label: 'Power Banks', link: createPageUrl('Shop?category=power_banks') },
+      { label: 'Earphones', link: createPageUrl('Shop?category=earphones') },
+      { label: 'Cables', link: createPageUrl('Shop?category=cables') },
+    ],
   },
   {
     id: 'electronics',
@@ -31,6 +41,7 @@ const HOME_CATEGORIES = [
     icon: Tv,
     color: 'bg-purple-100 text-purple-700',
     link: createPageUrl('Shop?category=electronic_appliances'),
+    image: 'https://images.unsplash.com/photo-1593359677879-a4bb92f4834a?w=400',
     match: (p) => ['electronic_appliances','smart_watches'].includes(p.category),
   },
   {

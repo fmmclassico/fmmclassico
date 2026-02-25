@@ -284,6 +284,15 @@ export default function Settings() {
           <LogOut className="mr-2 h-5 w-5" />
           Logout
         </Button>
+
+        <Button 
+          variant="outline"
+          onClick={handleDeleteAccount}
+          className="w-full text-red-800 hover:text-white hover:bg-red-700 border-red-400 mt-2"
+        >
+          <Trash2 className="mr-2 h-5 w-5" />
+          Delete My Account
+        </Button>
       </motion.div>
     </div>
   );

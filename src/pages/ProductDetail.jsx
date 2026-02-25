@@ -179,29 +179,54 @@ export default function ProductDetail() {
           animate={{ opacity: 1, x: 0 }}
           className="space-y-4"
         >
-          {/* Main Image with Navigation */}
-          <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-lg">
+          {/* Main Image with swipe & navigation */}
+          <div
+            className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-lg cursor-grab active:cursor-grabbing"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
             <AnimatePresence mode="wait">
               <motion.img
                 key={selectedImageIndex}
                 src={allImages[selectedImageIndex] || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=800'}
                 alt={product.name}
                 className="w-full h-full object-cover"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: 0.25 }}
               />
             </AnimatePresence>
-            
+
             {discount > 0 && (
               <Badge className="absolute top-4 left-4 bg-red-500 hover:bg-red-500 text-white text-lg px-3 py-1">
                 -{discount}%
               </Badge>
             )}
-            
-            {/* Swipe dots only - no nav arrows */}
-            
+
+            {/* Prev / Next arrows */}
+            {allImages.length > 1 && (
+              <>
+                <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow-md transition-all">
+                  <ChevronLeft className="h-5 w-5 text-gray-700" />
+                </button>
+                <button onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow-md transition-all">
+                  <ChevronRight className="h-5 w-5 text-gray-700" />
+                </button>
+              </>
+            )}
+
+            {/* Dot indicators */}
+            {allImages.length > 1 && (
+              <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+                {allImages.map((_, idx) => (
+                  <button key={idx} onClick={() => setSelectedImageIndex(idx)}
+                    className={`rounded-full transition-all ${idx === selectedImageIndex ? 'bg-orange-500 w-4 h-2' : 'bg-white/70 w-2 h-2'}`}
+                  />
+                ))}
+              </div>
+            )}
+
             <div className="absolute top-4 right-4 flex flex-col gap-2">
               <Button size="icon" variant="secondary" className="rounded-full shadow-md">
                 <Heart className="h-5 w-5" />

@@ -157,14 +157,14 @@ export default function Home() {
           {/* horizontal scroll — max 6 products visible */}
           <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
             {isLoading
-              ? Array(4).fill(0).map((_, i) => (
+              ? Array(5).fill(0).map((_, i) => (
                   <div key={i} className="flex-shrink-0 w-[44vw] md:w-44 bg-white p-2 space-y-2">
                     <div className="aspect-square bg-gray-200 rounded animate-pulse" />
                     <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
                     <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                   </div>
                 ))
-              : (flashItems.length > 0 ? flashItems : products.slice(0, 6)).map(product => (
+              : (flashItems.length > 0 ? flashItems : products.slice(0, 5)).map(product => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
                     className="flex-shrink-0 w-[44vw] md:w-44 bg-white hover:bg-orange-50 transition-colors p-2">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-gray-50">

@@ -207,7 +207,7 @@ export default function Cart() {
 
         {/* Order Summary */}
         <div className="lg:col-span-1">
-          <Card className="p-6 shadow-md sticky top-24">
+          <Card className="p-4 sm:p-6 shadow-md lg:sticky lg:top-24">
             <h2 className="text-lg font-bold text-gray-800 mb-4">Order Summary</h2>
             
             <div className="space-y-3">

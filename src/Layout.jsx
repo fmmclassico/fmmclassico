@@ -257,7 +257,7 @@ export default function Layout({ children, currentPageName }) {
                       <p className="text-orange-100 text-sm mt-1">Hello, {user.full_name || user.email}</p>
                     )}
                   </SheetHeader>
-                  <div className="py-4 overflow-y-auto flex-1">
+                  <div className="py-4 overflow-y-auto" style={{maxHeight: 'calc(100vh - 120px)'}}>
                     {menuItems.map((item) => (
                       <Link
                         key={item.page}

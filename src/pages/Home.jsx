@@ -3,10 +3,9 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronRight, Zap, Star, Tag, Home as HomeIcon, Smartphone, Headphones, Tv, ShoppingBag } from 'lucide-react';
+import { ChevronRight, Zap, Star, Tag, Home as HomeIcon, Smartphone, Headphones, Tv, ShoppingBag, Gem } from 'lucide-react';
 import { toast } from 'sonner';
 import HeroBanner from '../components/home/HeroBanner';
-import ProductRow from '../components/home/ProductRow';
 
 // 4 merged categories shown on home page
 const HOME_CATEGORIES = [

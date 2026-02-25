@@ -209,21 +209,42 @@ export default function AdminInvoice() {
               className="pl-9"
             />
           </div>
-          <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
+          {selectedInvoices.length > 0 && (
+            <div className="mb-2 flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="destructive"
+                className="gap-1 w-full"
+                onClick={handleDeleteSelected}
+                disabled={deleteOrdersMutation.isPending}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete {selectedInvoices.length} Selected
+              </Button>
+            </div>
+          )}
+          <div className="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
             {isLoading ? (
               Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)
             ) : filteredOrders.map(order => (
               <Card
                 key={order.id}
                 onClick={() => setSelectedOrder(order)}
-                className={`p-3 cursor-pointer transition-all hover:border-orange-400 ${selectedOrder?.id === order.id ? 'border-2 border-orange-500 bg-orange-50' : ''}`}
+                className={`p-3 cursor-pointer transition-all hover:border-orange-400 ${selectedOrder?.id === order.id ? 'border-2 border-orange-500 bg-orange-50' : ''} ${selectedInvoices.includes(order.id) ? 'bg-red-50 border-red-300' : ''}`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-sm text-gray-800">{order.order_number}</span>
-                  {selectedOrder?.id === order.id && <CheckCircle2 className="h-4 w-4 text-orange-500" />}
+                <div className="flex items-center gap-2 mb-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedInvoices.includes(order.id)}
+                    onChange={e => { e.stopPropagation(); handleToggleInvoice(order.id); }}
+                    onClick={e => e.stopPropagation()}
+                    className="w-4 h-4 cursor-pointer flex-shrink-0"
+                  />
+                  <span className="font-bold text-sm text-gray-800 flex-1">{order.order_number}</span>
+                  {selectedOrder?.id === order.id && <CheckCircle2 className="h-4 w-4 text-orange-500 flex-shrink-0" />}
                 </div>
-                <p className="text-xs text-gray-600">{order.customer_name}</p>
-                <div className="flex items-center justify-between mt-1">
+                <p className="text-xs text-gray-600 pl-6">{order.customer_name}</p>
+                <div className="flex items-center justify-between mt-1 pl-6">
                   <span className="text-xs font-bold text-gray-800">₵{order.total_amount?.toFixed(2)}</span>
                   <Badge className="text-[10px] px-1.5 py-0" variant="secondary">
                     {order.status}

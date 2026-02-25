@@ -147,9 +147,9 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-white fill-white" />
-              <h2 className="font-black text-white text-base uppercase tracking-wide">Flash Sale</h2>
-              <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Limited Time</span>
+              <Zap className="h-5 w-5 text-orange-500 fill-orange-400" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Flash Sale</h2>
+              <span className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Limited Time</span>
             </div>
             <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-white text-xs font-bold border border-white/60 rounded-full px-3 py-1 hover:bg-white/20 transition-colors">
               See All <ChevronRight className="h-3 w-3" />

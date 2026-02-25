@@ -152,14 +152,10 @@ export default function Payment() {
             className="flex flex-col"
           >
             {/* Header bar */}
-            <div className="bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm">
-              <div>
-                <p className="font-bold text-gray-800 text-sm">Secure Payment – FMM CLASSICO</p>
-                <p className="text-xs text-gray-500">Order #{orderNumber}</p>
-              </div>
+            <div className="bg-white border-b px-4 py-2 flex items-center justify-between shadow-sm">
+              <p className="text-xs text-gray-500">Order #{orderNumber}</p>
               <div className="text-right">
-                <p className="text-xs text-gray-500">Amount</p>
-                <p className="font-black text-orange-600 text-lg">₵{Number.isInteger(amount) ? amount : amount.toFixed(2).replace(/\.00$/, '')}</p>
+                <p className="font-black text-orange-600 text-base">₵{Number.isInteger(amount) ? amount : amount.toFixed(2).replace(/\.00$/, '')}</p>
               </div>
             </div>
 

@@ -134,6 +134,7 @@ export default function Layout({ children, currentPageName }) {
               { icon: Settings, label: 'Invoices', page: 'AdminInvoice' },
               { icon: Bell, label: 'Promo Banners', page: 'AdminBanners' },
               { icon: Send, label: 'Broadcast to Customers', page: 'AdminBroadcast' },
+              { icon: Phone, label: 'SMS Broadcast (9000+)', page: 'AdminSMSBroadcast' },
             ] : []),
           ];
 

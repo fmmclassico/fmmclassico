@@ -41,7 +41,7 @@ const HOME_CATEGORIES = [
     icon: Tv,
     color: 'bg-purple-100 text-purple-700',
     link: createPageUrl('Shop?category=electronic_appliances'),
-    image: 'https://images.unsplash.com/photo-1593359677879-a4bb92f4834a?w=400',
+    image: 'https://ikonic.com/wp-content/uploads/2023/10/industries-consumer-electronics.jpeg',
     match: (p) => ['electronic_appliances','smart_watches'].includes(p.category),
   },
   {

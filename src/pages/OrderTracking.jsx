@@ -112,83 +112,34 @@ export default function OrderTracking() {
         )}
       </div>
 
-      {/* Tracking Progress */}
-      {!isCancelled && (
-        <Card className="p-6 mb-6 shadow-md">
-          <h2 className="text-lg font-bold text-gray-800 mb-6">Delivery Status</h2>
-          
-          <div className="relative">
-            {/* Progress Line */}
-            <div className="absolute top-6 left-0 right-0 h-1 bg-gray-200 hidden md:block" />
-            <div 
-              className="absolute top-6 left-0 h-1 bg-orange-500 transition-all duration-500 hidden md:block"
-              style={{ width: `${(currentStatusIndex / (statusSteps.length - 1)) * 100}%` }}
-            />
+      {/* Tracking Progress — removed, only tracking history shown */}
 
-            {/* Steps */}
-            <div className="flex flex-col md:flex-row justify-between gap-4 md:gap-0">
-              {statusSteps.map((step, index) => {
-                const isCompleted = index <= currentStatusIndex;
-                const isCurrent = index === currentStatusIndex;
-                const StepIcon = step.icon;
-
-                return (
-                  <motion.div
-                    key={step.key}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`flex md:flex-col items-center gap-3 md:gap-2 ${isCurrent ? 'md:scale-110' : ''}`}
-                  >
-                    <div className={`
-                      w-12 h-12 rounded-full flex items-center justify-center z-10 transition-all
-                      ${isCompleted ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-400'}
-                      ${isCurrent ? 'ring-4 ring-orange-200' : ''}
-                    `}>
-                      <StepIcon className="h-5 w-5" />
-                    </div>
-                    <span className={`text-sm font-medium ${isCompleted ? 'text-gray-800' : 'text-gray-400'}`}>
-                      {step.label}
-                    </span>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-
-          {order.estimated_delivery && (
-            <div className="mt-6 p-4 bg-orange-50 rounded-lg text-center">
-              <p className="text-sm text-gray-600">Estimated Delivery</p>
-              <p className="text-lg font-bold text-orange-600">
-                {format(new Date(order.estimated_delivery), 'EEEE, MMMM d, yyyy')}
-              </p>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* Tracking Updates */}
+      {/* Tracking History */}
       {order.tracking_updates?.length > 0 && (
         <Card className="p-6 mb-6 shadow-md">
           <h2 className="text-lg font-bold text-gray-800 mb-4">Tracking History</h2>
-          <div className="space-y-4">
-            {order.tracking_updates.map((update, index) => (
-              <div key={index} className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className={`w-3 h-3 rounded-full ${index === 0 ? 'bg-orange-500' : 'bg-gray-300'}`} />
-                  {index < order.tracking_updates.length - 1 && (
-                    <div className="w-0.5 flex-1 bg-gray-200 my-1" />
-                  )}
+          <div className="space-y-0">
+            {[...order.tracking_updates].reverse().map((update, index, arr) => {
+              const isGreen = ['confirmed', 'processing', 'shipped', 'in_transit', 'delivered', 'payment confirmed'].some(s =>
+                update.status?.toLowerCase().includes(s)
+              );
+              const isLast = index === arr.length - 1;
+              return (
+                <div key={index} className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-3.5 h-3.5 rounded-full flex-shrink-0 mt-1 ${isGreen ? 'bg-green-500' : 'bg-orange-400'}`} />
+                    {!isLast && <div className="w-0.5 flex-1 bg-gray-200 my-1 min-h-[20px]" />}
+                  </div>
+                  <div className={`flex-1 pb-4 ${!isLast ? '' : ''}`}>
+                    <p className={`font-semibold text-sm ${isGreen ? 'text-green-700' : 'text-orange-600'}`}>{update.status}</p>
+                    <p className="text-sm text-gray-600 mt-0.5">{update.message}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {format(new Date(update.timestamp), 'MMM d, yyyy h:mm a')}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 pb-4">
-                  <p className="font-medium text-gray-800">{update.status}</p>
-                  <p className="text-sm text-gray-600">{update.message}</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {format(new Date(update.timestamp), 'MMM d, yyyy h:mm a')}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}

@@ -193,8 +193,7 @@ export default function Checkout() {
         to: 'fmmclassico@gmail.com',
         subject: `🆕 NEW ORDER – ${formData.customer_name} | ₵${total.toFixed(2)}`,
         body: `New order on FMM CLASSICO!\n\n📦 Order: ${orderNumber}\n👤 Customer: ${formData.customer_name}\n📧 Email: ${user.email}\n📞 Phone: ${formData.customer_phone}\n💰 Total: ₵${total.toFixed(2)}\n📍 Address: ${formData.delivery_address}, ${formData.city}\n\nItems:\n${cartItems.map(i => `• ${i.product_name} x${i.quantity} – ₵${(i.product_price * i.quantity).toFixed(2)}`).join('\n')}`
-      }).catch(e => console.log('Admin email error:', e)),
-      // Chat/direct messages go to company email - NOT here (handled in Feedback page)
+      }).catch(e => console.log('Admin email error:', e))
     ]);
 
     queryClient.invalidateQueries({ queryKey: ['cartItems'] });

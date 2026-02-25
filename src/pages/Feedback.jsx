@@ -78,7 +78,7 @@ export default function Feedback() {
       const feedback = await base44.entities.Feedback.create(data);
       // Notify admin
       await base44.integrations.Core.SendEmail({
-        to: 'fmmcompanylimited@gmail.com',
+        to: 'fmmclassico@gmail.com',
         subject: `📩 New Feedback: ${data.type?.toUpperCase()} – ${data.subject || 'No subject'}`,
         body: `New customer feedback received:\n\nName: ${data.customer_name}\nEmail: ${data.customer_email}\nPhone: ${data.customer_phone || 'N/A'}\nType: ${data.type}\nSubject: ${data.subject || 'N/A'}\nOrder #: ${data.order_number || 'N/A'}\n\nMessage:\n${data.message}`,
       });

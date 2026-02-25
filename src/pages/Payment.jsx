@@ -139,7 +139,7 @@ export default function Payment() {
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-500">Amount</p>
-                <p className="font-black text-orange-600 text-lg">₵{amount.toFixed(2)}</p>
+                <p className="font-black text-orange-600 text-lg">₵{Number.isInteger(amount) ? amount : amount.toFixed(2).replace(/\.00$/, '')}</p>
               </div>
             </div>
 
@@ -165,22 +165,14 @@ export default function Payment() {
               <p className="text-xs text-center text-gray-500">
                 After completing payment above, tap the button below
               </p>
-              <div className="flex gap-2">
-                <a href={paystackUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
-                  <Button variant="outline" size="sm" className="gap-1 text-xs">
-                    <ExternalLink className="h-3 w-3" />
-                    Open in browser
-                  </Button>
-                </a>
-                <Button
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
-                  onClick={() => {
-                    window.location.href = createPageUrl(`PaymentConfirmed?orderId=${orderId}&orderNumber=${orderNumber}&amount=${amount.toFixed(2)}`);
-                  }}
-                >
-                  ✅ I've Paid – Continue
-                </Button>
-              </div>
+              <Button
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 text-base"
+                onClick={() => {
+                  window.location.href = createPageUrl(`PaymentConfirmed?orderId=${orderId}&orderNumber=${orderNumber}&amount=${amount.toFixed(2)}`);
+                }}
+              >
+                ✅ Payment Completed – Continue
+              </Button>
             </div>
           </motion.div>
         ) : (
@@ -226,7 +218,7 @@ export default function Payment() {
 
                 <div className="space-y-2">
                   <p className="text-xs text-gray-600 font-medium">Need help?</p>
-                  <a href="https://wa.me/233599676419" target="_blank" rel="noopener noreferrer">
+                  <a href="https://wa.me/233509896035" target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" className="w-full gap-2 text-sm">
                       <Bell className="h-4 w-4" />
                       WhatsApp Support
@@ -338,7 +330,7 @@ export default function Payment() {
                 </div>
 
                 <div className="mt-6 space-y-2">
-                  <a href="https://wa.me/233599676419" target="_blank" rel="noopener noreferrer">
+                  <a href="https://wa.me/233509896035" target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" className="w-full gap-2">
                       <Bell className="h-4 w-4" />
                       Contact Support on WhatsApp

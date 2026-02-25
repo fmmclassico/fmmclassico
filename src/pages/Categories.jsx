@@ -149,7 +149,6 @@ const subColorClasses = {
 
 export default function Categories() {
   const [expanded, setExpanded] = useState({});
-  const navigate = useNavigate();
 
   const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
 

@@ -19,7 +19,8 @@ import {
   LogOut,
   ChevronRight,
   Bot,
-  Bell
+  Bell,
+  Send
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

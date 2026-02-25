@@ -56,9 +56,10 @@ export default function Orders() {
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', user?.email],
-    queryFn: () => base44.entities.Order.filter({ customer_email: user?.email }, '-created_date'),
+    queryFn: () => base44.entities.Order.list('-created_date', 200),
     enabled: !!user?.email,
     refetchInterval: 20000,
+    select: (data) => data.filter(o => o.customer_email === user?.email),
   });
 
   const claimPaymentMutation = useMutation({

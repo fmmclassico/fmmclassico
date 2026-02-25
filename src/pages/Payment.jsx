@@ -163,8 +163,8 @@ export default function Payment() {
               </div>
             </div>
 
-            {/* Iframe */}
-            <div className="relative" style={{ height: 'calc(100vh - 160px)', minHeight: '500px' }}>
+            {/* Iframe — scrollable */}
+            <div className="relative overflow-y-auto" style={{ height: 'calc(100vh - 140px)', minHeight: '500px' }}>
               {!iframeLoaded && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
@@ -181,8 +181,8 @@ export default function Payment() {
               />
             </div>
 
-            {/* Bottom bar */}
-            <div className="bg-white border-t px-4 py-2 shadow-lg">
+            {/* Bottom bar — sticky, always visible */}
+            <div className="sticky bottom-0 bg-white border-t px-4 py-2 shadow-lg z-20">
               <Button
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 text-base"
                 onClick={() => {

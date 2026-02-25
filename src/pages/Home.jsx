@@ -151,7 +151,7 @@ export default function Home() {
               <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Flash Sale</h2>
               <span className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Limited Time</span>
             </div>
-            <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-white text-xs font-bold border border-white/60 rounded-full px-3 py-1 hover:bg-white/20 transition-colors">
+            <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-orange-500 text-xs font-bold border border-orange-400 rounded-full px-3 py-1 hover:bg-orange-50 transition-colors">
               See All <ChevronRight className="h-3 w-3" />
             </Link>
           </div>

@@ -357,6 +357,10 @@ export default function Layout({ children, currentPageName }) {
                 {helpOpen && (
                   <div className="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 py-2 overflow-hidden">
                     <p className="text-xs font-bold text-gray-400 uppercase px-4 pt-1 pb-2 tracking-wider">Help Center</p>
+                    <div className="px-4 py-2 text-xs text-gray-600 bg-orange-50 border-b border-orange-100">
+                      <p className="font-semibold text-orange-700 mb-1">👋 Need help?</p>
+                      <p>Browse the guides below or chat with us directly on WhatsApp or our AI Chat.</p>
+                    </div>
                     {[
                       { label: '🛍️ How to Place an Order', page: 'HowToUse' },
                       { label: '💳 How to Pay for an Order', page: 'HowToUse' },

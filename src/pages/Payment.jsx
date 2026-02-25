@@ -214,12 +214,36 @@ export default function Payment() {
 
             {!paymentClicked ? (
               <>
-                <Card className="p-5 mb-4 bg-orange-50 border-orange-200">
+                <Card className="p-4 mb-4 bg-orange-50 border-orange-200">
                   <p className="text-sm text-gray-700 font-medium mb-1">✅ Done paying on Paystack?</p>
                   <p className="text-xs text-gray-500">
-                    Tap below to notify FMM CLASSICO. We'll verify your payment and confirm your order within <strong>2–5 minutes</strong>.
+                    Tap below to notify FMM CLASSICO. We'll verify and confirm within <strong>2–5 minutes</strong>.
                   </p>
                 </Card>
+
+                {/* Upload payment proof */}
+                <div className="mb-4">
+                  <p className="text-xs text-gray-600 font-semibold mb-2 flex items-center gap-1">
+                    <ImageIcon className="h-3.5 w-3.5 text-orange-500" />
+                    Upload payment screenshot (optional but speeds up verification)
+                  </p>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUploadProof} />
+                  {proofUrl ? (
+                    <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-300 rounded-lg">
+                      <img src={proofUrl} alt="proof" className="h-12 w-12 object-cover rounded" />
+                      <div className="flex-1">
+                        <p className="text-xs text-green-700 font-semibold">Screenshot uploaded ✅</p>
+                        <button onClick={() => setProofUrl('')} className="text-xs text-red-500 underline">Remove</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => fileInputRef.current?.click()}
+                      className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-orange-300 rounded-xl hover:bg-orange-50 transition-colors text-sm text-orange-600 font-medium">
+                      {isUploadingProof ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {isUploadingProof ? 'Uploading...' : 'Tap to upload payment screenshot / invoice'}
+                    </button>
+                  )}
+                </div>
 
                 <Button
                   className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-6 text-lg mb-3"
@@ -233,12 +257,11 @@ export default function Payment() {
                   )}
                 </Button>
 
-                <p className="text-xs text-center text-gray-400 mb-6">
-                  Only tap this after your payment was successful on Paystack
+                <p className="text-xs text-center text-gray-400 mb-4">
+                  Only tap after your Paystack payment was successful
                 </p>
 
                 <div className="space-y-2">
-                  <p className="text-xs text-gray-600 font-medium">Need help?</p>
                   <a href="https://wa.me/233509896035" target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" className="w-full gap-2 text-sm">
                       <Bell className="h-4 w-4" />

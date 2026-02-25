@@ -16,7 +16,7 @@ const HOME_CATEGORIES = [
     icon: Smartphone,
     color: 'bg-blue-100 text-blue-700',
     link: createPageUrl('Shop?category=phones'),
-    image: 'https://i.pinimg.com/1200x/99/64/a2/9964a202c67115b1f40714082848c312.jpg',
+    match: (p) => p.category === 'phones',
   },
   {
     id: 'phone_accessories',
@@ -24,7 +24,7 @@ const HOME_CATEGORIES = [
     icon: Headphones,
     color: 'bg-orange-100 text-orange-700',
     link: createPageUrl('Shop?category=phone_cases'),
-    image: 'https://i.pinimg.com/1200x/a5/2d/a2/a52da2d4f4c4f22e6b2e7f5c5c5c5c5c.jpg',
+    match: (p) => ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category),
   },
   {
     id: 'electronics',
@@ -32,7 +32,7 @@ const HOME_CATEGORIES = [
     icon: Tv,
     color: 'bg-purple-100 text-purple-700',
     link: createPageUrl('Shop?category=electronic_appliances'),
-    image: 'https://m.media-amazon.com/images/I/519qw7On-vL.jpg',
+    match: (p) => ['electronic_appliances','smart_watches'].includes(p.category),
   },
   {
     id: 'home_appliances',
@@ -40,7 +40,7 @@ const HOME_CATEGORIES = [
     icon: HomeIcon,
     color: 'bg-green-100 text-green-700',
     link: createPageUrl('Shop?category=home_appliances'),
-    image: 'https://i.pinimg.com/1200x/60/53/2f/60532f215514eb6e5068ec232e1428c1.jpg',
+    match: (p) => p.category === 'home_appliances',
   },
 ];
 

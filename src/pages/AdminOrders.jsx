@@ -383,6 +383,12 @@ export default function AdminOrders() {
                     </div>
                     </div>
                     <div className="flex gap-2 flex-wrap">
+                      <Link to={createPageUrl(`AdminInvoice?orderId=${order.id}`)}>
+                        <Button size="sm" variant="outline" className="gap-1 border-orange-400 text-orange-600 hover:bg-orange-50">
+                          <FileText className="h-4 w-4" />
+                          Invoice
+                        </Button>
+                      </Link>
                       {order.status === 'confirmed' && (
                         <Button 
                           size="sm"

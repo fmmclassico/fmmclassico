@@ -198,7 +198,7 @@ export default function Layout({ children, currentPageName }) {
         "url": window.location.origin,
         "logo": { "@type": "ImageObject", "url": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg", "width": 1200, "height": 1200 },
         "image": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg",
-        "telephone": "+233599676419",
+        "telephone": "+233509896035",
         "email": "fmmclassico@gmail.com",
         "address": [
           { "@type": "PostalAddress", "streetAddress": "UMAT Campus", "addressLocality": "Tarkwa", "addressRegion": "Western Region", "addressCountry": "GH" },
@@ -219,7 +219,7 @@ export default function Layout({ children, currentPageName }) {
           ]
         },
         "sameAs": [
-          "https://wa.me/233599676419"
+        "https://wa.me/233509896035"
         ]
       },
       {

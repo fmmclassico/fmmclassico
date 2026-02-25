@@ -13,7 +13,7 @@ export default function InvoiceTemplate({ order, invoiceRef }) {
           <h1 className="text-3xl font-black text-orange-500 tracking-tight">FMM CLASSICO</h1>
           <p className="text-xs text-gray-500 mt-1">Phone Accessories · Electronics · Home Appliances</p>
           <p className="text-xs text-gray-500">Tarkwa (UMAT Campus) & Accra (Ashongman Estate)</p>
-          <p className="text-xs text-gray-500">Tel: 0599 676 419 | fmmclassico@gmail.com</p>
+          <p className="text-xs text-gray-500">Tel: 0509 896 035 | fmmclassico@gmail.com</p>
         </div>
         <div className="text-right">
           <div className="text-2xl font-black text-gray-700 uppercase tracking-widest">Invoice</div>
@@ -96,7 +96,7 @@ export default function InvoiceTemplate({ order, invoiceRef }) {
       {/* Footer */}
       <div className="border-t pt-4 text-center text-xs text-gray-400">
         <p className="font-semibold text-gray-500 mb-1">Thank you for shopping with FMM CLASSICO! 🧡</p>
-        <p>For enquiries: WhatsApp 0599 676 419 | fmmclassico@gmail.com</p>
+        <p>For enquiries: WhatsApp 0509 896 035 | fmmclassico@gmail.com</p>
         <p className="mt-1">This is a computer-generated invoice — no signature required.</p>
       </div>
     </div>

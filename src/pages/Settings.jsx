@@ -76,6 +76,13 @@ export default function Settings() {
     base44.auth.logout();
   };
 
+  const handleDeleteAccount = async () => {
+    if (!confirm('Are you sure you want to delete your account? This action cannot be undone and all your data will be lost.')) return;
+    if (!confirm('This is permanent. Delete account?')) return;
+    await base44.entities.User.delete(user.id);
+    base44.auth.logout();
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">

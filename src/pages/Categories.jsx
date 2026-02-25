@@ -96,7 +96,7 @@ const categories = [
     id: 'screen_protectors', 
     name: 'Screen Protectors', 
     desc: 'Ultimate screen defense',
-    image: 'https://images.unsplash.com/photo-1567581935884-3349723552ad?w=600',
+    image: 'https://www.popsci.com/wp-content/uploads/2023/09/13/best-screen-protectors-iphone-header-image.jpg?quality=85&w=1200',
     color: 'from-teal-500 to-cyan-500'
   },
   { 

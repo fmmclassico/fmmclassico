@@ -293,7 +293,7 @@ export default function Layout({ children, currentPageName }) {
               </Sheet>
               
               <Link to={createPageUrl('Home')} className="flex items-center">
-                <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
                   FMM <span className="text-orange-200">CLASSICO</span>
                 </h1>
               </Link>
@@ -328,16 +328,6 @@ export default function Layout({ children, currentPageName }) {
                     <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold animate-pulse">
                       {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
                     </span>
-                  )}
-                </Button>
-              </Link>
-              <Link to={createPageUrl('Cart')} className="relative">
-                <Button variant="ghost" size="icon" className="text-white hover:bg-orange-600 relative">
-                  <ShoppingCart className="h-6 w-6" />
-                  {cartCount > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center p-0 bg-white text-orange-600 text-xs font-bold">
-                      {cartCount > 99 ? '99+' : cartCount}
-                    </Badge>
                   )}
                 </Button>
               </Link>

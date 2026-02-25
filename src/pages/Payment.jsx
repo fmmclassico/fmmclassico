@@ -35,9 +35,8 @@ export default function Payment() {
     );
   }
 
-  // Pass exact amount in pesewas (1 GHS = 100 pesewas), no rounding that inflates value
-  const amountPesewas = Math.round(amount * 100);
-  const paystackUrl = `${PAYSTACK_BASE}?amount=${amountPesewas}`;
+  // Pass exact amount in GHS — Paystack shop pages accept amount in cedis directly
+  const paystackUrl = `${PAYSTACK_BASE}?amount=${amount.toFixed(2)}`;
 
   useEffect(() => {
     const getUser = async () => {

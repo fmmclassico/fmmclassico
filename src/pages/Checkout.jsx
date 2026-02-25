@@ -227,9 +227,9 @@ export default function Checkout() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <Link to={createPageUrl('Cart')} className="inline-flex items-center text-gray-600 hover:text-orange-600 mb-6">
-        <ChevronLeft className="h-4 w-4 mr-1" /> Back to Cart
-      </Link>
+      <button onClick={() => window.history.back()} className="inline-flex items-center text-gray-600 hover:text-orange-600 mb-6">
+        <ChevronLeft className="h-4 w-4" />
+      </button>
 
       <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Checkout</h1>
 
@@ -345,26 +345,21 @@ export default function Checkout() {
               </div>
             </Card>
 
-            <Card className="p-6 shadow-md">
-              <div className="flex items-center gap-2 mb-4">
-                <CreditCard className="h-5 w-5 text-orange-500" />
-                <h2 className="text-lg font-bold text-gray-800">Payment Method</h2>
+            <Card className="p-4 shadow-md">
+              <div className="flex items-center gap-2 mb-3">
+                <CreditCard className="h-4 w-4 text-orange-500" />
+                <h2 className="text-base font-bold text-gray-800">Payment Method</h2>
               </div>
               
-              <div className="p-4 border-2 border-green-500 rounded-lg bg-green-50">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
-                        <span className="text-white text-xl">💳</span>
-                      </div>
-                      <div>
-                        <span className="font-bold text-gray-800 block">Pay with Paystack</span>
-                        <span className="text-sm text-gray-600">Mobile Money, Card & Bank Transfer</span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-3">
-                      After placing your order, you'll be redirected to Paystack to complete your payment securely.
-                    </p>
-                  </div>
+              <div className="p-3 border-2 border-green-500 rounded-lg bg-green-50 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-base">💳</span>
+                </div>
+                <div>
+                  <span className="font-bold text-gray-800 text-sm block">Pay with Paystack</span>
+                  <span className="text-xs text-gray-600">Mobile Money, Card & Bank Transfer – secure checkout</span>
+                </div>
+              </div>
             </Card>
           </div>
 

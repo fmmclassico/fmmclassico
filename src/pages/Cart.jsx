@@ -145,10 +145,10 @@ export default function Cart() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
               >
-                <Card className="p-4 shadow-sm">
-                  <div className="flex gap-4">
-                    <Link to={createPageUrl(`ProductDetail?id=${item.product_id}`)}>
-                      <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                <Card className="p-3 sm:p-4 shadow-sm">
+                  <div className="flex gap-3">
+                    <Link to={createPageUrl(`ProductDetail?id=${item.product_id}`)} className="flex-shrink-0">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
                         <img
                           src={item.product_image || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=200'}
                           alt={item.product_name}
@@ -156,18 +156,18 @@ export default function Cart() {
                         />
                       </div>
                     </Link>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <Link to={createPageUrl(`ProductDetail?id=${item.product_id}`)}>
-                        <h3 className="font-medium text-gray-800 hover:text-orange-600 transition-colors">
+                        <h3 className="font-medium text-gray-800 hover:text-orange-600 transition-colors text-sm sm:text-base leading-tight line-clamp-2">
                           {item.product_name}
                         </h3>
                       </Link>
-                      <p className="text-lg font-bold text-orange-600 mt-1">
+                      <p className="text-base sm:text-lg font-bold text-orange-600 mt-1">
                         ₵{item.product_price?.toFixed(2)}
                       </p>
                       
-                      <div className="flex items-center justify-between mt-3">
-                        <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
+                      <div className="flex items-center justify-between mt-2 sm:mt-3">
+                        <div className="flex items-center gap-1 bg-gray-100 rounded-full p-1">
                           <Button 
                             size="icon" 
                             variant="ghost" 
@@ -190,11 +190,11 @@ export default function Cart() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 px-2 sm:px-3"
                           onClick={() => removeItemMutation.mutate(item.id)}
                         >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Remove
+                          <Trash2 className="h-4 w-4" />
+                          <span className="hidden sm:inline ml-1">Remove</span>
                         </Button>
                       </div>
                     </div>

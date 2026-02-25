@@ -201,26 +201,92 @@ export default function Home() {
               See All <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100">
+          {/* 2-column fixed + rest horizontal scroll */}
+          <div className="flex gap-px bg-gray-100">
+            {/* Fixed left: first 2 items vertical */}
+            <div className="flex flex-col gap-px flex-shrink-0" style={{ width: '45vw', maxWidth: '180px' }}>
+              {isLoading
+                ? Array(2).fill(0).map((_, i) => (
+                    <div key={i} className="bg-white p-2 space-y-2">
+                      <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                      <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    </div>
+                  ))
+                : newArrivals.slice(0, 2).map(product => (
+                    <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                      className="bg-white hover:bg-yellow-50 transition-colors p-2">
+                      <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
+                        {product.image_url
+                          ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                        <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[8px] font-black px-1 py-0.5 rounded-full">NEW</span>
+                      </div>
+                      <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                      <p className="text-xs font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
+                    </Link>
+                  ))}
+            </div>
+            {/* Scrollable right: remaining items */}
+            <div className="overflow-x-auto flex gap-px flex-1" style={{ scrollbarWidth: 'none' }}>
+              {isLoading
+                ? Array(3).fill(0).map((_, i) => (
+                    <div key={i} className="flex-shrink-0 bg-white p-2 space-y-2" style={{ width: '40vw', maxWidth: '160px' }}>
+                      <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                      <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    </div>
+                  ))
+                : newArrivals.slice(2).map(product => (
+                    <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                      className="flex-shrink-0 bg-white hover:bg-yellow-50 transition-colors p-2"
+                      style={{ width: '40vw', maxWidth: '160px' }}>
+                      <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
+                        {product.image_url
+                          ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                        <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[8px] font-black px-1 py-0.5 rounded-full">NEW</span>
+                      </div>
+                      <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                      <p className="text-xs font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
+                    </Link>
+                  ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── CLASSICO DEALS ── */}
+      <div className="mt-5 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600">
+            <div className="flex items-center gap-2">
+              <Gem className="h-5 w-5 text-white" />
+              <h2 className="font-black text-white text-base uppercase tracking-wide">Classico Deals</h2>
+              <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Top Picks</span>
+            </div>
+            <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-white text-xs font-bold border border-white/60 rounded-full px-3 py-1 hover:bg-white/20 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
             {isLoading
-              ? Array(4).fill(0).map((_, i) => (
-                  <div key={i} className="bg-white p-2 space-y-2">
+              ? Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[44vw] md:w-44 bg-white p-2 space-y-2">
                     <div className="aspect-square bg-gray-200 rounded animate-pulse" />
                     <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
                     <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                   </div>
                 ))
-              : newArrivals.map(product => (
+              : (classicoDeals.length > 0 ? classicoDeals : products.slice(0, 5)).map(product => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                    className="bg-white hover:bg-yellow-50 transition-colors p-2">
+                    className="flex-shrink-0 w-[44vw] md:w-44 bg-white hover:bg-purple-50 transition-colors p-2">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-gray-50">
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-8 w-8 text-gray-300" /></div>}
-                      <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[9px] font-black px-1.5 py-0.5 rounded-full">NEW</span>
+                      <span className="absolute top-1 left-1 bg-purple-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">⭐ PICK</span>
                     </div>
                     <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
-                    <p className="text-sm font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
+                    <p className="text-sm font-black text-purple-700">₵{product.price?.toLocaleString()}</p>
                     {product.original_price > product.price && (
                       <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
                     )}
@@ -243,28 +309,28 @@ export default function Home() {
               See All <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100">
+          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
             {isLoading
-              ? Array(4).fill(0).map((_, i) => (
-                  <div key={i} className="bg-white p-2 space-y-2">
+              ? Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
                     <div className="aspect-square bg-gray-200 rounded animate-pulse" />
                     <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
                     <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                   </div>
                 ))
-              : (falaaDeals.length > 0 ? falaaDeals : products.slice(0, 8)).map(product => (
+              : (falaaDeals.length > 0 ? falaaDeals : products.slice(0, 5)).map(product => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                    className="bg-white hover:bg-green-50 transition-colors p-2">
-                    <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-gray-50">
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-8 w-8 text-gray-300" /></div>}
-                      <span className="absolute top-1 left-1 bg-green-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">🔥 DEAL</span>
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                      <span className="absolute top-1 left-1 bg-green-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">🔥</span>
                     </div>
-                    <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
-                    <p className="text-sm font-black text-green-700">₵{product.price?.toLocaleString()}</p>
+                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                    <p className="text-xs font-black text-green-700">₵{product.price?.toLocaleString()}</p>
                     {product.original_price > product.price && (
-                      <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
                     )}
                   </Link>
                 ))}

@@ -463,7 +463,7 @@ export default function Layout({ children, currentPageName }) {
         {currentPageName !== 'Home' && (
           <div className="container mx-auto px-4 pt-3">
             <button
-              onClick={() => window.history.back()}
+              onClick={() => navigate(-1)}
               className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-orange-600 transition-colors group"
             >
               <ChevronRight className="h-4 w-4 rotate-180 group-hover:-translate-x-1 transition-transform" />

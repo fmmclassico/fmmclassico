@@ -409,10 +409,6 @@ export default function Layout({ children, currentPageName }) {
                       <>
                         <p className="text-xs text-gray-400 px-4 pt-1 pb-2 truncate font-medium">{user.full_name || user.email}</p>
                         <div className="border-t mb-1" />
-                        <Link to={createPageUrl('Orders')} onClick={() => setAccountOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 hover:bg-orange-50 text-sm text-gray-700 font-medium transition-colors">
-                          <Package className="h-4 w-4 text-orange-500" /> My Orders
-                        </Link>
                         <Link to={createPageUrl('Settings')} onClick={() => setAccountOpen(false)}
                           className="flex items-center gap-2 px-4 py-2.5 hover:bg-orange-50 text-sm text-gray-700 font-medium transition-colors">
                           <User className="h-4 w-4 text-orange-500" /> Profile / Settings

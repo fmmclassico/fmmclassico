@@ -13,7 +13,9 @@ import {
   Bell, 
   User,
   Search,
-  RefreshCw
+  RefreshCw,
+  Trash2,
+  Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -80,6 +82,16 @@ export default function AdminMessages() {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [selectedMessages]);
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (msgId) => {
+      await base44.entities.ChatMessage.delete(msgId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminChatMessages'] });
+      toast.success('Message deleted');
+    }
+  });
 
   const replyMutation = useMutation({
     mutationFn: async () => {
@@ -258,18 +270,26 @@ export default function AdminMessages() {
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {selectedMessages.map((msg, i) => (
-                    <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                    <div key={i} className={`flex gap-2 group ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
                       {msg.role === 'user' && (
                         <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-1">
                           <User className="h-4 w-4 text-gray-500" />
                         </div>
                       )}
-                      <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${msg.role === 'user' ? 'bg-gray-100 text-gray-800 rounded-tl-none' : 'bg-orange-500 text-white rounded-tr-none'}`}>
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                        <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-orange-100'}`}>
-                          {msg.created_date && format(new Date(msg.created_date), 'h:mm a')}
-                          {msg.role === 'assistant' && ' · Admin'}
-                        </p>
+                      <div className="flex flex-col gap-1">
+                        <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${msg.role === 'user' ? 'bg-gray-100 text-gray-800 rounded-tl-none' : 'bg-orange-500 text-white rounded-tr-none'}`}>
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                          <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-orange-100'}`}>
+                            {msg.created_date && format(new Date(msg.created_date), 'h:mm a')}
+                            {msg.role === 'assistant' && ' · Admin'}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => { if (confirm('Delete this message?')) deleteMessageMutation.mutate(msg.id); }}
+                          className="self-end opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 flex items-center gap-1 text-[11px]"
+                        >
+                          <Trash2 className="h-3 w-3" /> Delete
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -308,20 +328,27 @@ export default function AdminMessages() {
       {/* ── SEND NOTIFICATION TAB ── */}
       {activeTab === 'send_notification' && (
         <Card className="max-w-xl p-6 shadow-md">
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center gap-2 mb-4">
             <Bell className="h-5 w-5 text-orange-500" />
             <h2 className="text-lg font-bold text-gray-800">Send Notification to Customers</h2>
           </div>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Send to (email) <span className="text-gray-400 font-normal">– leave blank to broadcast to ALL customers</span>
+                Send to (email) <span className="text-gray-400 font-normal">– leave blank to broadcast to ALL</span>
               </label>
-              <Input
-                placeholder="customer@email.com  (or leave blank for all)"
-                value={notifTarget}
-                onChange={e => setNotifTarget(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <Input
+                  placeholder="customer@email.com  (or leave blank for all)"
+                  value={notifTarget}
+                  onChange={e => setNotifTarget(e.target.value)}
+                />
+                {notifTarget && (
+                  <Button size="icon" variant="ghost" onClick={() => setNotifTarget('')}>
+                    <Trash2 className="h-4 w-4 text-red-400" />
+                  </Button>
+                )}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notification Title *</label>

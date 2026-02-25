@@ -153,15 +153,6 @@ export default function AdminOrders() {
     }
   });
 
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Access Denied</h2>
-        <p className="text-gray-500">You must be an admin to view this page.</p>
-      </div>
-    );
-  }
-
   const deleteOrdersMutation = useMutation({
     mutationFn: async (orderIds) => {
       await Promise.all(orderIds.map(id => base44.entities.Order.delete(id)));

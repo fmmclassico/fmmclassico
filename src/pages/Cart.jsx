@@ -279,7 +279,7 @@ export default function Cart() {
             </div>
 
             <Button 
-              className={`w-full mt-6 font-bold py-6 text-lg ${selectedZone ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+              className={`w-full mt-4 sm:mt-6 font-bold py-4 sm:py-6 text-base sm:text-lg ${selectedZone ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
               disabled={!selectedZone}
               onClick={() => {
                 if (!selectedZone) {

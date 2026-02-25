@@ -388,22 +388,24 @@ export default function Layout({ children, currentPageName }) {
               </div>
 
               {/* Notifications */}
-              <Link to={createPageUrl('Notifications')} className="relative">
-                <Button variant="ghost" size="icon" className="text-white hover:bg-orange-600 h-10 w-10">
-                  <Bell className="h-6 w-6" />
+              <Link to={createPageUrl('Notifications')} className="relative flex flex-col items-center text-white hover:bg-orange-600 rounded-md px-2 py-1 transition-colors">
+                <div className="relative">
+                  <Bell className="h-5 w-5" />
                   {unreadNotifCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold animate-pulse">
+                    <span className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold animate-pulse">
                       {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
                     </span>
                   )}
-                </Button>
+                </div>
+                <span className="text-[10px] font-semibold leading-tight">Alerts</span>
               </Link>
 
               {/* Account dropdown */}
               <div className="relative" ref={accountRef}>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-orange-600 h-10 w-10" onClick={() => setAccountOpen(o => !o)}>
-                  <User className="h-6 w-6" />
-                </Button>
+                <button className="flex flex-col items-center text-white hover:bg-orange-600 rounded-md px-2 py-1 transition-colors" onClick={() => setAccountOpen(o => !o)}>
+                  <User className="h-5 w-5" />
+                  <span className="text-[10px] font-semibold leading-tight">Account</span>
+                </button>
                 {accountOpen && (
                   <div className="absolute right-0 top-12 w-52 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 py-2 overflow-hidden">
                     {user ? (

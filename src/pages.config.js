@@ -66,6 +66,8 @@ import PaymentConfirmed from './pages/PaymentConfirmed';
 import ProductDetail from './pages/ProductDetail';
 import Settings from './pages/Settings';
 import Shop from './pages/Shop';
+import AdminBroadcast from './pages/AdminBroadcast';
+import AdminBanners from './pages/AdminBanners';
 import __Layout from './Layout.jsx';
 
 
@@ -89,6 +91,8 @@ export const PAGES = {
     "ProductDetail": ProductDetail,
     "Settings": Settings,
     "Shop": Shop,
+    "AdminBroadcast": AdminBroadcast,
+    "AdminBanners": AdminBanners,
 }
 
 export const pagesConfig = {

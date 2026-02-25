@@ -224,34 +224,34 @@ export default function Cart() {
                 </div>
                 <button
                   onClick={() => setLocationPickerOpen(o => !o)}
-                  className="w-full flex items-center justify-between p-3 rounded-xl border-2 border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors text-left"
+                  className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border-2 border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors text-left"
                 >
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-2">
                     {selectedZone ? (
                       <>
-                        <p className="text-sm font-semibold text-gray-800 truncate">{selectedZone.label}</p>
-                        <p className="text-xs text-orange-600">{selectedZone.note}</p>
+                        <p className="text-xs sm:text-sm font-semibold text-gray-800 break-words leading-snug">{selectedZone.label}</p>
+                        <p className="text-xs text-orange-600 mt-0.5">{selectedZone.note}</p>
                       </>
                     ) : (
-                      <p className="text-sm text-orange-700 font-medium">📍 Tap to pick your location</p>
+                      <p className="text-xs sm:text-sm text-orange-700 font-medium">📍 Tap to pick your location</p>
                     )}
                   </div>
-                  <ChevronDown className={`h-4 w-4 text-orange-500 flex-shrink-0 ml-2 transition-transform ${locationPickerOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`h-4 w-4 text-orange-500 flex-shrink-0 transition-transform ${locationPickerOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {locationPickerOpen && (
-                  <div className="mt-1 border border-gray-200 rounded-xl shadow-lg bg-white overflow-hidden max-h-64 overflow-y-auto z-10 relative">
+                  <div className="mt-1 border border-gray-200 rounded-xl shadow-lg bg-white overflow-hidden max-h-60 overflow-y-auto z-10 relative">
                     {deliveryZones.map(zone => (
                       <button
                         key={zone.id}
                         onClick={() => { setSelectedLocation(zone.id); setLocationPickerOpen(false); }}
-                        className={`w-full flex items-center justify-between px-4 py-3 hover:bg-orange-50 text-left border-b border-gray-100 last:border-0 transition-colors ${selectedLocation === zone.id ? 'bg-orange-50 border-l-4 border-l-orange-500' : ''}`}
+                        className={`w-full flex items-start justify-between px-3 py-2.5 hover:bg-orange-50 text-left border-b border-gray-100 last:border-0 transition-colors ${selectedLocation === zone.id ? 'bg-orange-50 border-l-4 border-l-orange-500' : ''}`}
                       >
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">{zone.label}</p>
-                          <p className="text-xs text-gray-500">{zone.note}</p>
+                        <div className="flex-1 min-w-0 pr-2">
+                          <p className="text-xs sm:text-sm font-medium text-gray-800 leading-snug">{zone.label}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{zone.note}</p>
                         </div>
-                        <span className={`text-sm font-bold ml-2 flex-shrink-0 ${zone.fee === 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                        <span className={`text-xs sm:text-sm font-bold flex-shrink-0 ${zone.fee === 0 ? 'text-green-600' : 'text-orange-600'}`}>
                           {zone.fee === 0 ? 'FREE' : `₵${zone.fee}`}
                         </span>
                       </button>

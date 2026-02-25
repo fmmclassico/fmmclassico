@@ -105,10 +105,10 @@ export default function Layout({ children, currentPageName }) {
             { icon: Info, label: 'About Us', page: 'About' },
             { icon: Settings, label: 'Settings', page: 'Settings' },
             ...(isAdmin ? [
-            { icon: Settings, label: 'Admin Orders', page: 'AdminOrders' },
-            { icon: MessageCircle, label: 'Customer Messages', page: 'AdminMessages' },
-            { icon: Settings, label: 'Invoices', page: 'AdminInvoice' },
-          ] : []),
+              { icon: Settings, label: 'Admin Orders', page: 'AdminOrders' },
+              { icon: MessageCircle, label: 'Customer Messages', page: 'AdminMessages' },
+              { icon: Settings, label: 'Invoices', page: 'AdminInvoice' },
+            ] : []),
           ];
 
   const categories = [
@@ -274,23 +274,6 @@ export default function Layout({ children, currentPageName }) {
                         {item.badge > 0 && (
                           <Badge className="bg-orange-500">{item.badge}</Badge>
                         )}
-                      </Link>
-                    ))}
-                    
-                    <div className="border-t my-4" />
-                    
-                    <div className="px-6 py-2">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Categories</p>
-                    </div>
-                    {categories.map((cat) => (
-                      <Link
-                        key={cat.id}
-                        to={createPageUrl(`Shop?category=${cat.id}`)}
-                        onClick={() => setIsMenuOpen(false)}
-                        className="flex items-center justify-between px-6 py-2.5 hover:bg-orange-50 text-gray-600 transition-colors"
-                      >
-                        <span>{cat.name}</span>
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
                       </Link>
                     ))}
                     

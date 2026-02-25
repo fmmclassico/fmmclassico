@@ -351,9 +351,10 @@ export default function Layout({ children, currentPageName }) {
             <div className="flex items-center gap-1">
               {/* Help Button */}
               <div className="relative" ref={helpRef}>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-orange-600 h-10 w-10" onClick={() => setHelpOpen(o => !o)}>
-                  <Info className="h-6 w-6" />
-                </Button>
+                <button className="flex flex-col items-center text-white hover:bg-orange-600 rounded-md px-2 py-1 transition-colors" onClick={() => setHelpOpen(o => !o)}>
+                  <Info className="h-5 w-5" />
+                  <span className="text-[10px] font-semibold leading-tight">Help</span>
+                </button>
                 {helpOpen && (
                   <div className="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 py-2 overflow-hidden">
                     <p className="text-xs font-bold text-gray-400 uppercase px-4 pt-1 pb-2 tracking-wider">Help Center</p>

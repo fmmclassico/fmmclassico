@@ -186,27 +186,7 @@ export default function ProductDetail() {
               </Badge>
             )}
             
-            {/* Navigation Arrows */}
-            {allImages.length > 1 && (
-              <>
-                <Button 
-                  size="icon" 
-                  variant="secondary" 
-                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full shadow-md h-10 w-10"
-                  onClick={prevImage}
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <Button 
-                  size="icon" 
-                  variant="secondary" 
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full shadow-md h-10 w-10"
-                  onClick={nextImage}
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
-              </>
-            )}
+            {/* Swipe dots only - no nav arrows */}
             
             <div className="absolute top-4 right-4 flex flex-col gap-2">
               <Button size="icon" variant="secondary" className="rounded-full shadow-md">
@@ -270,7 +250,13 @@ export default function ProductDetail() {
           </div>
 
           {product.description && (
-            <p className="text-gray-600 leading-relaxed">{product.description}</p>
+            <details className="group border border-gray-200 rounded-xl overflow-hidden">
+              <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer font-semibold text-gray-700 select-none list-none">
+                <span>Product Details</span>
+                <span className="text-orange-500 group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <div className="px-4 py-3 text-gray-600 leading-relaxed text-sm">{product.description}</div>
+            </details>
           )}
 
           <div className="flex items-center gap-4">
@@ -312,18 +298,10 @@ export default function ProductDetail() {
           </div>
 
           {/* Features */}
-          <div className="grid grid-cols-3 gap-3 pt-4 border-t">
-            <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg">
-              <Truck className="h-6 w-6 text-orange-500 mb-2" />
-              <span className="text-xs font-medium text-gray-600">Free Delivery</span>
-            </div>
+          <div className="grid grid-cols-1 gap-3 pt-4 border-t">
             <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg">
               <Shield className="h-6 w-6 text-orange-500 mb-2" />
               <span className="text-xs font-medium text-gray-600">Genuine Product</span>
-            </div>
-            <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg">
-              <RotateCcw className="h-6 w-6 text-orange-500 mb-2" />
-              <span className="text-xs font-medium text-gray-600">Easy Returns</span>
             </div>
           </div>
         </motion.div>

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronDown, ChevronLeft } from 'lucide-react';
-import { Button } from "@/components/ui/button";
+import { ChevronRight, ChevronDown } from 'lucide-react';
 
 const phoneSubCategories = [
   { id: 'iphone', name: 'iPhones', desc: 'Apple iPhone models' },

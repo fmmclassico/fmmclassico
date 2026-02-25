@@ -106,21 +106,15 @@ export default function Home() {
 
   // Product buckets
   const phoneAccessoryCategories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers'];
-  const phoneProducts = products.filter(p => p.category === 'phones');
-  const accessoriesProducts = products.filter(p => phoneAccessoryCategories.includes(p.category));
-  const electronicsProducts = products.filter(p => ['electronic_appliances', 'smart_watches'].includes(p.category));
-  const homeProducts = products.filter(p => p.category === 'home_appliances');
-  const allAccessoryAndPhone = products.filter(p => ['phones', ...phoneAccessoryCategories].includes(p.category));
-  // Flash sale = discounted or featured items
   const flashSaleProducts = products.filter(p => p.original_price && p.original_price > p.price).slice(0, 6);
   const fallbackFlash = products.filter(p => p.featured).slice(0, 6);
   const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : fallbackFlash.length > 0 ? fallbackFlash : products.slice(0, 6);
-  // New arrivals = latest added (exclude home_appliances)
   const newArrivals = [...products].filter(p => p.category !== 'home_appliances').sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 6);
-  // Classico Deals = featured products
   const classicoDeals = products.filter(p => p.featured).slice(0, 6);
-  // Falaa deals = cheapest priced products (exclude home_appliances)
   const falaaDeals = [...products].filter(p => p.price > 0 && p.category !== 'home_appliances').sort((a, b) => a.price - b.price).slice(0, 6);
+  // Top selling = highest reviews_count products
+  const topSelling = [...products].filter(p => p.reviews_count > 0).sort((a, b) => (b.reviews_count || 0) - (a.reviews_count || 0)).slice(0, 6);
+  const topSellingFallback = topSelling.length >= 2 ? topSelling : [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 6);
 
   return (
     <div className="pb-6 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>

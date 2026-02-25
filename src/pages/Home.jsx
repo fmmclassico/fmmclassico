@@ -24,7 +24,7 @@ const HOME_CATEGORIES = [
     icon: Headphones,
     color: 'bg-orange-100 text-orange-700',
     link: createPageUrl('Shop?category=phone_cases'),
-    image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=400',
+    image: 'https://mate.net.in/public/uploads/all/UsReqZvujmEjMUb27qlTtRcCG8Pf18SyULO4HW7U.jpg',
     match: (p) => ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category),
     subCategories: [
       { label: 'Cases', link: createPageUrl('Shop?category=phone_cases') },

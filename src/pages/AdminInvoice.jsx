@@ -37,6 +37,18 @@ export default function AdminInvoice() {
     enabled: isAdmin,
   });
 
+  // Auto-select order from URL param
+  useEffect(() => {
+    if (orders.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const orderId = params.get('orderId');
+      if (orderId) {
+        const found = orders.find(o => o.id === orderId);
+        if (found) setSelectedOrder(found);
+      }
+    }
+  }, [orders]);
+
   const filteredOrders = orders.filter(o =>
     o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
     o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||

@@ -16,7 +16,7 @@ import {
   LogOut,
   Save,
   Loader2,
-  CheckCircle2
+  Trash2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';

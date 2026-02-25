@@ -177,8 +177,8 @@ export default function Checkout() {
       ...cartItems.map(item => base44.entities.CartItem.delete(item.id).catch(e => console.log('Cart clear error:', e))),
       base44.entities.Notification.create({
         user_email: user.email,
-        title: '🛍️ Order Placed – Pay on Paystack',
-        message: `Your order #${orderNumber} is placed! Complete payment on Paystack then click "Payment Completed". Total: ₵${total.toFixed(2)}`,
+        title: '🛍️ Order Placed Successfully!',
+        message: `Order #${orderNumber} has been placed! Please complete payment on Paystack. FMM CLASSICO will verify your payment within 2–5 minutes and update you. Total: ₵${total.toFixed(2)}`,
         type: 'order_placed',
         order_id: newOrder.id,
         order_number: orderNumber,
@@ -187,7 +187,7 @@ export default function Checkout() {
       base44.integrations.Core.SendEmail({
         to: user.email,
         subject: `🛍️ Order Placed – FMM CLASSICO #${orderNumber}`,
-        body: `Hi ${formData.customer_name},\n\nYour order #${orderNumber} has been placed!\n\nOrder Total: ₵${total.toFixed(2)}\nDelivery Address: ${formData.delivery_address}, ${formData.city}\n\nPlease complete your payment on Paystack. Then click "Payment Completed" on the website. We will confirm within 2-5 minutes and notify you.\n\nThank you!\n📞 FMM CLASSICO: 0599676419`
+        body: `Hi ${formData.customer_name},\n\nYour order #${orderNumber} has been placed!\n\nOrder Total: ₵${total.toFixed(2)}\nDelivery Address: ${formData.delivery_address}, ${formData.city}\n\nPlease complete your payment on Paystack. Then click "Payment Completed" on the website. We will confirm within 2-5 minutes and notify you.\n\nThank you!\n📞 FMM CLASSICO: 0509896035`
       }).catch(e => console.log('Email error:', e)),
       base44.integrations.Core.SendEmail({
         to: 'fmmclassico@gmail.com',
@@ -314,7 +314,7 @@ export default function Checkout() {
                       Pin Location
                     </a>
                   </div>
-                  <p className="text-xs text-gray-400">Open Google Maps, copy your location link and paste it in the address field or send to <strong>0599676419</strong> on WhatsApp.</p>
+                  <p className="text-xs text-gray-400">Open Google Maps, copy your location link and paste it in the address field or send to <strong>0509896035</strong> on WhatsApp.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">City / Town *</Label>

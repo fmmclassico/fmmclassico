@@ -108,6 +108,8 @@ export default function Layout({ children, currentPageName }) {
               { icon: Settings, label: 'Admin Orders', page: 'AdminOrders' },
               { icon: MessageCircle, label: 'Customer Messages', page: 'AdminMessages' },
               { icon: Settings, label: 'Invoices', page: 'AdminInvoice' },
+              { icon: Bell, label: 'Promo Banners', page: 'AdminBanners' },
+              { icon: Send, label: 'Broadcast to Customers', page: 'AdminBroadcast' },
             ] : []),
           ];
 

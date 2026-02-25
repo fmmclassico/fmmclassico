@@ -237,7 +237,12 @@ export default function Layout({ children, currentPageName }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full">
+    <style>{`
+      html, body { overflow-x: hidden; max-width: 100vw; }
+      * { box-sizing: border-box; }
+      .container { max-width: 100% !important; }
+    `}</style>
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full" style={{maxWidth:'100vw'}}>
       {/* Header */}
       <header className="sticky top-0 z-50 bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg">
         <div className="container mx-auto px-4">

@@ -202,26 +202,7 @@ export default function Home() {
         layout="grid"
       />
 
-      {/* Promo Banner */}
-      <div className="mx-3 mb-4">
-        <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl overflow-hidden p-6 md:p-10 relative">
-          <div className="absolute top-0 right-0 w-1/2 h-full bg-[url('https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=800')] bg-cover bg-center opacity-10" />
-          <div className="relative max-w-md">
-            <span className="inline-block bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full mb-3">Limited Offer</span>
-            <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
-              Get the Best Deals on FMM CLASSICO
-            </h3>
-            <p className="text-gray-400 text-sm mb-4">
-              Premium phone accessories, electronics & home appliances in Tarkwa, UMAT Campus & Accra.
-            </p>
-            <Link to={createPageUrl('Shop')}>
-              <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white font-bold">
-                Start Shopping
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
+
     </div>
   );
 }

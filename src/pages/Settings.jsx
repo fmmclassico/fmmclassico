@@ -25,6 +25,7 @@ export default function Settings() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showDangerZone, setShowDangerZone] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',

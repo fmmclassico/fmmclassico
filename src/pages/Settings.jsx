@@ -286,14 +286,26 @@ export default function Settings() {
           Logout
         </Button>
 
-        <Button 
-          variant="outline"
-          onClick={handleDeleteAccount}
-          className="w-full text-red-800 hover:text-white hover:bg-red-700 border-red-400 mt-2"
-        >
-          <Trash2 className="mr-2 h-5 w-5" />
-          Delete My Account
-        </Button>
+        {/* Danger Zone — hidden until tapped */}
+        <div className="mt-2">
+          <button
+            onClick={() => setShowDangerZone(v => !v)}
+            className="w-full text-xs text-gray-400 hover:text-red-500 transition-colors py-2 flex items-center justify-center gap-1"
+          >
+            <Shield className="h-3 w-3" />
+            {showDangerZone ? 'Hide danger zone' : 'Account options'}
+          </button>
+          {showDangerZone && (
+            <Button 
+              variant="outline"
+              onClick={handleDeleteAccount}
+              className="w-full text-red-800 hover:text-white hover:bg-red-700 border-red-400 mt-1"
+            >
+              <Trash2 className="mr-2 h-5 w-5" />
+              Delete My Account
+            </Button>
+          )}
+        </div>
       </motion.div>
     </div>
   );

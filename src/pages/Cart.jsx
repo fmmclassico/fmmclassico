@@ -47,15 +47,24 @@ export default function Cart() {
   });
 
   const updateQuantityMutation = useMutation({
-    mutationFn: async ({ id, quantity }) => {
-      if (quantity < 1) {
-        await base44.entities.CartItem.delete(id);
+    mutationFn: async ({ item, delta }) => {
+      const newQty = item.quantity + delta;
+      // Find the product to update its stock
+      if (newQty < 1) {
+        await base44.entities.CartItem.delete(item.id);
       } else {
-        await base44.entities.CartItem.update(id, { quantity });
+        await base44.entities.CartItem.update(item.id, { quantity: newQty });
+      }
+      // Update product stock: adding to cart reduces stock, removing adds back
+      const products = await base44.entities.Product.filter({ id: item.product_id });
+      if (products.length > 0 && products[0].stock != null) {
+        const newStock = Math.max(0, products[0].stock - delta);
+        await base44.entities.Product.update(item.product_id, { stock: newStock });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     }
   });
 
@@ -163,10 +172,7 @@ export default function Cart() {
                             size="icon" 
                             variant="ghost" 
                             className="h-7 w-7 rounded-full"
-                            onClick={() => updateQuantityMutation.mutate({ 
-                              id: item.id, 
-                              quantity: item.quantity - 1 
-                            })}
+                            onClick={() => updateQuantityMutation.mutate({ item, delta: -1 })}
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
@@ -175,10 +181,7 @@ export default function Cart() {
                             size="icon" 
                             variant="ghost" 
                             className="h-7 w-7 rounded-full"
-                            onClick={() => updateQuantityMutation.mutate({ 
-                              id: item.id, 
-                              quantity: item.quantity + 1 
-                            })}
+                            onClick={() => updateQuantityMutation.mutate({ item, delta: 1 })}
                           >
                             <Plus className="h-3 w-3" />
                           </Button>

@@ -40,6 +40,7 @@ export default function ProductDetail() {
   const [user, setUser] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
   const queryClient = useQueryClient();
   
   const urlParams = new URLSearchParams(window.location.search);

@@ -504,15 +504,15 @@ export default function Layout({ children, currentPageName }) {
       {/* Spacer for bottom nav */}
       <div className="md:hidden h-20" />
 
-      {/* Scroll to top button */}
-      {showScrollTop && (
+      {/* Scroll to top button — only on Home page */}
+      {showScrollTop && currentPageName === 'Home' && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-24 md:bottom-8 right-4 z-50 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-3 shadow-2xl transition-all hover:scale-110 active:scale-95"
+          className="fixed bottom-24 md:bottom-8 right-4 z-50 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-2 shadow-2xl transition-all hover:scale-110 active:scale-95"
           style={{ boxShadow: '0 4px 20px rgba(249,115,22,0.4)' }}
           aria-label="Back to top"
         >
-          <ChevronUp className="h-5 w-5" />
+          <ChevronUp className="h-4 w-4" />
         </button>
       )}
 

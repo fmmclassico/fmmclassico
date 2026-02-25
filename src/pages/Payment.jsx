@@ -127,6 +127,7 @@ export default function Payment() {
 
     setIsSubmitting(false);
     setPaymentClicked(true);
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
     queryClient.invalidateQueries({ queryKey: ['order', orderId] });
     toast.success('Payment notification sent! We\'ll verify shortly.');
   };
@@ -150,9 +151,10 @@ export default function Payment() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="flex flex-col"
+            style={{ height: '100dvh', maxHeight: '100dvh' }}
           >
             {/* Header bar */}
-            <div className="bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm">
+            <div className="bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm flex-shrink-0">
               <div>
                 <p className="font-bold text-gray-800 text-sm">Secure Payment – FMM CLASSICO</p>
                 <p className="text-xs text-gray-500">Order #{orderNumber}</p>
@@ -163,8 +165,8 @@ export default function Payment() {
               </div>
             </div>
 
-            {/* Iframe */}
-            <div className="relative" style={{ height: 'calc(100vh - 160px)', minHeight: '500px' }}>
+            {/* Iframe — takes remaining space */}
+            <div className="relative flex-1 min-h-0">
               {!iframeLoaded && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
@@ -181,18 +183,16 @@ export default function Payment() {
               />
             </div>
 
-            {/* Bottom bar */}
-            <div className="bg-white border-t px-4 py-2 shadow-lg">
+            {/* Bottom bar — always visible, never hidden */}
+            <div className="bg-white border-t px-4 pt-3 pb-4 shadow-lg flex-shrink-0" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
               <Button
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 text-base"
-                onClick={() => {
-                  window.location.href = createPageUrl(`PaymentConfirmed?orderId=${orderId}&orderNumber=${orderNumber}&amount=${amount.toFixed(2)}`);
-                }}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 text-base rounded-xl"
+                onClick={() => setPaymentDone(true)}
               >
                 ✅ I've Completed Payment – Continue
               </Button>
-              <p className="text-xs text-center text-gray-400 mt-1 pb-1">
-                Tap after your Paystack payment is done
+              <p className="text-xs text-center text-gray-400 mt-2">
+                Tap only after your Paystack payment is done
               </p>
             </div>
           </motion.div>
@@ -322,29 +322,33 @@ export default function Payment() {
                    </div>
                  </div>
 
+                 {/* Always show Orders button after payment claimed */}
+                 <div className="mt-4 space-y-2">
+                   <Link to={createPageUrl('Orders')}>
+                     <Button className="w-full bg-orange-500 hover:bg-orange-600 gap-2">
+                       <Package className="h-4 w-4" />
+                       View My Orders & Track
+                     </Button>
+                   </Link>
+                 </div>
+
                  {paymentConfirmedByAdmin ? (
-                  <>
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-6"
-                    >
-                      <Card className="p-6 bg-green-50 border-green-300 text-center">
-                        <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-3" />
-                        <h2 className="text-xl font-bold text-green-900 mb-2">🎉 Order Confirmed!</h2>
-                        <p className="text-sm text-green-700 mb-4">
-                          Your payment has been verified. Your order is now processing and will be prepared for shipment.
-                        </p>
-                        <Link to={createPageUrl('Orders')}>
-                          <Button className="w-full bg-green-600 hover:bg-green-700">
-                            <Package className="mr-2 h-4 w-4" />
-                            View My Orders
-                          </Button>
-                        </Link>
-                      </Card>
-                    </motion.div>
-                  </>
-                ) : (
+                   <>
+                     <motion.div
+                       initial={{ opacity: 0, y: 20 }}
+                       animate={{ opacity: 1, y: 0 }}
+                       className="mt-4"
+                     >
+                       <Card className="p-5 bg-green-50 border-green-300 text-center">
+                         <CheckCircle2 className="h-10 w-10 text-green-600 mx-auto mb-2" />
+                         <h2 className="text-lg font-bold text-green-900 mb-1">🎉 Order Confirmed!</h2>
+                         <p className="text-sm text-green-700">
+                           Your payment has been verified. Your order is now processing.
+                         </p>
+                       </Card>
+                     </motion.div>
+                   </>
+                 ) : (
                   <div className="mt-6 text-center">
                     <p className="text-sm text-gray-600 mb-4">Waiting for FMM CLASSICO to verify...</p>
                     <div className="flex items-center justify-center gap-1">

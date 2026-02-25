@@ -115,34 +115,87 @@ export default function OrderTracking() {
       {/* Tracking Progress — removed, only tracking history shown */}
 
       {/* Tracking History */}
-      {order.tracking_updates?.length > 0 && (
-        <Card className="p-6 mb-6 shadow-md">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Tracking History</h2>
-          <div className="space-y-0">
-            {[...order.tracking_updates].reverse().map((update, index, arr) => {
-              const isGreen = ['confirmed', 'processing', 'shipped', 'in_transit', 'delivered', 'payment confirmed'].some(s =>
-                update.status?.toLowerCase().includes(s)
-              );
-              const isLast = index === arr.length - 1;
-              return (
-                <div key={index} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className={`w-3.5 h-3.5 rounded-full flex-shrink-0 mt-1 ${isGreen ? 'bg-green-500' : 'bg-orange-400'}`} />
-                    {!isLast && <div className="w-0.5 flex-1 bg-gray-200 my-1 min-h-[20px]" />}
-                  </div>
-                  <div className={`flex-1 pb-4 ${!isLast ? '' : ''}`}>
-                    <p className={`font-semibold text-sm ${isGreen ? 'text-green-700' : 'text-orange-600'}`}>{update.status}</p>
-                    <p className="text-sm text-gray-600 mt-0.5">{update.message}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {format(new Date(update.timestamp), 'MMM d, yyyy h:mm a')}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+      <Card className="p-6 mb-6 shadow-md">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-800">Tracking History</h2>
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-4 mb-5 p-3 bg-gray-50 rounded-lg text-xs">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />
+            <span className="text-gray-600 font-medium">Green = Status Confirmed</span>
           </div>
-        </Card>
-      )}
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-red-400 flex-shrink-0" />
+            <span className="text-gray-600 font-medium">Red = Not Yet Confirmed</span>
+          </div>
+        </div>
+
+        {/* Ordered steps */}
+        {(() => {
+          const stepOrder = [
+            { key: 'payment', label: 'Payment Confirmed', match: (s) => s?.toLowerCase().includes('payment confirmed') || s?.toLowerCase().includes('payment claimed') },
+            { key: 'placed', label: 'Order Placed', match: (s) => s?.toLowerCase().includes('order placed') || s?.toLowerCase().includes('placed') },
+            { key: 'processing', label: 'Processing', match: (s) => s?.toLowerCase().includes('processing') || s?.toLowerCase().includes('confirmed') },
+            { key: 'shipped', label: 'Shipped', match: (s) => s?.toLowerCase().includes('shipped') || s?.toLowerCase().includes('in_transit') || s?.toLowerCase().includes('in transit') },
+            { key: 'delivered', label: 'Delivered', match: (s) => s?.toLowerCase().includes('delivered') },
+          ];
+
+          // Find matching tracking update for each step
+          const allUpdates = order.tracking_updates || [];
+
+          // Show step-based view
+          return (
+            <div className="space-y-0">
+              {stepOrder.map((step, index) => {
+                const matchedUpdate = allUpdates.find(u => step.match(u.status));
+                const isConfirmed = !!matchedUpdate && (
+                  step.key === 'payment' ? matchedUpdate.status?.toLowerCase().includes('payment confirmed') :
+                  step.key === 'placed' ? true :
+                  ['confirmed', 'processing', 'shipped', 'in_transit', 'in transit', 'delivered'].some(s => matchedUpdate.status?.toLowerCase().includes(s))
+                );
+                // Green if order status has reached or passed this step (admin confirmed)
+                const orderStatusIndex = ['pending', 'confirmed', 'processing', 'shipped', 'in_transit', 'delivered'].indexOf(order.status);
+                const stepStatusIndex = ['pending', 'confirmed', 'processing', 'shipped', 'in_transit', 'delivered'].indexOf(
+                  step.key === 'payment' ? 'confirmed' :
+                  step.key === 'placed' ? 'pending' :
+                  step.key === 'processing' ? 'processing' :
+                  step.key === 'shipped' ? 'shipped' :
+                  'delivered'
+                );
+                const isGreen = orderStatusIndex >= stepStatusIndex && orderStatusIndex >= 0;
+                const isLast = index === stepOrder.length - 1;
+
+                return (
+                  <div key={step.key} className="flex gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-4 h-4 rounded-full flex-shrink-0 mt-1 border-2 ${isGreen ? 'bg-green-500 border-green-500' : 'bg-white border-red-400'}`} />
+                      {!isLast && <div className={`w-0.5 flex-1 my-1 min-h-[24px] ${isGreen ? 'bg-green-300' : 'bg-gray-200'}`} />}
+                    </div>
+                    <div className="flex-1 pb-4">
+                      <p className={`font-semibold text-sm ${isGreen ? 'text-green-700' : 'text-red-500'}`}>
+                        {index + 1}. {step.label}
+                      </p>
+                      {matchedUpdate && (
+                        <>
+                          <p className="text-xs text-gray-500 mt-0.5">{matchedUpdate.message}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {format(new Date(matchedUpdate.timestamp), 'MMM d, yyyy h:mm a')}
+                          </p>
+                        </>
+                      )}
+                      {!matchedUpdate && (
+                        <p className="text-xs text-gray-400 mt-0.5 italic">Pending...</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+      </Card>
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Order Items */}

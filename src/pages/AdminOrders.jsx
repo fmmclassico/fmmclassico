@@ -187,6 +187,23 @@ export default function AdminOrders() {
     }
   };
 
+  if (!isAdmin && user) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">Access Denied</h2>
+        <p className="text-gray-500">You must be an admin to view this page.</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    );
+  }
+
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const otherOrders = orders.filter(o => o.status !== 'pending');
 

@@ -504,7 +504,7 @@ export default function Layout({ children, currentPageName }) {
       </nav>
 
       {/* Spacer for bottom nav */}
-      <div className="md:hidden h-20" />
+      <div className="h-20" />
 
       {/* Scroll to top button — only on Home page */}
       {showScrollTop && currentPageName === 'Home' && (

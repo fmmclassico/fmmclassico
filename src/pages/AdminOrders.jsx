@@ -88,7 +88,7 @@ export default function AdminOrders() {
         base44.entities.Notification.create({
           user_email: order.customer_email,
           title: '✅ Payment Confirmed – Order Processing!',
-          message: `🎉 Payment confirmed for order #${order.order_number}! Total: ₵${order.total_amount?.toFixed(2)}. Your order is now being prepared. Estimated delivery: ${deliveryDays}. We'll notify you when it ships!`,
+          message: `🎉 Payment confirmed for order #${order.order_number}! Total: ₵${order.total_amount?.toFixed(2)}. Your order is now being prepared. Estimated delivery: ${deliveryDays}. We'll notify you when it ships! For help: 0509896035`,
           type: 'payment_confirmed',
           order_id: order.id,
           order_number: order.order_number,
@@ -124,7 +124,7 @@ export default function AdminOrders() {
         shipped: { title: '🚚 Order Shipped!', msg: `Your order #${order.order_number} has been shipped and is on its way to you!`, type: 'order_shipped' },
         in_transit: { title: '🛵 Out for Delivery!', msg: `Your order #${order.order_number} is out for delivery. Expect it very soon!`, type: 'order_shipped' },
         delivered: { title: '🎉 Order Delivered!', msg: `Your order #${order.order_number} has been delivered. Enjoy your purchase! Thank you for shopping with FMM CLASSICO.`, type: 'order_delivered' },
-        cancelled: { title: '❌ Order Cancelled', msg: `Your order #${order.order_number} has been cancelled. Contact us at 0599676419 for assistance.`, type: 'order_cancelled' },
+        cancelled: { title: '❌ Order Cancelled', msg: `Your order #${order.order_number} has been cancelled. Contact us at 0509896035 for assistance.`, type: 'order_cancelled' },
       };
       const notif = notifMap[newStatus];
       if (notif) {
@@ -142,7 +142,7 @@ export default function AdminOrders() {
             to: order.customer_email,
             from_name: 'FMM CLASSICO',
             subject: `${notif.title} – FMM CLASSICO Order #${order.order_number}`,
-            body: `Hi ${order.customer_name},\n\n${notif.msg}\n\n📦 Order: #${order.order_number}\n💰 Total: ₵${order.total_amount?.toFixed(2)}\n📍 Delivery: ${order.delivery_address}, ${order.city}\n\nTrack your order on the FMM CLASSICO website.\n\nFor help: call/WhatsApp 0599676419\n\nFMM CLASSICO Team`
+            body: `Hi ${order.customer_name},\n\n${notif.msg}\n\n📦 Order: #${order.order_number}\n💰 Total: ₵${order.total_amount?.toFixed(2)}\n📍 Delivery: ${order.delivery_address}, ${order.city}\n\nTrack your order on the FMM CLASSICO website.\n\nFor help: call/WhatsApp 0509896035\n\nFMM CLASSICO Team`
           })
         ]);
       }

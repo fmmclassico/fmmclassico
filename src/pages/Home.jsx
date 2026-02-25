@@ -125,33 +125,19 @@ export default function Home() {
           </Link>
         </div>
         <div className="grid grid-cols-4 gap-3">
-          {HOME_CATEGORIES.map(cat => (
-            <Link key={cat.id} to={cat.link} className="flex flex-col items-center gap-2 group">
-              <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl overflow-hidden shadow-sm border-2 border-white group-hover:scale-105 transition-transform ${cat.color} flex items-center justify-center`}>
-                {/* try product image, fallback icon */}
-                {products.find(p => {
-                  if (cat.id === 'phones') return p.category === 'phones';
-                  if (cat.id === 'phone_accessories') return phoneAccessoryCategories.includes(p.category);
-                  if (cat.id === 'electronics') return ['electronic_appliances', 'smart_watches'].includes(p.category);
-                  return p.category === 'home_appliances';
-                })?.image_url ? (
-                  <img
-                    src={products.find(p => {
-                      if (cat.id === 'phones') return p.category === 'phones';
-                      if (cat.id === 'phone_accessories') return phoneAccessoryCategories.includes(p.category);
-                      if (cat.id === 'electronics') return ['electronic_appliances', 'smart_watches'].includes(p.category);
-                      return p.category === 'home_appliances';
-                    })?.image_url}
-                    alt={cat.label}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <cat.icon className="h-7 w-7 opacity-70" />
-                )}
-              </div>
-              <span className="text-[11px] md:text-xs font-semibold text-gray-700 text-center leading-tight">{cat.label}</span>
-            </Link>
-          ))}
+          {HOME_CATEGORIES.map(cat => {
+            const img = products.find(cat.match)?.image_url;
+            return (
+              <Link key={cat.id} to={cat.link} className="flex flex-col items-center gap-2 group">
+                <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl overflow-hidden shadow-sm border-2 border-white group-hover:scale-105 transition-transform ${cat.color} flex items-center justify-center`}>
+                  {img
+                    ? <img src={img} alt={cat.label} className="w-full h-full object-cover" />
+                    : <cat.icon className="h-7 w-7 opacity-70" />}
+                </div>
+                <span className="text-[11px] md:text-xs font-semibold text-gray-700 text-center leading-tight">{cat.label}</span>
+              </Link>
+            );
+          })}
         </div>
       </div>
 

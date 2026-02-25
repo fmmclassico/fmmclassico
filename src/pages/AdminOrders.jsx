@@ -95,7 +95,12 @@ export default function AdminOrders() {
           order_id: order.id,
           order_number: order.order_number,
           is_read: false
-        })
+        }),
+        base44.integrations.Core.SendEmail({
+          to: 'fmmclassico@gmail.com',
+          subject: `✅ Payment Confirmed – Order #${order.order_number}`,
+          body: `Payment has been confirmed for Order #${order.order_number}.\n\nCustomer: ${order.customer_name}\nEmail: ${order.customer_email}\nTotal: ₵${order.total_amount?.toFixed(2)}\nDelivery: ${order.delivery_address}, ${order.city}`
+        }).catch(() => {})
       ]);
     },
     onSuccess: () => {
@@ -128,6 +133,12 @@ export default function AdminOrders() {
         delivered: { title: '🎉 Order Delivered!', msg: `Your order #${order.order_number} has been delivered. Enjoy your purchase! Thank you for shopping with FMM CLASSICO.`, type: 'order_delivered' },
         cancelled: { title: '❌ Order Cancelled', msg: `Your order #${order.order_number} has been cancelled. Contact us at 0509896035 for assistance.`, type: 'order_cancelled' },
       };
+      // Also notify admin on order status changes
+      base44.integrations.Core.SendEmail({
+        to: 'fmmclassico@gmail.com',
+        subject: `📦 Order ${statusConfig[newStatus]?.label || newStatus} – #${order.order_number}`,
+        body: `Order #${order.order_number} status updated to: ${statusConfig[newStatus]?.label || newStatus}\nCustomer: ${order.customer_name}\nTotal: ₵${order.total_amount?.toFixed(2)}`
+      }).catch(() => {});
       const notif = notifMap[newStatus];
       if (notif) {
         await Promise.all([

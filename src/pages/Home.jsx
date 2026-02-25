@@ -145,7 +145,7 @@ export default function Home() {
       {/* ── FLASH SALES ── */}
       <div className="mt-4 mx-2 md:mx-4">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-red-500 to-orange-500">
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
             <div className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-white fill-white" />
               <h2 className="font-black text-white text-base uppercase tracking-wide">Flash Sale</h2>

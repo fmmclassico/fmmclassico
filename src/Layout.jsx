@@ -59,6 +59,23 @@ export default function Layout({ children, currentPageName }) {
     checkAuth();
   }, []);
 
+  // Scroll-to-top button visibility
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (helpRef.current && !helpRef.current.contains(e.target)) setHelpOpen(false);
+      if (accountRef.current && !accountRef.current.contains(e.target)) setAccountOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const { data: cartItems = [] } = useQuery({
     queryKey: ['cartItems', user?.email],
     queryFn: () => base44.entities.CartItem.filter({ user_email: user?.email }),

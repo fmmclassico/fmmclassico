@@ -119,6 +119,19 @@ export default function ProductDetail() {
     setSelectedImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
   };
 
+  const handleTouchStart = (e) => {
+    setTouchStart(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStart === null) return;
+    const diff = touchStart - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) nextImage(); else prevImage();
+    }
+    setTouchStart(null);
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-6">

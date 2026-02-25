@@ -145,7 +145,7 @@ export default function Payment() {
             </div>
 
             {/* Iframe */}
-            <div className="relative" style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
+            <div className="relative" style={{ height: 'calc(100vh - 180px)', minHeight: '400px' }}>
               {!iframeLoaded && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-orange-500" />

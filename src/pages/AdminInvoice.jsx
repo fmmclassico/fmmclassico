@@ -151,6 +151,10 @@ export default function AdminInvoice() {
     toast.success(`Invoice sent to ${selectedOrder.customer_email}`);
   };
 
+  if (!user) {
+    return <div className="container mx-auto px-4 py-12 text-center text-gray-500">Loading...</div>;
+  }
+
   if (!isAdmin) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">

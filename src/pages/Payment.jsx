@@ -79,6 +79,16 @@ export default function Payment() {
     return unsubscribe;
   }, [orderId, paymentClicked]);
 
+  const handleUploadProof = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingProof(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setProofUrl(file_url);
+    setIsUploadingProof(false);
+    toast.success('Screenshot uploaded!');
+  };
+
   const handlePaymentCompleted = async () => {
     if (!orderId || !user) return;
     setIsSubmitting(true);
@@ -92,26 +102,33 @@ export default function Payment() {
           ...existingTracking,
           {
             status: 'Payment Claimed',
-            message: 'Customer confirmed payment – awaiting FMM CLASSICO verification',
+            message: `Customer confirmed payment – awaiting FMM CLASSICO verification${proofUrl ? ' (proof attached)' : ''}`,
             timestamp: new Date().toISOString()
           }
-        ]
+        ],
+        ...(proofUrl ? { notes: `Payment proof: ${proofUrl}` } : {})
       }),
       base44.entities.Notification.create({
         user_email: user.email,
-        title: '✅ Next Message Will Be Sent',
-        message: `Your payment for order #${orderNumber} has been received. FMM CLASSICO will verify and send you confirmation shortly.`,
+        title: '✅ Payment Notification Sent',
+        message: `Your payment for order #${orderNumber} has been received. FMM CLASSICO will verify and confirm within 2–5 minutes.`,
         type: 'payment_pending',
         order_id: orderId,
         order_number: orderNumber,
         is_read: false
-      })
+      }),
+      // Notify admin with proof if uploaded
+      proofUrl ? base44.integrations.Core.SendEmail({
+        to: 'fmmclassico@gmail.com',
+        subject: `💳 Payment Proof – Order #${orderNumber}`,
+        body: `Customer ${user.email} submitted payment proof for Order #${orderNumber} (₵${amount.toFixed(2)}).\n\nProof screenshot: ${proofUrl}\n\nPlease verify and confirm.`
+      }).catch(() => {}) : Promise.resolve()
     ]);
 
     setIsSubmitting(false);
     setPaymentClicked(true);
     queryClient.invalidateQueries({ queryKey: ['order', orderId] });
-    toast.success('Payment sent! We\'ll verify shortly.');
+    toast.success('Payment notification sent! We\'ll verify shortly.');
   };
 
   if (!user || !orderId) {

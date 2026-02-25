@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Send, CheckCircle2, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { MessageCircle, Send, CheckCircle2, Loader2, ChevronDown, ChevronUp, Upload, ImageIcon, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -32,6 +32,9 @@ export default function Feedback() {
   const [submitted, setSubmitted] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -73,14 +76,31 @@ export default function Feedback() {
     enabled: isAdmin,
   });
 
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setIsUploading(true);
+    const urls = [];
+    for (const file of files) {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      urls.push(file_url);
+    }
+    setUploadedImages(prev => [...prev, ...urls]);
+    setIsUploading(false);
+    toast.success(`${urls.length} image(s) uploaded`);
+  };
+
   const submitMutation = useMutation({
     mutationFn: async (data) => {
       const feedback = await base44.entities.Feedback.create(data);
       // Notify admin
+      const imageLines = uploadedImages.length > 0
+        ? `\n\nAttached images:\n${uploadedImages.join('\n')}`
+        : '';
       await base44.integrations.Core.SendEmail({
         to: 'fmmclassico@gmail.com',
         subject: `📩 New Feedback: ${data.type?.toUpperCase()} – ${data.subject || 'No subject'}`,
-        body: `New customer feedback received:\n\nName: ${data.customer_name}\nEmail: ${data.customer_email}\nPhone: ${data.customer_phone || 'N/A'}\nType: ${data.type}\nSubject: ${data.subject || 'N/A'}\nOrder #: ${data.order_number || 'N/A'}\n\nMessage:\n${data.message}`,
+        body: `New customer feedback received:\n\nName: ${data.customer_name}\nEmail: ${data.customer_email}\nPhone: ${data.customer_phone || 'N/A'}\nType: ${data.type}\nSubject: ${data.subject || 'N/A'}\nOrder #: ${data.order_number || 'N/A'}\n\nMessage:\n${data.message}${imageLines}`,
       });
       return feedback;
     },
@@ -106,7 +126,10 @@ export default function Feedback() {
       toast.error('Please fill in required fields');
       return;
     }
-    submitMutation.mutate(formData);
+    const dataWithImages = uploadedImages.length > 0
+      ? { ...formData, message: formData.message + '\n\n[Attached images: ' + uploadedImages.join(', ') + ']' }
+      : formData;
+    submitMutation.mutate(dataWithImages);
   };
 
   if (isAdmin) {
@@ -208,6 +231,33 @@ export default function Feedback() {
                 rows={4}
                 required
               />
+            </div>
+
+            {/* Image Upload */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <ImageIcon className="h-3.5 w-3.5 text-orange-500" />
+                Upload Screenshots / Product Photos (optional)
+              </Label>
+              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
+              <button type="button" onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-orange-300 rounded-xl hover:bg-orange-50 transition-colors text-sm text-orange-600 font-medium">
+                {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {isUploading ? 'Uploading...' : 'Tap to upload images or screenshots'}
+              </button>
+              {uploadedImages.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {uploadedImages.map((url, i) => (
+                    <div key={i} className="relative">
+                      <img src={url} alt={`upload-${i}`} className="h-16 w-16 object-cover rounded-lg border" />
+                      <button type="button" onClick={() => setUploadedImages(prev => prev.filter((_, idx) => idx !== i))}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <Button

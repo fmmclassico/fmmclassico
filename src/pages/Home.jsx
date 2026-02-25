@@ -3,23 +3,45 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from "@/components/ui/button";
-import { Truck, Shield, Clock, CreditCard, ChevronRight } from 'lucide-react';
+import { ChevronRight, Zap, Star, Tag, Home as HomeIcon, Smartphone, Headphones, Tv, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 import HeroBanner from '../components/home/HeroBanner';
 import ProductRow from '../components/home/ProductRow';
-import CategoryCard from '../components/products/CategoryCard';
 
-const ALL_CATEGORIES = [
-  'phones', 'phone_cases', 'chargers', 'earphones', 'cables', 'power_banks',
-  'screen_protectors', 'holders', 'speakers', 'smart_watches', 'electronic_appliances', 'home_appliances'
-];
-
-const features = [
-  { icon: Truck, title: 'Fast Delivery', desc: 'Across Ghana' },
-  { icon: Shield, title: 'Quality', desc: '100% authentic' },
-  { icon: Clock, title: 'Live Support', desc: 'AI assistant 24/7' },
-  { icon: CreditCard, title: 'Paystack', desc: 'Mobile Money & Card' },
+// 4 merged categories shown on home page
+const HOME_CATEGORIES = [
+  {
+    id: 'phones',
+    label: 'Phones',
+    icon: Smartphone,
+    color: 'bg-blue-100 text-blue-700',
+    link: createPageUrl('Shop?category=phones'),
+    image: 'https://i.pinimg.com/1200x/99/64/a2/9964a202c67115b1f40714082848c312.jpg',
+  },
+  {
+    id: 'phone_accessories',
+    label: 'Phone Accessories',
+    icon: Headphones,
+    color: 'bg-orange-100 text-orange-700',
+    link: createPageUrl('Shop?category=phone_cases'),
+    image: 'https://i.pinimg.com/1200x/a5/2d/a2/a52da2d4f4c4f22e6b2e7f5c5c5c5c5c.jpg',
+  },
+  {
+    id: 'electronics',
+    label: 'Electronics',
+    icon: Tv,
+    color: 'bg-purple-100 text-purple-700',
+    link: createPageUrl('Shop?category=electronic_appliances'),
+    image: 'https://m.media-amazon.com/images/I/519qw7On-vL.jpg',
+  },
+  {
+    id: 'home_appliances',
+    label: 'Home Appliances',
+    icon: HomeIcon,
+    color: 'bg-green-100 text-green-700',
+    link: createPageUrl('Shop?category=home_appliances'),
+    image: 'https://i.pinimg.com/1200x/60/53/2f/60532f215514eb6e5068ec232e1428c1.jpg',
+  },
 ];
 
 export default function Home() {
@@ -42,9 +64,8 @@ export default function Home() {
     queryFn: () => base44.entities.Product.list('-created_date', 100),
   });
 
-  // Real-time updates: subscribe to product changes from admin
   useEffect(() => {
-    const unsubscribe = base44.entities.Product.subscribe((event) => {
+    const unsubscribe = base44.entities.Product.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
     });
     return unsubscribe;
@@ -52,47 +73,20 @@ export default function Home() {
 
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {
-      if (!user) {
-        base44.auth.redirectToLogin(window.location.href);
-        return;
-      }
-      // Optimistic UI: show toast immediately
+      if (!user) { base44.auth.redirectToLogin(window.location.href); return; }
       toast.success('Added to cart!');
       queryClient.setQueryData(['cartItems', user?.email], (old = []) => {
         const existing = old.find(i => i.product_id === product.id);
-        if (existing) {
-          return old.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
-        }
-        return [...old, {
-          id: 'optimistic-' + product.id,
-          product_id: product.id,
-          product_name: product.name,
-          product_image: product.image_url,
-          product_price: product.price,
-          quantity: 1,
-          user_email: user.email
-        }];
+        if (existing) return old.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+        return [...old, { id: 'optimistic-' + product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1, user_email: user.email }];
       });
-      // Background API calls
-      const existingItems = await base44.entities.CartItem.filter({
-        user_email: user.email,
-        product_id: product.id
-      });
+      const existingItems = await base44.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
       if (existingItems.length > 0) {
         await base44.entities.CartItem.update(existingItems[0].id, { quantity: existingItems[0].quantity + 1 });
       } else {
-        await base44.entities.CartItem.create({
-          product_id: product.id,
-          product_name: product.name,
-          product_image: product.image_url,
-          product_price: product.price,
-          quantity: 1,
-          user_email: user.email
-        });
+        await base44.entities.CartItem.create({ product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1, user_email: user.email });
       }
-      if (product.stock != null) {
-        base44.entities.Product.update(product.id, { stock: Math.max(0, product.stock - 1) });
-      }
+      if (product.stock != null) base44.entities.Product.update(product.id, { stock: Math.max(0, product.stock - 1) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems'] });
@@ -100,109 +94,199 @@ export default function Home() {
     }
   });
 
-  const featuredProducts = products.filter(p => p.featured);
-  const phoneProducts = products.filter(p => p.category === 'phones' || p.category === 'phone_cases' || p.category === 'chargers' || p.category === 'earphones' || p.category === 'cables' || p.category === 'screen_protectors' || p.category === 'power_banks' || p.category === 'holders');
-  const electronicsProducts = products.filter(p => p.category === 'electronic_appliances' || p.category === 'speakers' || p.category === 'smart_watches');
+  // Product buckets
+  const phoneAccessoryCategories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers'];
+  const phoneProducts = products.filter(p => p.category === 'phones');
+  const accessoriesProducts = products.filter(p => phoneAccessoryCategories.includes(p.category));
+  const electronicsProducts = products.filter(p => ['electronic_appliances', 'smart_watches'].includes(p.category));
   const homeProducts = products.filter(p => p.category === 'home_appliances');
+  const allAccessoryAndPhone = products.filter(p => ['phones', ...phoneAccessoryCategories].includes(p.category));
+  // Flash sale = discounted or featured items
+  const flashSaleProducts = products.filter(p => p.original_price && p.original_price > p.price).slice(0, 8);
+  const fallbackFlash = products.filter(p => p.featured).slice(0, 8);
+  const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : fallbackFlash;
+  // New arrivals = latest added
+  const newArrivals = [...products].sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 8);
+  // Falaa deals = cheapest priced products
+  const falaaDeals = [...products].filter(p => p.price > 0).sort((a, b) => a.price - b.price).slice(0, 8);
 
   return (
-    <div className="pb-4 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
+    <div className="pb-6 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
+
       {/* Hero Slider */}
       <HeroBanner />
 
-      {/* Features Bar */}
-      <div className="bg-white border-b mb-2">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-around">
-            {features.map((f, i) => (
-              <div key={i} className="flex flex-col md:flex-row items-center gap-1 md:gap-2 text-center">
-                <div className="p-1.5 rounded-full bg-orange-100 flex-shrink-0">
-                  <f.icon className="h-4 w-4 text-orange-600" />
-                </div>
-                <div className="hidden md:block">
-                  <p className="font-semibold text-gray-800 text-xs">{f.title}</p>
-                  <p className="text-xs text-gray-500">{f.desc}</p>
-                </div>
-                <p className="md:hidden text-[10px] text-gray-600 font-medium leading-tight">{f.title}</p>
+      {/* ── CATEGORIES ── */}
+      <div className="bg-white mt-3 mx-2 md:mx-4 rounded-2xl shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-black text-gray-900 text-base">Shop by Category</h2>
+          <Link to={createPageUrl('Categories')} className="text-orange-500 text-xs font-semibold flex items-center hover:underline">
+            All <ChevronRight className="h-3 w-3" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-4 gap-3">
+          {HOME_CATEGORIES.map(cat => (
+            <Link key={cat.id} to={cat.link} className="flex flex-col items-center gap-2 group">
+              <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl overflow-hidden shadow-sm border-2 border-white group-hover:scale-105 transition-transform ${cat.color} flex items-center justify-center`}>
+                {/* try product image, fallback icon */}
+                {products.find(p => {
+                  if (cat.id === 'phones') return p.category === 'phones';
+                  if (cat.id === 'phone_accessories') return phoneAccessoryCategories.includes(p.category);
+                  if (cat.id === 'electronics') return ['electronic_appliances', 'smart_watches'].includes(p.category);
+                  return p.category === 'home_appliances';
+                })?.image_url ? (
+                  <img
+                    src={products.find(p => {
+                      if (cat.id === 'phones') return p.category === 'phones';
+                      if (cat.id === 'phone_accessories') return phoneAccessoryCategories.includes(p.category);
+                      if (cat.id === 'electronics') return ['electronic_appliances', 'smart_watches'].includes(p.category);
+                      return p.category === 'home_appliances';
+                    })?.image_url}
+                    alt={cat.label}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <cat.icon className="h-7 w-7 opacity-70" />
+                )}
               </div>
-            ))}
+              <span className="text-[11px] md:text-xs font-semibold text-gray-700 text-center leading-tight">{cat.label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* ── FLASH SALES ── */}
+      <div className="mt-4 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-red-500 to-orange-500">
+            <div className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-white fill-white" />
+              <h2 className="font-black text-white text-base uppercase tracking-wide">Flash Sale</h2>
+              <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Limited Time</span>
+            </div>
+            <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-white text-xs font-bold border border-white/60 rounded-full px-3 py-1 hover:bg-white/20 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          {/* horizontal scroll — max 6 products visible */}
+          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+            {isLoading
+              ? Array(4).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[44vw] md:w-44 bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  </div>
+                ))
+              : (flashItems.length > 0 ? flashItems : products.slice(0, 6)).map(product => (
+                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                    className="flex-shrink-0 w-[44vw] md:w-44 bg-white hover:bg-orange-50 transition-colors p-2">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-gray-50">
+                      {product.image_url
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-8 w-8 text-gray-300" /></div>}
+                      {product.original_price > product.price && (
+                        <span className="absolute top-1 left-1 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                          -{Math.round((1 - product.price / product.original_price) * 100)}%
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
+                    <p className="text-sm font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && (
+                      <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                    )}
+                  </Link>
+                ))}
           </div>
         </div>
       </div>
 
-      {/* Category Icons */}
-      <div className="bg-white shadow-sm mb-2 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm md:text-base font-bold text-gray-800">Shop by Category</h2>
-          <Link to={createPageUrl('Categories')} className="text-orange-600 text-xs font-semibold hover:underline flex items-center">
-            All <ChevronRight className="h-3 w-3" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
-          {ALL_CATEGORIES.map((cat, i) => {
-            const categoryProduct = products.find(p => p.category === cat);
-            return (
-              <CategoryCard
-                key={cat}
-                category={cat}
-                index={i}
-                productImage={categoryProduct?.image_url}
-              />
-            );
-          })}
+      {/* ── NEW ARRIVALS ── */}
+      <div className="mt-5 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500 fill-yellow-400" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">New Arrivals</h2>
+            </div>
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-orange-500 text-xs font-bold border border-orange-400 rounded-full px-3 py-1 hover:bg-orange-50 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100">
+            {isLoading
+              ? Array(4).fill(0).map((_, i) => (
+                  <div key={i} className="bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  </div>
+                ))
+              : newArrivals.map(product => (
+                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                    className="bg-white hover:bg-yellow-50 transition-colors p-2">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-gray-50">
+                      {product.image_url
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-8 w-8 text-gray-300" /></div>}
+                      <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[9px] font-black px-1.5 py-0.5 rounded-full">NEW</span>
+                    </div>
+                    <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
+                    <p className="text-sm font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && (
+                      <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                    )}
+                  </Link>
+                ))}
+          </div>
         </div>
       </div>
 
-      {/* Featured Products — horizontal scroll like Jumia flash sales */}
-      {(isLoading || featuredProducts.length > 0) && (
-        <ProductRow
-          title="⚡ Top Selling Items"
-          products={featuredProducts}
-          isLoading={isLoading}
-          viewAllLink={createPageUrl('Shop?featured=true')}
-          layout="scroll"
-        />
-      )}
+      {/* ── FALAA DEALS ── */}
+      <div className="mt-5 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-green-600 to-teal-500">
+            <div className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-white" />
+              <h2 className="font-black text-white text-base uppercase tracking-wide">Falaa Deals</h2>
+              <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Best Prices</span>
+            </div>
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-white text-xs font-bold border border-white/60 rounded-full px-3 py-1 hover:bg-white/20 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100">
+            {isLoading
+              ? Array(4).fill(0).map((_, i) => (
+                  <div key={i} className="bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  </div>
+                ))
+              : (falaaDeals.length > 0 ? falaaDeals : products.slice(0, 8)).map(product => (
+                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                    className="bg-white hover:bg-green-50 transition-colors p-2">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-gray-50">
+                      {product.image_url
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-8 w-8 text-gray-300" /></div>}
+                      <span className="absolute top-1 left-1 bg-green-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">🔥 DEAL</span>
+                    </div>
+                    <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
+                    <p className="text-sm font-black text-green-700">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && (
+                      <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                    )}
+                  </Link>
+                ))}
+          </div>
+        </div>
+      </div>
 
-      {/* Flash Sale — horizontal scroll */}
-      <ProductRow
-        title="🔥 Flash Sale Deals"
-        products={phoneProducts}
-        isLoading={isLoading}
-        viewAllLink={createPageUrl('Shop?category=phones')}
-        layout="scroll"
-      />
-
-      {/* New Arrivals — 2-column grid like Jumia */}
-      <ProductRow
-        title="✨ New Arrivals"
-        products={electronicsProducts}
-        isLoading={isLoading}
-        viewAllLink={createPageUrl('Shop?category=electronic_appliances')}
-        layout="grid"
-      />
-
-      {/* Home Appliances — 2-column grid */}
-      {(isLoading || homeProducts.length > 0) && (
-        <ProductRow
-          title="🏠 Home Appliances"
-          products={homeProducts}
-          isLoading={isLoading}
-          viewAllLink={createPageUrl('Shop?category=home_appliances')}
-          layout="grid"
-        />
-      )}
-
-      {/* All Products — 2-column grid like Jumia main listing */}
-      <ProductRow
-        title="🛍️ All Products"
-        products={products}
-        isLoading={isLoading}
-        viewAllLink={createPageUrl('Shop')}
-        layout="grid"
-      />
-
-
+      {/* Bottom spacer for nav */}
+      <div className="h-6" />
     </div>
   );
 }

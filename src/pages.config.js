@@ -53,6 +53,7 @@ import AdminBroadcast from './pages/AdminBroadcast';
 import AdminInvoice from './pages/AdminInvoice';
 import AdminMessages from './pages/AdminMessages';
 import AdminOrders from './pages/AdminOrders';
+import AdminSMSBroadcast from './pages/AdminSMSBroadcast';
 import Cart from './pages/Cart';
 import Categories from './pages/Categories';
 import Chat from './pages/Chat';
@@ -68,7 +69,6 @@ import PaymentConfirmed from './pages/PaymentConfirmed';
 import ProductDetail from './pages/ProductDetail';
 import Settings from './pages/Settings';
 import Shop from './pages/Shop';
-import AdminSMSBroadcast from './pages/AdminSMSBroadcast';
 import __Layout from './Layout.jsx';
 
 
@@ -79,6 +79,7 @@ export const PAGES = {
     "AdminInvoice": AdminInvoice,
     "AdminMessages": AdminMessages,
     "AdminOrders": AdminOrders,
+    "AdminSMSBroadcast": AdminSMSBroadcast,
     "Cart": Cart,
     "Categories": Categories,
     "Chat": Chat,
@@ -94,7 +95,6 @@ export const PAGES = {
     "ProductDetail": ProductDetail,
     "Settings": Settings,
     "Shop": Shop,
-    "AdminSMSBroadcast": AdminSMSBroadcast,
 }
 
 export const pagesConfig = {

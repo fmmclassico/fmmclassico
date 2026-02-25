@@ -473,8 +473,8 @@ export default function Layout({ children, currentPageName }) {
         {children}
       </main>
 
-      {/* Bottom Navigation - Mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-40">
+      {/* Bottom Navigation - All screens */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-40">
         <div className="flex items-center justify-around py-2">
           <Link to={createPageUrl('Home')} className={`flex flex-col items-center p-2 ${currentPageName === 'Home' ? 'text-orange-500' : 'text-gray-500'}`}>
             <Home className="h-5 w-5" />

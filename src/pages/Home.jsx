@@ -56,6 +56,7 @@ const HOME_CATEGORIES = [
 
 export default function Home() {
   const [user, setUser] = useState(null);
+  const [showSubCats, setShowSubCats] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {

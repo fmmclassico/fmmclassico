@@ -304,6 +304,12 @@ export default function AdminOrders() {
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                       Confirm Payment
                     </Button>
+                    <Link to={createPageUrl(`AdminInvoice?orderId=${order.id}`)}>
+                      <Button size="sm" variant="outline" className="w-full gap-1 border-orange-400 text-orange-600 hover:bg-orange-50">
+                        <FileText className="h-4 w-4" />
+                        Invoice
+                      </Button>
+                    </Link>
                   </div>
                 </div>
                 

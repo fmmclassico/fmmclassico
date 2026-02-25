@@ -156,14 +156,7 @@ export default function Categories() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Back/Forward Navigation */}
-      <div className="flex items-center gap-2 mb-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-8 w-8 rounded-full bg-white shadow border hover:bg-orange-50">
-          <ChevronLeft className="h-4 w-4 text-gray-600" />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={() => navigate(1)} className="h-8 w-8 rounded-full bg-white shadow border hover:bg-orange-50">
-          <ChevronRight className="h-4 w-4 text-gray-600" />
-        </Button>
+      <div className="mb-4">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Shop by Category</h1>
       </div>
       

@@ -47,7 +47,7 @@ export default function Orders() {
         const userData = await base44.auth.me();
         setUser(userData);
       } else {
-        base44.auth.redirectToLogin(createPageUrl('Orders'));
+        base44.auth.redirectToLogin(createPageUrl('Home'));
       }
     };
     getUser();

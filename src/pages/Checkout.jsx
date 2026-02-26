@@ -52,7 +52,7 @@ export default function Checkout() {
           customer_name: userData.full_name || ''
         }));
       } else {
-        base44.auth.redirectToLogin(createPageUrl('Checkout'));
+        base44.auth.redirectToLogin(createPageUrl('Home'));
       }
     };
     getUser();

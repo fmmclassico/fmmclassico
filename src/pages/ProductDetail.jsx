@@ -284,8 +284,10 @@ export default function ProductDetail() {
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            {product.stock && (
-              <span className="text-sm text-gray-500">{product.stock} in stock</span>
+            {product.stock != null && (
+              <span className={`text-sm font-semibold ${product.stock <= 5 ? 'text-red-500' : 'text-gray-500'}`}>
+                {product.stock} in stock
+              </span>
             )}
           </div>
 

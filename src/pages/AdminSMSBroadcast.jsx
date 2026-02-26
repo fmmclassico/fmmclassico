@@ -137,51 +137,69 @@ export default function AdminSMSBroadcast() {
     return matchSearch && matchGroup;
   });
 
-  const broadcastTargets = selectedGroup === 'All' ? contacts : contacts.filter(c => c.group === selectedGroup);
+  const broadcastTargets = selectedContacts.length > 0
+    ? contacts.filter(c => selectedContacts.includes(c.id))
+    : (selectedGroup === 'All' ? contacts : contacts.filter(c => c.group === selectedGroup));
 
-  const handleSendBroadcast = async () => {
-    if (!message.trim()) { toast.error('Please write a message'); return; }
-    const targets = selectedContacts.length > 0
-      ? contacts.filter(c => selectedContacts.includes(c.id))
-      : broadcastTargets;
-    if (!targets.length) { toast.error('No contacts to send to'); return; }
-
-    setIsSending(true);
-    setSentCount(0);
-    setSendDone(false);
-
-    // Since direct SMS API is not available, we use the 9mobile/mNotify/Hubtel style:
-    // We generate a WhatsApp-friendly download and also send emails where possible
-    // Cross-match with orders to get emails
-    const emailMap = {};
-    orders.forEach(o => {
-      if (o.customer_phone) emailMap[o.customer_phone.trim()] = { email: o.customer_email, name: o.customer_name };
-    });
-
-    let count = 0;
-    for (const c of targets) {
-      const match = emailMap[c.phone];
-      if (match?.email) {
-        await base44.integrations.Core.SendEmail({
-          to: match.email,
-          subject: 'Message from FMM CLASSICO',
-          body: `Hi ${c.name || match.name || 'Valued Customer'},\n\n${message}\n\n– FMM CLASSICO\n📞 0509896035`,
-        }).catch(() => {});
+  // Parse CSV/VCF contact file upload
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result;
+      // Try CSV first
+      if (file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
+        setBulkText(text);
+        setShowBulkImport(true);
+      } else if (file.name.endsWith('.vcf')) {
+        // Parse VCF
+        const lines = text.split('\n');
+        const entries = [];
+        let curName = '', curPhone = '';
+        lines.forEach(line => {
+          if (line.startsWith('FN:')) curName = line.replace('FN:', '').trim();
+          if (line.startsWith('TEL')) {
+            curPhone = line.split(':').pop().trim().replace(/\D/g, '');
+            if (curPhone.startsWith('233')) curPhone = '0' + curPhone.slice(3);
+          }
+          if (line.startsWith('END:VCARD') && curPhone) {
+            entries.push(`${curName}, ${curPhone}`);
+            curName = ''; curPhone = '';
+          }
+        });
+        setBulkText(entries.join('\n'));
+        setShowBulkImport(true);
+        toast.success(`${entries.length} contacts parsed from VCF`);
       }
-      count++;
-      setSentCount(count);
-    }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
-    setIsSending(false);
-    setSendDone(true);
-    setSelectedContacts([]);
-    toast.success(`Message delivered to ${count} contacts!`);
+  // WhatsApp broadcast: open wa.me links for each contact
+  const handleWhatsAppBroadcast = () => {
+    if (!message.trim()) { toast.error('Please write a message'); return; }
+    if (!broadcastTargets.length) { toast.error('No contacts to send to'); return; }
+    // Open first contact in WhatsApp, copy message
+    const encodedMsg = encodeURIComponent(message);
+    // Open WhatsApp for the first target, show instructions
+    window.open(`https://wa.me/${broadcastTargets[0].phone.replace(/^0/, '233')}?text=${encodedMsg}`, '_blank');
+    setWaSent(true);
+    toast.success('WhatsApp opened! To broadcast: copy the number list and paste into WhatsApp Broadcast List.');
   };
 
   const copyAllPhones = () => {
     const phones = broadcastTargets.map(c => c.phone).join('\n');
     navigator.clipboard.writeText(phones);
-    toast.success(`${broadcastTargets.length} phone numbers copied! Paste into mNotify, Hubtel, or WhatsApp Broadcast.`);
+    toast.success(`${broadcastTargets.length} numbers copied! Create a WhatsApp Broadcast List and paste.`);
+  };
+
+  const copyMessageAndPhones = () => {
+    if (!message.trim()) { toast.error('Write a message first'); return; }
+    const text = `MESSAGE:\n${message}\n\nCONTACTS:\n${broadcastTargets.map(c => `${c.name}: ${c.phone}`).join('\n')}`;
+    navigator.clipboard.writeText(text);
+    toast.success('Message + contacts copied!');
   };
 
   const toggleSelect = (id) => {

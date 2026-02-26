@@ -84,7 +84,7 @@ export default function Layout({ children, currentPageName }) {
     queryKey: ['notifications', user?.email],
     queryFn: () => base44.entities.Notification.filter({ user_email: user?.email }, '-created_date', 50),
     enabled: !!user?.email,
-    refetchInterval: 10000,
+    refetchInterval: 7000,
   });
 
   // Real-time notification updates

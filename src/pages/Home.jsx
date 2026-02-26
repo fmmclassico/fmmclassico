@@ -85,14 +85,7 @@ export default function Home() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const getUser = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
-      if (isAuth) {
-        const userData = await base44.auth.me();
-        setUser(userData);
-      }
-    };
-    getUser();
+    base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
   const { data: products = [], isLoading } = useQuery({

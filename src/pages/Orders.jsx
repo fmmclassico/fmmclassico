@@ -207,102 +207,105 @@ export default function Orders() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                <Card className="p-4 shadow-md hover:shadow-lg transition-shadow overflow-hidden">
-                  <div className="flex items-start gap-3">
-                    {/* Checkbox */}
-                    <div className="pt-1 flex-shrink-0">
+                <Card className="shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+                  {/* Top bar: checkbox + order number + amount */}
+                  <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b">
+                    <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => handleToggleSelect(order.id)}
                         className="w-4 h-4 cursor-pointer"
                       />
+                      <div>
+                        <span className="font-bold text-sm text-gray-800">{order.order_number}</span>
+                        <p className="text-[10px] text-gray-400">{format(new Date(order.created_date), 'MMM d, yyyy')}</p>
+                      </div>
                     </div>
+                    <div className="text-right">
+                      <p className="font-black text-orange-600 text-base">₵{order.total_amount?.toFixed(2)}</p>
+                      <Badge className={`text-[10px] ${statusConfig[order.status]?.color || 'bg-gray-100 text-gray-800'}`}>
+                        {statusConfig[order.status]?.label || order.status}
+                      </Badge>
+                    </div>
+                  </div>
 
-                    {/* Order Info */}
-                    <div className="flex-1 min-w-0">
-                      {/* Header row: number+badge on left, amount+date on right */}
-                      <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
-                        <div className="flex flex-wrap items-center gap-2 min-w-0">
-                          <h3 className="font-bold text-base text-gray-800 truncate">{order.order_number}</h3>
-                          <Badge className={`text-xs flex-shrink-0 ${statusConfig[order.status]?.color || 'bg-gray-100 text-gray-800'}`}>
-                            <StatusIcon className="h-3 w-3 mr-1" />
-                            {statusConfig[order.status]?.label || order.status}
-                          </Badge>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-lg font-bold text-orange-600">₵{order.total_amount?.toFixed(2)}</p>
-                          <p className="text-xs text-gray-500">{format(new Date(order.created_date), 'MMM d, yyyy')}</p>
-                        </div>
-                      </div>
-
-                      {/* Order Items */}
-                      <div className="mb-3 space-y-1">
-                        {order.items?.map((item, idx) => (
-                          <p key={idx} className="text-xs text-gray-600 break-words">
-                            • {item.product_name} ×{item.quantity} – ₵{(item.price * item.quantity).toFixed(2)}
-                          </p>
-                        ))}
-                      </div>
-
-                      {/* Delivery Info */}
-                      <div className="mb-3 text-xs space-y-1">
-                        <p className="text-gray-500">📍 <span className="font-medium text-gray-800 break-words">{order.delivery_address}, {order.city}</span></p>
-                        {order.estimated_delivery && (
-                          <p className="text-gray-500">🗓 Est. delivery: <span className="font-medium text-gray-800">{format(new Date(order.estimated_delivery), 'MMM d, yyyy')}</span></p>
-                        )}
-                      </div>
-
-                      {/* Tracking Timeline */}
-                      {order.tracking_updates && order.tracking_updates.length > 0 && (
-                        <div className="mb-3 p-3 bg-gray-50 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Tracking History</p>
-                          <div className="space-y-2 max-h-32 overflow-y-auto">
-                            {[...order.tracking_updates].reverse().map((update, idx) => {
-                              const isGreen = ['confirmed', 'processing', 'shipped', 'in_transit', 'delivered', 'Payment Confirmed'].some(s => update.status?.toLowerCase().includes(s.toLowerCase())) || ['confirmed', 'processing', 'shipped', 'in_transit', 'delivered'].includes(update.status?.toLowerCase());
-                              return (
-                                <div key={idx} className="flex items-start gap-2">
-                                  <div className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${isGreen ? 'bg-green-500' : 'bg-orange-400'}`} />
-                                  <div className="flex-1 min-w-0">
-                                    <span className={`text-xs font-semibold ${isGreen ? 'text-green-700' : 'text-orange-700'}`}>{update.status}</span>
-                                    <span className="text-xs text-gray-500 ml-1 break-words">– {update.message}</span>
-                                    <p className="text-[10px] text-gray-400">{format(new Date(update.timestamp), 'MMM d, HH:mm')}</p>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                  {/* Product(s) with images */}
+                  <div className="px-4 py-3 border-b">
+                    <div className="flex flex-wrap gap-2">
+                      {order.items?.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2 py-1.5">
+                          {item.product_image && (
+                            <img src={item.product_image} alt={item.product_name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                          )}
+                          <div>
+                            <p className="text-xs font-semibold text-gray-800 max-w-[140px] truncate">{item.product_name}</p>
+                            <p className="text-[10px] text-gray-500">x{item.quantity} · ₵{(item.price * item.quantity).toFixed(2)}</p>
                           </div>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tracking checklist */}
+                  <div className="px-4 py-3 border-b bg-white">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Order Progress <span className="text-green-600 font-normal normal-case">(green = processed)</span></p>
+                    {(() => {
+                      const tracking = order.tracking_updates || [];
+                      const hasStatus = (keywords) => tracking.some(t =>
+                        keywords.some(k => t.status?.toLowerCase().includes(k.toLowerCase()))
+                      );
+                      const steps = [
+                        { label: 'Payment Confirmed', done: hasStatus(['confirmed', 'order placed', 'payment confirmed']) || ['confirmed','processing','shipped','in_transit','delivered'].includes(order.status) },
+                        { label: 'Order(s) Placed', done: hasStatus(['order placed', 'processing']) || ['processing','shipped','in_transit','delivered'].includes(order.status) },
+                        { label: 'Order(s) Shipped', done: hasStatus(['shipped','in_transit']) || ['shipped','in_transit','delivered'].includes(order.status) },
+                        { label: 'Product(s) Delivered', done: hasStatus(['delivered']) || order.status === 'delivered' },
+                      ];
+                      return (
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                          {steps.map((step, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border-2 ${step.done ? 'bg-green-500 border-green-500' : 'bg-white border-gray-300'}`}>
+                                {step.done && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                              </div>
+                              <span className={`text-xs font-medium ${step.done ? 'text-green-700' : 'text-gray-400'}`}>{step.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Delivery info + actions */}
+                  <div className="px-4 py-3">
+                    <p className="text-xs text-gray-500 mb-2">📍 <span className="font-medium text-gray-700">{order.delivery_address}, {order.city}</span></p>
+                    {order.estimated_delivery && (
+                      <p className="text-xs text-gray-500 mb-2">🗓 Est. delivery: <span className="font-medium text-gray-700">{format(new Date(order.estimated_delivery), 'MMM d, yyyy')}</span></p>
+                    )}
+                    <div className="flex gap-2 flex-wrap mt-2">
+                      <Link to={createPageUrl(`OrderTracking?id=${order.id}`)}>
+                        <Button variant="outline" size="sm" className="gap-1">
+                          <ChevronRight className="h-4 w-4" />
+                          Track Order
+                        </Button>
+                      </Link>
+                      {order.status === 'pending' && !order.tracking_updates?.some(t => t.status === 'Payment Claimed') && (
+                        <Button 
+                          size="sm" 
+                          className="gap-1 bg-green-600 hover:bg-green-700"
+                          onClick={() => claimPaymentMutation.mutate(order)}
+                          disabled={claimPaymentMutation.isPending}
+                        >
+                          <CreditCard className="h-4 w-4" />
+                          {claimPaymentMutation.isPending ? 'Sending...' : 'Payment Completed'}
+                        </Button>
                       )}
-
-                      {/* Actions */}
-                      <div className="flex gap-2 flex-wrap">
-                        <Link to={createPageUrl(`OrderTracking?id=${order.id}`)}>
-                          <Button variant="outline" size="sm" className="gap-1">
-                            <ChevronRight className="h-4 w-4" />
-                            Track Order
-                          </Button>
-                        </Link>
-
-                        {order.status === 'pending' && !order.tracking_updates?.some(t => t.status === 'Payment Claimed') && (
-                          <Button 
-                            size="sm" 
-                            className="gap-1 bg-green-600 hover:bg-green-700"
-                            onClick={() => claimPaymentMutation.mutate(order)}
-                            disabled={claimPaymentMutation.isPending}
-                          >
-                            <CreditCard className="h-4 w-4" />
-                            {claimPaymentMutation.isPending ? 'Sending...' : 'Payment Completed'}
-                          </Button>
-                        )}
-
-                        {order.status === 'pending' && order.tracking_updates?.some(t => t.status === 'Payment Claimed') && (
-                          <Button variant="outline" size="sm" disabled className="gap-1 text-orange-600">
-                            <Clock className="h-4 w-4" />
-                            Awaiting Verification
-                          </Button>
-                        )}
-                      </div>
+                      {order.status === 'pending' && order.tracking_updates?.some(t => t.status === 'Payment Claimed') && (
+                        <Button variant="outline" size="sm" disabled className="gap-1 text-orange-600">
+                          <Clock className="h-4 w-4" />
+                          Awaiting Verification
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Card>

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { Textarea } from "@/components/ui/textarea";
 import { 
   CheckCircle2, 
   Clock, 
@@ -15,7 +16,8 @@ import {
   XCircle,
   FileText,
   CreditCard,
-  Trash2
+  Trash2,
+  Send
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';

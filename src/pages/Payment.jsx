@@ -154,17 +154,18 @@ export default function Payment() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 flex flex-col bg-white"
-            style={{ zIndex: 10 }}
+            className="flex flex-col"
           >
-            {/* Fixed Header bar */}
-            <div className="flex-shrink-0 bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm">
-              <p className="text-sm font-semibold text-gray-700">Order #{orderNumber}</p>
-              <p className="font-black text-orange-600 text-lg">₵{Number.isInteger(amount) ? amount : amount.toFixed(2).replace(/\.00$/, '')}</p>
+            {/* Header bar */}
+            <div className="bg-white border-b px-4 py-2 flex items-center justify-between shadow-sm">
+              <p className="text-xs text-gray-500">Order #{orderNumber}</p>
+              <div className="text-right">
+                <p className="font-black text-orange-600 text-base">₵{Number.isInteger(amount) ? amount : amount.toFixed(2).replace(/\.00$/, '')}</p>
+              </div>
             </div>
 
-            {/* Scrollable Iframe area */}
-            <div className="flex-1 relative overflow-y-auto">
+            {/* Iframe — scrollable */}
+            <div className="relative overflow-y-auto" style={{ height: 'calc(100vh - 110px)' }}>
               {!iframeLoaded && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
@@ -174,54 +175,24 @@ export default function Payment() {
               <iframe
                 src={paystackUrl}
                 title="Paystack Payment"
-                className="w-full border-0"
-                style={{ minHeight: '100%', height: '100%' }}
-                onLoad={() => {
-                  setIframeLoaded(true);
-                  // After iframe loads, listen for Paystack success via postMessage
-                }}
+                className="w-full h-full border-0"
+                onLoad={() => setIframeLoaded(true)}
                 allow="payment *"
                 loading="eager"
               />
             </div>
 
-            {/* Fixed Bottom bar — above taskbar */}
-            <div className="flex-shrink-0 bg-white border-t px-4 pt-3 pb-4 shadow-lg">
-              {/* Confirmation checkbox */}
-              <label className="flex items-center gap-2 mb-3 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={paystackConfirmed}
-                  onChange={(e) => setPaystackConfirmed(e.target.checked)}
-                  className="w-4 h-4 accent-green-600 rounded"
-                />
-                <span className="text-xs text-gray-700 font-medium">
-                  I confirm I have completed payment on Paystack
-                </span>
-              </label>
+            {/* Bottom bar — sticky, always visible */}
+            <div className="sticky bottom-0 bg-white border-t px-4 py-2 shadow-lg z-20">
               <Button
-                className={`w-full font-bold py-4 text-base ${paystackConfirmed ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
-                disabled={!paystackConfirmed}
-                onClick={async () => {
-                  if (!paystackConfirmed) return;
-                  // Create order placed notification immediately
-                  if (user) {
-                    await base44.entities.Notification.create({
-                      user_email: user.email,
-                      title: '🛍️ Order Placed!',
-                      message: `Your order #${orderNumber} has been placed and payment is being processed. Amount: ₵${amount.toFixed(2)}.`,
-                      type: 'order_placed',
-                      order_id: orderId,
-                      order_number: orderNumber,
-                      is_read: false
-                    }).catch(() => {});
-                  }
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 text-base"
+                onClick={() => {
                   window.location.href = createPageUrl(`PaymentConfirmed?orderId=${orderId}&orderNumber=${orderNumber}&amount=${amount.toFixed(2)}`);
                 }}
               >
                 ✅ I've Completed Payment – Continue
               </Button>
-              <p className="text-xs text-center text-gray-400 mt-1">
+              <p className="text-xs text-center text-gray-400 mt-1 pb-1">
                 Tap after your Paystack payment is done
               </p>
             </div>

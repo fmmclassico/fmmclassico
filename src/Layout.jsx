@@ -271,7 +271,7 @@ export default function Layout({ children, currentPageName }) {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo & Menu */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="text-white hover:bg-orange-600">

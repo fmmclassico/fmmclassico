@@ -154,18 +154,23 @@ export default function Payment() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex flex-col"
+            className="fixed inset-0 flex flex-col"
+            style={{ zIndex: 100 }}
           >
-            {/* Header bar */}
-            <div className="bg-white border-b px-4 py-2 flex items-center justify-between shadow-sm">
-              <p className="text-xs text-gray-500">Order #{orderNumber}</p>
-              <div className="text-right">
-                <p className="font-black text-orange-600 text-base">₵{Number.isInteger(amount) ? amount : amount.toFixed(2).replace(/\.00$/, '')}</p>
+            {/* Fixed Header bar — amount */}
+            <div className="flex-shrink-0 bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 flex items-center justify-between shadow-md">
+              <div>
+                <p className="text-xs text-orange-100">Order #{orderNumber}</p>
+                <p className="text-xs text-orange-100 mt-0.5">Pay securely with Paystack</p>
+              </div>
+              <div className="text-right bg-white/20 rounded-xl px-3 py-1.5">
+                <p className="text-xs text-orange-100">Amount</p>
+                <p className="font-black text-white text-xl">₵{Number.isInteger(amount) ? amount : amount.toFixed(2).replace(/\.00$/, '')}</p>
               </div>
             </div>
 
-            {/* Iframe — scrollable */}
-            <div className="relative overflow-y-auto" style={{ height: 'calc(100vh - 110px)' }}>
+            {/* Iframe — scrollable middle */}
+            <div className="flex-1 relative overflow-y-auto">
               {!iframeLoaded && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
@@ -176,24 +181,25 @@ export default function Payment() {
                 src={paystackUrl}
                 title="Paystack Payment"
                 className="w-full h-full border-0"
+                style={{ minHeight: '100%' }}
                 onLoad={() => setIframeLoaded(true)}
                 allow="payment *"
                 loading="eager"
               />
             </div>
 
-            {/* Bottom bar — sticky, always visible */}
-            <div className="sticky bottom-0 bg-white border-t px-4 py-2 shadow-lg z-20">
+            {/* Fixed Bottom bar — always on top of taskbar */}
+            <div className="flex-shrink-0 bg-white border-t px-4 pt-3 pb-5 shadow-2xl" style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}>
               <Button
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 text-base"
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-5 text-base rounded-2xl shadow-lg"
                 onClick={() => {
                   window.location.href = createPageUrl(`PaymentConfirmed?orderId=${orderId}&orderNumber=${orderNumber}&amount=${amount.toFixed(2)}`);
                 }}
               >
                 ✅ I've Completed Payment – Continue
               </Button>
-              <p className="text-xs text-center text-gray-400 mt-1 pb-1">
-                Tap after your Paystack payment is done
+              <p className="text-xs text-center text-gray-400 mt-2">
+                Tap this button after your Paystack payment is done
               </p>
             </div>
           </motion.div>

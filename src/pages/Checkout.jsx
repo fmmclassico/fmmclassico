@@ -178,7 +178,7 @@ export default function Checkout() {
       base44.entities.Notification.create({
         user_email: user.email,
         title: '🛍️ Order Placed Successfully!',
-        message: `Order #${orderNumber} has been placed! Please complete payment on Paystack. FMM CLASSICO will verify your payment within 2–5 minutes and update you. Total: ₵${total.toFixed(2)}`,
+        message: `Order #${orderNumber} has been placed! FMM CLASSICO will verify your payment within 2–5 minutes and update you. Total: ₵${total.toFixed(2)}.`,
         type: 'order_placed',
         order_id: newOrder.id,
         order_number: orderNumber,

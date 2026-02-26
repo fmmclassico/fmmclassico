@@ -198,20 +198,20 @@ export default function Home() {
               : (flashItems.length > 0 ? flashItems : products.slice(0, 5)).map(product => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
                     className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-orange-50 transition-colors p-1.5">
-                    <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-gray-50">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-8 w-8 text-gray-300" /></div>}
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
                       {product.original_price > product.price && (
-                        <span className="absolute top-1 left-1 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                        <span className="absolute top-1 left-1 bg-red-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">
                           -{Math.round((1 - product.price / product.original_price) * 100)}%
                         </span>
                       )}
                     </div>
-                    <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
-                    <p className="text-sm font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
+                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                    <p className="text-xs font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
                     {product.original_price > product.price && (
-                      <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
                     )}
                   </Link>
                 ))}

@@ -29,7 +29,7 @@ export default function Notifications() {
   useEffect(() => {
     base44.auth.me()
       .then(setUser)
-      .catch(() => base44.auth.redirectToLogin(createPageUrl('Notifications')));
+      .catch(() => base44.auth.redirectToLogin(createPageUrl('Home')));
   }, []);
 
   const isAdmin = user?.role === 'admin';

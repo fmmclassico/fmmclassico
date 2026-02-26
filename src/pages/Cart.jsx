@@ -34,7 +34,7 @@ export default function Cart() {
         const userData = await base44.auth.me();
         setUser(userData);
       } else {
-        base44.auth.redirectToLogin(createPageUrl('Cart'));
+        base44.auth.redirectToLogin(createPageUrl('Home'));
       }
     };
     getUser();

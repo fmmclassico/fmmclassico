@@ -365,9 +365,8 @@ export default function AdminOrders() {
                   </div>
                 </div>
 
-                {/* keep existing order items preview */}
-                <div className="mt-3 pt-3 border-t hidden">
-                  <div className="flex flex-col gap-2 opacity-0" />
+                {/* spacer - items moved below */}
+                <div className="hidden">
                 </div>
                 
                 {/* Order Items Preview */}

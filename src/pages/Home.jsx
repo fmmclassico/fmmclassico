@@ -159,42 +159,37 @@ export default function Home() {
         <div className="grid grid-cols-4 gap-3">
           {HOME_CATEGORIES.map(cat => {
             const displayImg = cat.image || products.find(cat.match)?.image_url;
-            const isAccessories = cat.id === 'phone_accessories';
-            return isAccessories ? (
-              <button key={cat.id} onClick={() => setShowSubCats(s => !s)} className="flex flex-col items-center gap-2 group">
-                <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden shadow-sm border-2 group-hover:scale-105 transition-transform ${showSubCats ? 'border-orange-400' : 'border-white'} ${cat.color} flex items-center justify-center`}>
+            const isExpanded = expandedCat === cat.id;
+            return (
+              <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
+                <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden shadow-sm border-2 group-hover:scale-105 transition-transform ${isExpanded ? 'border-orange-400' : 'border-white'} ${cat.color} flex items-center justify-center`}>
                   {displayImg
                     ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
                     : <cat.icon className="h-10 w-10 opacity-70" />}
                 </div>
                 <span className="text-xs md:text-sm font-bold text-gray-800 text-center leading-tight">{cat.label}</span>
               </button>
-            ) : (
-              <Link key={cat.id} to={cat.link} className="flex flex-col items-center gap-2 group">
-                <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden shadow-sm border-2 border-white group-hover:scale-105 transition-transform ${cat.color} flex items-center justify-center`}>
-                  {displayImg
-                    ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
-                    : <cat.icon className="h-10 w-10 opacity-70" />}
-                </div>
-                <span className="text-xs md:text-sm font-bold text-gray-800 text-center leading-tight">{cat.label}</span>
-              </Link>
             );
           })}
         </div>
-        {/* Phone Accessories sub-categories — shown on click */}
-        {showSubCats && (
-          <div className="mt-4 pt-3 border-t border-orange-100">
-            <p className="text-xs font-bold text-orange-500 uppercase tracking-wider mb-2">Phone Accessories</p>
-            <div className="flex flex-wrap gap-2">
-              {HOME_CATEGORIES.find(c => c.id === 'phone_accessories')?.subCategories?.map(sub => (
-                <Link key={sub.label} to={sub.link}
-                  className="text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-full px-3 py-1 hover:bg-orange-100 transition-colors">
-                  {sub.label}
-                </Link>
-              ))}
+        {/* Sub-categories — shown on click */}
+        {expandedCat && (() => {
+          const cat = HOME_CATEGORIES.find(c => c.id === expandedCat);
+          if (!cat?.subCategories) return null;
+          return (
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{cat.label}</p>
+              <div className="flex flex-wrap gap-2">
+                {cat.subCategories.map(sub => (
+                  <Link key={sub.label} to={sub.link}
+                    className={`text-xs font-semibold border rounded-full px-3 py-1 transition-colors ${cat.chipColor}`}>
+                    {sub.label}
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* ── FLASH SALES ── */}

@@ -27,16 +27,9 @@ export default function Notifications() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const getUser = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
-      if (isAuth) {
-        const userData = await base44.auth.me();
-        setUser(userData);
-      } else {
-        base44.auth.redirectToLogin(createPageUrl('Notifications'));
-      }
-    };
-    getUser();
+    base44.auth.me()
+      .then(setUser)
+      .catch(() => base44.auth.redirectToLogin(createPageUrl('Notifications')));
   }, []);
 
   const isAdmin = user?.role === 'admin';

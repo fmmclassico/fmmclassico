@@ -124,7 +124,7 @@ const categories = [
     id: 'electronic_appliances', 
     name: 'Electronic Appliances', 
     desc: 'TVs, laptops, cameras & more',
-    image: 'https://images.unsplash.com/photo-1593359677879-a4bb92f4834c?w=600',
+    image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ94SJivj0M3R6IzI-Ef1RaIn5Y7HOF7y5FnVqEpq0-uFqeEJFh3iu_0NE&s=10',
     color: 'from-cyan-500 to-blue-600',
     subCategories: electronicSubCategories,
     subColor: 'blue'

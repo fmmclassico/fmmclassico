@@ -69,7 +69,6 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     const handler = (e) => {
       if (helpRef.current && !helpRef.current.contains(e.target)) setHelpOpen(false);
-      if (accountRef.current && !accountRef.current.contains(e.target)) setAccountOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);

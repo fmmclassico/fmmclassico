@@ -365,10 +365,6 @@ export default function AdminOrders() {
                   </div>
                 </div>
 
-                {/* spacer - items moved below */}
-                <div className="hidden">
-                </div>
-                
                 {/* Order Items Preview */}
                 <div className="mt-3 pt-3 border-t">
                   <p className="text-xs text-gray-500 mb-2">Items:</p>

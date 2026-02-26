@@ -80,6 +80,22 @@ export default function Payment() {
     return unsubscribe;
   }, [orderId, paymentClicked]);
 
+  // Listen for Paystack success message from iframe
+  useEffect(() => {
+    const handler = (event) => {
+      // Paystack sends success events via postMessage
+      if (event.data && (
+        event.data.event === 'successful' ||
+        event.data.status === 'success' ||
+        (typeof event.data === 'string' && event.data.includes('success'))
+      )) {
+        setPaystackConfirmed(true);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   const handleUploadProof = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;

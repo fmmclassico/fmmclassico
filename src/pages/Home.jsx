@@ -98,14 +98,9 @@ export default function Home() {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list('-created_date', 100),
+    staleTime: 2 * 60 * 1000, // cache for 2 minutes, show instantly on revisit
+    gcTime: 10 * 60 * 1000,
   });
-
-  useEffect(() => {
-    const unsubscribe = base44.entities.Product.subscribe(() => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-    });
-    return unsubscribe;
-  }, [queryClient]);
 
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {

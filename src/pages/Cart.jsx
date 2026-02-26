@@ -69,9 +69,17 @@ export default function Cart() {
   });
 
   const removeItemMutation = useMutation({
-    mutationFn: (id) => base44.entities.CartItem.delete(id),
+    mutationFn: async (item) => {
+      // Restore stock when removing item from cart entirely
+      const products = await base44.entities.Product.filter({ id: item.product_id });
+      if (products.length > 0 && products[0].stock != null) {
+        await base44.entities.Product.update(item.product_id, { stock: products[0].stock + item.quantity });
+      }
+      await base44.entities.CartItem.delete(item.id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Item removed');
     }
   });

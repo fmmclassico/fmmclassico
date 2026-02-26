@@ -88,53 +88,7 @@ export default function Shop() {
         <p className="text-gray-500">{filteredProducts.length} products found</p>
       </div>
 
-      {/* Active Filters */}
-      {hasFilters && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {category && (
-            <Badge variant="secondary" className="flex items-center gap-1 px-3 py-1">
-              {categoryNames[category]}
-              <X 
-                className="h-3 w-3 ml-1 cursor-pointer hover:text-red-500" 
-                onClick={() => {
-                  const newParams = new URLSearchParams(searchParams);
-                  newParams.delete('category');
-                  setSearchParams(newParams);
-                }}
-              />
-            </Badge>
-          )}
-          {search && (
-            <Badge variant="secondary" className="flex items-center gap-1 px-3 py-1">
-              Search: {search}
-              <X 
-                className="h-3 w-3 ml-1 cursor-pointer hover:text-red-500" 
-                onClick={() => {
-                  const newParams = new URLSearchParams(searchParams);
-                  newParams.delete('search');
-                  setSearchParams(newParams);
-                }}
-              />
-            </Badge>
-          )}
-          {featured && (
-            <Badge variant="secondary" className="flex items-center gap-1 px-3 py-1">
-              Featured
-              <X 
-                className="h-3 w-3 ml-1 cursor-pointer hover:text-red-500" 
-                onClick={() => {
-                  const newParams = new URLSearchParams(searchParams);
-                  newParams.delete('featured');
-                  setSearchParams(newParams);
-                }}
-              />
-            </Badge>
-          )}
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-orange-600">
-            Clear All
-          </Button>
-        </div>
-      )}
+
 
       {/* Filters Bar */}
       <div className="flex items-center justify-between mb-6 bg-white rounded-lg p-3 shadow-sm">

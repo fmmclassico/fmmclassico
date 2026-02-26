@@ -77,14 +77,17 @@ export default function Layout({ children, currentPageName }) {
   const { data: cartItems = [] } = useQuery({
     queryKey: ['cartItems', user?.email],
     queryFn: () => base44.entities.CartItem.filter({ user_email: user?.email }),
-    enabled: !!user?.email
+    enabled: !!user?.email,
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
   });
 
   const { data: userNotifications = [] } = useQuery({
     queryKey: ['notifications', user?.email],
     queryFn: () => base44.entities.Notification.filter({ user_email: user?.email }, '-created_date', 50),
     enabled: !!user?.email,
-    refetchInterval: 7000,
+    staleTime: 20000,
+    refetchInterval: 15000,
   });
 
   // Real-time notification updates

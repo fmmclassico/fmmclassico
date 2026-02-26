@@ -17,6 +17,14 @@ const HOME_CATEGORIES = [
     link: createPageUrl('Shop?category=phones'),
     image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
     match: (p) => p.category === 'phones',
+    subCategories: [
+      { label: 'iPhones', link: createPageUrl('Shop?category=phones') },
+      { label: 'Samsung', link: createPageUrl('Shop?category=phones') },
+      { label: 'Tecno', link: createPageUrl('Shop?category=phones') },
+      { label: 'Infinix', link: createPageUrl('Shop?category=phones') },
+      { label: 'All Phones', link: createPageUrl('Shop?category=phones') },
+    ],
+    chipColor: 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100',
   },
   {
     id: 'phone_accessories',
@@ -34,6 +42,7 @@ const HOME_CATEGORIES = [
       { label: 'Earphones', link: createPageUrl('Shop?category=earphones') },
       { label: 'Cables', link: createPageUrl('Shop?category=cables') },
     ],
+    chipColor: 'text-orange-700 bg-orange-50 border-orange-200 hover:bg-orange-100',
   },
   {
     id: 'electronics',
@@ -43,6 +52,14 @@ const HOME_CATEGORIES = [
     link: createPageUrl('Shop?category=electronic_appliances'),
     image: 'https://ikonic.com/wp-content/uploads/2023/10/industries-consumer-electronics.jpeg',
     match: (p) => ['electronic_appliances','smart_watches'].includes(p.category),
+    subCategories: [
+      { label: 'Televisions', link: createPageUrl('Shop?category=electronic_appliances') },
+      { label: 'Smart Watches', link: createPageUrl('Shop?category=smart_watches') },
+      { label: 'Laptops', link: createPageUrl('Shop?category=electronic_appliances') },
+      { label: 'Cameras', link: createPageUrl('Shop?category=electronic_appliances') },
+      { label: 'All Electronics', link: createPageUrl('Shop?category=electronic_appliances') },
+    ],
+    chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100',
   },
   {
     id: 'home_appliances',
@@ -51,12 +68,20 @@ const HOME_CATEGORIES = [
     color: 'bg-green-100 text-green-700',
     link: createPageUrl('Shop?category=home_appliances'),
     match: (p) => p.category === 'home_appliances',
+    subCategories: [
+      { label: 'Fridges', link: createPageUrl('Shop?category=home_appliances') },
+      { label: 'Microwaves', link: createPageUrl('Shop?category=home_appliances') },
+      { label: 'Blenders', link: createPageUrl('Shop?category=home_appliances') },
+      { label: 'Irons', link: createPageUrl('Shop?category=home_appliances') },
+      { label: 'All Appliances', link: createPageUrl('Shop?category=home_appliances') },
+    ],
+    chipColor: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100',
   },
 ];
 
 export default function Home() {
   const [user, setUser] = useState(null);
-  const [showSubCats, setShowSubCats] = useState(false);
+  const [expandedCat, setExpandedCat] = useState(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {

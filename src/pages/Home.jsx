@@ -86,6 +86,15 @@ export default function Home() {
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
+    // Ensure after login/signup users always land on Home
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('_redirected')) {
+      base44.auth.isAuthenticated().then(auth => {
+        if (!auth) {
+          base44.auth.redirectToLogin(window.location.origin + '?_redirected=1');
+        }
+      });
+    }
   }, []);
 
   const { data: products = [], isLoading } = useQuery({

@@ -214,13 +214,13 @@ export default function AdminSMSBroadcast() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 bg-orange-100 rounded-full">
-            <MessageSquare className="h-6 w-6 text-orange-600" />
+          <div className="p-2 bg-green-100 rounded-full">
+            <MessageSquare className="h-6 w-6 text-green-600" />
           </div>
-          <h1 className="text-2xl font-black text-gray-800">SMS Broadcast</h1>
-          <Badge className="bg-orange-500 text-white text-xs">9000+ Ghana SMS</Badge>
+          <h1 className="text-2xl font-black text-gray-800">WhatsApp Broadcast</h1>
+          <Badge className="bg-green-500 text-white text-xs">WhatsApp</Badge>
         </div>
-        <p className="text-gray-500 text-sm ml-14">Manage your contact list and broadcast SMS messages to customers in Ghana.</p>
+        <p className="text-gray-500 text-sm ml-14">Manage your contact list and broadcast messages via WhatsApp to customers.</p>
         <div className="flex gap-3 mt-2 ml-14">
           <Badge className="bg-blue-100 text-blue-700"><Users className="h-3 w-3 mr-1" />{contacts.length} contacts</Badge>
           <Badge className="bg-green-100 text-green-700"><Phone className="h-3 w-3 mr-1" />{groups.length - 1} groups</Badge>
@@ -231,10 +231,10 @@ export default function AdminSMSBroadcast() {
       <div className="flex gap-2 mb-6 overflow-x-auto">
         {[
           { id: 'contacts', label: '👥 Contacts' },
-          { id: 'broadcast', label: '📲 Broadcast SMS' },
+          { id: 'broadcast', label: '📲 WhatsApp Broadcast' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap px-3 ${tab === t.id ? 'bg-orange-500 text-white shadow' : 'bg-white text-gray-600 border'}`}>
+            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap px-3 ${tab === t.id ? 'bg-green-600 text-white shadow' : 'bg-white text-gray-600 border'}`}>
             {t.label}
           </button>
         ))}

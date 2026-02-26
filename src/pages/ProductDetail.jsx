@@ -69,33 +69,16 @@ export default function ProductDetail() {
         base44.auth.redirectToLogin(window.location.href);
         return;
       }
-      // Optimistic update for cart and stock instantly
-      queryClient.setQueryData(['cartItems', user.email], (old = []) => {
-        const existing = old.find(i => i.product_id === product.id);
-        if (existing) return old.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + quantity } : i);
-        return [...old, { id: 'opt-' + product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity, user_email: user.email }];
-      });
-      // Optimistically reduce stock shown on page
-      if (product.stock != null) {
-        queryClient.setQueryData(['products'], (old = []) =>
-          old.map(p => p.id === product.id ? { ...p, stock: Math.max(0, p.stock - quantity) } : p)
-        );
-      }
-      toast.success('Added to cart!');
-      // Persist in background
       const existingItems = await base44.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
       if (existingItems.length > 0) {
         await base44.entities.CartItem.update(existingItems[0].id, { quantity: existingItems[0].quantity + quantity });
       } else {
         await base44.entities.CartItem.create({ product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity, user_email: user.email });
       }
-      if (product.stock != null) {
-        await base44.entities.Product.update(product.id, { stock: Math.max(0, product.stock - quantity) });
-      }
+      toast.success('Added to cart!');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
     }
   });
 

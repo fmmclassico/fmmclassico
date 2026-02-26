@@ -52,16 +52,24 @@ export default function ProductDetail() {
 
   const product = products.find(p => p.id === productId);
 
-  // Build image gallery array
+  // Build image gallery: up to 4 images + 1 video slot
   const allImages = product ? [
     product.image_url,
     ...(product.image_urls || [])
   ].filter(Boolean).slice(0, 4) : [];
 
-  // If less than 4 images, use the main image as fallback
   while (allImages.length < 4 && product?.image_url) {
     allImages.push(product.image_url);
   }
+
+  const videoUrl = product?.video_url || null;
+  // gallery = images + video (if exists) = up to 5 items
+  const galleryItems = videoUrl
+    ? [...allImages, { type: 'video', url: videoUrl }]
+    : allImages.map(u => ({ type: 'image', url: u }));
+
+  const isVideo = (item) => typeof item === 'object' && item?.type === 'video';
+  const getUrl = (item) => typeof item === 'string' ? item : item?.url;
 
   const addToCartMutation = useMutation({
     mutationFn: async () => {

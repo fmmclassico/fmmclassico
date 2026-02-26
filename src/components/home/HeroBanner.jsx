@@ -42,6 +42,7 @@ const DEFAULT_SLIDES = [
 export default function HeroBanner() {
   const [current, setCurrent] = useState(0);
   const [slides, setSlides] = useState(DEFAULT_SLIDES);
+  const [touchStart, setTouchStart] = useState(null);
 
   useEffect(() => {
     // Load any active promo banners from admin
@@ -64,6 +65,14 @@ export default function HeroBanner() {
 
   const prev = () => setCurrent(prev => (prev - 1 + slides.length) % slides.length);
   const next = () => setCurrent(prev => (prev + 1) % slides.length);
+
+  const handleTouchStart = (e) => setTouchStart(e.touches[0].clientX);
+  const handleTouchEnd = (e) => {
+    if (touchStart === null) return;
+    const diff = touchStart - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) { diff > 0 ? next() : prev(); }
+    setTouchStart(null);
+  };
   const slide = slides[current] || DEFAULT_SLIDES[0];
 
   const ctaHref = slide.cta_link
@@ -71,7 +80,11 @@ export default function HeroBanner() {
     : createPageUrl('Shop');
 
   return (
-    <div className={`relative bg-gradient-to-r ${slide.bg_gradient || 'from-orange-600 via-orange-500 to-amber-400'} overflow-hidden transition-all duration-700`}>
+    <div
+      className={`relative bg-gradient-to-r ${slide.bg_gradient || 'from-orange-600 via-orange-500 to-amber-400'} overflow-hidden transition-all duration-700`}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <AnimatePresence mode="wait">
         <motion.div
           key={slide.id}

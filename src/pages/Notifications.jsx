@@ -43,11 +43,9 @@ export default function Notifications() {
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ['notifications', user?.email],
-    queryFn: () => isAdmin
-      ? base44.entities.Notification.list('-created_date', 100)
-      : base44.entities.Notification.filter({ user_email: user.email }, '-created_date', 50),
+    queryFn: () => base44.entities.Notification.filter({ user_email: user.email }, '-created_date', 50),
     enabled: !!user?.email,
-    refetchInterval: 15000,
+    refetchInterval: 8000,
   });
 
   // Also fetch orders for admin payment alerts

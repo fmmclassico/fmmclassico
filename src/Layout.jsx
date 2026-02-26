@@ -47,15 +47,14 @@ export default function Layout({ children, currentPageName }) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const authenticated = await base44.auth.isAuthenticated();
+    // Run auth check and user fetch in parallel, non-blocking
+    Promise.all([
+      base44.auth.isAuthenticated(),
+      base44.auth.me().catch(() => null),
+    ]).then(([authenticated, userData]) => {
       setIsAuthenticated(authenticated);
-      if (authenticated) {
-        const userData = await base44.auth.me();
-        setUser(userData);
-      }
-    };
-    checkAuth();
+      if (authenticated && userData) setUser(userData);
+    });
   }, []);
 
   // Scroll-to-top button visibility

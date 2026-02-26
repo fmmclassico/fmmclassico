@@ -16,8 +16,6 @@ import {
   ChevronRight,
   Plus,
   Minus,
-  Share2,
-  Heart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -161,16 +159,7 @@ export default function ProductDetail() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link to={createPageUrl('Home')} className="hover:text-orange-600">Home</Link>
-        <span>/</span>
-        <Link to={createPageUrl(`Shop?category=${product.category}`)} className="hover:text-orange-600">
-          {categoryNames[product.category]}
-        </Link>
-        <span>/</span>
-        <span className="text-gray-800">{product.name}</span>
-      </div>
+
 
       <div className="grid md:grid-cols-2 gap-8">
         {/* Product Image Gallery */}
@@ -204,17 +193,7 @@ export default function ProductDetail() {
               </Badge>
             )}
 
-            {/* Prev / Next arrows */}
-            {allImages.length > 1 && (
-              <>
-                <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow-md transition-all">
-                  <ChevronLeft className="h-5 w-5 text-gray-700" />
-                </button>
-                <button onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow-md transition-all">
-                  <ChevronRight className="h-5 w-5 text-gray-700" />
-                </button>
-              </>
-            )}
+
 
             {/* Dot indicators */}
             {allImages.length > 1 && (
@@ -227,14 +206,7 @@ export default function ProductDetail() {
               </div>
             )}
 
-            <div className="absolute top-4 right-4 flex flex-col gap-2">
-              <Button size="icon" variant="secondary" className="rounded-full shadow-md">
-                <Heart className="h-5 w-5" />
-              </Button>
-              <Button size="icon" variant="secondary" className="rounded-full shadow-md">
-                <Share2 className="h-5 w-5" />
-              </Button>
-            </div>
+
           </div>
 
           {/* Thumbnail Gallery */}

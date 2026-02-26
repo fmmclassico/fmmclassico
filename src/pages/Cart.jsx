@@ -201,7 +201,7 @@ export default function Cart() {
                           variant="ghost"
                           size="sm"
                           className="text-red-500 hover:text-red-600 hover:bg-red-50 px-2 sm:px-3"
-                          onClick={() => removeItemMutation.mutate(item.id)}
+                          onClick={() => removeItemMutation.mutate(item)}
                         >
                           <Trash2 className="h-4 w-4" />
                           <span className="hidden sm:inline ml-1">Remove</span>

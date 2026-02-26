@@ -47,6 +47,7 @@ export default function Notifications() {
     queryKey: ['orders-admin-alerts', isAdmin],
     queryFn: () => base44.entities.Order.list('-updated_date', 50),
     enabled: !!isAdmin,
+    staleTime: 60000,
   });
 
   const paymentAlerts = isAdmin

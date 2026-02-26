@@ -272,7 +272,7 @@ export default function Layout({ children, currentPageName }) {
               <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="text-white hover:bg-orange-600">
-                    <Menu className="h-6 w-6" />
+                    <Menu className="h-7 w-7" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-80 p-0">

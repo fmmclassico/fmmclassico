@@ -45,7 +45,8 @@ export default function Notifications() {
     queryKey: ['notifications', user?.email],
     queryFn: () => base44.entities.Notification.filter({ user_email: user.email }, '-created_date', 50),
     enabled: !!user?.email,
-    refetchInterval: 8000,
+    staleTime: 30000,
+    refetchInterval: 10000,
   });
 
   // Also fetch orders for admin payment alerts

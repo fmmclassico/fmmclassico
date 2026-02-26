@@ -199,11 +199,18 @@ export default function Payment() {
 
             {/* Fixed Bottom bar — above taskbar */}
             <div className="flex-shrink-0 bg-white border-t px-4 pt-3 pb-4 shadow-lg">
-              {!paystackConfirmed && (
-                <p className="text-xs text-center text-amber-600 font-medium mb-2">
-                  ⚠️ Complete your payment in Paystack above first, then tap below
-                </p>
-              )}
+              {/* Confirmation checkbox */}
+              <label className="flex items-center gap-2 mb-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={paystackConfirmed}
+                  onChange={(e) => setPaystackConfirmed(e.target.checked)}
+                  className="w-4 h-4 accent-green-600 rounded"
+                />
+                <span className="text-xs text-gray-700 font-medium">
+                  I confirm I have completed payment on Paystack
+                </span>
+              </label>
               <Button
                 className={`w-full font-bold py-4 text-base ${paystackConfirmed ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                 disabled={!paystackConfirmed}

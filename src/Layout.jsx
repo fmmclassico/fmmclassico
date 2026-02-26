@@ -400,41 +400,7 @@ export default function Layout({ children, currentPageName }) {
                 <span className="text-[10px] font-semibold leading-tight">Alerts</span>
               </Link>
 
-              {/* Account dropdown */}
-              <div className="relative" ref={accountRef}>
-                <button className="flex flex-col items-center text-white hover:bg-orange-600 rounded-md px-2 py-1 transition-colors" onClick={() => setAccountOpen(o => !o)}>
-                  <User className="h-5 w-5" />
-                  <span className="text-[10px] font-semibold leading-tight">Account</span>
-                </button>
-                {accountOpen && (
-                  <div className="absolute right-0 top-12 w-52 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 py-2 overflow-hidden">
-                    {user ? (
-                      <>
-                        <p className="text-xs text-gray-400 px-4 pt-1 pb-2 truncate font-medium">{user.full_name || user.email}</p>
-                        <div className="border-t mb-1" />
-                        <Link to={createPageUrl('Settings')} onClick={() => setAccountOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 hover:bg-orange-50 text-sm text-gray-700 font-medium transition-colors">
-                          <User className="h-4 w-4 text-orange-500" /> Profile / Settings
-                        </Link>
-                        <div className="border-t my-1" />
-                        <button onClick={() => { setAccountOpen(false); base44.auth.logout(); }}
-                          className="flex items-center gap-2 px-4 py-2.5 hover:bg-red-50 text-sm text-red-600 font-medium w-full transition-colors">
-                          <LogOut className="h-4 w-4" /> Logout
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-xs text-gray-400 px-4 pt-1 pb-2">Not signed in</p>
-                        <div className="border-t mb-1" />
-                        <button onClick={() => { setAccountOpen(false); base44.auth.redirectToLogin(window.location.href); }}
-                          className="flex items-center gap-2 px-4 py-2.5 hover:bg-orange-50 text-sm text-orange-700 font-semibold w-full transition-colors">
-                          <User className="h-4 w-4" /> Sign In
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
+
             </div>
           </div>
 

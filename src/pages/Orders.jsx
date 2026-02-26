@@ -16,7 +16,6 @@ import {
   MapPin,
   XCircle,
   CreditCard,
-  ExternalLink,
   Trash2,
   Check
 } from 'lucide-react';

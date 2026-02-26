@@ -148,6 +148,9 @@ export default function Payment() {
     toast.success('Payment notification sent! We\'ll verify shortly.');
   };
 
+  // Override Paystack branding via CSS injected into the page
+  // (The iframe content is cross-origin and cannot be styled directly)
+
   if (!user || !orderId) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">

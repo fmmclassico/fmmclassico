@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function AdminSMSBroadcast() {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [tab, setTab] = useState('contacts'); // 'contacts' | 'broadcast' | 'history'
+  const [tab, setTab] = useState('contacts');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Add contact form
@@ -31,13 +31,14 @@ export default function AdminSMSBroadcast() {
   const [bulkText, setBulkText] = useState('');
   const [showBulkImport, setShowBulkImport] = useState(false);
 
+  // File upload for contacts
+  const fileInputRef = useRef(null);
+
   // Broadcast form
   const [message, setMessage] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('All');
-  const [isSending, setIsSending] = useState(false);
-  const [sentCount, setSentCount] = useState(0);
-  const [sendDone, setSendDone] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState([]);
+  const [waSent, setWaSent] = useState(false);
 
   const queryClient = useQueryClient();
 

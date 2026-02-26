@@ -441,7 +441,7 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Bottom Navigation - All screens */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-40">
-        <div className="flex items-center justify-around py-2 max-w-2xl mx-auto">
+        <div className="flex items-center justify-around py-3 max-w-2xl mx-auto">
           <Link to={createPageUrl('Home')} className={`flex flex-col items-center p-2 ${currentPageName === 'Home' ? 'text-orange-500' : 'text-gray-500'}`}>
             <Home className="h-5 w-5" />
             <span className="text-xs mt-1">Home</span>

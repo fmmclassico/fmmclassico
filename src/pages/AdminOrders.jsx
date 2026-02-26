@@ -342,6 +342,33 @@ export default function AdminOrders() {
                     </Link>
                   </div>
                 </div>
+
+                {/* Admin message box */}
+                <div className="mt-3 pt-3 border-t">
+                  <p className="text-xs font-semibold text-gray-500 mb-1.5">💬 Send message to customer (e.g. partial payment, wrong amount):</p>
+                  <div className="flex gap-2">
+                    <Textarea
+                      rows={2}
+                      placeholder="e.g. Your payment amount is incorrect. Please pay ₵X to complete your order..."
+                      className="text-xs flex-1 resize-none"
+                      value={adminMessages[order.id] || ''}
+                      onChange={(e) => setAdminMessages(prev => ({ ...prev, [order.id]: e.target.value }))}
+                    />
+                    <Button
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 self-end"
+                      disabled={!adminMessages[order.id]?.trim() || sendAdminMessageMutation.isPending}
+                      onClick={() => sendAdminMessageMutation.mutate({ order, message: adminMessages[order.id] })}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* keep existing order items preview */}
+                <div className="mt-3 pt-3 border-t hidden">
+                  <div className="flex flex-col gap-2 opacity-0" />
+                </div>
                 
                 {/* Order Items Preview */}
                 <div className="mt-3 pt-3 border-t">

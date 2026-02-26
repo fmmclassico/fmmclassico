@@ -360,7 +360,7 @@ export default function Home() {
           <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
             {isLoading
               ? Array(5).fill(0).map((_, i) => (
-                  <div key={i} className="flex-shrink-0 w-[44vw] md:w-44 bg-white p-2 space-y-2">
+                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
                     <div className="aspect-square bg-gray-200 rounded animate-pulse" />
                     <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
                     <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
@@ -368,15 +368,15 @@ export default function Home() {
                 ))
               : (topSellingFallback.length > 0 ? topSellingFallback : products.slice(0, 6)).map((product, idx) => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                    className="flex-shrink-0 w-[44vw] md:w-44 bg-white hover:bg-red-50 transition-colors p-2">
-                    <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-gray-50">
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-red-50 transition-colors p-1.5">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-8 w-8 text-gray-300" /></div>}
-                      <span className="absolute top-1 left-1 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">#{idx + 1}</span>
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                      <span className="absolute top-1 left-1 bg-red-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">#{idx + 1}</span>
                     </div>
-                    <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
-                    <p className="text-sm font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
+                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                    <p className="text-xs font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
                     {product.reviews_count > 0 && (
                       <p className="text-[10px] text-yellow-600 font-bold">⭐ {product.reviews_count} sold</p>
                     )}

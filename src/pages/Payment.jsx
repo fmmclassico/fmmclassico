@@ -18,7 +18,6 @@ export default function Payment() {
   const [paymentConfirmedByAdmin, setPaymentConfirmedByAdmin] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
-  const [paystackConfirmed, setPaystackConfirmed] = useState(false);
   const [proofUrl, setProofUrl] = useState('');
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const fileInputRef = useRef(null);

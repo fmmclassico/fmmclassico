@@ -6,17 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  ShoppingCart, 
-  Star, 
-  Truck, 
-  Shield, 
-  RotateCcw, 
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Minus,
-} from 'lucide-react';
+import { ShoppingCart, Star, Shield, Plus, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -79,29 +69,23 @@ export default function ProductDetail() {
         base44.auth.redirectToLogin(window.location.href);
         return;
       }
-      const existingItems = await base44.entities.CartItem.filter({ 
-        user_email: user.email, 
-        product_id: product.id 
+      // Optimistic update first for instant UI feedback
+      queryClient.setQueryData(['cartItems', user.email], (old = []) => {
+        const existing = old.find(i => i.product_id === product.id);
+        if (existing) return old.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + quantity } : i);
+        return [...old, { id: 'opt-' + product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity, user_email: user.email }];
       });
-      
+      toast.success('Added to cart!');
+      // Then persist in background
+      const existingItems = await base44.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
       if (existingItems.length > 0) {
-        await base44.entities.CartItem.update(existingItems[0].id, {
-          quantity: existingItems[0].quantity + quantity
-        });
+        await base44.entities.CartItem.update(existingItems[0].id, { quantity: existingItems[0].quantity + quantity });
       } else {
-        await base44.entities.CartItem.create({
-          product_id: product.id,
-          product_name: product.name,
-          product_image: product.image_url,
-          product_price: product.price,
-          quantity: quantity,
-          user_email: user.email
-        });
+        await base44.entities.CartItem.create({ product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity, user_email: user.email });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems'] });
-      toast.success('Added to cart!');
     }
   });
 

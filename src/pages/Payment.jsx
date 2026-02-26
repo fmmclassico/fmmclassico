@@ -160,7 +160,7 @@ export default function Payment() {
             </div>
 
             {/* Iframe — scrollable */}
-            <div className="relative overflow-y-auto" style={{ height: 'calc(100vh - 140px)', minHeight: '500px' }}>
+            <div className="relative overflow-y-auto" style={{ height: 'calc(100vh - 110px)' }}>
               {!iframeLoaded && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-orange-500" />

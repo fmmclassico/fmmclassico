@@ -169,23 +169,36 @@ export default function ProductDetail() {
           animate={{ opacity: 1, x: 0 }}
           className="space-y-4"
         >
-          {/* Main Image with swipe & navigation */}
+          {/* Main display with swipe */}
           <div
             className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-lg cursor-grab active:cursor-grabbing"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
             <AnimatePresence mode="wait">
-              <motion.img
-                key={selectedImageIndex}
-                src={allImages[selectedImageIndex] || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=800'}
-                alt={product.name}
-                className="w-full h-full object-cover"
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ duration: 0.25 }}
-              />
+              {isVideo(galleryItems[selectedImageIndex]) ? (
+                <motion.video
+                  key={`video-${selectedImageIndex}`}
+                  src={getUrl(galleryItems[selectedImageIndex])}
+                  className="w-full h-full object-cover"
+                  controls
+                  playsInline
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                />
+              ) : (
+                <motion.img
+                  key={selectedImageIndex}
+                  src={getUrl(galleryItems[selectedImageIndex]) || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=800'}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -30 }}
+                  transition={{ duration: 0.25 }}
+                />
+              )}
             </AnimatePresence>
 
             {discount > 0 && (
@@ -194,39 +207,41 @@ export default function ProductDetail() {
               </Badge>
             )}
 
-
-
             {/* Dot indicators */}
-            {allImages.length > 1 && (
+            {galleryItems.length > 1 && (
               <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
-                {allImages.map((_, idx) => (
+                {galleryItems.map((_, idx) => (
                   <button key={idx} onClick={() => setSelectedImageIndex(idx)}
                     className={`rounded-full transition-all ${idx === selectedImageIndex ? 'bg-orange-500 w-4 h-2' : 'bg-white/70 w-2 h-2'}`}
                   />
                 ))}
               </div>
             )}
-
-
           </div>
 
-          {/* Thumbnail Gallery */}
-          <div className="grid grid-cols-4 gap-2">
-            {allImages.map((img, idx) => (
+          {/* Thumbnail Gallery — 4 images + video */}
+          <div className="grid grid-cols-5 gap-2">
+            {galleryItems.map((item, idx) => (
               <button
                 key={idx}
                 onClick={() => setSelectedImageIndex(idx)}
-                className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                className={`aspect-square rounded-lg overflow-hidden border-2 transition-all relative ${
                   selectedImageIndex === idx 
                     ? 'border-orange-500 shadow-md' 
                     : 'border-transparent hover:border-gray-300'
                 }`}
               >
-                <img
-                  src={img}
-                  alt={`${product.name} view ${idx + 1}`}
-                  className="w-full h-full object-cover"
-                />
+                {isVideo(item) ? (
+                  <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                    <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                ) : (
+                  <img
+                    src={getUrl(item)}
+                    alt={`${product.name} view ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </button>
             ))}
           </div>

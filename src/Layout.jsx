@@ -272,7 +272,7 @@ export default function Layout({ children, currentPageName }) {
               <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="text-white hover:bg-orange-600">
-                    <Menu className="h-7 w-7" />
+                    <Menu className="h-7 w-7 text-white drop-shadow-[0_0_2px_rgba(0,0,0,0.5)]" style={{color:'#fff', filter:'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.4))'}} />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-80 p-0">

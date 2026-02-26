@@ -57,7 +57,7 @@ export default function Orders() {
     queryKey: ['orders', user?.email],
     queryFn: () => base44.entities.Order.list('-created_date', 200),
     enabled: !!user?.email,
-    refetchInterval: 20000,
+    refetchInterval: 5000,
     select: (data) => data.filter(o => o.customer_email === user?.email),
   });
 

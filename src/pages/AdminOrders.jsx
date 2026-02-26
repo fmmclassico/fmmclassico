@@ -61,6 +61,34 @@ export default function AdminOrders() {
     o.tracking_updates?.some(t => t.status === 'Payment Claimed')
   );
 
+  const [adminMessages, setAdminMessages] = useState({});
+
+  const sendAdminMessageMutation = useMutation({
+    mutationFn: async ({ order, message }) => {
+      await Promise.all([
+        base44.entities.Notification.create({
+          user_email: order.customer_email,
+          title: '💬 Message from FMM CLASSICO',
+          message: message,
+          type: 'general',
+          order_id: order.id,
+          order_number: order.order_number,
+          is_read: false
+        }),
+        base44.integrations.Core.SendEmail({
+          to: order.customer_email,
+          from_name: 'FMM CLASSICO',
+          subject: `Message about your order #${order.order_number}`,
+          body: `Hi ${order.customer_name},\n\n${message}\n\nFor help: 0509896035\n\nFMM CLASSICO Team`
+        })
+      ]);
+    },
+    onSuccess: (_, variables) => {
+      setAdminMessages(prev => ({ ...prev, [variables.order.id]: '' }));
+      toast.success('Message sent to customer!');
+    }
+  });
+
   const confirmPaymentMutation = useMutation({
     mutationFn: async (order) => {
       const newTrackingUpdates = [

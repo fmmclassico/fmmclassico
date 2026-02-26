@@ -251,6 +251,10 @@ export default function AdminSMSBroadcast() {
             <Button onClick={() => setShowBulkImport(!showBulkImport)} size="sm" variant="outline" className="gap-1">
               <Upload className="h-4 w-4" /> Bulk Import
             </Button>
+            <Button onClick={() => fileInputRef.current?.click()} size="sm" variant="outline" className="gap-1 border-green-400 text-green-700 hover:bg-green-50">
+              <Upload className="h-4 w-4" /> Upload Contacts (CSV/VCF)
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".csv,.vcf,.txt" className="hidden" onChange={handleFileUpload} />
             <Button onClick={importFromOrders} size="sm" variant="outline" className="gap-1" disabled={isAdding}>
               {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               Import from Orders

@@ -38,11 +38,9 @@ export default function Payment() {
     );
   }
 
-  // Pass amount and callback_url so Paystack redirects automatically after payment
-  const callbackUrl = encodeURIComponent(
-    `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${orderNumber}&amount=${amount.toFixed(2)}`
-  );
-  const paystackUrl = `${PAYSTACK_BASE}?amount=${amount.toFixed(2)}&callback_url=${callbackUrl}`;
+  // Paystack shop links don't support callback_url as a param — set it in the Paystack dashboard instead
+  const paystackUrl = `${PAYSTACK_BASE}?amount=${amount.toFixed(2)}`;
+  const confirmUrl = `/PaymentConfirmed?orderId=${orderId}&orderNumber=${orderNumber}&amount=${amount.toFixed(2)}`;
 
   useEffect(() => {
     const getUser = async () => {
@@ -190,9 +188,15 @@ export default function Payment() {
                 loading="eager"
               />
             </div>
-            {/* Tip bar */}
-            <div className="flex-shrink-0 bg-white border-t px-4 py-2 text-center" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
-              <p className="text-xs text-gray-400">Complete your payment above — you'll be redirected automatically when done ✅</p>
+            {/* Bottom bar with manual continue button */}
+            <div className="flex-shrink-0 bg-white border-t px-4 pt-3 pb-4 shadow-2xl" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+              <Button
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-5 text-base rounded-2xl shadow-lg"
+                onClick={() => { window.location.href = confirmUrl; }}
+              >
+                ✅ I've Paid – Continue to Order Confirmation
+              </Button>
+              <p className="text-xs text-center text-gray-400 mt-2">Only tap after your Paystack payment is successful</p>
             </div>
 
 

@@ -38,8 +38,11 @@ export default function Payment() {
     );
   }
 
-  // Pass exact amount in GHS — Paystack shop pages accept amount in cedis directly
-  const paystackUrl = `${PAYSTACK_BASE}?amount=${amount.toFixed(2)}`;
+  // Pass amount and callback_url so Paystack redirects automatically after payment
+  const callbackUrl = encodeURIComponent(
+    `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${orderNumber}&amount=${amount.toFixed(2)}`
+  );
+  const paystackUrl = `${PAYSTACK_BASE}?amount=${amount.toFixed(2)}&callback_url=${callbackUrl}`;
 
   useEffect(() => {
     const getUser = async () => {
@@ -169,7 +172,7 @@ export default function Payment() {
               </div>
             </div>
 
-            {/* Iframe — scrollable middle */}
+            {/* Iframe — fills remaining space */}
             <div className="flex-1 relative overflow-y-auto">
               {!iframeLoaded && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
@@ -187,21 +190,12 @@ export default function Payment() {
                 loading="eager"
               />
             </div>
-
-            {/* Fixed Bottom bar — always on top of taskbar */}
-            <div className="flex-shrink-0 bg-white border-t px-4 pt-3 pb-5 shadow-2xl" style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}>
-              <Button
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-5 text-base rounded-2xl shadow-lg"
-                onClick={() => {
-                  window.location.href = createPageUrl(`PaymentConfirmed?orderId=${orderId}&orderNumber=${orderNumber}&amount=${amount.toFixed(2)}`);
-                }}
-              >
-                ✅ I've Completed Payment – Continue
-              </Button>
-              <p className="text-xs text-center text-gray-400 mt-2">
-                Tap this button after your Paystack payment is done
-              </p>
+            {/* Tip bar */}
+            <div className="flex-shrink-0 bg-white border-t px-4 py-2 text-center" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
+              <p className="text-xs text-gray-400">Complete your payment above — you'll be redirected automatically when done ✅</p>
             </div>
+
+
           </motion.div>
         ) : (
           /* ── POST-PAYMENT CONFIRMATION VIEW ── */

@@ -51,12 +51,17 @@ export default function Payment() {
     );
   }
 
+  const displayAmount = amount % 1 === 0 ? amount : amount.toFixed(2);
+  // Paystack accepts amount in the smallest currency unit (pesewas), so multiply by 100
+  const paystackAmountPesewas = Math.round(amount * 100);
+  const paystackUrl = `${PAYSTACK_BASE}?amount=${paystackAmountPesewas}`;
+
   return (
     <div className="fixed inset-0 flex flex-col bg-white" style={{ zIndex: 100 }}>
       {/* Top info bar */}
       <div className="flex-shrink-0 flex items-center justify-between bg-orange-500 px-4 py-2">
         <p className="text-white text-sm font-semibold">Order #{orderNumber}</p>
-        <p className="text-white font-black text-lg">₵{amount % 1 === 0 ? amount : amount.toFixed(2)}</p>
+        <p className="text-white font-black text-lg">Amount to be paid ₵{displayAmount}</p>
       </div>
 
       {/* Loading overlay */}
@@ -67,9 +72,9 @@ export default function Payment() {
         </div>
       )}
 
-      {/* Paystack iframe — full screen */}
+      {/* Paystack iframe — amount passed via query param in pesewas */}
       <iframe
-        src={PAYSTACK_BASE}
+        src={paystackUrl}
         title="Paystack Payment"
         className="w-full flex-1 border-0"
         onLoad={() => setIframeLoaded(true)}

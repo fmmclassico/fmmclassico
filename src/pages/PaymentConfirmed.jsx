@@ -245,26 +245,6 @@ export default function PaymentConfirmed() {
           </div>
         )}
 
-        {/* Order Summary */}
-        {amount > 0 && (
-          <div className="mt-6 pt-4 border-t">
-            <p className="text-xs text-gray-500 font-semibold mb-2">Order Summary</p>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between text-gray-600">
-                <span>Order Number</span>
-                <span className="font-semibold text-gray-800">#{orderNumber}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Amount Paid</span>
-                <span className="font-bold text-orange-600">₵{amount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Payment Method</span>
-                <span className="font-semibold text-gray-800">Paystack</span>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Actions */}
         <div className="mt-6 space-y-2">

@@ -5,7 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Package, Loader2, Bell, CheckIcon, Upload, ImageIcon } from 'lucide-react';
+import { Package, Loader2, Bell, CheckIcon, Upload, ImageIcon, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -17,7 +17,7 @@ export default function Payment() {
   const [paymentClicked, setPaymentClicked] = useState(false);
   const [paymentConfirmedByAdmin, setPaymentConfirmedByAdmin] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [paystackOpened, setPaystackOpened] = useState(false);
   const [proofUrl, setProofUrl] = useState('');
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const fileInputRef = useRef(null);
@@ -134,8 +134,17 @@ export default function Payment() {
     toast.success('Payment notification sent! We\'ll verify shortly.');
   };
 
-  // Override Paystack branding via CSS injected into the page
-  // (The iframe content is cross-origin and cannot be styled directly)
+  // When user returns to this tab after paying on Paystack (new tab), auto-redirect to confirmation
+  useEffect(() => {
+    if (!paystackOpened) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        window.location.href = confirmUrl;
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [paystackOpened, confirmUrl]);
 
   if (!user || !orderId) {
     return (
@@ -170,33 +179,41 @@ export default function Payment() {
               </div>
             </div>
 
-            {/* Iframe — fills remaining space */}
-            <div className="flex-1 relative overflow-y-auto">
-              {!iframeLoaded && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
-                  <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-                  <p className="text-sm text-gray-500">Opening Paystack securely...</p>
+            {/* Center content — order info while waiting */}
+            <div className="flex-1 flex flex-col items-center justify-center px-6 gap-4 bg-gray-50">
+              <div className="w-full max-w-sm bg-white rounded-2xl shadow p-6 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 mb-3">
+                  <Package className="h-8 w-8 text-orange-500" />
                 </div>
-              )}
-              <iframe
-                src={paystackUrl}
-                title="Paystack Payment"
-                className="w-full h-full border-0"
-                style={{ minHeight: '100%' }}
-                onLoad={() => setIframeLoaded(true)}
-                allow="payment *"
-                loading="eager"
-              />
+                <p className="font-bold text-gray-800 text-lg">Order #{orderNumber}</p>
+                <p className="text-3xl font-black text-orange-600 mt-1">₵{Number.isInteger(amount) ? amount : amount.toFixed(2)}</p>
+                <p className="text-sm text-gray-500 mt-3">Tap the button below to complete your payment securely via Paystack</p>
+              </div>
             </div>
-            {/* Bottom bar with manual continue button */}
+            {/* Bottom bar — opens Paystack in new tab; auto-redirects on return */}
             <div className="flex-shrink-0 bg-white border-t px-4 pt-3 pb-4 shadow-2xl" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
-              <Button
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-5 text-base rounded-2xl shadow-lg"
-                onClick={() => { window.location.href = confirmUrl; }}
-              >
-                ✅ I've Paid – Continue to Order Confirmation
-              </Button>
-              <p className="text-xs text-center text-gray-400 mt-2">Only tap after your Paystack payment is successful</p>
+              {!paystackOpened ? (
+                <>
+                  <Button
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-5 text-base rounded-2xl shadow-lg"
+                    onClick={() => {
+                      window.open(paystackUrl, '_blank');
+                      setPaystackOpened(true);
+                    }}
+                  >
+                    💳 Proceed to Pay with Paystack
+                  </Button>
+                  <p className="text-xs text-center text-gray-400 mt-2">You'll be taken to Paystack to complete your payment</p>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-center gap-2 py-2 mb-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+                    <p className="text-sm text-gray-600 font-medium">Waiting for your payment on Paystack...</p>
+                  </div>
+                  <p className="text-xs text-center text-gray-400">Once payment is done, you'll be redirected automatically ✅</p>
+                </>
+              )}
             </div>
 
 

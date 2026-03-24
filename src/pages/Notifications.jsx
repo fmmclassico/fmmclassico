@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, Package, CheckCircle2, Clock, Truck, ChevronRight, Check, Trash2 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ const typeConfig = {
 export default function Notifications() {
   const [user, setUser] = useState(null);
   const [selectedNotifs, setSelectedNotifs] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -42,7 +43,6 @@ export default function Notifications() {
     refetchInterval: 8000,
   });
 
-  // Also fetch orders for admin payment alerts
   const { data: orders = [] } = useQuery({
     queryKey: ['orders-admin-alerts', isAdmin],
     queryFn: () => base44.entities.Order.list('-updated_date', 50),
@@ -54,58 +54,53 @@ export default function Notifications() {
     ? orders.filter(o => o.status === 'pending' && o.tracking_updates?.some(t => t.status === 'Payment Claimed'))
     : [];
 
-  const markReadMutation = useMutation({
-    mutationFn: (id) => base44.entities.Notification.update(id, { is_read: true }),
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ['notifications', user?.email] });
-      const previous = queryClient.getQueryData(['notifications', user?.email]);
-      queryClient.setQueryData(['notifications', user?.email], (old = []) =>
-        old.map(n => n.id === id ? { ...n, is_read: true } : n)
-      );
-      return { previous };
-    },
-    onError: (_err, _id, context) => {
-      queryClient.setQueryData(['notifications', user?.email], context.previous);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
-    },
-  });
+  const refreshNotifs = () => queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
 
-  const markAllRead = async () => {
-    const unread = notifications.filter(n => !n.is_read);
-    // Optimistic update
-    queryClient.setQueryData(['notifications', user?.email], (old = []) =>
-      old.map(n => ({ ...n, is_read: true }))
-    );
-    await Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { is_read: true })));
-    queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
+  const handleMarkOneRead = async (notif) => {
+    if (notif.is_read) return;
+    await base44.entities.Notification.update(notif.id, { is_read: true });
+    refreshNotifs();
   };
 
-  const deleteNotificationsMutation = useMutation({
-    mutationFn: async (notifIds) => {
-      await Promise.all(notifIds.map(id => base44.entities.Notification.delete(id)));
-    },
-    onMutate: async (notifIds) => {
-      await queryClient.cancelQueries({ queryKey: ['notifications', user?.email] });
-      const previous = queryClient.getQueryData(['notifications', user?.email]);
-      queryClient.setQueryData(['notifications', user?.email], (old = []) =>
-        old.filter(n => !notifIds.includes(n.id))
-      );
-      setSelectedNotifs([]);
-      return { previous };
-    },
-    onError: (_err, _ids, context) => {
-      queryClient.setQueryData(['notifications', user?.email], context.previous);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
+  const handleMarkAllRead = async () => {
+    const unread = notifications.filter(n => !n.is_read);
+    if (unread.length === 0) return;
+    setIsProcessing(true);
+    for (const n of unread) {
+      await base44.entities.Notification.update(n.id, { is_read: true });
     }
-  });
+    setIsProcessing(false);
+    refreshNotifs();
+  };
+
+  const handleMarkSelectedRead = async () => {
+    if (selectedNotifs.length === 0) return;
+    setIsProcessing(true);
+    for (const id of selectedNotifs) {
+      const notif = notifications.find(n => n.id === id);
+      if (notif && !notif.is_read) {
+        await base44.entities.Notification.update(id, { is_read: true });
+      }
+    }
+    setSelectedNotifs([]);
+    setIsProcessing(false);
+    refreshNotifs();
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedNotifs.length === 0) return;
+    setIsProcessing(true);
+    for (const id of selectedNotifs) {
+      await base44.entities.Notification.delete(id);
+    }
+    setSelectedNotifs([]);
+    setIsProcessing(false);
+    refreshNotifs();
+  };
 
   const handleToggleSelect = (notifId) => {
-    setSelectedNotifs(prev => 
-      prev.includes(notifId) 
+    setSelectedNotifs(prev =>
+      prev.includes(notifId)
         ? prev.filter(id => id !== notifId)
         : [...prev, notifId]
     );
@@ -117,11 +112,6 @@ export default function Notifications() {
     } else {
       setSelectedNotifs(notifications.map(n => n.id));
     }
-  };
-
-  const handleDeleteSelected = () => {
-    if (selectedNotifs.length === 0) return;
-    deleteNotificationsMutation.mutate(selectedNotifs);
   };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -148,24 +138,51 @@ export default function Notifications() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Notifications</h1>
-            <p className="text-sm text-gray-500">{selectedNotifs.length > 0 ? `${selectedNotifs.length} selected` : (unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!')}</p>
+            <p className="text-sm text-gray-500">
+              {selectedNotifs.length > 0
+                ? `${selectedNotifs.length} selected`
+                : unreadCount > 0
+                ? `${unreadCount} unread`
+                : 'All caught up!'}
+            </p>
           </div>
         </div>
+
         <div className="flex gap-2 flex-wrap">
           {selectedNotifs.length > 0 && (
-            <Button 
-              variant="destructive" 
-              size="sm"
-              onClick={handleDeleteSelected}
-              className="gap-1 flex-1 sm:flex-none"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete ({selectedNotifs.length})
-            </Button>
+            <>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteSelected}
+                disabled={isProcessing}
+                className="gap-1 flex-1 sm:flex-none"
+              >
+                <Trash2 className="h-4 w-4" />
+                {isProcessing ? 'Deleting...' : `Delete (${selectedNotifs.length})`}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMarkSelectedRead}
+                disabled={isProcessing}
+                className="gap-1 flex-1 sm:flex-none text-green-700 border-green-200"
+              >
+                <Check className="h-4 w-4" />
+                {isProcessing ? 'Updating...' : 'Mark Read'}
+              </Button>
+            </>
           )}
-          {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={markAllRead} className="text-orange-600 border-orange-200 flex-1 sm:flex-none">
-              <Check className="h-4 w-4 mr-1" /> Mark all read
+          {unreadCount > 0 && selectedNotifs.length === 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMarkAllRead}
+              disabled={isProcessing}
+              className="text-orange-600 border-orange-200 flex-1 sm:flex-none"
+            >
+              <Check className="h-4 w-4 mr-1" />
+              {isProcessing ? 'Updating...' : 'Mark all read'}
             </Button>
           )}
         </div>
@@ -173,13 +190,13 @@ export default function Notifications() {
 
       {notifications.length > 0 && (
         <div className="mb-4 flex items-center gap-2">
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             checked={selectedNotifs.length === notifications.length && notifications.length > 0}
             onChange={handleSelectAll}
             className="w-4 h-4 cursor-pointer"
           />
-          <label className="text-sm font-medium text-gray-600 cursor-pointer">
+          <label className="text-sm font-medium text-gray-600 cursor-pointer" onClick={handleSelectAll}>
             Select All ({selectedNotifs.length}/{notifications.length})
           </label>
         </div>
@@ -190,11 +207,18 @@ export default function Notifications() {
         <div className="mb-4 p-4 bg-red-50 border-2 border-red-400 rounded-xl flex items-start gap-3">
           <span className="text-2xl animate-bounce">🔔</span>
           <div>
-            <p className="font-bold text-red-700">Payment Alert! {paymentAlerts.length} customer{paymentAlerts.length > 1 ? 's' : ''} clicked "Payment Completed"</p>
-            <p className="text-sm text-red-600 mt-1">Check Paystack and confirm in <Link to={createPageUrl('AdminOrders')} className="underline font-bold">Admin Orders</Link>.</p>
+            <p className="font-bold text-red-700">
+              Payment Alert! {paymentAlerts.length} customer{paymentAlerts.length > 1 ? 's' : ''} clicked "Payment Completed"
+            </p>
+            <p className="text-sm text-red-600 mt-1">
+              Check Paystack and confirm in{' '}
+              <Link to={createPageUrl('AdminOrders')} className="underline font-bold">Admin Orders</Link>.
+            </p>
             <div className="mt-2 space-y-1">
               {paymentAlerts.map(o => (
-                <p key={o.id} className="text-sm text-red-700">• <strong>{o.customer_name}</strong> – ₵{o.total_amount?.toFixed(2)} – 📞 {o.customer_phone}</p>
+                <p key={o.id} className="text-sm text-red-700">
+                  • <strong>{o.customer_name}</strong> – ₵{o.total_amount?.toFixed(2)} – 📞 {o.customer_phone}
+                </p>
               ))}
             </div>
           </div>
@@ -229,10 +253,14 @@ export default function Notifications() {
               >
                 <div
                   className={`flex items-start gap-3 p-4 rounded-xl border transition-all hover:shadow-md ${
-                    isSelected ? 'bg-blue-50 border-blue-300' : (!notif.is_read ? 'border-orange-200 bg-orange-50' : 'border-gray-100 bg-white')
+                    isSelected
+                      ? 'bg-blue-50 border-blue-300'
+                      : !notif.is_read
+                      ? 'border-orange-200 bg-orange-50'
+                      : 'border-gray-100 bg-white'
                   }`}
                 >
-                  <input 
+                  <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => handleToggleSelect(notif.id)}
@@ -240,7 +268,7 @@ export default function Notifications() {
                   />
                   <div
                     className="flex-1 min-w-0 cursor-pointer"
-                    onClick={() => { if (!notif.is_read && !isSelected) markReadMutation.mutate(notif.id); }}
+                    onClick={() => handleMarkOneRead(notif)}
                   >
                     <div className={`p-2 rounded-full ${config.bg} flex-shrink-0 w-fit mb-2`}>
                       <Icon className={`h-5 w-5 ${config.color}`} />

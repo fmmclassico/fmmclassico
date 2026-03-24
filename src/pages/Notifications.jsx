@@ -119,7 +119,7 @@ export default function Notifications() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-2xl">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-orange-100 rounded-full relative">
             <Bell className="h-6 w-6 text-orange-600" />
@@ -134,20 +134,20 @@ export default function Notifications() {
             <p className="text-sm text-gray-500">{selectedNotifs.length > 0 ? `${selectedNotifs.length} selected` : (unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!')}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {selectedNotifs.length > 0 && (
             <Button 
               variant="destructive" 
               size="sm"
               onClick={handleDeleteSelected}
-              className="gap-1"
+              className="gap-1 flex-1 sm:flex-none"
             >
               <Trash2 className="h-4 w-4" />
               Delete ({selectedNotifs.length})
             </Button>
           )}
           {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={markAllRead} className="text-orange-600 border-orange-200">
+            <Button variant="outline" size="sm" onClick={markAllRead} className="text-orange-600 border-orange-200 flex-1 sm:flex-none">
               <Check className="h-4 w-4 mr-1" /> Mark all read
             </Button>
           )}

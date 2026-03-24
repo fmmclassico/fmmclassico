@@ -167,7 +167,6 @@ export default function PaymentConfirmed() {
         ) : (
           <Card className="p-6 bg-blue-50 border-blue-200 text-center mb-4">
             <Bell className="h-10 w-10 text-blue-600 mx-auto mb-2" />
-            <h2 className="text-lg font-bold text-blue-900 mb-1">✅ FMM CLASSICO Notified</h2>
             <p className="text-sm text-blue-700">
               Your payment notification has been sent. We will verify within <strong>2–5 minutes</strong> and update your order.
             </p>

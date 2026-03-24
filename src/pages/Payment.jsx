@@ -14,16 +14,6 @@ export default function Payment() {
   const amountRaw = urlParams.get('amount');
   const amount = amountRaw ? parseFloat(amountRaw) : 0;
 
-  if (amount <= 0) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <p className="text-red-500 font-semibold">Invalid order amount. Please return to checkout and try again.</p>
-      </div>
-    );
-  }
-
-  const paystackUrl = `${PAYSTACK_BASE}`;
-
   useEffect(() => {
     const getUser = async () => {
       const isAuth = await base44.auth.isAuthenticated();
@@ -37,52 +27,45 @@ export default function Payment() {
     getUser();
   }, []);
 
-  if (!user || !orderId) {
+  if (amount <= 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <Loader2 className="h-10 w-10 animate-spin text-orange-500" />
-        <p className="text-gray-500 text-sm">Loading payment...</p>
+      <div className="container mx-auto px-4 py-12 text-center">
+        <p className="text-red-500 font-semibold">Invalid order amount. Please return to checkout and try again.</p>
       </div>
     );
   }
 
+  if (!user || !orderId) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+
+  const paystackUrl = `${PAYSTACK_BASE}?amount=${amount.toFixed(2)}`;
+
   return (
-    <div className="container mx-auto px-0 md:px-4 py-0 md:py-4">
-      {/* Payment header */}
-      <div className="bg-orange-50 border border-orange-200 rounded-t-xl md:rounded-xl px-4 py-3 flex items-center justify-between mb-0 md:mb-3">
-        <div>
-          <p className="text-sm font-bold text-orange-800">Secure Payment</p>
-          <p className="text-xs text-orange-600">Order #{orderNumber}</p>
+    <div className="fixed inset-0 flex flex-col bg-white" style={{ zIndex: 100 }}>
+      {/* Loading overlay */}
+      {!iframeLoaded && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+          <p className="text-sm text-gray-500">Loading Paystack securely...</p>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-orange-500">Amount</p>
-          <p className="font-black text-orange-700 text-lg">₵{amount % 1 === 0 ? amount : amount.toFixed(2)}</p>
-        </div>
-      </div>
+      )}
 
-      {/* Paystack iframe */}
-      <div className="relative bg-white border border-gray-200 rounded-b-xl md:rounded-xl overflow-hidden"
-           style={{ height: 'calc(100vh - 220px)', minHeight: '500px' }}>
-        {!iframeLoaded && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-            <p className="text-sm text-gray-500">Loading Paystack securely...</p>
-          </div>
-        )}
-        <iframe
-          src={paystackUrl}
-          title="Paystack Payment"
-          className="w-full h-full border-0"
-          onLoad={() => setIframeLoaded(true)}
-          allow="payment *"
-          loading="eager"
-          sandbox="allow-scripts allow-forms allow-same-origin allow-top-navigation allow-popups"
-        />
-      </div>
-
-      <p className="text-center text-xs text-gray-400 mt-2 pb-2">
-        🔒 Payments are secured and encrypted by Paystack
-      </p>
+      {/* Paystack iframe — full screen, no chrome around it */}
+      <iframe
+        src={paystackUrl}
+        title="Paystack Payment"
+        className="w-full flex-1 border-0"
+        style={{ height: '100%', minHeight: '100vh' }}
+        onLoad={() => setIframeLoaded(true)}
+        allow="payment *"
+        loading="eager"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
+      />
     </div>
   );
 }

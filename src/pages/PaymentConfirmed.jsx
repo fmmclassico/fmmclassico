@@ -86,6 +86,9 @@ export default function PaymentConfirmed() {
       setIsNotifying(true);
       const existingTracking = orderData.tracking_updates || [];
 
+      // Clear the user's cart now that payment was completed
+      const cartItems = await base44.entities.CartItem.filter({ user_email: user.email }).catch(() => []);
+
       await Promise.all([
         base44.entities.Order.update(orderId, {
           tracking_updates: [
@@ -99,13 +102,24 @@ export default function PaymentConfirmed() {
         }),
         base44.entities.Notification.create({
           user_email: user.email,
-          title: '⏳ Payment Received – Verifying',
-          message: `We received your payment for order #${orderNumber}. FMM CLASSICO will verify and confirm your order within 2–5 minutes.`,
-          type: 'payment_pending',
+          title: '🛍️ Order Placed & Payment Received!',
+          message: `Your order #${orderNumber} has been placed and payment received! FMM CLASSICO will verify and confirm within 2–5 minutes. Total: ₵${amount > 0 ? amount.toFixed(2) : orderData.total_amount?.toFixed(2) || ''}.`,
+          type: 'order_placed',
           order_id: orderId,
           order_number: orderNumber,
           is_read: false
-        })
+        }),
+        base44.integrations.Core.SendEmail({
+          to: user.email,
+          subject: `🛍️ Order Placed – FMM CLASSICO #${orderNumber}`,
+          body: `Hi ${orderData.customer_name},\n\nYour order #${orderNumber} has been placed and payment received!\n\nOrder Total: ₵${orderData.total_amount?.toFixed(2)}\nDelivery Address: ${orderData.delivery_address}, ${orderData.city}\n\nWe will verify within 2-5 minutes and notify you.\n\nThank you!\n📞 FMM CLASSICO: 0509896035`
+        }).catch(() => {}),
+        base44.integrations.Core.SendEmail({
+          to: 'fmmclassico@gmail.com',
+          subject: `🆕 NEW ORDER – ${orderData.customer_name} | ₵${orderData.total_amount?.toFixed(2)}`,
+          body: `New order on FMM CLASSICO!\n\n📦 Order: ${orderNumber}\n👤 Customer: ${orderData.customer_name}\n📧 Email: ${user.email}\n📞 Phone: ${orderData.customer_phone}\n💰 Total: ₵${orderData.total_amount?.toFixed(2)}\n📍 Address: ${orderData.delivery_address}, ${orderData.city}\n\nItems:\n${(orderData.items || []).map(i => `• ${i.product_name} x${i.quantity} – ₵${(i.price * i.quantity).toFixed(2)}`).join('\n')}`
+        }).catch(() => {}),
+        ...cartItems.map(item => base44.entities.CartItem.delete(item.id).catch(() => {}))
       ]);
 
       setIsNotifying(false);
@@ -142,9 +156,6 @@ export default function PaymentConfirmed() {
             <CheckCircle2 className="h-10 w-10 text-green-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Payment Submitted!</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Order #{orderNumber} · {amount > 0 ? `₵${amount.toFixed(2)}` : ''}
-          </p>
         </div>
 
         {/* Status Card */}

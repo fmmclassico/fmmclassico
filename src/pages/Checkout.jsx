@@ -172,31 +172,8 @@ export default function Checkout() {
       return;
     }
     
-    // Fire-and-forget: clear cart + notifications + email (non-blocking)
-    Promise.allSettled([
-      ...cartItems.map(item => base44.entities.CartItem.delete(item.id).catch(e => console.log('Cart clear error:', e))),
-      base44.entities.Notification.create({
-        user_email: user.email,
-        title: '🛍️ Order Placed Successfully!',
-        message: `Order #${orderNumber} has been placed! FMM CLASSICO will verify your payment within 2–5 minutes and update you. Total: ₵${total.toFixed(2)}.`,
-        type: 'order_placed',
-        order_id: newOrder.id,
-        order_number: orderNumber,
-        is_read: false
-      }).catch(e => console.log('Notification error:', e)),
-      base44.integrations.Core.SendEmail({
-        to: user.email,
-        subject: `🛍️ Order Placed – FMM CLASSICO #${orderNumber}`,
-        body: `Hi ${formData.customer_name},\n\nYour order #${orderNumber} has been placed!\n\nOrder Total: ₵${total.toFixed(2)}\nDelivery Address: ${formData.delivery_address}, ${formData.city}\n\nPlease complete your payment on Paystack. Then click "Payment Completed" on the website. We will confirm within 2-5 minutes and notify you.\n\nThank you!\n📞 FMM CLASSICO: 0509896035`
-      }).catch(e => console.log('Email error:', e)),
-      base44.integrations.Core.SendEmail({
-        to: 'fmmclassico@gmail.com',
-        subject: `🆕 NEW ORDER – ${formData.customer_name} | ₵${total.toFixed(2)}`,
-        body: `New order on FMM CLASSICO!\n\n📦 Order: ${orderNumber}\n👤 Customer: ${formData.customer_name}\n📧 Email: ${user.email}\n📞 Phone: ${formData.customer_phone}\n💰 Total: ₵${total.toFixed(2)}\n📍 Address: ${formData.delivery_address}, ${formData.city}\n\nItems:\n${cartItems.map(i => `• ${i.product_name} x${i.quantity} – ₵${(i.product_price * i.quantity).toFixed(2)}`).join('\n')}`
-      }).catch(e => console.log('Admin email error:', e))
-    ]);
-
-    queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+    // Do NOT clear cart or send notifications here — that happens in PaymentConfirmed
+    // after Paystack redirects the user back (confirming payment was completed)
     setIsSubmitting(false);
     // Redirect to Payment page where Paystack opens in an iframe
     navigate(createPageUrl(`Payment?orderId=${newOrder.id}&orderNumber=${orderNumber}&amount=${total.toFixed(2)}`));

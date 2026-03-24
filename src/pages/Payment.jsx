@@ -1,16 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
 import { createPageUrl } from '../utils';
-import { base44 } from '@/api/base44Client';
-import { Loader2, ChevronLeft, CheckCircle2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const PAYSTACK_BASE = "https://paystack.shop/pay/1miimvhai8";
 
 export default function Payment() {
-  const [user, setUser] = useState(null);
-  const [iframeLoaded, setIframeLoaded] = useState(false);
-  const navigate = useNavigate();
-
   const urlParams = new URLSearchParams(window.location.search);
   const orderId = urlParams.get('orderId');
   const orderNumber = urlParams.get('orderNumber');
@@ -18,42 +12,22 @@ export default function Payment() {
   const amount = amountRaw ? parseFloat(amountRaw) : 0;
 
   // Store order details in sessionStorage so PaymentConfirmed can retrieve them
+  // after Paystack redirects back (Paystack won't preserve our URL params)
   useEffect(() => {
     if (orderId && orderNumber && amount > 0) {
       sessionStorage.setItem('fmm_pending_order', JSON.stringify({ orderId, orderNumber, amount }));
     }
-  }, [orderId, orderNumber, amount]);
-
-  // Listen for Paystack postMessage events (in case iframe sends a success signal)
-  useEffect(() => {
-    const handleMessage = (event) => {
-      try {
-        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-        if (
-          data?.event === 'successful' ||
-          data?.status === 'success' ||
-          data?.type === 'success' ||
-          data?.message === 'payment_success'
-        ) {
-          navigate(createPageUrl('PaymentConfirmed'), { replace: true });
-        }
-      } catch (e) {}
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
-    const getUser = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
-      if (isAuth) {
-        const userData = await base44.auth.me();
-        setUser(userData);
-      } else {
-        base44.auth.redirectToLogin(window.location.href);
-      }
-    };
-    getUser();
+    if (!orderId || amount <= 0) return;
+
+    // Build the callback URL pointing to our PaymentConfirmed page
+    const callbackUrl = `${window.location.origin}${createPageUrl('PaymentConfirmed')}`;
+    const paystackUrl = `${PAYSTACK_BASE}?amount=${amount}&callback_url=${encodeURIComponent(callbackUrl)}`;
+
+    // Full-page redirect to Paystack — they will redirect back to callbackUrl on success
+    window.location.href = paystackUrl;
   }, []);
 
   if (amount <= 0) {
@@ -64,61 +38,10 @@ export default function Payment() {
     );
   }
 
-  if (!user || !orderId) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-      </div>
-    );
-  }
-
-  // Paystack receives the exact GHS amount (e.g. 2 for ₵2, 35 for ₵35)
-  const paystackUrl = `${PAYSTACK_BASE}?amount=${amount}`;
-
   return (
-    <div className="fixed inset-0 flex flex-col bg-white" style={{ zIndex: 100 }}>
-      {/* Top bar with back button only */}
-      <div className="flex-shrink-0 flex items-center bg-orange-500 px-4 py-2">
-        <button
-          onClick={() => navigate(createPageUrl('Checkout'), { replace: true })}
-          className="text-white hover:bg-orange-600 rounded-full p-1 transition-colors"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-      </div>
-
-      {/* Loading overlay */}
-      {!iframeLoaded && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3 mt-10">
-          <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-          <p className="text-sm text-gray-500">Loading Paystack securely...</p>
-        </div>
-      )}
-
-      {/* Paystack iframe */}
-      <iframe
-        src={paystackUrl}
-        title="Paystack Payment"
-        className="w-full flex-1 border-0"
-        onLoad={() => setIframeLoaded(true)}
-        allow="payment *"
-        loading="eager"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
-      />
-
-      {/* "I've Paid" button — Paystack iframe redirects internally, so user must confirm manually */}
-      {iframeLoaded && (
-        <div className="flex-shrink-0 bg-white border-t px-4 py-3 shadow-lg">
-          <p className="text-xs text-center text-gray-500 mb-2">Paid on Paystack? Tap below to confirm your order.</p>
-          <button
-            onClick={() => navigate(createPageUrl('PaymentConfirmed'), { replace: true })}
-            className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-colors text-base"
-          >
-            <CheckCircle2 className="h-5 w-5" />
-            I've Completed Payment
-          </button>
-        </div>
-      )}
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-white gap-3">
+      <Loader2 className="h-10 w-10 animate-spin text-orange-500" />
+      <p className="text-sm text-gray-500 font-medium">Redirecting to Paystack...</p>
     </div>
   );
 }

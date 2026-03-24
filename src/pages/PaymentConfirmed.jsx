@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
@@ -15,6 +15,7 @@ export default function PaymentConfirmed() {
   const [isNotifying, setIsNotifying] = useState(false);
   const [paymentConfirmedByAdmin, setPaymentConfirmedByAdmin] = useState(false);
   const queryClient = useQueryClient();
+  const notifyCalledRef = useRef(false);
 
   const urlParams = new URLSearchParams(window.location.search);
   // Try URL params first; fall back to sessionStorage (used when Paystack redirects back)
@@ -74,7 +75,7 @@ export default function PaymentConfirmed() {
   // Auto-notify on page load (Paystack redirected here = payment done)
   useEffect(() => {
     const autoNotify = async () => {
-      if (!user || !orderId || !orderData || notified || isNotifying) return;
+      if (!user || !orderId || !orderData || notifyCalledRef.current) return;
 
       // Check if already claimed to avoid duplicate
       const alreadyClaimed = orderData.tracking_updates?.some(t => t.status === 'Payment Claimed');
@@ -83,44 +84,52 @@ export default function PaymentConfirmed() {
         return;
       }
 
+      // Lock immediately to prevent any re-run
+      notifyCalledRef.current = true;
       setIsNotifying(true);
+
       const existingTracking = orderData.tracking_updates || [];
+      const totalDisplay = orderData.total_amount?.toFixed(2) || (amount > 0 ? amount.toFixed(2) : '');
 
-      // Clear the user's cart now that payment was completed
-      const cartItems = await base44.entities.CartItem.filter({ user_email: user.email }).catch(() => []);
+      // Step 1: Update order tracking + create in-app notification (critical)
+      await base44.entities.Order.update(orderId, {
+        tracking_updates: [
+          ...existingTracking,
+          {
+            status: 'Payment Claimed',
+            message: 'Customer completed payment via Paystack – awaiting FMM CLASSICO verification',
+            timestamp: new Date().toISOString()
+          }
+        ]
+      });
 
-      await Promise.all([
-        base44.entities.Order.update(orderId, {
-          tracking_updates: [
-            ...existingTracking,
-            {
-              status: 'Payment Claimed',
-              message: 'Customer completed payment via Paystack – awaiting FMM CLASSICO verification',
-              timestamp: new Date().toISOString()
-            }
-          ]
-        }),
-        base44.entities.Notification.create({
-          user_email: user.email,
-          title: '🛍️ Order Placed & Payment Received!',
-          message: `Your order #${orderNumber} has been placed and payment received! FMM CLASSICO will verify and confirm within 2–5 minutes. Total: ₵${amount > 0 ? amount.toFixed(2) : orderData.total_amount?.toFixed(2) || ''}.`,
-          type: 'order_placed',
-          order_id: orderId,
-          order_number: orderNumber,
-          is_read: false
-        }),
-        base44.integrations.Core.SendEmail({
-          to: user.email,
-          subject: `🛍️ Order Placed – FMM CLASSICO #${orderNumber}`,
-          body: `Hi ${orderData.customer_name},\n\nYour order #${orderNumber} has been placed and payment received!\n\nOrder Total: ₵${orderData.total_amount?.toFixed(2)}\nDelivery Address: ${orderData.delivery_address}, ${orderData.city}\n\nWe will verify within 2-5 minutes and notify you.\n\nThank you!\n📞 FMM CLASSICO: 0509896035`
-        }).catch(() => {}),
-        base44.integrations.Core.SendEmail({
-          to: 'fmmclassico@gmail.com',
-          subject: `🆕 NEW ORDER – ${orderData.customer_name} | ₵${orderData.total_amount?.toFixed(2)}`,
-          body: `New order on FMM CLASSICO!\n\n📦 Order: ${orderNumber}\n👤 Customer: ${orderData.customer_name}\n📧 Email: ${user.email}\n📞 Phone: ${orderData.customer_phone}\n💰 Total: ₵${orderData.total_amount?.toFixed(2)}\n📍 Address: ${orderData.delivery_address}, ${orderData.city}\n\nItems:\n${(orderData.items || []).map(i => `• ${i.product_name} x${i.quantity} – ₵${(i.price * i.quantity).toFixed(2)}`).join('\n')}`
-        }).catch(() => {}),
-        ...cartItems.map(item => base44.entities.CartItem.delete(item.id).catch(() => {}))
-      ]);
+      await base44.entities.Notification.create({
+        user_email: user.email,
+        title: '🛍️ Order Placed & Payment Received!',
+        message: `Your order #${orderNumber} has been placed and payment received! FMM CLASSICO will verify and confirm within 2–5 minutes. Total: ₵${totalDisplay}.`,
+        type: 'order_placed',
+        order_id: orderId,
+        order_number: orderNumber,
+        is_read: false
+      });
+
+      // Step 2: Send emails independently (non-blocking, won't fail the flow)
+      base44.integrations.Core.SendEmail({
+        to: user.email,
+        subject: `🛍️ Order Placed – FMM CLASSICO #${orderNumber}`,
+        body: `Hi ${orderData.customer_name},\n\nYour order #${orderNumber} has been placed and payment received!\n\nOrder Total: ₵${totalDisplay}\nDelivery Address: ${orderData.delivery_address}, ${orderData.city}\n\nWe will verify within 2-5 minutes and notify you.\n\nThank you!\n📞 FMM CLASSICO: 0509896035`
+      }).catch(() => {});
+
+      base44.integrations.Core.SendEmail({
+        to: 'fmmclassico@gmail.com',
+        subject: `🆕 NEW ORDER – ${orderData.customer_name} | ₵${totalDisplay}`,
+        body: `New order on FMM CLASSICO!\n\n📦 Order: ${orderNumber}\n👤 Customer: ${orderData.customer_name}\n📧 Email: ${user.email}\n📞 Phone: ${orderData.customer_phone}\n💰 Total: ₵${totalDisplay}\n📍 Address: ${orderData.delivery_address}, ${orderData.city}\n\nItems:\n${(orderData.items || []).map(i => `• ${i.product_name} x${i.quantity} – ₵${(i.price * i.quantity).toFixed(2)}`).join('\n')}`
+      }).catch(() => {});
+
+      // Step 3: Clear cart (non-blocking)
+      base44.entities.CartItem.filter({ user_email: user.email })
+        .then(cartItems => Promise.all(cartItems.map(item => base44.entities.CartItem.delete(item.id).catch(() => {}))))
+        .catch(() => {});
 
       setIsNotifying(false);
       setNotified(true);
@@ -132,7 +141,7 @@ export default function PaymentConfirmed() {
     if (user && orderData) {
       autoNotify();
     }
-  }, [user, orderData, orderId, orderNumber, notified, isNotifying, queryClient]);
+  }, [user, orderData]);
 
   if (!user || !orderId) {
     return (

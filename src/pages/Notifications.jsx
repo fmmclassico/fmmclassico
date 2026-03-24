@@ -56,13 +56,30 @@ export default function Notifications() {
 
   const markReadMutation = useMutation({
     mutationFn: (id) => base44.entities.Notification.update(id, { is_read: true }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications', user?.email] });
+      const previous = queryClient.getQueryData(['notifications', user?.email]);
+      queryClient.setQueryData(['notifications', user?.email], (old = []) =>
+        old.map(n => n.id === id ? { ...n, is_read: true } : n)
+      );
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      queryClient.setQueryData(['notifications', user?.email], context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
+    },
   });
 
   const markAllRead = async () => {
     const unread = notifications.filter(n => !n.is_read);
+    // Optimistic update
+    queryClient.setQueryData(['notifications', user?.email], (old = []) =>
+      old.map(n => ({ ...n, is_read: true }))
+    );
     await Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { is_read: true })));
-    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
   };
 
   const deleteNotificationsMutation = useMutation({
@@ -82,7 +99,7 @@ export default function Notifications() {
       queryClient.setQueryData(['notifications', user?.email], context.previous);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
     }
   });
 

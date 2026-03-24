@@ -61,7 +61,10 @@ export default function Payment() {
     <div className="fixed inset-0 flex flex-col bg-white" style={{ zIndex: 100 }}>
       {/* Top bar with back button only */}
       <div className="flex-shrink-0 flex items-center bg-orange-500 px-4 py-2">
-        <button onClick={() => navigate(-1)} className="text-white hover:bg-orange-600 rounded-full p-1 transition-colors">
+        <button
+          onClick={() => navigate(createPageUrl('Checkout'), { replace: true })}
+          className="text-white hover:bg-orange-600 rounded-full p-1 transition-colors"
+        >
           <ChevronLeft className="h-5 w-5" />
         </button>
       </div>

@@ -38,8 +38,8 @@ export default function Notifications() {
     queryKey: ['notifications', user?.email],
     queryFn: () => base44.entities.Notification.filter({ user_email: user.email }, '-created_date', 50),
     enabled: !!user?.email,
-    staleTime: 30000,
-    refetchInterval: 10000,
+    staleTime: 5000,
+    refetchInterval: 8000,
   });
 
   // Also fetch orders for admin payment alerts
@@ -69,9 +69,20 @@ export default function Notifications() {
     mutationFn: async (notifIds) => {
       await Promise.all(notifIds.map(id => base44.entities.Notification.delete(id)));
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    onMutate: async (notifIds) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications', user?.email] });
+      const previous = queryClient.getQueryData(['notifications', user?.email]);
+      queryClient.setQueryData(['notifications', user?.email], (old = []) =>
+        old.filter(n => !notifIds.includes(n.id))
+      );
       setSelectedNotifs([]);
+      return { previous };
+    },
+    onError: (_err, _ids, context) => {
+      queryClient.setQueryData(['notifications', user?.email], context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
   });
 
@@ -93,9 +104,7 @@ export default function Notifications() {
 
   const handleDeleteSelected = () => {
     if (selectedNotifs.length === 0) return;
-    if (confirm(`Delete ${selectedNotifs.length} notification(s)?`)) {
-      deleteNotificationsMutation.mutate(selectedNotifs);
-    }
+    deleteNotificationsMutation.mutate(selectedNotifs);
   };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;

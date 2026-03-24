@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 
 import { 
-  ChevronLeft,
   Truck,
   CreditCard,
   Loader2,
@@ -204,10 +203,6 @@ export default function Checkout() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <button onClick={() => window.history.back()} className="inline-flex items-center text-gray-600 hover:text-orange-600 mb-6">
-        <ChevronLeft className="h-4 w-4" />
-      </button>
-
       <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Checkout</h1>
 
       <form onSubmit={handleSubmit}>

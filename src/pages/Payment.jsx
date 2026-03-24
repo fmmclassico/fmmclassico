@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { Loader2, ChevronLeft } from 'lucide-react';
 
@@ -7,6 +9,7 @@ const PAYSTACK_BASE = "https://paystack.shop/pay/1miimvhai8";
 export default function Payment() {
   const [user, setUser] = useState(null);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const navigate = useNavigate();
 
   const urlParams = new URLSearchParams(window.location.search);
   const orderId = urlParams.get('orderId');
@@ -58,7 +61,7 @@ export default function Payment() {
     <div className="fixed inset-0 flex flex-col bg-white" style={{ zIndex: 100 }}>
       {/* Top bar with back button only */}
       <div className="flex-shrink-0 flex items-center bg-orange-500 px-4 py-2">
-        <button onClick={() => window.history.back()} className="text-white hover:bg-orange-600 rounded-full p-1 transition-colors">
+        <button onClick={() => navigate(-1)} className="text-white hover:bg-orange-600 rounded-full p-1 transition-colors">
           <ChevronLeft className="h-5 w-5" />
         </button>
       </div>

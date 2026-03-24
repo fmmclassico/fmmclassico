@@ -22,8 +22,10 @@ export default function Payment() {
   useEffect(() => {
     if (!orderId || amount <= 0) return;
 
-    // Build the callback URL pointing to our PaymentConfirmed page
-    const callbackUrl = `${window.location.origin}${createPageUrl('PaymentConfirmed')}`;
+    // Build the callback URL — point to root "/" so the app always loads,
+    // then Home page detects the redirect param and navigates to PaymentConfirmed.
+    // This avoids ERR_TIMED_OUT caused by deep SPA routes failing on cold starts.
+    const callbackUrl = `${window.location.origin}/?paystack_return=1`;
     const paystackUrl = `${PAYSTACK_BASE}?amount=${amount}&callback_url=${encodeURIComponent(callbackUrl)}`;
 
     // Use window.top to break out of any iframe (e.g. preview sandbox)

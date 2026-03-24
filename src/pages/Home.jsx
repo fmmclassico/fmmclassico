@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -83,6 +83,18 @@ export default function Home() {
   const [user, setUser] = useState(null);
   const [expandedCat, setExpandedCat] = useState(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  // Detect Paystack return redirect — Paystack sends user to /?paystack_return=1
+  // We then forward them to PaymentConfirmed which reads sessionStorage for order info
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('paystack_return') === '1') {
+      // Clean the URL then navigate to PaymentConfirmed
+      window.history.replaceState({}, '', '/');
+      navigate('/PaymentConfirmed', { replace: true });
+    }
+  }, []);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});

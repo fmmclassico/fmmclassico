@@ -51,7 +51,6 @@ export default function Payment() {
     );
   }
 
-  const displayAmount = amount % 1 === 0 ? amount : amount.toFixed(2);
   // Paystack receives the exact GHS amount (e.g. 2 for ₵2, 35 for ₵35)
   const paystackUrl = `${PAYSTACK_BASE}?amount=${amount}`;
 

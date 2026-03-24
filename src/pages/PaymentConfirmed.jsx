@@ -144,7 +144,7 @@ export default function PaymentConfirmed() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="fixed inset-0 bg-gray-50 overflow-y-auto z-50">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}

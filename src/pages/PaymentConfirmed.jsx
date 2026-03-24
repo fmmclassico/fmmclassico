@@ -17,9 +17,20 @@ export default function PaymentConfirmed() {
   const queryClient = useQueryClient();
 
   const urlParams = new URLSearchParams(window.location.search);
-  const orderId = urlParams.get('orderId');
-  const orderNumber = urlParams.get('orderNumber');
-  const amountRaw = urlParams.get('amount');
+  // Try URL params first; fall back to sessionStorage (used when Paystack redirects back)
+  let orderId = urlParams.get('orderId');
+  let orderNumber = urlParams.get('orderNumber');
+  let amountRaw = urlParams.get('amount');
+
+  if (!orderId) {
+    try {
+      const stored = JSON.parse(sessionStorage.getItem('fmm_pending_order') || '{}');
+      orderId = stored.orderId || null;
+      orderNumber = stored.orderNumber || null;
+      amountRaw = stored.amount ? String(stored.amount) : null;
+    } catch (e) {}
+  }
+
   const amount = amountRaw ? parseFloat(amountRaw) : 0;
 
   useEffect(() => {
@@ -99,6 +110,7 @@ export default function PaymentConfirmed() {
 
       setIsNotifying(false);
       setNotified(true);
+      sessionStorage.removeItem('fmm_pending_order');
       queryClient.invalidateQueries({ queryKey: ['order', orderId] });
       toast.success("Payment received! We'll verify shortly.");
     };

@@ -14,6 +14,14 @@ export default function Payment() {
   const amountRaw = urlParams.get('amount');
   const amount = amountRaw ? parseFloat(amountRaw) : 0;
 
+  // Store order details in sessionStorage so PaymentConfirmed can retrieve them
+  // even after Paystack redirects back (Paystack won't preserve our URL params)
+  useEffect(() => {
+    if (orderId && orderNumber && amount > 0) {
+      sessionStorage.setItem('fmm_pending_order', JSON.stringify({ orderId, orderNumber, amount }));
+    }
+  }, [orderId, orderNumber, amount]);
+
   useEffect(() => {
     const getUser = async () => {
       const isAuth = await base44.auth.isAuthenticated();
@@ -43,24 +51,27 @@ export default function Payment() {
     );
   }
 
-  const paystackUrl = `${PAYSTACK_BASE}?amount=${amount.toFixed(2)}`;
-
   return (
     <div className="fixed inset-0 flex flex-col bg-white" style={{ zIndex: 100 }}>
+      {/* Top info bar */}
+      <div className="flex-shrink-0 flex items-center justify-between bg-orange-500 px-4 py-2">
+        <p className="text-white text-sm font-semibold">Order #{orderNumber}</p>
+        <p className="text-white font-black text-lg">₵{amount % 1 === 0 ? amount : amount.toFixed(2)}</p>
+      </div>
+
       {/* Loading overlay */}
       {!iframeLoaded && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3 mt-10">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
           <p className="text-sm text-gray-500">Loading Paystack securely...</p>
         </div>
       )}
 
-      {/* Paystack iframe — full screen, no chrome around it */}
+      {/* Paystack iframe — full screen */}
       <iframe
-        src={paystackUrl}
+        src={PAYSTACK_BASE}
         title="Paystack Payment"
         className="w-full flex-1 border-0"
-        style={{ height: '100%', minHeight: '100vh' }}
         onLoad={() => setIframeLoaded(true)}
         allow="payment *"
         loading="eager"

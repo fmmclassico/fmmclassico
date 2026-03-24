@@ -26,9 +26,9 @@ export default function Payment() {
     const callbackUrl = `${window.location.origin}${createPageUrl('PaymentConfirmed')}`;
     const paystackUrl = `${PAYSTACK_BASE}?amount=${amount}&callback_url=${encodeURIComponent(callbackUrl)}`;
 
-    // Full-page redirect to Paystack — they will redirect back to callbackUrl on success
-    window.location.href = paystackUrl;
-  }, []);
+    // Redirect immediately — no delay
+    window.location.replace(paystackUrl);
+  }, [orderId, amount]);
 
   if (amount <= 0) {
     return (

@@ -91,40 +91,58 @@ export default function PaymentConfirmed() {
       const existingTracking = orderData.tracking_updates || [];
       const totalDisplay = orderData.total_amount?.toFixed(2) || (amount > 0 ? amount.toFixed(2) : '');
 
-      // Step 1: Update order tracking + create in-app notification (critical)
-      await base44.entities.Order.update(orderId, {
-        tracking_updates: [
-          ...existingTracking,
-          {
-            status: 'Payment Claimed',
-            message: 'Customer completed payment via Paystack – awaiting FMM CLASSICO verification',
-            timestamp: new Date().toISOString()
-          }
-        ]
-      });
+      const itemsList = (orderData.items || []).map(i => `• ${i.product_name} x${i.quantity} – ₵${(i.price * i.quantity).toFixed(2)}`).join('\n');
 
-      await base44.entities.Notification.create({
-        user_email: user.email,
-        title: '🛍️ Order Placed & Payment Received!',
-        message: `Your order #${orderNumber} has been placed and payment received! FMM CLASSICO will verify and confirm within 2–5 minutes. Total: ₵${totalDisplay}.`,
-        type: 'order_placed',
-        order_id: orderId,
-        order_number: orderNumber,
-        is_read: false
-      });
+      // Step 1: Update order tracking + create in-app notifications for BOTH user and admin — all in parallel
+      await Promise.all([
+        base44.entities.Order.update(orderId, {
+          tracking_updates: [
+            ...existingTracking,
+            {
+              status: 'Payment Claimed',
+              message: 'Customer completed payment via Paystack – awaiting FMM CLASSICO verification',
+              timestamp: new Date().toISOString()
+            }
+          ]
+        }),
+        // Customer notification (shows in their bell icon)
+        base44.entities.Notification.create({
+          user_email: user.email,
+          title: '🛍️ Order Placed & Payment Received!',
+          message: `Your order #${orderNumber} has been placed and payment received! FMM CLASSICO will verify and confirm within 2–5 minutes. Total: ₵${totalDisplay}.`,
+          type: 'order_placed',
+          order_id: orderId,
+          order_number: orderNumber,
+          is_read: false
+        }),
+        // Admin notification (shows in admin's bell icon)
+        base44.entities.Notification.create({
+          user_email: 'fmmclassico@gmail.com',
+          title: `🆕 New Order – ${orderData.customer_name} | ₵${totalDisplay}`,
+          message: `Order #${orderNumber} placed by ${orderData.customer_name} (${user.email}). Phone: ${orderData.customer_phone}. Address: ${orderData.delivery_address}, ${orderData.city}. Items: ${(orderData.items || []).map(i => `${i.product_name} x${i.quantity}`).join(', ')}`,
+          type: 'order_placed',
+          order_id: orderId,
+          order_number: orderNumber,
+          is_read: false
+        }),
+      ]);
 
-      // Step 2: Send emails independently (non-blocking, won't fail the flow)
-      base44.integrations.Core.SendEmail({
-        to: user.email,
-        subject: `🛍️ Order Placed – FMM CLASSICO #${orderNumber}`,
-        body: `Hi ${orderData.customer_name},\n\nYour order #${orderNumber} has been placed and payment received!\n\nOrder Total: ₵${totalDisplay}\nDelivery Address: ${orderData.delivery_address}, ${orderData.city}\n\nWe will verify within 2-5 minutes and notify you.\n\nThank you!\n📞 FMM CLASSICO: 0509896035`
-      }).catch(() => {});
+      // Invalidate notifications cache so bell icon updates immediately
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
-      base44.integrations.Core.SendEmail({
-        to: 'fmmclassico@gmail.com',
-        subject: `🆕 NEW ORDER – ${orderData.customer_name} | ₵${totalDisplay}`,
-        body: `New order on FMM CLASSICO!\n\n📦 Order: ${orderNumber}\n👤 Customer: ${orderData.customer_name}\n📧 Email: ${user.email}\n📞 Phone: ${orderData.customer_phone}\n💰 Total: ₵${totalDisplay}\n📍 Address: ${orderData.delivery_address}, ${orderData.city}\n\nItems:\n${(orderData.items || []).map(i => `• ${i.product_name} x${i.quantity} – ₵${(i.price * i.quantity).toFixed(2)}`).join('\n')}`
-      }).catch(() => {});
+      // Step 2: Send emails to both customer and admin simultaneously (non-blocking)
+      Promise.all([
+        base44.integrations.Core.SendEmail({
+          to: user.email,
+          subject: `🛍️ Order Confirmed – FMM CLASSICO #${orderNumber}`,
+          body: `Hi ${orderData.customer_name},\n\nThank you! Your order #${orderNumber} has been placed and payment received!\n\nOrder Total: ₵${totalDisplay}\nDelivery Address: ${orderData.delivery_address}, ${orderData.city}\n\nItems Ordered:\n${itemsList}\n\nWe will verify your payment within 2–5 minutes and update your order status. You can track your order in the app.\n\nThank you for shopping with us!\n📞 FMM CLASSICO: 0509896035\n📧 fmmclassico@gmail.com`
+        }),
+        base44.integrations.Core.SendEmail({
+          to: 'fmmclassico@gmail.com',
+          subject: `🆕 NEW ORDER – ${orderData.customer_name} | ₵${totalDisplay}`,
+          body: `New order received on FMM CLASSICO!\n\n📦 Order: #${orderNumber}\n👤 Customer: ${orderData.customer_name}\n📧 Email: ${user.email}\n📞 Phone: ${orderData.customer_phone}\n💰 Total: ₵${totalDisplay}\n📍 Address: ${orderData.delivery_address}, ${orderData.city}\n\nItems:\n${itemsList}\n\nPlease verify payment and confirm the order in the Admin panel.`
+        }),
+      ]).catch(() => {});
 
       // Step 3: Clear cart (non-blocking)
       base44.entities.CartItem.filter({ user_email: user.email })

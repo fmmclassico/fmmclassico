@@ -52,9 +52,8 @@ export default function Payment() {
   }
 
   const displayAmount = amount % 1 === 0 ? amount : amount.toFixed(2);
-  // Paystack requires amount in pesewas (2 decimal places * 100), formatted to 2dp
-  const paystackAmountPesewas = (amount * 100).toFixed(2);
-  const paystackUrl = `${PAYSTACK_BASE}?amount=${paystackAmountPesewas}`;
+  // Paystack receives the exact GHS amount (e.g. 2 for ₵2, 35 for ₵35)
+  const paystackUrl = `${PAYSTACK_BASE}?amount=${amount}`;
 
   return (
     <div className="fixed inset-0 flex flex-col bg-white" style={{ zIndex: 100 }}>

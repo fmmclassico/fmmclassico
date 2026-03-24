@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
-import { Loader2, ChevronLeft } from 'lucide-react';
+import { Loader2, ChevronLeft, CheckCircle2 } from 'lucide-react';
 
 const PAYSTACK_BASE = "https://paystack.shop/pay/1miimvhai8";
 
@@ -18,12 +18,30 @@ export default function Payment() {
   const amount = amountRaw ? parseFloat(amountRaw) : 0;
 
   // Store order details in sessionStorage so PaymentConfirmed can retrieve them
-  // even after Paystack redirects back (Paystack won't preserve our URL params)
   useEffect(() => {
     if (orderId && orderNumber && amount > 0) {
       sessionStorage.setItem('fmm_pending_order', JSON.stringify({ orderId, orderNumber, amount }));
     }
   }, [orderId, orderNumber, amount]);
+
+  // Listen for Paystack postMessage events (in case iframe sends a success signal)
+  useEffect(() => {
+    const handleMessage = (event) => {
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (
+          data?.event === 'successful' ||
+          data?.status === 'success' ||
+          data?.type === 'success' ||
+          data?.message === 'payment_success'
+        ) {
+          navigate(createPageUrl('PaymentConfirmed'), { replace: true });
+        }
+      } catch (e) {}
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [navigate]);
 
   useEffect(() => {
     const getUser = async () => {
@@ -77,7 +95,7 @@ export default function Payment() {
         </div>
       )}
 
-      {/* Paystack iframe — amount passed via query param in pesewas */}
+      {/* Paystack iframe */}
       <iframe
         src={paystackUrl}
         title="Paystack Payment"
@@ -87,6 +105,20 @@ export default function Payment() {
         loading="eager"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
       />
+
+      {/* "I've Paid" button — Paystack iframe redirects internally, so user must confirm manually */}
+      {iframeLoaded && (
+        <div className="flex-shrink-0 bg-white border-t px-4 py-3 shadow-lg">
+          <p className="text-xs text-center text-gray-500 mb-2">Paid on Paystack? Tap below to confirm your order.</p>
+          <button
+            onClick={() => navigate(createPageUrl('PaymentConfirmed'), { replace: true })}
+            className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-colors text-base"
+          >
+            <CheckCircle2 className="h-5 w-5" />
+            I've Completed Payment
+          </button>
+        </div>
+      )}
     </div>
   );
 }

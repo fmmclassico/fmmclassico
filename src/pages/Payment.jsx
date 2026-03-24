@@ -51,9 +51,9 @@ export default function Payment() {
     );
   }
 
-  const displayAmount = amount.toFixed(2);
-  // Paystack accepts amount in the smallest currency unit (pesewas), so multiply by 100
-  const paystackAmountPesewas = Math.round(amount * 100);
+  const displayAmount = amount % 1 === 0 ? amount : amount.toFixed(2);
+  // Paystack requires amount in pesewas (2 decimal places * 100), formatted to 2dp
+  const paystackAmountPesewas = (amount * 100).toFixed(2);
   const paystackUrl = `${PAYSTACK_BASE}?amount=${paystackAmountPesewas}`;
 
   return (
@@ -61,7 +61,7 @@ export default function Payment() {
       {/* Top info bar */}
       <div className="flex-shrink-0 flex items-center justify-between bg-orange-500 px-4 py-2">
         <p className="text-white text-sm font-semibold">Order #{orderNumber}</p>
-        <p className="text-white font-black text-lg">Amount to be paid ₵{displayAmount}</p>
+        <p className="text-white font-black text-lg">Amount: ₵{displayAmount}</p>
       </div>
 
       {/* Loading overlay */}

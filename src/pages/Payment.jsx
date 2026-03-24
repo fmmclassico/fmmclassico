@@ -6,7 +6,7 @@ const PAYSTACK_BASE = "https://paystack.shop/pay/1miimvhai8";
 
 export default function Payment() {
   const [user, setUser] = useState(null);
-  const [launched, setLaunched] = useState(false);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
 
   const urlParams = new URLSearchParams(window.location.search);
   const orderId = urlParams.get('orderId');
@@ -22,7 +22,7 @@ export default function Payment() {
     );
   }
 
-  const paystackUrl = `${PAYSTACK_BASE}?amount=${amount.toFixed(2)}`;
+  const paystackUrl = `${PAYSTACK_BASE}`;
 
   useEffect(() => {
     const getUser = async () => {
@@ -37,20 +37,52 @@ export default function Payment() {
     getUser();
   }, []);
 
-  // Auto-open Paystack in current tab as soon as user & order are ready
-  useEffect(() => {
-    if (user && orderId && !launched) {
-      setLaunched(true);
-      window.location.href = paystackUrl;
-    }
-  }, [user, orderId, launched, paystackUrl]);
+  if (!user || !orderId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-orange-500" />
+        <p className="text-gray-500 text-sm">Loading payment...</p>
+      </div>
+    );
+  }
 
-  // Show a loading/redirect screen — Paystack will take over the tab
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-white gap-4" style={{ zIndex: 100 }}>
-      <Loader2 className="h-10 w-10 animate-spin text-orange-500" />
-      <p className="text-gray-600 font-medium text-sm">Redirecting you to Paystack...</p>
-      <p className="text-xs text-gray-400">Order #{orderNumber} · ₵{Number.isInteger(amount) ? amount : amount.toFixed(2)}</p>
+    <div className="container mx-auto px-0 md:px-4 py-0 md:py-4">
+      {/* Payment header */}
+      <div className="bg-orange-50 border border-orange-200 rounded-t-xl md:rounded-xl px-4 py-3 flex items-center justify-between mb-0 md:mb-3">
+        <div>
+          <p className="text-sm font-bold text-orange-800">Secure Payment</p>
+          <p className="text-xs text-orange-600">Order #{orderNumber}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-orange-500">Amount</p>
+          <p className="font-black text-orange-700 text-lg">₵{amount % 1 === 0 ? amount : amount.toFixed(2)}</p>
+        </div>
+      </div>
+
+      {/* Paystack iframe */}
+      <div className="relative bg-white border border-gray-200 rounded-b-xl md:rounded-xl overflow-hidden"
+           style={{ height: 'calc(100vh - 220px)', minHeight: '500px' }}>
+        {!iframeLoaded && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+            <p className="text-sm text-gray-500">Loading Paystack securely...</p>
+          </div>
+        )}
+        <iframe
+          src={paystackUrl}
+          title="Paystack Payment"
+          className="w-full h-full border-0"
+          onLoad={() => setIframeLoaded(true)}
+          allow="payment *"
+          loading="eager"
+          sandbox="allow-scripts allow-forms allow-same-origin allow-top-navigation allow-popups"
+        />
+      </div>
+
+      <p className="text-center text-xs text-gray-400 mt-2 pb-2">
+        🔒 Payments are secured and encrypted by Paystack
+      </p>
     </div>
   );
 }

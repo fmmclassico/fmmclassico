@@ -51,7 +51,7 @@ export default function Payment() {
     );
   }
 
-  const displayAmount = amount % 1 === 0 ? amount : amount.toFixed(2);
+  const displayAmount = amount.toFixed(2);
   // Paystack accepts amount in the smallest currency unit (pesewas), so multiply by 100
   const paystackAmountPesewas = Math.round(amount * 100);
   const paystackUrl = `${PAYSTACK_BASE}?amount=${paystackAmountPesewas}`;

@@ -55,10 +55,9 @@ export default function Orders() {
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', user?.email],
-    queryFn: () => base44.entities.Order.list('-created_date', 200),
+    queryFn: () => base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 200),
     enabled: !!user?.email,
-    refetchInterval: 5000,
-    select: (data) => data.filter(o => o.customer_email === user?.email),
+    refetchInterval: 8000,
   });
 
   const claimPaymentMutation = useMutation({
@@ -122,10 +121,10 @@ export default function Orders() {
     }
   };
 
-  if (!user) {
+  if (!user || isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <p className="text-gray-500">Loading...</p>
+        <p className="text-gray-500">Loading your orders...</p>
       </div>
     );
   }

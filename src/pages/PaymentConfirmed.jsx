@@ -49,9 +49,14 @@ export default function PaymentConfirmed() {
 
   const { data: orderData } = useQuery({
     queryKey: ['order', orderId],
-    queryFn: () => base44.entities.Order.filter({ id: orderId }),
+    queryFn: async () => {
+      // Filter by customer_email is reliable; then find the specific order by id
+      const orders = await base44.entities.Order.list('-created_date', 50);
+      return orders.find(o => o.id === orderId) || null;
+    },
     enabled: !!orderId && !!user,
-    select: (data) => data?.[0],
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const { data: userNotifications = [] } = useQuery({
@@ -93,43 +98,47 @@ export default function PaymentConfirmed() {
 
       const itemsList = (orderData.items || []).map(i => `• ${i.product_name} x${i.quantity} – ₵${(i.price * i.quantity).toFixed(2)}`).join('\n');
 
-      // Step 1: Update order tracking + create in-app notifications for BOTH user and admin — all in parallel
-      await Promise.all([
-        base44.entities.Order.update(orderId, {
-          tracking_updates: [
-            ...existingTracking,
-            {
-              status: 'Payment Claimed',
-              message: 'Customer completed payment via Paystack – awaiting FMM CLASSICO verification',
-              timestamp: new Date().toISOString()
-            }
-          ]
-        }),
-        // Customer notification (shows in their bell icon)
-        base44.entities.Notification.create({
-          user_email: user.email,
-          title: '🛍️ Order Placed & Payment Received!',
-          message: `Your order #${orderNumber} has been placed and payment received! FMM CLASSICO will verify and confirm within 2–5 minutes. Total: ₵${totalDisplay}.`,
-          type: 'order_placed',
-          order_id: orderId,
-          order_number: orderNumber,
-          is_read: false
-        }),
-        // Admin notification (shows in admin's bell icon)
-        base44.entities.Notification.create({
-          user_email: 'fmmclassico@gmail.com',
-          title: `🆕 New Order – ${orderData.customer_name} | ₵${totalDisplay}`,
-          message: `Order #${orderNumber} placed by ${orderData.customer_name} (${user.email}). Phone: ${orderData.customer_phone}. Address: ${orderData.delivery_address}, ${orderData.city}. Items: ${(orderData.items || []).map(i => `${i.product_name} x${i.quantity}`).join(', ')}`,
-          type: 'order_placed',
-          order_id: orderId,
-          order_number: orderNumber,
-          is_read: false
-        }),
-      ]);
+      // Step 1: Update order tracking + create in-app notifications for BOTH user and admin
+      // Run each independently so one failure doesn't block others
+      await base44.entities.Order.update(orderId, {
+        tracking_updates: [
+          ...existingTracking,
+          {
+            status: 'Payment Claimed',
+            message: 'Customer completed payment via Paystack – awaiting FMM CLASSICO verification',
+            timestamp: new Date().toISOString()
+          }
+        ]
+      });
 
-      // Invalidate notifications cache so bell icon updates immediately for both user and admin
+      // Customer notification
+      await base44.entities.Notification.create({
+        user_email: user.email,
+        title: '🛍️ Order Placed & Payment Received!',
+        message: `Your order #${orderNumber} has been placed and payment received! FMM CLASSICO will verify and confirm within 2–5 minutes. Total: ₵${totalDisplay}.`,
+        type: 'order_placed',
+        order_id: orderId,
+        order_number: orderNumber,
+        is_read: false
+      });
+
+      // Admin notification
+      await base44.entities.Notification.create({
+        user_email: 'fmmclassico@gmail.com',
+        title: `🆕 New Order – ${orderData.customer_name} | ₵${totalDisplay}`,
+        message: `Order #${orderNumber} placed by ${orderData.customer_name} (${user.email}). Phone: ${orderData.customer_phone}. Address: ${orderData.delivery_address}, ${orderData.city}. Items: ${(orderData.items || []).map(i => `${i.product_name} x${i.quantity}`).join(', ')}`,
+        type: 'order_placed',
+        order_id: orderId,
+        order_number: orderNumber,
+        is_read: false
+      });
+
+      // Force refresh notifications so bell icon updates immediately
       queryClient.invalidateQueries({ queryKey: ['notifications', user.email] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      // Also force refresh orders so My Orders page shows immediately
+      queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
 
       // Step 2: Send emails to both customer and admin simultaneously (non-blocking)
       Promise.all([

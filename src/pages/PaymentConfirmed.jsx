@@ -127,7 +127,8 @@ export default function PaymentConfirmed() {
         }),
       ]);
 
-      // Invalidate notifications cache so bell icon updates immediately
+      // Invalidate notifications cache so bell icon updates immediately for both user and admin
+      queryClient.invalidateQueries({ queryKey: ['notifications', user.email] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
       // Step 2: Send emails to both customer and admin simultaneously (non-blocking)

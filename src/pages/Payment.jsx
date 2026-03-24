@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPageUrl } from '../utils';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldCheck } from 'lucide-react';
 
 const PAYSTACK_BASE = "https://paystack.shop/pay/1miimvhai8";
 
@@ -26,8 +26,11 @@ export default function Payment() {
     const callbackUrl = `${window.location.origin}${createPageUrl('PaymentConfirmed')}`;
     const paystackUrl = `${PAYSTACK_BASE}?amount=${amount}&callback_url=${encodeURIComponent(callbackUrl)}`;
 
-    // Redirect immediately — no delay
-    window.location.replace(paystackUrl);
+    // Use window.top to break out of any iframe (e.g. preview sandbox)
+    const target = window.top || window;
+    setTimeout(() => {
+      target.location.href = paystackUrl;
+    }, 800);
   }, [orderId, amount]);
 
   if (amount <= 0) {
@@ -39,9 +42,21 @@ export default function Payment() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-white gap-3">
-      <Loader2 className="h-10 w-10 animate-spin text-orange-500" />
-      <p className="text-sm text-gray-500 font-medium">Redirecting to Paystack...</p>
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-white gap-4 px-6">
+      <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center mb-2">
+        <ShieldCheck className="h-8 w-8 text-orange-500" />
+      </div>
+      <h2 className="text-xl font-bold text-gray-800">Secure Payment</h2>
+      <div className="bg-orange-50 border border-orange-200 rounded-xl px-8 py-4 text-center">
+        <p className="text-sm text-gray-500 mb-1">Amount to Pay</p>
+        <p className="text-3xl font-black text-orange-600">₵{Number(amount).toFixed(2)}</p>
+        {orderNumber && <p className="text-xs text-gray-400 mt-1">Order #{orderNumber}</p>}
+      </div>
+      <div className="flex items-center gap-2 text-gray-500">
+        <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
+        <p className="text-sm font-medium">Redirecting to Paystack...</p>
+      </div>
+      <p className="text-xs text-gray-400 text-center max-w-xs">You will be redirected to Paystack's secure payment page. Do not close this page.</p>
     </div>
   );
 }

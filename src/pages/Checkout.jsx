@@ -171,10 +171,19 @@ export default function Checkout() {
       return;
     }
     
-    // Do NOT clear cart or send notifications here — that happens in PaymentConfirmed
-    // after Paystack redirects the user back (confirming payment was completed)
+    // Save extra info to sessionStorage so PaymentConfirmed can notify immediately
+    // without waiting for the order DB fetch
+    sessionStorage.setItem('fmm_pending_order', JSON.stringify({
+      orderId: newOrder.id,
+      orderNumber,
+      amount: total,
+      customerName: formData.customer_name,
+      customerPhone: formData.customer_phone,
+      deliveryAddress: formData.delivery_address,
+      city: formData.city,
+    }));
+
     setIsSubmitting(false);
-    // Redirect to Payment page where Paystack opens in an iframe
     navigate(createPageUrl(`Payment?orderId=${newOrder.id}&orderNumber=${orderNumber}&amount=${total.toFixed(2)}`));
   };
 

@@ -112,9 +112,42 @@ export default function OrderTracking() {
         )}
       </div>
 
-      {/* Tracking Progress — removed, only tracking history shown */}
+      {/* ── Visual Progress Tracker ── */}
+      {!isCancelled && (
+        <Card className="p-6 mb-6 shadow-md overflow-x-auto">
+          <h2 className="text-lg font-bold text-gray-800 mb-5">Order Progress</h2>
+          <div className="flex items-start min-w-max gap-0">
+            {statusSteps.map((step, i) => {
+              const isDone = currentStatusIndex >= i;
+              const isActive = currentStatusIndex === i;
+              const Icon = step.icon;
+              return (
+                <div key={step.key} className="flex items-center">
+                  <div className="flex flex-col items-center w-20">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
+                      isDone
+                        ? 'bg-green-500 border-green-500'
+                        : isActive
+                          ? 'bg-orange-100 border-orange-500 animate-pulse'
+                          : 'bg-white border-gray-200'
+                    }`}>
+                      <Icon className={`h-5 w-5 ${isDone ? 'text-white' : isActive ? 'text-orange-500' : 'text-gray-300'}`} />
+                    </div>
+                    <p className={`text-[10px] font-semibold text-center mt-1.5 leading-tight w-16 ${isDone ? 'text-green-700' : isActive ? 'text-orange-600' : 'text-gray-400'}`}>
+                      {step.label}
+                    </p>
+                  </div>
+                  {i < statusSteps.length - 1 && (
+                    <div className={`h-1 w-8 rounded flex-shrink-0 mb-5 ${isDone && currentStatusIndex > i ? 'bg-green-500' : 'bg-gray-200'}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
-      {/* Tracking History */}
+      {/* ── Tracking History ── */}
       {order.tracking_updates?.length > 0 && (
         <Card className="p-6 mb-6 shadow-md">
           <h2 className="text-lg font-bold text-gray-800 mb-4">Tracking History</h2>

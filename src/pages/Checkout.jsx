@@ -172,7 +172,6 @@ export default function Checkout() {
     }
     
     // Save extra info to sessionStorage so PaymentConfirmed can notify immediately
-    // without waiting for the order DB fetch
     sessionStorage.setItem('fmm_pending_order', JSON.stringify({
       orderId: newOrder.id,
       orderNumber,
@@ -182,6 +181,12 @@ export default function Checkout() {
       deliveryAddress: formData.delivery_address,
       city: formData.city,
     }));
+
+    // Clear the cart immediately when customer proceeds to payment
+    base44.entities.CartItem.filter({ user_email: user.email })
+      .then(items => Promise.all(items.map(item => base44.entities.CartItem.delete(item.id).catch(() => {}))))
+      .then(() => queryClient.invalidateQueries({ queryKey: ['cartItems'] }))
+      .catch(() => {});
 
     setIsSubmitting(false);
     navigate(createPageUrl(`Payment?orderId=${newOrder.id}&orderNumber=${orderNumber}&amount=${total.toFixed(2)}`));

@@ -1,7 +1,13 @@
 import React, { useEffect } from 'react';
-import { Loader2, ShieldCheck, Package, ArrowRight } from 'lucide-react';
+import { Loader2, ShieldCheck, Package } from 'lucide-react';
 
 const PAYSTACK_BASE = "https://paystack.shop/pay/1miimvhai8";
+
+// Format amount: remove trailing .00 but keep decimals if meaningful e.g. 120 not 120.00, but 120.50 stays
+function formatAmount(num) {
+  const n = Number(num);
+  return n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2);
+}
 
 export default function Payment() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -29,18 +35,17 @@ export default function Payment() {
 
   if (amount <= 0) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white px-6">
+      <div className="container mx-auto px-4 py-12 text-center">
         <p className="text-red-500 font-semibold text-center">Invalid order amount. Please return to checkout and try again.</p>
       </div>
     );
   }
 
   return (
-    // Full-screen overlay that sits ON TOP of everything including the Layout header
-    <div className="fixed inset-0 z-[9999] flex flex-col bg-white overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-white">
 
-      {/* ── Custom Title Bar — order number + total ── */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 flex items-center justify-between shadow-md flex-shrink-0">
+      {/* ── Title Bar — ONLY on this Payment page ── */}
+      <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-2">
           <Package className="h-5 w-5 text-white" />
           <div>
@@ -52,12 +57,12 @@ export default function Payment() {
         </div>
         <div className="text-right">
           <p className="text-orange-100 text-[11px]">Amount to Pay</p>
-          <p className="text-white font-black text-lg leading-tight">₵{Number(amount).toFixed(2)}</p>
+          <p className="text-white font-black text-lg leading-tight">₵{formatAmount(amount)}</p>
         </div>
       </div>
 
       {/* ── Body ── */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6">
+      <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 py-10">
         <div className="w-20 h-20 rounded-full bg-orange-100 flex items-center justify-center">
           <ShieldCheck className="h-10 w-10 text-orange-500" />
         </div>
@@ -72,7 +77,7 @@ export default function Payment() {
           {orderNumber && (
             <p className="text-xs text-gray-500 mb-1">Order <span className="font-semibold text-gray-700">#{orderNumber}</span></p>
           )}
-          <p className="text-4xl font-black text-orange-600 my-2">₵{Number(amount).toFixed(2)}</p>
+          <p className="text-4xl font-black text-orange-600 my-2">₵{formatAmount(amount)}</p>
           <p className="text-xs text-gray-400">Total payable to FMM CLASSICO</p>
         </div>
 
@@ -86,12 +91,12 @@ export default function Payment() {
         </div>
 
         {/* Security badges */}
-        <div className="flex items-center gap-3 text-xs text-gray-400">
-          <span className="flex items-center gap-1">🔒 SSL Secured</span>
+        <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-gray-400">
+          <span>🔒 SSL Secured</span>
           <span>·</span>
-          <span className="flex items-center gap-1">✅ Paystack Verified</span>
+          <span>✅ Paystack Verified</span>
           <span>·</span>
-          <span className="flex items-center gap-1">🛡️ Safe Checkout</span>
+          <span>🛡️ Safe Checkout</span>
         </div>
       </div>
     </div>

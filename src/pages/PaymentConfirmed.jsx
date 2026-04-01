@@ -161,30 +161,7 @@ export default function PaymentConfirmed() {
     if (user) autoNotify();
   }, [user]); // Fire as soon as user is known — don't wait for orderData
 
-  // Also update tracking_updates once orderData loads (if not done yet)
-  const trackingUpdatedRef = useRef(false);
-  useEffect(() => {
-    if (!orderData || !notifyCalledRef.current || trackingUpdatedRef.current) return;
-    const alreadyClaimed = orderData.tracking_updates?.some(t => t.status === 'Payment Claimed');
-    if (!alreadyClaimed) {
-      trackingUpdatedRef.current = true;
-      base44.entities.Order.update(orderId, {
-        tracking_updates: [
-          ...(orderData.tracking_updates || []),
-          {
-            status: 'Payment Claimed',
-            message: 'Customer completed payment via Paystack – awaiting FMM CLASSICO verification',
-            timestamp: new Date().toISOString()
-          }
-        ]
-      }).then(() => {
-        queryClient.invalidateQueries({ queryKey: ['order', orderId] });
-        queryClient.invalidateQueries({ queryKey: ['orders'] });
-      }).catch(() => {});
-    } else {
-      trackingUpdatedRef.current = true;
-    }
-  }, [orderData]);
+
 
   const trackingSteps = [
     { label: 'Order Placed', icon: Package, done: true },
@@ -217,7 +194,6 @@ export default function PaymentConfirmed() {
             <CheckCircle2 className="h-10 w-10 text-green-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Payment Submitted!</h1>
-          {orderNumber && <p className="text-gray-500 text-sm mt-1">Order #{orderNumber} · ₵{amount > 0 ? amount.toFixed(2) : ''}</p>}
         </div>
 
         {/* Notifying status */}

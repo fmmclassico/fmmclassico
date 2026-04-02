@@ -1,9 +1,8 @@
-import React, { useEffect } from 'react';
-import { Loader2, ShieldCheck, Package } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Package, ShieldCheck, Lock } from 'lucide-react';
 
 const PAYSTACK_BASE = "https://paystack.shop/pay/1miimvhai8";
 
-// Format amount: remove trailing .00 but keep decimals if meaningful e.g. 120 not 120.00, but 120.50 stays
 function formatAmount(num) {
   const n = Number(num);
   return n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2);
@@ -16,6 +15,8 @@ export default function Payment() {
   const amountRaw = urlParams.get('amount');
   const amount = amountRaw ? parseFloat(amountRaw) : 0;
 
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+
   // Store order details in sessionStorage so PaymentConfirmed can retrieve them
   useEffect(() => {
     if (orderId && orderNumber && amount > 0) {
@@ -23,81 +24,67 @@ export default function Payment() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!orderId || amount <= 0) return;
-    const callbackUrl = `${window.location.origin}/PaymentConfirmed`;
-    const paystackUrl = `${PAYSTACK_BASE}?amount=${Math.round(amount * 100)}&callback_url=${encodeURIComponent(callbackUrl)}`;
-    const target = window.top || window;
-    setTimeout(() => {
-      target.location.href = paystackUrl;
-    }, 1200);
-  }, [orderId, amount]);
-
   if (amount <= 0) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <p className="text-red-500 font-semibold text-center">Invalid order amount. Please return to checkout and try again.</p>
+        <p className="text-red-600 font-semibold">Invalid order amount. Please return to checkout and try again.</p>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-white">
+  // Pass amount in GHS directly (not pesewas) and set callback to PaymentConfirmed
+  const callbackUrl = `${window.location.origin}/PaymentConfirmed`;
+  const paystackUrl = `${PAYSTACK_BASE}?amount=${Math.round(amount)}&callback_url=${encodeURIComponent(callbackUrl)}`;
 
-      {/* ── Title Bar — ONLY on this Payment page ── */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-2">
-          <Package className="h-5 w-5 text-white" />
+  return (
+    // Full-screen page that sits UNDER the normal Layout header
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 64px)' }}>
+
+      {/* ── Dark Red Header Bar — Order # + Amount — ONLY on Payment page ── */}
+      <div className="flex items-center justify-between px-4 py-3 flex-shrink-0"
+        style={{ background: 'linear-gradient(90deg, #7f1d1d 0%, #991b1b 100%)' }}>
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+            <Package className="h-4 w-4 text-white" />
+          </div>
           <div>
             <p className="text-white font-bold text-sm leading-tight">FMM CLASSICO</p>
             {orderNumber && (
-              <p className="text-orange-100 text-[11px] leading-tight">Order #{orderNumber}</p>
+              <p className="text-red-200 text-[11px] leading-tight">Order #{orderNumber}</p>
             )}
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-orange-100 text-[11px]">Amount to Pay</p>
-          <p className="text-white font-black text-lg leading-tight">₵{formatAmount(amount)}</p>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-red-200 text-[10px] uppercase tracking-wider">Amount to Pay</p>
+            <p className="text-white font-black text-xl leading-tight">₵{formatAmount(amount)}</p>
+          </div>
+          <div className="flex items-center gap-1 bg-white/10 rounded-full px-2 py-1">
+            <Lock className="h-3 w-3 text-white" />
+            <span className="text-white text-[10px] font-semibold">Secure</span>
+          </div>
         </div>
       </div>
 
-      {/* ── Body ── */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 py-10">
-        <div className="w-20 h-20 rounded-full bg-orange-100 flex items-center justify-center">
-          <ShieldCheck className="h-10 w-10 text-orange-500" />
-        </div>
-
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-1">Secure Payment</h2>
-          <p className="text-gray-500 text-sm">You are being redirected to Paystack's secure payment page</p>
-        </div>
-
-        {/* Order Summary Box */}
-        <div className="w-full max-w-xs bg-orange-50 border border-orange-200 rounded-2xl p-5 text-center">
-          {orderNumber && (
-            <p className="text-xs text-gray-500 mb-1">Order <span className="font-semibold text-gray-700">#{orderNumber}</span></p>
-          )}
-          <p className="text-4xl font-black text-orange-600 my-2">₵{formatAmount(amount)}</p>
-          <p className="text-xs text-gray-400">Total payable to FMM CLASSICO</p>
-        </div>
-
-        {/* Redirecting indicator */}
-        <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-5 py-3">
-          <Loader2 className="h-5 w-5 animate-spin text-orange-500 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-gray-700">Redirecting to Paystack...</p>
-            <p className="text-xs text-gray-400">Please wait, do not close this page</p>
+      {/* ── Paystack iframe — fills remaining height ── */}
+      <div className="flex-1 relative bg-gray-100">
+        {!iframeLoaded && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white z-10">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: '#fef2f2' }}>
+              <ShieldCheck className="h-6 w-6" style={{ color: '#991b1b' }} />
+            </div>
+            <p className="text-sm font-semibold text-gray-700">Loading secure payment...</p>
+            <div className="w-8 h-8 border-4 border-gray-200 rounded-full animate-spin" style={{ borderTopColor: '#991b1b' }} />
           </div>
-        </div>
-
-        {/* Security badges */}
-        <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-gray-400">
-          <span>🔒 SSL Secured</span>
-          <span>·</span>
-          <span>✅ Paystack Verified</span>
-          <span>·</span>
-          <span>🛡️ Safe Checkout</span>
-        </div>
+        )}
+        <iframe
+          src={paystackUrl}
+          title="Paystack Payment"
+          className="w-full h-full border-0"
+          onLoad={() => setIframeLoaded(true)}
+          allow="payment"
+          style={{ display: 'block' }}
+        />
       </div>
     </div>
   );

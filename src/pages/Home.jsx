@@ -85,16 +85,7 @@ export default function Home() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  // Detect Paystack return redirect — Paystack sends user to /?paystack_return=1
-  // We then forward them to PaymentConfirmed which reads sessionStorage for order info
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('paystack_return') === '1') {
-      // Clean the URL then navigate to PaymentConfirmed
-      window.history.replaceState({}, '', '/');
-      navigate('/PaymentConfirmed', { replace: true });
-    }
-  }, []);
+
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});

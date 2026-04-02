@@ -22,6 +22,7 @@ import DeliveryInfoModal from '../components/delivery/DeliveryInfoModal';
 export default function Checkout() {
   const [user, setUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [orderSubmitted, setOrderSubmitted] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -188,6 +189,7 @@ export default function Checkout() {
       .then(() => queryClient.invalidateQueries({ queryKey: ['cartItems'] }))
       .catch(() => {});
 
+    setOrderSubmitted(true);
     setIsSubmitting(false);
     navigate(createPageUrl(`Payment?orderId=${newOrder.id}&orderNumber=${orderNumber}&amount=${total.toFixed(2)}`));
   };
@@ -204,7 +206,7 @@ export default function Checkout() {
 
 
 
-  if (cartItems.length === 0) {
+  if (cartItems.length === 0 && !orderSubmitted) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Your cart is empty</h2>

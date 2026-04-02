@@ -25,7 +25,7 @@ export default function Payment() {
 
   useEffect(() => {
     if (!orderId || amount <= 0) return;
-    const callbackUrl = `${window.location.origin}/?paystack_return=1`;
+    const callbackUrl = `${window.location.origin}/PaymentConfirmed`;
     const paystackUrl = `${PAYSTACK_BASE}?amount=${Math.round(amount * 100)}&callback_url=${encodeURIComponent(callbackUrl)}`;
     const target = window.top || window;
     setTimeout(() => {

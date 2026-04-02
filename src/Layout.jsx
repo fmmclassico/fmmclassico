@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { base44 } from '@/api/base44Client';
@@ -47,7 +47,6 @@ export default function Layout({ children, currentPageName }) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    // Run auth check and user fetch in parallel, non-blocking
     Promise.all([
       base44.auth.isAuthenticated(),
       base44.auth.me().catch(() => null),
@@ -57,14 +56,12 @@ export default function Layout({ children, currentPageName }) {
     });
   }, []);
 
-  // Scroll-to-top button visibility
   useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 400);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e) => {
       if (helpRef.current && !helpRef.current.contains(e.target)) setHelpOpen(false);
@@ -89,7 +86,6 @@ export default function Layout({ children, currentPageName }) {
     refetchInterval: 15000,
   });
 
-  // Real-time notification updates
   useEffect(() => {
     if (!user?.email) return;
     const unsubscribe = base44.entities.Notification.subscribe((event) => {
@@ -117,54 +113,35 @@ export default function Layout({ children, currentPageName }) {
 
   const isAdmin = user?.role === 'admin';
 
-          const menuItems = [
-            { icon: Home, label: 'Home', page: 'Home' },
-            { icon: Grid3X3, label: 'Categories', page: 'Categories' },
-            { icon: ShoppingCart, label: 'Cart', page: 'Cart', badge: cartCount },
-            { icon: Package, label: 'My Orders', page: 'Orders' },
-            { icon: Bell, label: 'Notifications', page: 'Notifications' },
-            { icon: MessageCircle, label: 'Chat Support', page: 'Chat' },
-            { icon: MessageCircle, label: 'Feedback / Report Issue', page: 'Feedback' },
-            { icon: Info, label: 'How to Use the Site', page: 'HowToUse' },
-            { icon: Info, label: 'About Us', page: 'About' },
-            { icon: Settings, label: 'Settings', page: 'Settings' },
-            ...(isAdmin ? [
-              { icon: Settings, label: 'Admin Orders', page: 'AdminOrders' },
-              { icon: MessageCircle, label: 'Customer Messages', page: 'AdminMessages' },
-              { icon: Settings, label: 'Invoices', page: 'AdminInvoice' },
-              { icon: Bell, label: 'Promo Banners', page: 'AdminBanners' },
-              { icon: Send, label: 'Broadcast to Customers', page: 'AdminBroadcast' },
-              { icon: Phone, label: 'WhatsApp Broadcast', page: 'AdminSMSBroadcast' },
-            ] : []),
-          ];
-
-  const categories = [
-    { id: 'phones', name: 'Phones' },
-    { id: 'phone_cases', name: 'Phone Cases' },
-    { id: 'chargers', name: 'Chargers' },
-    { id: 'earphones', name: 'Earphones' },
-    { id: 'cables', name: 'Cables' },
-    { id: 'power_banks', name: 'Power Banks' },
-    { id: 'screen_protectors', name: 'Screen Protectors' },
-    { id: 'holders', name: 'Holders & Mounts' },
-    { id: 'speakers', name: 'Speakers' },
-    { id: 'smart_watches', name: 'Smart Watches' },
-    { id: 'electronic_appliances', name: 'Electronic Appliances' },
-    { id: 'home_appliances', name: 'Home Appliances' },
+  const menuItems = [
+    { icon: Home, label: 'Home', page: 'Home' },
+    { icon: Grid3X3, label: 'Categories', page: 'Categories' },
+    { icon: ShoppingCart, label: 'Cart', page: 'Cart', badge: cartCount },
+    { icon: Package, label: 'My Orders', page: 'Orders' },
+    { icon: Bell, label: 'Notifications', page: 'Notifications' },
+    { icon: MessageCircle, label: 'Chat Support', page: 'Chat' },
+    { icon: MessageCircle, label: 'Feedback / Report Issue', page: 'Feedback' },
+    { icon: Info, label: 'How to Use the Site', page: 'HowToUse' },
+    { icon: Info, label: 'About Us', page: 'About' },
+    { icon: Settings, label: 'Settings', page: 'Settings' },
+    ...(isAdmin ? [
+      { icon: Settings, label: 'Admin Orders', page: 'AdminOrders' },
+      { icon: MessageCircle, label: 'Customer Messages', page: 'AdminMessages' },
+      { icon: Settings, label: 'Invoices', page: 'AdminInvoice' },
+      { icon: Bell, label: 'Promo Banners', page: 'AdminBanners' },
+      { icon: Send, label: 'Broadcast to Customers', page: 'AdminBroadcast' },
+      { icon: Phone, label: 'WhatsApp Broadcast', page: 'AdminSMSBroadcast' },
+    ] : []),
   ];
 
-
-
-  // SEO: set page title and meta tags for all search engines
+  // SEO
   useEffect(() => {
     document.title = 'FMM CLASSICO – Phone Accessories, Electronics & Home Appliances in Ghana | FMMCLASSICO';
-
     const setMeta = (attr, key, content) => {
       let el = document.querySelector(`meta[${attr}="${key}"]`);
       if (!el) { el = document.createElement('meta'); el.setAttribute(attr, key); document.head.appendChild(el); }
       el.setAttribute('content', content);
     };
-
     setMeta('name', 'description', 'FMM CLASSICO (FMMCLASSICO) – Your trusted online store for premium phone accessories, electronic appliances and home appliances in Ghana. Shop chargers, earphones, phone cases, smart watches and more. Fast delivery to Tarkwa (UMAT Campus), Accra (Ashongman Estate) and across Ghana.');
     setMeta('name', 'keywords', 'FMMCLASSICO, FMM CLASSICO, fmmclassico, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Ashongman Estate, online shopping Ghana');
     setMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
@@ -178,32 +155,25 @@ export default function Layout({ children, currentPageName }) {
     setMeta('name', 'geo.placename', 'Ghana');
     setMeta('name', 'geo.position', '5.0;-1.0');
     setMeta('name', 'ICBM', '5.0, -1.0');
-
     setMeta('property', 'og:type', 'website');
     setMeta('property', 'og:site_name', 'FMM CLASSICO');
     setMeta('property', 'og:title', 'FMM CLASSICO – Phone Accessories, Electronics & Home Appliances in Ghana');
-    setMeta('property', 'og:description', 'Shop premium phone accessories, electronics and home appliances at FMM CLASSICO. Fast delivery across Ghana. Tarkwa (UMAT Campus) & Accra (Ashongman Estate).');
+    setMeta('property', 'og:description', 'Shop premium phone accessories, electronics and home appliances at FMM CLASSICO. Fast delivery across Ghana.');
     setMeta('property', 'og:image', 'https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg');
     setMeta('property', 'og:image:alt', 'FMM CLASSICO – Phone Accessories, Electronics & Home Appliances Ghana');
     setMeta('property', 'og:image:width', '1200');
     setMeta('property', 'og:image:height', '630');
     setMeta('property', 'og:url', window.location.origin);
     setMeta('property', 'og:locale', 'en_GH');
-
     setMeta('name', 'twitter:card', 'summary_large_image');
     setMeta('name', 'twitter:title', 'FMM CLASSICO – Phone Accessories & Electronics Ghana');
     setMeta('name', 'twitter:description', 'Premium phone accessories, electronics & home appliances. Fast delivery across Ghana. Shop FMMCLASSICO now!');
     setMeta('name', 'twitter:image', 'https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg');
-
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical); }
     canonical.href = window.location.origin;
-
-    // Bing/Yahoo verification placeholder (add your own verification code if needed)
     setMeta('name', 'msvalidate.01', '');
     setMeta('name', 'yandex-verification', '');
-
-    // Prompt search engines to index
     let pingGoogle = document.querySelector('#ping-google');
     if (!pingGoogle) {
       pingGoogle = document.createElement('link');
@@ -212,7 +182,6 @@ export default function Layout({ children, currentPageName }) {
       pingGoogle.href = 'https://www.google.com';
       document.head.appendChild(pingGoogle);
     }
-
     let jsonLd = document.querySelector('#fmm-jsonld');
     if (!jsonLd) { jsonLd = document.createElement('script'); jsonLd.id = 'fmm-jsonld'; jsonLd.type = 'application/ld+json'; document.head.appendChild(jsonLd); }
     jsonLd.textContent = JSON.stringify([
@@ -221,7 +190,7 @@ export default function Layout({ children, currentPageName }) {
         "@type": "OnlineStore",
         "name": "FMM CLASSICO",
         "alternateName": ["FMMCLASSICO", "FMMClassico", "fmmclassico"],
-        "description": "FMM CLASSICO is an online store for premium phone accessories, electronic appliances and home appliances in Ghana. Serving Tarkwa (UMAT Campus) and Accra (Ashongman Estate).",
+        "description": "FMM CLASSICO is an online store for premium phone accessories, electronic appliances and home appliances in Ghana.",
         "url": window.location.origin,
         "logo": { "@type": "ImageObject", "url": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg", "width": 1200, "height": 1200 },
         "image": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg",
@@ -236,18 +205,7 @@ export default function Layout({ children, currentPageName }) {
         "openingHours": "Mo-Su 08:00-20:00",
         "currenciesAccepted": "GHS",
         "paymentAccepted": "Mobile Money, Credit Card, Bank Transfer",
-        "hasOfferCatalog": {
-          "@type": "OfferCatalog",
-          "name": "FMM CLASSICO Products",
-          "itemListElement": [
-            { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Phone Accessories Ghana" } },
-            { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Electronic Appliances Ghana" } },
-            { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Home Appliances Ghana" } }
-          ]
-        },
-        "sameAs": [
-        "https://wa.me/233509896035"
-        ]
+        "sameAs": ["https://wa.me/233509896035"]
       },
       {
         "@context": "https://schema.org",
@@ -263,25 +221,29 @@ export default function Layout({ children, currentPageName }) {
     ]);
   }, []);
 
+  // Dark ash color: #1f2937 (gray-800) / #374151 (gray-700)
+  const ASH = '#1f2937';
+  const ASH_HOVER = '#374151';
+
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full" style={{maxWidth:'100vw', boxSizing:'border-box'}}>
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg">
+      {/* Header — dark ash */}
+      <header className="sticky top-0 z-50 shadow-lg" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo & Menu */}
             <div className="flex items-center gap-2">
               <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-orange-600">
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
                     <Menu className="h-7 w-7" style={{color:'#fff', opacity:1, strokeWidth:3}} />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-80 p-0">
-                  <SheetHeader className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 text-white">
+                  <SheetHeader className="p-6 text-white" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
                     <SheetTitle className="text-white text-xl font-bold">FMM CLASSICO</SheetTitle>
                     {user && (
-                      <p className="text-orange-100 text-sm mt-1">Hello, {user.full_name || user.email}</p>
+                      <p className="text-gray-300 text-sm mt-1">Hello, {user.full_name || user.email}</p>
                     )}
                   </SheetHeader>
                   <div className="py-4 overflow-y-auto" style={{maxHeight: 'calc(100vh - 120px)'}}>
@@ -290,8 +252,8 @@ export default function Layout({ children, currentPageName }) {
                         key={item.page}
                         to={createPageUrl(item.page)}
                         onClick={() => setIsMenuOpen(false)}
-                        className={`flex items-center justify-between px-6 py-3 hover:bg-orange-50 transition-colors ${
-                          currentPageName === item.page ? 'bg-orange-50 text-orange-600 border-r-4 border-orange-500' : 'text-gray-700'
+                        className={`flex items-center justify-between px-6 py-3 hover:bg-gray-100 transition-colors ${
+                          currentPageName === item.page ? 'bg-gray-100 text-gray-900 border-r-4 border-gray-800' : 'text-gray-700'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -299,13 +261,11 @@ export default function Layout({ children, currentPageName }) {
                           <span className="font-medium">{item.label}</span>
                         </div>
                         {item.badge > 0 && (
-                          <Badge className="bg-orange-500">{item.badge}</Badge>
+                          <Badge style={{ background: ASH }}>{item.badge}</Badge>
                         )}
                       </Link>
                     ))}
-                    
                     <div className="border-t my-4" />
-                    
                     {isAuthenticated && (
                       <button
                         onClick={handleLogout}
@@ -321,7 +281,7 @@ export default function Layout({ children, currentPageName }) {
               
               <Link to={createPageUrl('Home')} className="flex items-center">
                 <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-                  FMM <span className="text-orange-200">CLASSICO</span>
+                  FMM <span className="text-gray-300">CLASSICO</span>
                 </h1>
               </Link>
             </div>
@@ -339,7 +299,8 @@ export default function Layout({ children, currentPageName }) {
                 <Button 
                   type="submit"
                   size="icon" 
-                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-orange-500 hover:bg-orange-600 h-8 w-8"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-8 w-8 text-white"
+                  style={{ background: ASH }}
                 >
                   <Search className="h-4 w-4" />
                 </Button>
@@ -350,15 +311,15 @@ export default function Layout({ children, currentPageName }) {
             <div className="flex items-center gap-1">
               {/* Help Button */}
               <div className="relative" ref={helpRef}>
-                <button className="flex flex-col items-center text-white hover:bg-orange-600 rounded-md px-2 py-1 transition-colors" onClick={() => setHelpOpen(o => !o)}>
+                <button className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors" onClick={() => setHelpOpen(o => !o)}>
                   <Info className="h-5 w-5" />
                   <span className="text-[10px] font-semibold leading-tight">Help</span>
                 </button>
                 {helpOpen && (
                   <div className="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 py-2 overflow-hidden">
                     <p className="text-xs font-bold text-gray-400 uppercase px-4 pt-1 pb-2 tracking-wider">Help Center</p>
-                    <div className="px-4 py-2 text-xs text-gray-600 bg-orange-50 border-b border-orange-100">
-                      <p className="font-semibold text-orange-700 mb-1">👋 Need help?</p>
+                    <div className="px-4 py-2 text-xs text-gray-600 bg-gray-50 border-b border-gray-100">
+                      <p className="font-semibold text-gray-700 mb-1">👋 Need help?</p>
                       <p>Browse the guides below or chat with us directly on WhatsApp or our AI Chat.</p>
                     </div>
                     {[
@@ -368,7 +329,7 @@ export default function Layout({ children, currentPageName }) {
                       { label: '❌ Cancel an Order', page: 'Orders' },
                     ].map(item => (
                       <Link key={item.page + item.label} to={createPageUrl(item.page)} onClick={() => setHelpOpen(false)}
-                        className="flex items-center px-4 py-2.5 hover:bg-orange-50 text-sm text-gray-700 font-medium transition-colors">
+                        className="flex items-center px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
                         {item.label}
                       </Link>
                     ))}
@@ -379,7 +340,7 @@ export default function Layout({ children, currentPageName }) {
                       WhatsApp Support
                     </a>
                     <Link to={createPageUrl('Chat')} onClick={() => setHelpOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 hover:bg-orange-50 text-sm text-orange-700 font-medium transition-colors">
+                      className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
                       <Bot className="h-4 w-4" /> Live Chat
                     </Link>
                   </div>
@@ -387,7 +348,7 @@ export default function Layout({ children, currentPageName }) {
               </div>
 
               {/* Notifications */}
-              <Link to={createPageUrl('Notifications')} className="relative flex flex-col items-center text-white hover:bg-orange-600 rounded-md px-2 py-1 transition-colors">
+              <Link to={createPageUrl('Notifications')} className="relative flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors">
                 <div className="relative">
                   <Bell className="h-5 w-5" />
                   {unreadNotifCount > 0 && (
@@ -398,8 +359,6 @@ export default function Layout({ children, currentPageName }) {
                 </div>
                 <span className="text-[10px] font-semibold leading-tight">Alerts</span>
               </Link>
-
-
             </div>
           </div>
 
@@ -416,7 +375,8 @@ export default function Layout({ children, currentPageName }) {
               <Button 
                 type="submit"
                 size="icon" 
-                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-orange-500 hover:bg-orange-600 h-8 w-8"
+                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-8 w-8 text-white"
+                style={{ background: ASH }}
               >
                 <Search className="h-4 w-4" />
               </Button>
@@ -431,7 +391,7 @@ export default function Layout({ children, currentPageName }) {
           <div className="container mx-auto px-4 pt-3">
             <button
               onClick={() => navigate(-1)}
-              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-orange-600 transition-colors group"
+              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors group"
             >
               <ChevronRight className="h-4 w-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
               <span>Back</span>
@@ -441,30 +401,29 @@ export default function Layout({ children, currentPageName }) {
         {children}
       </main>
 
-      {/* Bottom Navigation - All screens */}
+      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-40">
         <div className="flex items-center justify-around py-3 max-w-2xl mx-auto">
-          <Link to={createPageUrl('Home')} className={`flex flex-col items-center p-2 ${currentPageName === 'Home' ? 'text-orange-500' : 'text-gray-500'}`}>
+          <Link to={createPageUrl('Home')} className={`flex flex-col items-center p-2 ${currentPageName === 'Home' ? 'text-gray-800' : 'text-gray-400'}`}>
             <Home className="h-5 w-5" />
             <span className="text-xs mt-1">Home</span>
           </Link>
-          <Link to={createPageUrl('Categories')} className={`flex flex-col items-center p-2 ${currentPageName === 'Categories' ? 'text-orange-500' : 'text-gray-500'}`}>
+          <Link to={createPageUrl('Categories')} className={`flex flex-col items-center p-2 ${currentPageName === 'Categories' ? 'text-gray-800' : 'text-gray-400'}`}>
             <Grid3X3 className="h-5 w-5" />
             <span className="text-xs mt-1">Categories</span>
           </Link>
-          <Link to={createPageUrl('Cart')} className={`flex flex-col items-center p-2 relative ${currentPageName === 'Cart' ? 'text-orange-500' : 'text-gray-500'}`}>
+          <Link to={createPageUrl('Cart')} className={`flex flex-col items-center p-2 relative ${currentPageName === 'Cart' ? 'text-gray-800' : 'text-gray-400'}`}>
             <div className="relative">
               <ShoppingCart className="h-6 w-6" />
               {cartCount > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-orange-500 text-white text-[11px] font-bold">
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-white text-[11px] font-bold" style={{ background: ASH }}>
                   {cartCount > 9 ? '9+' : cartCount}
                 </Badge>
               )}
             </div>
             <span className="text-xs mt-1">Cart</span>
           </Link>
-
-          <Link to={createPageUrl('Settings')} className={`flex flex-col items-center p-2 ${currentPageName === 'Settings' ? 'text-orange-500' : 'text-gray-500'}`}>
+          <Link to={createPageUrl('Settings')} className={`flex flex-col items-center p-2 ${currentPageName === 'Settings' ? 'text-gray-800' : 'text-gray-400'}`}>
             <User className="h-5 w-5" />
             <span className="text-xs mt-1">Account</span>
           </Link>
@@ -474,12 +433,12 @@ export default function Layout({ children, currentPageName }) {
       {/* Spacer for bottom nav */}
       <div className="h-20" />
 
-      {/* Scroll to top button — only on Home page */}
+      {/* Scroll to top button */}
       {showScrollTop && currentPageName === 'Home' && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-24 md:bottom-8 right-4 z-50 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-2.5 shadow-xl transition-all hover:scale-110 active:scale-95"
-          style={{ boxShadow: '0 4px 16px rgba(249,115,22,0.4)' }}
+          className="fixed bottom-24 md:bottom-8 right-4 z-50 text-white rounded-full p-2.5 shadow-xl transition-all hover:scale-110 active:scale-95"
+          style={{ background: ASH, boxShadow: '0 4px 16px rgba(31,41,55,0.4)' }}
           aria-label="Back to top"
         >
           <ChevronUp className="h-4 w-4" />
@@ -503,8 +462,8 @@ export default function Layout({ children, currentPageName }) {
           </a>
           <Link
             to={createPageUrl('Chat')}
-            className="fixed bottom-36 md:bottom-20 right-4 z-50 flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-2.5 py-1.5 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95"
-            style={{ boxShadow: '0 4px 20px rgba(249,115,22,0.5)' }}
+            className="fixed bottom-36 md:bottom-20 right-4 z-50 flex items-center gap-1.5 text-white px-2.5 py-1.5 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95"
+            style={{ background: ASH, boxShadow: '0 4px 20px rgba(31,41,55,0.5)' }}
           >
             <Bot className="h-4 w-4" />
             <span className="text-xs font-bold">AI Chat</span>

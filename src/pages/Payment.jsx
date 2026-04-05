@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Package, Lock, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Package, Lock, ShieldCheck, Loader2 } from 'lucide-react';
 
-const PAYSTACK_BASE = "https://paystack.shop/pay/1miimvhai8";
+// Your Paystack payment link
+const PAYSTACK_LINK = "https://paystack.shop/pay/1miimvhai8";
 
 function formatAmount(num) {
   const n = Number(num);
@@ -10,33 +11,36 @@ function formatAmount(num) {
 
 export default function Payment() {
   const urlParams = new URLSearchParams(window.location.search);
-  const orderId = urlParams.get('orderId');
+  const orderId    = urlParams.get('orderId');
   const orderNumber = urlParams.get('orderNumber');
-  const amountRaw = urlParams.get('amount');
-  const amount = amountRaw ? parseFloat(amountRaw) : 0;
-  const [countdown, setCountdown] = useState(3);
+  const amountRaw  = urlParams.get('amount');
+  const amount     = amountRaw ? parseFloat(amountRaw) : 0;
 
-  // Store order details in sessionStorage so PaymentConfirmed can retrieve them
+  const [countdown, setCountdown] = useState(4);
+
+  // Save order to sessionStorage so PaymentConfirmed can read it after callback
   useEffect(() => {
     if (orderId && orderNumber && amount > 0) {
       sessionStorage.setItem('fmm_pending_order', JSON.stringify({ orderId, orderNumber, amount }));
     }
   }, []);
 
-  // Countdown then redirect to Paystack with correct amount in pesewas and callback to /PaymentConfirmed
   useEffect(() => {
-    if (!orderId || amount <= 0) return;
-    const callbackUrl = `${window.location.origin}/PaymentConfirmed`;
-    // Paystack shop links take amount in pesewas (GHS × 100)
-    const paystackUrl = `${PAYSTACK_BASE}?amount=${Math.round(amount * 100)}&callback_url=${encodeURIComponent(callbackUrl)}`;
+    if (amount <= 0 || !orderId) return;
 
     if (countdown <= 0) {
+      // Build Paystack URL:
+      // - amount in PESEWAS (GHS × 100)
+      // - callback_url goes back to our PaymentConfirmed page
+      const callbackUrl = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
+      const paystackUrl = `${PAYSTACK_LINK}?amount=${Math.round(amount * 100)}&callback_url=${encodeURIComponent(callbackUrl)}`;
       window.location.href = paystackUrl;
       return;
     }
+
     const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(timer);
-  }, [countdown, orderId, amount]);
+  }, [countdown, amount, orderId]);
 
   if (amount <= 0) {
     return (
@@ -46,10 +50,13 @@ export default function Payment() {
     );
   }
 
+  // Progress percentage for the countdown ring (4s total)
+  const progress = ((4 - countdown) / 4) * 100;
+
   return (
     <div className="min-h-screen flex flex-col bg-white">
 
-      {/* ── Dark Red Header Bar — Order # + Amount — ONLY on Payment page ── */}
+      {/* ── Dark ash header — Order # + Amount ── */}
       <div
         className="flex items-center justify-between px-4 py-3 flex-shrink-0 shadow-md"
         style={{ background: 'linear-gradient(90deg, #1f2937 0%, #374151 100%)' }}
@@ -85,11 +92,14 @@ export default function Payment() {
         </div>
 
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-1">Secure Payment</h2>
-          <p className="text-gray-500 text-sm">You'll be taken to Paystack's secure payment page</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-1">Redirecting to Payment</h2>
+          <p className="text-gray-500 text-sm">
+            You're being taken to Paystack's secure payment page.<br/>
+            <span className="text-xs text-gray-400">After payment, you'll be automatically returned to FMM CLASSICO.</span>
+          </p>
         </div>
 
-        {/* Order + Amount summary card */}
+        {/* Order summary card */}
         <div className="w-full max-w-xs rounded-2xl border-2 border-gray-200 p-5 text-center bg-gray-50">
           {orderNumber && (
             <p className="text-xs text-gray-500 mb-1">
@@ -100,21 +110,34 @@ export default function Payment() {
           <p className="text-xs text-gray-400">Total payable to FMM CLASSICO</p>
         </div>
 
-        {/* Countdown launcher */}
-        <div className="flex flex-col items-center gap-3">
-          <div
-            className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-black shadow-lg"
-            style={{ background: 'linear-gradient(135deg, #1f2937, #374151)' }}
-          >
-            {countdown > 0 ? countdown : <ArrowRight className="h-7 w-7" />}
+        {/* Countdown */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="relative w-16 h-16">
+            <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="28" fill="none" stroke="#e5e7eb" strokeWidth="5" />
+              <circle
+                cx="32" cy="32" r="28"
+                fill="none"
+                stroke="#1f2937"
+                strokeWidth="5"
+                strokeDasharray={`${2 * Math.PI * 28}`}
+                strokeDashoffset={`${2 * Math.PI * 28 * (1 - progress / 100)}`}
+                strokeLinecap="round"
+                style={{ transition: 'stroke-dashoffset 1s linear' }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xl font-black text-gray-800">
+                {countdown > 0 ? countdown : <Loader2 className="h-5 w-5 animate-spin text-gray-700" />}
+              </span>
+            </div>
           </div>
           <p className="text-sm font-semibold text-gray-700">
-            {countdown > 0 ? `Redirecting in ${countdown}...` : 'Opening Paystack...'}
+            {countdown > 0 ? `Opening Paystack in ${countdown}s...` : 'Connecting to Paystack...'}
           </p>
-          <p className="text-xs text-gray-400">Please wait — do not close this page</p>
         </div>
 
-        {/* Security badges */}
+        {/* Trust badges */}
         <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-gray-400">
           <span>🔒 SSL Secured</span>
           <span>·</span>
@@ -122,6 +145,10 @@ export default function Payment() {
           <span>·</span>
           <span>🛡️ Safe Checkout</span>
         </div>
+
+        <p className="text-xs text-gray-300 text-center max-w-xs">
+          Do not close or refresh this page. You will be redirected automatically.
+        </p>
       </div>
     </div>
   );

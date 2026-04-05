@@ -191,7 +191,7 @@ export default function Checkout() {
 
     setOrderSubmitted(true);
     setIsSubmitting(false);
-    navigate(createPageUrl(`Payment?orderId=${newOrder.id}&orderNumber=${orderNumber}&amount=${total.toFixed(2)}`));
+    navigate(createPageUrl(`Payment?orderId=${newOrder.id}&orderNumber=${orderNumber}&amount=${total.toFixed(2)}&email=${encodeURIComponent(user.email)}`));
   };
 
 

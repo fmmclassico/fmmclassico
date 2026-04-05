@@ -7,6 +7,8 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import Payment from './pages/Payment';
+import PaymentConfirmed from './pages/PaymentConfirmed';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -47,7 +49,12 @@ const AuthenticatedApp = () => {
           <MainPage />
         </LayoutWrapper>
       } />
+      {/* Payment pages — NO layout wrapper, they have their own header */}
+      <Route path="/Payment" element={<Payment />} />
+      <Route path="/PaymentConfirmed" element={<PaymentConfirmed />} />
+
       {Object.entries(Pages).map(([path, Page]) => (
+        path === 'Payment' || path === 'PaymentConfirmed' ? null :
         <Route
           key={path}
           path={`/${path}`}

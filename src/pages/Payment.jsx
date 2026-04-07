@@ -1,31 +1,63 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { Package, Lock, ShieldCheck, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { base44 } from '@/api/base44Client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2
+} from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
-// ⚠️ Replace this with your actual Paystack PUBLIC key from your Paystack dashboard
-// Go to: https://dashboard.paystack.com/#/settings/developers → copy your "Public Key"
-const PAYSTACK_PUBLIC_KEY = 'pk_live_xxxxxxxxxxxxxxxxxxxxxxxx'; // TODO: replace with real key
+const ASH = '#1f2937';
+const ASH_HOVER = '#374151';
+
+// ⚠️ Replace with your actual Paystack PUBLIC key from your Paystack dashboard
+// https://dashboard.paystack.com/#/settings/developers
+const PAYSTACK_PUBLIC_KEY = 'pk_live_xxxxxxxxxxxxxxxxxxxxxxxx';
 
 function formatAmount(num) {
   const n = Number(num);
-  return n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2);
+  return n % 1 === 0 ? n.toLocaleString() : n.toFixed(2);
 }
 
 export default function Payment() {
   const urlParams = new URLSearchParams(window.location.search);
-  const orderId      = urlParams.get('orderId');
-  const orderNumber  = urlParams.get('orderNumber');
-  const amountRaw    = urlParams.get('amount');
-  const email        = urlParams.get('email') || '';
-  const amount       = amountRaw ? parseFloat(amountRaw) : 0;
+  const orderId     = urlParams.get('orderId');
+  const orderNumber = urlParams.get('orderNumber');
+  const amountRaw   = urlParams.get('amount');
+  const emailParam  = urlParams.get('email') || '';
+  const amount      = amountRaw ? parseFloat(amountRaw) : 0;
 
+  const [user, setUser] = useState(null);
   const [paystackReady, setPaystackReady] = useState(false);
-  const [paymentStarted, setPaymentStarted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const scriptRef = useRef(null);
+  const [paying, setPaying] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
 
-  // Save order to sessionStorage so PaymentConfirmed can read it
+  // Form fields
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName]   = useState('');
+  const [emailVal, setEmailVal]   = useState(emailParam);
+  const [phone, setPhone]         = useState('');
+
+  useEffect(() => {
+    base44.auth.me().then(u => {
+      setUser(u);
+      const parts = (u.full_name || '').trim().split(' ');
+      setFirstName(parts[0] || '');
+      setLastName(parts.slice(1).join(' ') || '');
+      setEmailVal(u.email || emailParam);
+      // fetch cart count
+      base44.entities.CartItem.filter({ user_email: u.email })
+        .then(items => setCartCount(items.reduce((s, i) => s + (i.quantity || 1), 0)))
+        .catch(() => {});
+    }).catch(() => {});
+  }, []);
+
+  // Save to sessionStorage for PaymentConfirmed
   useEffect(() => {
     if (orderId && orderNumber && amount > 0) {
       sessionStorage.setItem('fmm_pending_order', JSON.stringify({ orderId, orderNumber, amount }));
@@ -42,41 +74,46 @@ export default function Payment() {
     const script = document.createElement('script');
     script.id = 'paystack-script';
     script.src = 'https://js.paystack.co/v1/inline.js';
-    script.onload = () => {
-      setPaystackReady(true);
-      setLoading(false);
-    };
+    script.onload = () => { setPaystackReady(true); setLoading(false); };
     script.onerror = () => setLoading(false);
     document.body.appendChild(script);
-    scriptRef.current = script;
   }, []);
 
-  const openPaystack = () => {
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) navigate(`/Shop?search=${encodeURIComponent(searchQuery)}`);
+  };
+
+  const handlePay = (e) => {
+    e.preventDefault();
     if (!window.PaystackPop) return;
-    setPaymentStarted(true);
+    if (!emailVal) { alert('Please enter your email address.'); return; }
+    setPaying(true);
 
     const callbackUrl = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
 
     const handler = window.PaystackPop.setup({
       key: PAYSTACK_PUBLIC_KEY,
-      email: email || 'customer@fmmclassico.com',
+      email: emailVal,
       amount: Math.round(amount * 100), // pesewas
       currency: 'GHS',
       ref: orderNumber,
       metadata: {
         order_id: orderId,
         order_number: orderNumber,
+        first_name: firstName,
+        last_name: lastName,
+        phone,
         custom_fields: [
           { display_name: 'Store', variable_name: 'store', value: 'FMM CLASSICO' },
           { display_name: 'Order Number', variable_name: 'order_number', value: orderNumber },
         ]
       },
       callback: function(response) {
-        // Payment successful — go to confirmation page
         window.location.href = callbackUrl + `&reference=${response.reference}`;
       },
       onClose: function() {
-        setPaymentStarted(false);
+        setPaying(false);
       }
     });
 
@@ -85,121 +122,260 @@ export default function Payment() {
 
   if (amount <= 0) {
     return (
-      <div className="min-h-screen flex flex-col">
-        {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 shadow-md" style={{ background: 'linear-gradient(90deg, #1f2937 0%, #374151 100%)' }}>
-          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-            <Package className="h-4 w-4 text-white" />
-          </div>
-          <h1 className="text-white font-bold text-lg">FMM CLASSICO</h1>
-        </div>
-        <div className="flex-1 flex items-center justify-center p-6 text-center">
-          <div>
-            <p className="text-red-600 font-semibold mb-4">Invalid order. Please return to checkout and try again.</p>
-            <Link to="/Checkout" className="text-sm text-gray-500 underline">← Back to Checkout</Link>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-red-500 font-semibold">Invalid order amount. Please return to checkout and try again.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
 
-      {/* ── Dark ash header ── */}
-      <header
-        className="flex items-center justify-between px-4 py-3 shadow-md flex-shrink-0"
-        style={{ background: 'linear-gradient(90deg, #1f2937 0%, #374151 100%)' }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
-            <Package className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <p className="text-white font-black text-base leading-tight">FMM CLASSICO</p>
-            <p className="text-gray-300 text-[11px] leading-tight">Secure Checkout</p>
-          </div>
-        </div>
+      {/* ══ FULL SITE HEADER ══ */}
+      <header className="sticky top-0 z-50 shadow-lg" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => navigate(-1)}>
+                <Menu className="h-7 w-7 text-white" style={{ strokeWidth: 3 }} />
+              </Button>
+              <Link to="/" className="flex items-center">
+                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                  FMM <span className="text-gray-300">CLASSICO</span>
+                </h1>
+              </Link>
+            </div>
 
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-gray-400 text-[10px] uppercase tracking-wider">Amount</p>
-            <p className="text-white font-black text-xl leading-tight">₵{formatAmount(amount)}</p>
+            {/* Search — desktop */}
+            <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl mx-8">
+              <div className="relative w-full">
+                <Input
+                  type="text"
+                  placeholder="Search for phone accessories..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-4 pr-12 py-2 rounded-full border-0 bg-white/90 focus:bg-white"
+                />
+                <Button type="submit" size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-8 w-8 text-white"
+                  style={{ background: ASH }}>
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            </form>
+
+            {/* Right icons */}
+            <div className="flex items-center gap-1">
+              <Link to="/Notifications" className="relative flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1">
+                <Bell className="h-5 w-5" />
+                <span className="text-[10px] font-semibold leading-tight">Alerts</span>
+              </Link>
+              <Link to="/Cart" className="relative flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1">
+                <div className="relative">
+                  <ShoppingCart className="h-5 w-5" />
+                  {cartCount > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-white text-[10px] font-bold" style={{ background: '#ef4444' }}>
+                      {cartCount > 9 ? '9+' : cartCount}
+                    </Badge>
+                  )}
+                </div>
+                <span className="text-[10px] font-semibold leading-tight">Cart</span>
+              </Link>
+              <Link to="/Settings" className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1">
+                <User className="h-5 w-5" />
+                <span className="text-[10px] font-semibold leading-tight">Account</span>
+              </Link>
+            </div>
           </div>
-          <div className="flex items-center gap-1 bg-white/10 rounded-full px-2.5 py-1">
-            <Lock className="h-3 w-3 text-green-400" />
-            <span className="text-green-300 text-[10px] font-semibold">Secure</span>
-          </div>
+
+          {/* Search — mobile */}
+          <form onSubmit={handleSearch} className="md:hidden pb-3">
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-4 pr-12 py-2 rounded-full border-0 bg-white/90"
+              />
+              <Button type="submit" size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-8 w-8 text-white"
+                style={{ background: ASH }}>
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+          </form>
         </div>
       </header>
 
-      {/* ── Body ── */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 py-10">
+      {/* ══ PAGE BODY ══ */}
+      <div className="flex-1 container mx-auto px-4 py-4 max-w-5xl">
 
-        {/* Order card */}
-        <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          {/* Card header */}
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wider">Order</p>
-              <p className="font-bold text-gray-800">#{orderNumber}</p>
+        {/* Back + title row */}
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <button onClick={() => navigate(-1)}
+              className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-2 transition-colors">
+              <ChevronLeft className="h-4 w-4" /> Back
+            </button>
+            <p className="font-bold text-gray-800 text-sm">Secure Payment – FMM CLASSICO</p>
+            <p className="text-xs text-gray-400">Order #{orderNumber}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-400">Amount</p>
+            <p className="text-2xl font-black text-orange-500">₵{formatAmount(amount)}</p>
+          </div>
+        </div>
+
+        {/* Two-column layout */}
+        <div className="flex flex-col md:flex-row gap-0 rounded-xl overflow-hidden shadow-lg border border-gray-100">
+
+          {/* ── LEFT PANEL — store info (Paystack-style light blue) ── */}
+          <div className="md:w-5/12 flex flex-col items-center justify-center py-10 px-8 text-center"
+            style={{ background: '#e8f0f9' }}>
+
+            {/* Store logo */}
+            <div className="w-28 h-28 rounded-xl overflow-hidden shadow-md mb-5 bg-gray-900 flex items-center justify-center">
+              <img
+                src="https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg"
+                alt="FMM CLASSICO"
+                className="w-full h-full object-cover"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
             </div>
-            <ShieldCheck className="h-8 w-8 text-gray-300" />
-          </div>
 
-          {/* Amount */}
-          <div className="px-5 py-6 text-center border-b border-gray-100">
-            <p className="text-xs text-gray-400 mb-1">Total to pay</p>
-            <p className="text-5xl font-black text-gray-800">₵{formatAmount(amount)}</p>
-            <p className="text-xs text-gray-400 mt-1">Ghana Cedis (GHS)</p>
-          </div>
+            <h2 className="text-xl font-black text-gray-800 mb-0.5">FMM CLASSICO</h2>
+            <p className="text-xs text-gray-500 mb-4 font-medium">BY FMM CLASSICO</p>
 
-          {/* Pay button */}
-          <div className="px-5 py-5">
-            {loading ? (
-              <div className="flex items-center justify-center gap-2 py-2">
-                <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                <span className="text-sm text-gray-500">Loading payment...</span>
+            <p className="text-sm text-blue-700 leading-relaxed max-w-xs">
+              FMM CLASSICO is an online store offering a wide range of{' '}
+              <span className="font-semibold">phone accessories</span> and{' '}
+              <span className="font-semibold">electronic appliances</span>, providing quality
+              products and convenient shopping for our customers.
+            </p>
+
+            {/* Paystack badge */}
+            <div className="mt-6 flex items-center gap-1.5 text-xs text-gray-500">
+              <Lock className="h-3.5 w-3.5" />
+              <span>Secured by</span>
+              <span className="font-black text-gray-700">paystack</span>
+            </div>
+
+            {/* Payment method logos */}
+            <div className="mt-3 flex items-center gap-2 flex-wrap justify-center">
+              {/* Mastercard */}
+              <div className="h-7 w-11 bg-white rounded flex items-center justify-center shadow-sm px-1">
+                <svg viewBox="0 0 38 24" width="36" height="22"><circle cx="15" cy="12" r="10" fill="#EB001B"/><circle cx="23" cy="12" r="10" fill="#F79E1B"/><path d="M19 4.8a10 10 0 0 1 0 14.4A10 10 0 0 1 19 4.8z" fill="#FF5F00"/></svg>
               </div>
-            ) : (
+              {/* Visa */}
+              <div className="h-7 w-11 bg-white rounded flex items-center justify-center shadow-sm px-1">
+                <span className="text-blue-700 font-black text-sm italic">VISA</span>
+              </div>
+              {/* MTN MoMo */}
+              <div className="h-7 w-11 bg-yellow-400 rounded flex items-center justify-center shadow-sm px-1">
+                <span className="text-black font-black text-[9px] leading-tight text-center">MTN<br/>MoMo</span>
+              </div>
+              {/* Apple Pay */}
+              <div className="h-7 w-11 bg-white rounded flex items-center justify-center shadow-sm px-1">
+                <span className="text-gray-800 font-black text-[10px]"> Pay</span>
+              </div>
+            </div>
+
+            {/* Telecel & Airteltico */}
+            <div className="mt-2 flex items-center gap-3 flex-wrap justify-center">
+              <div className="h-6 px-2 bg-white rounded flex items-center justify-center shadow-sm">
+                <span className="text-red-600 font-black text-[9px]">Telecel Cash</span>
+              </div>
+              <div className="h-6 px-2 bg-white rounded flex items-center justify-center shadow-sm">
+                <span className="text-red-500 font-black text-[9px]">AirtelTigo Money</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── RIGHT PANEL — payment form ── */}
+          <div className="md:w-7/12 bg-white flex flex-col justify-center px-8 py-10">
+            <form onSubmit={handlePay} className="space-y-4">
+
+              {/* First & Last name */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">First name</label>
+                  <Input placeholder="First name" value={firstName}
+                    onChange={e => setFirstName(e.target.value)}
+                    className="text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Last name</label>
+                  <Input placeholder="Last name" value={lastName}
+                    onChange={e => setLastName(e.target.value)}
+                    className="text-sm" />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Email address</label>
+                <Input type="email" placeholder="Email address" value={emailVal}
+                  onChange={e => setEmailVal(e.target.value)}
+                  required className="text-sm" />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Phone number</label>
+                <div className="flex gap-2">
+                  <div className="flex items-center border border-input rounded-md px-3 py-2 bg-background text-sm text-gray-600 gap-1 flex-shrink-0">
+                    <span className="text-base">🇬🇭</span>
+                    <span>+233</span>
+                    <svg className="h-3 w-3 ml-0.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
+                  </div>
+                  <Input placeholder="Phone number" value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    className="text-sm flex-1" />
+                </div>
+              </div>
+
+              {/* Amount (read-only) */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Amount</label>
+                <div className="flex gap-2">
+                  <div className="flex items-center border border-input rounded-md px-3 py-2 bg-gray-50 text-sm text-gray-600 flex-shrink-0 font-semibold">
+                    GHS
+                  </div>
+                  <Input
+                    value={formatAmount(amount)}
+                    readOnly
+                    className="text-sm flex-1 bg-gray-50 font-semibold text-gray-700 cursor-default"
+                  />
+                </div>
+              </div>
+
+              {/* Pay button */}
               <Button
-                onClick={openPaystack}
-                disabled={!paystackReady || paymentStarted}
-                className="w-full py-6 text-base font-bold rounded-xl text-white"
-                style={{ background: 'linear-gradient(90deg, #1f2937 0%, #374151 100%)' }}
+                type="submit"
+                disabled={loading || paying}
+                className="w-full py-6 text-base font-bold rounded-lg text-white bg-green-500 hover:bg-green-600 mt-2"
               >
-                {paymentStarted ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Payment window open...
-                  </>
+                {loading ? (
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading payment...</>
+                ) : paying ? (
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Opening payment window...</>
                 ) : (
-                  '💳 Pay with Paystack'
+                  'Pay now'
                 )}
               </Button>
-            )}
-            <p className="text-center text-xs text-gray-400 mt-3">
-              A Paystack payment popup will open on this page
-            </p>
+
+              <p className="text-center text-[11px] text-gray-400 mt-1">
+                After completing payment above, tap the button below to confirm your order.
+              </p>
+            </form>
           </div>
         </div>
-
-        {/* Trust badges */}
-        <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-gray-400">
-          <span>🔒 SSL Secured</span>
-          <span>·</span>
-          <span>✅ Paystack Verified</span>
-          <span>·</span>
-          <span>🛡️ Safe Checkout</span>
-          <span>·</span>
-          <span>📱 Mobile Money Accepted</span>
-        </div>
-
-        <Link to="/Checkout" className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 transition-colors">
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Checkout
-        </Link>
       </div>
+
+      {/* Bottom spacer */}
+      <div className="h-8" />
     </div>
   );
 }

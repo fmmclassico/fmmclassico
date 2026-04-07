@@ -49,12 +49,17 @@ const AuthenticatedApp = () => {
           <MainPage />
         </LayoutWrapper>
       } />
-      {/* Payment pages — NO layout wrapper, they have their own header */}
+      {/* Payment — own header (no layout wrapper) */}
       <Route path="/Payment" element={<Payment />} />
-      <Route path="/PaymentConfirmed" element={<PaymentConfirmed />} />
+      {/* PaymentConfirmed — WITH layout so header/nav is visible for tracking */}
+      <Route path="/PaymentConfirmed" element={
+        <LayoutWrapper currentPageName="PaymentConfirmed">
+          <PaymentConfirmed />
+        </LayoutWrapper>
+      } />
 
       {Object.entries(Pages).map(([path, Page]) => (
-        path === 'Payment' || path === 'PaymentConfirmed' ? null :
+        path === 'Payment' ? null :
         <Route
           key={path}
           path={`/${path}`}

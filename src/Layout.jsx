@@ -281,7 +281,7 @@ export default function Layout({ children, currentPageName }) {
               
               <Link to={createPageUrl('Home')} className="flex items-center">
                 <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-                  FMM <span className="text-gray-300">CLASSICO</span>
+                  FMM <span className="text-white">CLASSICO</span>
                 </h1>
               </Link>
             </div>

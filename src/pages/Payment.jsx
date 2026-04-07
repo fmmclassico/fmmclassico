@@ -140,7 +140,7 @@ export default function Payment() {
               </Button>
               <Link to="/" className="flex items-center">
                 <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-                  FMM <span className="text-gray-300">CLASSICO</span>
+                  FMM <span className="text-white">CLASSICO</span>
                 </h1>
               </Link>
             </div>
@@ -227,29 +227,19 @@ export default function Payment() {
         </div>
 
         {/* Two-column layout */}
-        <div className="flex flex-col md:flex-row gap-0 rounded-xl overflow-hidden shadow-lg border border-gray-100">
+        <div className="flex flex-col md:flex-row gap-0 rounded-xl overflow-hidden shadow-lg border border-gray-100 min-h-[520px]">
 
           {/* ── LEFT PANEL — store info (Paystack-style light blue) ── */}
           <div className="md:w-5/12 flex flex-col items-center justify-center py-10 px-8 text-center"
             style={{ background: '#e8f0f9' }}>
 
-            {/* Store logo */}
-            <div className="w-28 h-28 rounded-xl overflow-hidden shadow-md mb-5 bg-gray-900 flex items-center justify-center">
-              <img
-                src="https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg"
-                alt="FMM CLASSICO"
-                className="w-full h-full object-cover"
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
-            </div>
-
-            <h2 className="text-xl font-black text-gray-800 mb-0.5">FMM CLASSICO</h2>
-            <p className="text-xs text-gray-500 mb-4 font-medium">BY FMM CLASSICO</p>
+            <h2 className="text-2xl font-black text-gray-800 mb-5">FMM CLASSICO</h2>
 
             <p className="text-sm text-blue-700 leading-relaxed max-w-xs">
               FMM CLASSICO is an online store offering a wide range of{' '}
-              <span className="font-semibold">phone accessories</span> and{' '}
-              <span className="font-semibold">electronic appliances</span>, providing quality
+              <span className="font-semibold">Phones &amp; Accessories</span>,{' '}
+              <span className="font-semibold">Home Appliances</span> and{' '}
+              <span className="font-semibold">Electronics</span>, providing quality
               products and convenient shopping for our customers.
             </p>
 

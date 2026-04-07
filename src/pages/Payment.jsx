@@ -12,9 +12,7 @@ import { Badge } from '@/components/ui/badge';
 const ASH = '#1f2937';
 const ASH_HOVER = '#374151';
 
-// ⚠️ Replace with your actual Paystack PUBLIC key from your Paystack dashboard
-// https://dashboard.paystack.com/#/settings/developers
-const PAYSTACK_PUBLIC_KEY = 'pk_live_xxxxxxxxxxxxxxxxxxxxxxxx';
+const PAYSTACK_PUBLIC_KEY = 'pk_live_8e08afef1e1e7e7130f3f22d1c30a62cdd6b647e';
 
 function formatAmount(num) {
   const n = Number(num);

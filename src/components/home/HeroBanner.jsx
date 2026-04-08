@@ -12,7 +12,7 @@ const DEFAULT_SLIDES = [
     badge: '🔥 New Arrivals',
     title: 'Premium Phone Accessories',
     subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
-    bg_gradient: 'from-orange-600 via-orange-500 to-amber-400',
+    bg_gradient: 'from-red-800 via-red-700 to-red-600',
     image_url: 'https://i.pinimg.com/1200x/99/64/a2/9964a202c67115b1f40714082848c312.jpg',
     cta_link: createPageUrl('Shop?category=phones'),
     cta_text: 'Shop Now',
@@ -81,7 +81,7 @@ export default function HeroBanner() {
 
   return (
     <div
-      className={`relative bg-gradient-to-r ${slide.bg_gradient || 'from-orange-600 via-orange-500 to-amber-400'} overflow-hidden transition-all duration-700`}
+      className={`relative bg-gradient-to-r ${slide.bg_gradient || 'from-red-800 via-red-700 to-red-600'} overflow-hidden transition-all duration-700`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -110,7 +110,7 @@ export default function HeroBanner() {
                 </p>
               )}
               <Link to={ctaHref}>
-                <Button size="sm" className="bg-white text-orange-600 hover:bg-orange-50 font-bold shadow-lg text-sm">
+                <Button size="sm" className="bg-white text-red-800 hover:bg-red-50 font-bold shadow-lg text-sm">
                   {slide.cta_text || 'Shop Now'} <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>

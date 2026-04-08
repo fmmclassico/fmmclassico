@@ -208,7 +208,7 @@ export default function Payment() {
       </header>
 
       {/* ══ PAGE BODY ══ */}
-      <div className="flex-1 container mx-auto px-4 py-4 max-w-5xl">
+      <div className="flex-1 container mx-auto px-4 py-6 max-w-5xl">
 
         {/* Back + title row */}
         <div className="flex items-start justify-between mb-4">
@@ -227,7 +227,7 @@ export default function Payment() {
         </div>
 
         {/* Two-column layout */}
-        <div className="flex flex-col md:flex-row gap-0 rounded-xl overflow-hidden shadow-lg border border-gray-100 min-h-[520px]">
+        <div className="flex flex-col md:flex-row gap-0 rounded-xl overflow-hidden shadow-lg border border-gray-100 min-h-[580px]">
 
           {/* ── LEFT PANEL — store info (Paystack-style light blue) ── */}
           <div className="md:w-5/12 flex flex-col items-center justify-center py-10 px-8 text-center"
@@ -282,59 +282,59 @@ export default function Payment() {
           </div>
 
           {/* ── RIGHT PANEL — payment form ── */}
-          <div className="md:w-7/12 bg-white flex flex-col justify-center px-8 py-10">
-            <form onSubmit={handlePay} className="space-y-4">
+          <div className="md:w-7/12 bg-white flex flex-col justify-center px-6 md:px-10 py-8 md:py-10">
+            <form onSubmit={handlePay} className="space-y-5">
 
               {/* First & Last name */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">First name</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">First name</label>
                   <Input placeholder="First name" value={firstName}
                     onChange={e => setFirstName(e.target.value)}
-                    className="text-sm" />
+                    className="text-base h-12" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Last name</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Last name</label>
                   <Input placeholder="Last name" value={lastName}
                     onChange={e => setLastName(e.target.value)}
-                    className="text-sm" />
+                    className="text-base h-12" />
                 </div>
               </div>
 
               {/* Email */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Email address</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email address</label>
                 <Input type="email" placeholder="Email address" value={emailVal}
                   onChange={e => setEmailVal(e.target.value)}
-                  required className="text-sm" />
+                  required className="text-base h-12" />
               </div>
 
               {/* Phone */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Phone number</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone number</label>
                 <div className="flex gap-2">
-                  <div className="flex items-center border border-input rounded-md px-3 py-2 bg-background text-sm text-gray-600 gap-1 flex-shrink-0">
-                    <span className="text-base">🇬🇭</span>
+                  <div className="flex items-center border border-input rounded-md px-3 py-2.5 bg-background text-base text-gray-600 gap-1.5 flex-shrink-0 h-12">
+                    <span className="text-lg">🇬🇭</span>
                     <span>+233</span>
-                    <svg className="h-3 w-3 ml-0.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
+                    <svg className="h-3.5 w-3.5 ml-0.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
                   </div>
                   <Input placeholder="Phone number" value={phone}
                     onChange={e => setPhone(e.target.value)}
-                    className="text-sm flex-1" />
+                    className="text-base flex-1 h-12" />
                 </div>
               </div>
 
               {/* Amount (read-only) */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Amount</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Amount</label>
                 <div className="flex gap-2">
-                  <div className="flex items-center border border-input rounded-md px-3 py-2 bg-gray-50 text-sm text-gray-600 flex-shrink-0 font-semibold">
+                  <div className="flex items-center border border-input rounded-md px-3 py-2.5 bg-gray-50 text-base text-gray-600 flex-shrink-0 font-semibold h-12">
                     GHS
                   </div>
                   <Input
                     value={formatAmount(amount)}
                     readOnly
-                    className="text-sm flex-1 bg-gray-50 font-semibold text-gray-700 cursor-default"
+                    className="text-base flex-1 bg-gray-50 font-semibold text-gray-700 cursor-default h-12"
                   />
                 </div>
               </div>
@@ -343,7 +343,7 @@ export default function Payment() {
               <Button
                 type="submit"
                 disabled={loading || paying}
-                className="w-full py-6 text-base font-bold rounded-lg text-white bg-green-500 hover:bg-green-600 mt-2"
+                className="w-full py-7 text-lg font-bold rounded-lg text-white bg-green-500 hover:bg-green-600 mt-3"
               >
                 {loading ? (
                   <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading payment...</>
@@ -354,8 +354,8 @@ export default function Payment() {
                 )}
               </Button>
 
-              <p className="text-center text-[11px] text-gray-400 mt-1">
-                After completing payment above, tap the button below to confirm your order.
+              <p className="text-center text-xs text-gray-400 mt-1">
+                You will be redirected to Paystack to complete your payment securely.
               </p>
             </form>
           </div>

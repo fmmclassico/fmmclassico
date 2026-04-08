@@ -5,7 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CheckCircle2, Package, Bell, Loader2, Clock, Truck, MapPin, Home as HomeIcon } from 'lucide-react';
+import { CheckCircle2, Package, Bell, Loader2, Clock, Truck, Home as HomeIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -48,15 +48,15 @@ export default function PaymentConfirmed() {
 
   // Fetch order from DB (retry until found)
   const { data: orderData } = useQuery({
-    queryKey: ['order', orderId],
-    queryFn: async () => {
-      const orders = await base44.entities.Order.list('-created_date', 100);
-      return orders.find(o => o.id === orderId) || null;
-    },
-    enabled: !!orderId && !!user,
-    retry: 5,
-    retryDelay: 1500,
-    refetchInterval: (data) => (!data ? 2000 : false),
+  queryKey: ['order', orderId],
+  queryFn: async () => {
+    const orders = await base44.entities.Order.list('-created_date', 200);
+    return orders.find(o => o.id === orderId) || null;
+  },
+  enabled: !!orderId && !!user,
+  retry: 10,
+  retryDelay: 1000,
+  refetchInterval: (query) => (!query.state.data ? 1500 : 5000),
   });
 
   // Listen for admin payment confirmation in real-time
@@ -87,28 +87,26 @@ export default function PaymentConfirmed() {
       const itemsList = (orderData?.items || []).map(i => `${i.product_name} x${i.quantity}`).join(', ');
 
       try {
-        // 1. Update order tracking if orderData available, else skip (will be done when orderData loads)
-        if (orderData) {
-          const alreadyClaimed = orderData.tracking_updates?.some(t => t.status === 'Payment Claimed');
-          if (!alreadyClaimed) {
-            await base44.entities.Order.update(orderId, {
-              tracking_updates: [
-                ...(orderData.tracking_updates || []),
-                {
-                  status: 'Payment Claimed',
-                  message: 'Customer completed payment via Paystack – awaiting FMM CLASSICO verification',
-                  timestamp: new Date().toISOString()
-                }
-              ]
-            });
-          }
-        }
+        // 1. Update order status to confirmed and add tracking update
+        //    This ensures order appears properly in My Orders page
+        const updateData = {
+          status: 'confirmed',
+          tracking_updates: [
+            ...(orderData?.tracking_updates || []),
+            {
+              status: 'Payment Confirmed',
+              message: 'Payment completed via Paystack. Order is being processed.',
+              timestamp: new Date().toISOString()
+            }
+          ]
+        };
+        await base44.entities.Order.update(orderId, updateData);
 
         // 2. Customer notification — fire immediately
         await base44.entities.Notification.create({
           user_email: user.email,
           title: '🛍️ Order Placed & Payment Received!',
-          message: `Your order #${orderNumber} has been placed and payment received! FMM CLASSICO will verify within 2–5 minutes. Total: ₵${totalDisplay}.`,
+          message: `Your order #${orderNumber} has been placed. Payment confirmed and your order is being processed. Total: ₵${totalDisplay}.`,
           type: 'order_placed',
           order_id: orderId,
           order_number: orderNumber,
@@ -126,15 +124,16 @@ export default function PaymentConfirmed() {
           is_read: false
         });
 
-        // 4. Invalidate caches
+        // 4. Invalidate caches — ensure orders show up in My Orders page
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
         queryClient.invalidateQueries({ queryKey: ['orders'] });
+        queryClient.invalidateQueries({ queryKey: ['order', orderId] });
 
         // 5. Send emails (non-blocking)
         base44.integrations.Core.SendEmail({
           to: user.email,
           subject: `🛍️ Order Confirmed – FMM CLASSICO #${orderNumber}`,
-          body: `Hi ${custName},\n\nThank you! Your order #${orderNumber} has been placed and payment received!\n\nOrder Total: ₵${totalDisplay}\nDelivery Address: ${address}, ${city}\n\nWe will verify your payment within 2–5 minutes and update your order status. You can track your order in the app.\n\nThank you for shopping with us!\n📞 FMM CLASSICO: 0509896035\n📧 fmmclassico@gmail.com`
+          body: `Hi ${custName},\n\nThank you! Your order #${orderNumber} has been placed. Payment confirmed and your order is being processed.\n\nOrder Total: ₵${totalDisplay}\nDelivery Address: ${address}, ${city}\n\nYou can track your order in the app.\n\nThank you for shopping with us!\n📞 FMM CLASSICO: 0509896035\n📧 fmmclassico@gmail.com`
         }).catch(() => {});
 
         base44.integrations.Core.SendEmail({
@@ -148,8 +147,9 @@ export default function PaymentConfirmed() {
           .then(cartItems => Promise.all(cartItems.map(item => base44.entities.CartItem.delete(item.id).catch(() => {}))))
           .catch(() => {});
 
-        sessionStorage.removeItem('fmm_pending_order');
-        toast.success("Order placed! We'll verify your payment shortly.");
+        // Keep sessionStorage briefly so Orders page can find the data if needed
+        setTimeout(() => sessionStorage.removeItem('fmm_pending_order'), 5000);
+        toast.success("Order placed! Payment confirmed.");
       } catch (e) {
         console.error('Notify error:', e);
       }
@@ -168,14 +168,13 @@ export default function PaymentConfirmed() {
     { label: 'Payment Verified', icon: CheckCircle2, done: paymentConfirmedByAdmin || ['confirmed','processing','shipped','in_transit','delivered'].includes(orderData?.status) },
     { label: 'Processing', icon: Clock, done: ['processing','shipped','in_transit','delivered'].includes(orderData?.status) },
     { label: 'Shipped', icon: Truck, done: ['shipped','in_transit','delivered'].includes(orderData?.status) },
-    { label: 'In Transit', icon: MapPin, done: ['in_transit','delivered'].includes(orderData?.status) },
     { label: 'Delivered', icon: HomeIcon, done: orderData?.status === 'delivered' },
   ];
 
   if (!user || !orderId) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto text-orange-500" />
+        <Loader2 className="h-8 w-8 animate-spin mx-auto text-red-700" />
         <p className="text-gray-500 mt-3">Loading your order...</p>
       </div>
     );
@@ -198,9 +197,9 @@ export default function PaymentConfirmed() {
 
         {/* Notifying status */}
         {isNotifying ? (
-          <Card className="p-5 bg-orange-50 border-orange-200 text-center mb-4">
-            <Loader2 className="h-7 w-7 animate-spin text-orange-500 mx-auto mb-2" />
-            <p className="text-sm font-medium text-orange-800">Processing your order...</p>
+          <Card className="p-5 bg-red-50 border-red-200 text-center mb-4">
+            <Loader2 className="h-7 w-7 animate-spin text-red-600 mx-auto mb-2" />
+            <p className="text-sm font-medium text-red-800">Processing your order...</p>
           </Card>
         ) : (
           <Card className="p-5 bg-blue-50 border-blue-200 text-center mb-4">
@@ -208,7 +207,7 @@ export default function PaymentConfirmed() {
             <p className="text-sm text-blue-700">
               {paymentConfirmedByAdmin
                 ? '🎉 Payment verified! Your order is being prepared.'
-                : 'Payment received! FMM CLASSICO will verify within <strong>2–5 minutes</strong>.'}
+                : 'Payment confirmed. Your order is being processed and will be verified shortly.'}
             </p>
           </Card>
         )}
@@ -249,7 +248,6 @@ export default function PaymentConfirmed() {
                   <div className="flex-1 pb-2 pt-1">
                     <p className={`text-sm font-semibold ${step.done ? 'text-green-700' : 'text-gray-400'}`}>{step.label}</p>
                     {i === 0 && <p className="text-xs text-gray-400">Payment received from Paystack</p>}
-                    {i === 1 && !step.done && <p className="text-xs text-orange-500">Awaiting verification (2–5 mins)</p>}
                     {i === 1 && step.done && <p className="text-xs text-green-600">Verified by FMM CLASSICO</p>}
                   </div>
                 </div>
@@ -262,7 +260,7 @@ export default function PaymentConfirmed() {
         <div className="space-y-2 mt-4">
           {orderId && (
             <Link to={createPageUrl(`OrderTracking?id=${orderId}`)} className="block">
-              <Button className="w-full gap-2 bg-orange-600 hover:bg-orange-700">
+              <Button className="w-full gap-2 bg-red-700 hover:bg-red-800">
                 <Package className="h-4 w-4" />
                 Track My Order
               </Button>

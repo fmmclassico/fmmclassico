@@ -57,7 +57,10 @@ export default function Orders() {
     queryKey: ['orders', user?.email],
     queryFn: () => base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 200),
     enabled: !!user?.email,
-    refetchInterval: 8000,
+    refetchInterval: 5000,
+    retry: 5,
+    retryDelay: 1000,
+    staleTime: 2000,
   });
 
   const claimPaymentMutation = useMutation({
@@ -132,13 +135,13 @@ export default function Orders() {
   if (orders.length === 0) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 mb-4">
-          <Package className="h-8 w-8 text-orange-600" />
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
+          <Package className="h-8 w-8 text-red-700" />
         </div>
         <h3 className="text-lg font-medium text-gray-800 mb-2">No orders yet</h3>
         <p className="text-gray-500 mb-4">Start shopping to see your orders here</p>
         <Link to={createPageUrl('Shop')}>
-          <Button className="bg-orange-600 hover:bg-orange-700">Go to Shop</Button>
+          <Button className="bg-red-700 hover:bg-red-800">Go to Shop</Button>
         </Link>
       </div>
     );
@@ -148,8 +151,8 @@ export default function Orders() {
     <div className="container mx-auto px-4 py-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-orange-100 rounded-full">
-            <Package className="h-6 w-6 text-orange-600" />
+          <div className="p-2 bg-red-100 rounded-full">
+            <Package className="h-6 w-6 text-red-700" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">My Orders</h1>
@@ -222,7 +225,7 @@ export default function Orders() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-black text-orange-600 text-base">₵{order.total_amount?.toFixed(2)}</p>
+                      <p className="font-black text-red-700 text-base">₵{order.total_amount?.toFixed(2)}</p>
                       <Badge className={`text-[10px] ${statusConfig[order.status]?.color || 'bg-gray-100 text-gray-800'}`}>
                         {statusConfig[order.status]?.label || order.status}
                       </Badge>

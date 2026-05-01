@@ -22,7 +22,7 @@ const DEFAULT_SLIDES = [
     badge: '⚡ Best Deals',
     title: 'Electronic Appliances',
     subtitle: 'Top quality electronics for your everyday needs',
-    bg_gradient: 'from-blue-600 via-blue-500 to-indigo-400',
+    bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
     image_url: 'https://m.media-amazon.com/images/I/519qw7On-vL.jpg',
     cta_link: createPageUrl('Shop?category=electronic_appliances'),
     cta_text: 'Shop Now',
@@ -32,7 +32,7 @@ const DEFAULT_SLIDES = [
     badge: '🏡 Home Deals',
     title: 'Home Appliances',
     subtitle: 'Quality home appliances delivered to your door',
-    bg_gradient: 'from-gray-800 via-gray-700 to-gray-600',
+    bg_gradient: 'from-[#00B3A6] via-[#00a396] to-[#008f83]',
     image_url: 'https://i.pinimg.com/1200x/60/53/2f/60532f215514eb6e5068ec232e1428c1.jpg',
     cta_link: createPageUrl('Shop?category=home_appliances'),
     cta_text: 'Shop Now',
@@ -110,7 +110,7 @@ export default function HeroBanner() {
                 </p>
               )}
               <Link to={ctaHref}>
-                <Button size="sm" className="bg-white text-red-800 hover:bg-red-50 font-bold shadow-lg text-sm">
+                <Button size="sm" className="bg-white font-bold shadow-lg text-sm" style={{ color: slide.id === 'default-2' ? '#0093A6' : slide.id === 'default-3' ? '#00B3A6' : '#991b1b' }}>
                   {slide.cta_text || 'Shop Now'} <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>

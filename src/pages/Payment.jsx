@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-const ASH = '#1f2937';
-const ASH_HOVER = '#374151';
+const ASH = '#2E86C1';
+const ASH_HOVER = '#2578ae';
 
 const PAYSTACK_PUBLIC_KEY = 'pk_live_8e08afef1e1e7e7130f3f22d1c30a62cdd6b647e';
 

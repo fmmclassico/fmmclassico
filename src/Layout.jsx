@@ -221,9 +221,8 @@ export default function Layout({ children, currentPageName }) {
     ]);
   }, []);
 
-  // Dark ash color: #1f2937 (gray-800) / #374151 (gray-700)
-  const ASH = '#1f2937';
-  const ASH_HOVER = '#374151';
+  const ASH = '#2E86C1';
+  const ASH_HOVER = '#2578ae';
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full" style={{maxWidth:'100vw', boxSizing:'border-box'}}>

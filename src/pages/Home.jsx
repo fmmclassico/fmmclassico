@@ -30,7 +30,7 @@ const HOME_CATEGORIES = [
     id: 'phone_accessories',
     label: 'Phone Accessories',
     icon: Headphones,
-    color: 'bg-orange-100 text-orange-700',
+    color: 'bg-[#0093A6]/10 text-[#0093A6]',
     link: createPageUrl('Shop?category=phone_cases'),
     image: 'https://mate.net.in/public/uploads/all/UsReqZvujmEjMUb27qlTtRcCG8Pf18SyULO4HW7U.jpg',
     match: (p) => ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category),
@@ -42,7 +42,7 @@ const HOME_CATEGORIES = [
       { label: 'Earphones', link: createPageUrl('Shop?category=earphones') },
       { label: 'Cables', link: createPageUrl('Shop?category=cables') },
     ],
-    chipColor: 'text-orange-700 bg-orange-50 border-orange-200 hover:bg-orange-100',
+    chipColor: 'text-[#0093A6] bg-[#0093A6]/5 border-[#0093A6]/30 hover:bg-[#0093A6]/10',
   },
   {
     id: 'electronics',
@@ -143,7 +143,7 @@ export default function Home() {
       <div className="bg-white mt-3 mx-2 md:mx-4 rounded-2xl shadow-sm p-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-black text-gray-900 text-base">Shop by Category</h2>
-          <Link to={createPageUrl('Categories')} className="text-orange-500 text-xs font-semibold flex items-center hover:underline">
+          <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center hover:underline">
             All <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
@@ -192,7 +192,7 @@ export default function Home() {
               <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Flash Sale</h2>
               <span className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Limited Time</span>
             </div>
-            <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-orange-500 text-xs font-bold border border-orange-400 rounded-full px-3 py-1 hover:bg-orange-50 transition-colors">
+            <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
               See All <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
@@ -238,7 +238,7 @@ export default function Home() {
               <Star className="h-5 w-5 text-yellow-500 fill-yellow-400" />
               <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">New Arrivals</h2>
             </div>
-            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-orange-500 text-xs font-bold border border-orange-400 rounded-full px-3 py-1 hover:bg-orange-50 transition-colors">
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
               See All <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
@@ -280,7 +280,7 @@ export default function Home() {
               <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Classico Deals</h2>
               <span className="bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Top Picks</span>
             </div>
-            <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-orange-500 text-xs font-bold border border-orange-400 rounded-full px-3 py-1 hover:bg-orange-50 transition-colors">
+            <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
               See All <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
@@ -322,7 +322,7 @@ export default function Home() {
               <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Falaa Deals</h2>
               <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Best Prices</span>
             </div>
-            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-orange-500 text-xs font-bold border border-orange-400 rounded-full px-3 py-1 hover:bg-orange-50 transition-colors">
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
               See All <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
@@ -364,7 +364,7 @@ export default function Home() {
               <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Top Selling</h2>
               <span className="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-full">🔥 Hot</span>
             </div>
-            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-orange-500 text-xs font-bold border border-orange-400 rounded-full px-3 py-1 hover:bg-orange-50 transition-colors">
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
               See All <ChevronRight className="h-3 w-3" />
             </Link>
           </div>

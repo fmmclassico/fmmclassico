@@ -1,0 +1,91 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user this notification is for"
+    },
+    "title": {
+      "type": "string",
+      "description": "Notification title"
+    },
+    "message": {
+      "type": "string",
+      "description": "Notification message"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "order_placed",
+        "payment_confirmed",
+        "payment_pending",
+        "order_processing",
+        "order_shipped",
+        "order_delivered",
+        "order_cancelled",
+        "delivery_update",
+        "general"
+      ],
+      "description": "Type of notification"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Related order ID if any"
+    },
+    "order_number": {
+      "type": "string",
+      "description": "Related order number if any"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Has the user read this notification"
+    }
+  },
+  "required": [
+    "user_email",
+    "title",
+    "message",
+    "type"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

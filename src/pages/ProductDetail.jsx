@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShoppingCart, Star, Shield, Plus, Minus } from 'lucide-react';
+import ReviewSection from '@/components/products/ReviewSection';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -335,6 +336,9 @@ export default function ProductDetail() {
           </div>
         </motion.div>
       </div>
+
+      {/* Review Section */}
+      <ReviewSection product={product} user={user} />
     </div>
   );
 }

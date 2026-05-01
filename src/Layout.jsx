@@ -22,7 +22,8 @@ import {
   Bot,
   Bell,
   Send,
-  Phone
+  Phone,
+  Star
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -131,6 +132,7 @@ export default function Layout({ children, currentPageName }) {
       { icon: Bell, label: 'Promo Banners', page: 'AdminBanners' },
       { icon: Send, label: 'Broadcast to Customers', page: 'AdminBroadcast' },
       { icon: Phone, label: 'WhatsApp Broadcast', page: 'AdminSMSBroadcast' },
+      { icon: Star, label: 'Manage Reviews', page: 'AdminReviews' },
     ] : []),
   ];
 

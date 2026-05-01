@@ -1,0 +1,42 @@
+{
+  "name": "Review",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "description": "Reference to the product"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Name of the reviewer"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the reviewer"
+    },
+    "rating": {
+      "type": "number",
+      "description": "Rating out of 5"
+    },
+    "comment": {
+      "type": "string",
+      "description": "Review comment"
+    },
+    "verified_purchase": {
+      "type": "boolean",
+      "default": true,
+      "description": "Is this a verified purchase"
+    },
+    "approved": {
+      "type": "boolean",
+      "default": false,
+      "description": "Has admin approved this review to be publicly visible"
+    }
+  },
+  "required": [
+    "product_id",
+    "user_name",
+    "rating",
+    "comment"
+  ]
+}

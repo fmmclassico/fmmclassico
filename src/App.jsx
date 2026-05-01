@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Payment from './pages/Payment';
 import PaymentConfirmed from './pages/PaymentConfirmed';
+import AdminReviews from './pages/AdminReviews';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -51,6 +52,11 @@ const AuthenticatedApp = () => {
       } />
       {/* Payment — own header (no layout wrapper) */}
       <Route path="/Payment" element={<Payment />} />
+      <Route path="/AdminReviews" element={
+        <LayoutWrapper currentPageName="AdminReviews">
+          <AdminReviews />
+        </LayoutWrapper>
+      } />
       {/* PaymentConfirmed — WITH layout so header/nav is visible for tracking */}
       <Route path="/PaymentConfirmed" element={
         <LayoutWrapper currentPageName="PaymentConfirmed">

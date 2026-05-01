@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Zap, Star, Tag, Home as HomeIcon, Smartphone, Headphones, Tv, ShoppingBag, Gem, TrendingUp, Battery, Cable, Wifi, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import HeroBanner from '../components/home/HeroBanner';
+import FlashSaleCountdown from '../components/home/FlashSaleCountdown';
 
 // Main categories shown on home page
 const HOME_CATEGORIES = [
@@ -123,12 +124,16 @@ export default function Home() {
 
   // Product buckets
   const phoneAccessoryCategories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers'];
-  const flashSaleProducts = products.filter(p => p.original_price && p.original_price > p.price).slice(0, 6);
-  const fallbackFlash = products.filter(p => p.featured).slice(0, 6);
-  const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : fallbackFlash.length > 0 ? fallbackFlash : products.slice(0, 6);
+  // Flash sale: prefer products tagged flash_sale=true, fallback to discounted
+  const flashTagged = products.filter(p => p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
+  const flashSaleProducts = flashTagged.length >= 2 ? flashTagged : products.filter(p => p.original_price && p.original_price > p.price).slice(0, 6);
+  const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : products.filter(p => p.featured).slice(0, 6);
+  const flashSaleEndTime = flashTagged.length > 0 ? flashTagged[0].flash_sale_end : null;
   const newArrivals = [...products].filter(p => p.category !== 'home_appliances').sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 6);
   const classicoDeals = products.filter(p => p.featured).slice(0, 6);
-  const falaaDeals = [...products].filter(p => p.price > 0 && p.category !== 'home_appliances').sort((a, b) => a.price - b.price).slice(0, 6);
+  // Donkomi: prefer donkomi-tagged, fallback to cheapest
+  const donkomiTagged = products.filter(p => p.donkomi);
+  const donkomiDeals = donkomiTagged.length >= 2 ? donkomiTagged.slice(0, 6) : [...products].filter(p => p.price > 0 && p.category !== 'home_appliances').sort((a, b) => a.price - b.price).slice(0, 6);
   // Top selling = highest reviews_count products
   const topSelling = [...products].filter(p => p.reviews_count > 0).sort((a, b) => (b.reviews_count || 0) - (a.reviews_count || 0)).slice(0, 6);
   const topSellingFallback = topSelling.length >= 2 ? topSelling : [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 6);
@@ -187,10 +192,11 @@ export default function Home() {
       <div className="mt-4 mx-2 md:mx-4">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Zap className="h-5 w-5 text-orange-500 fill-orange-400" />
-              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Flash Sale</h2>
-              <span className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Limited Time</span>
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">CLASSICO Deals</h2>
+              <span className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Flash Sale</span>
+              <FlashSaleCountdown endTime={flashSaleEndTime} />
             </div>
             <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
               See All <ChevronRight className="h-3 w-3" />
@@ -319,7 +325,7 @@ export default function Home() {
           <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
             <div className="flex items-center gap-2">
               <Tag className="h-5 w-5 text-green-600" />
-              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Falaa Deals</h2>
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Donkomi Sales</h2>
               <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Best Prices</span>
             </div>
             <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
@@ -335,7 +341,7 @@ export default function Home() {
                     <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                   </div>
                 ))
-              : (falaaDeals.length > 0 ? falaaDeals : products.slice(0, 5)).map(product => (
+              : (donkomiDeals.length > 0 ? donkomiDeals : products.slice(0, 5)).map(product => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
                     className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">

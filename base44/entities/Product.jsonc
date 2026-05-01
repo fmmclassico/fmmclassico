@@ -1,0 +1,114 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Product name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Product description"
+    },
+    "price": {
+      "type": "number",
+      "description": "Product price"
+    },
+    "original_price": {
+      "type": "number",
+      "description": "Original price before discount"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "phones",
+        "phone_cases",
+        "chargers",
+        "earphones",
+        "cables",
+        "power_banks",
+        "screen_protectors",
+        "holders",
+        "speakers",
+        "smart_watches",
+        "electronic_appliances",
+        "home_appliances"
+      ],
+      "description": "Product category"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Product main image URL"
+    },
+    "image_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional product images (up to 4)"
+    },
+    "video_url": {
+      "type": "string",
+      "description": "Product video URL (shows as 5th slide in gallery)"
+    },
+    "stock": {
+      "type": "number",
+      "description": "Available stock quantity"
+    },
+    "featured": {
+      "type": "boolean",
+      "default": false,
+      "description": "Is this a featured product"
+    },
+    "flash_sale": {
+      "type": "boolean",
+      "default": false,
+      "description": "Is this product in a CLASSICO flash sale"
+    },
+    "flash_sale_end": {
+      "type": "string",
+      "description": "ISO datetime when flash sale ends (e.g. 2026-05-03T23:59:00)"
+    },
+    "donkomi": {
+      "type": "boolean",
+      "default": false,
+      "description": "Is this product featured in Donkomi (best price) section"
+    },
+    "review_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Are customer reviews enabled for this product"
+    },
+    "rating": {
+      "type": "number",
+      "description": "Product rating out of 5"
+    },
+    "reviews_count": {
+      "type": "number",
+      "description": "Number of reviews"
+    }
+  },
+  "required": [
+    "name",
+    "price",
+    "category"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

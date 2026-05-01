@@ -12,7 +12,7 @@ const DEFAULT_SLIDES = [
     badge: '🔥 New Arrivals',
     title: 'Premium Phone Accessories',
     subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
-    bg_gradient: 'from-red-800 via-red-700 to-red-600',
+    bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
     image_url: 'https://i.pinimg.com/1200x/99/64/a2/9964a202c67115b1f40714082848c312.jpg',
     cta_link: createPageUrl('Shop?category=phones'),
     cta_text: 'Shop Now',

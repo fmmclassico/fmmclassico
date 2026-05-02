@@ -72,37 +72,37 @@ export default function PaymentConfirmed() {
     return unsubscribe;
   }, [orderId]);
 
-  // Fire notifications as soon as user is available — don't wait for orderData
+  // Wait for both user AND orderData before firing notifications
   useEffect(() => {
     const autoNotify = async () => {
       if (!user || !orderId || notifyCalledRef.current) return;
+      // Wait until orderData is loaded (retry loop handles this)
+      if (!orderData) return;
       notifyCalledRef.current = true;
       setIsNotifying(true);
 
-      const totalDisplay = amount > 0 ? amount.toFixed(2) : '0.00';
-      const custName = stored.customerName || orderData?.customer_name || user.full_name || 'Customer';
-      const custPhone = stored.customerPhone || orderData?.customer_phone || '';
-      const address = stored.deliveryAddress || orderData?.delivery_address || '';
-      const city = stored.city || orderData?.city || '';
-      const itemsList = (orderData?.items || []).map(i => `${i.product_name} x${i.quantity}`).join(', ');
+      const totalDisplay = amount > 0 ? amount.toFixed(2) : (orderData.total_amount?.toFixed(2) || '0.00');
+      const custName = stored.customerName || orderData.customer_name || user.full_name || 'Customer';
+      const custPhone = stored.customerPhone || orderData.customer_phone || '';
+      const address = stored.deliveryAddress || orderData.delivery_address || '';
+      const city = stored.city || orderData.city || '';
+      const itemsList = (orderData.items || []).map(i => `${i.product_name} x${i.quantity}`).join(', ');
 
       try {
-        // 1. Update order status to confirmed and add tracking update
-        //    This ensures order appears properly in My Orders page
-        const updateData = {
+        // 1. Update order status to confirmed — use existing tracking_updates from the loaded order
+        await base44.entities.Order.update(orderId, {
           status: 'confirmed',
           tracking_updates: [
-            ...(orderData?.tracking_updates || []),
+            ...(orderData.tracking_updates || []),
             {
               status: 'Payment Confirmed',
               message: 'Payment completed via Paystack. Order is being processed.',
               timestamp: new Date().toISOString()
             }
           ]
-        };
-        await base44.entities.Order.update(orderId, updateData);
+        });
 
-        // 2. Customer notification — fire immediately
+        // 2. Customer notification
         await base44.entities.Notification.create({
           user_email: user.email,
           title: '🛍️ Order Placed & Payment Received!',
@@ -124,9 +124,9 @@ export default function PaymentConfirmed() {
           is_read: false
         });
 
-        // 4. Invalidate caches — ensure orders show up in My Orders page
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        queryClient.invalidateQueries({ queryKey: ['orders'] });
+        // 4. Invalidate caches — match the exact query keys used in Orders & Notifications pages
+        queryClient.invalidateQueries({ queryKey: ['notifications', user.email] });
+        queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
         queryClient.invalidateQueries({ queryKey: ['order', orderId] });
 
         // 5. Send emails (non-blocking)
@@ -142,24 +142,25 @@ export default function PaymentConfirmed() {
           body: `New order received!\n\n📦 Order: #${orderNumber}\n👤 Customer: ${custName}\n📧 Email: ${user.email}\n📞 Phone: ${custPhone}\n💰 Total: ₵${totalDisplay}\n📍 Address: ${address}, ${city}\n\nItems: ${itemsList || 'See order details'}\n\nPlease verify payment and confirm the order in the Admin panel.`
         }).catch(() => {});
 
-        // 6. Clear cart (non-blocking)
+        // 6. Clear cart (non-blocking — in case Checkout didn't fully clear it)
         base44.entities.CartItem.filter({ user_email: user.email })
           .then(cartItems => Promise.all(cartItems.map(item => base44.entities.CartItem.delete(item.id).catch(() => {}))))
           .catch(() => {});
 
-        // Keep sessionStorage briefly so Orders page can find the data if needed
         setTimeout(() => sessionStorage.removeItem('fmm_pending_order'), 5000);
         toast.success("Order placed! Payment confirmed.");
       } catch (e) {
         console.error('Notify error:', e);
+        // Reset so it can retry on next render if orderData becomes available
+        notifyCalledRef.current = false;
       }
 
       setIsNotifying(false);
       setNotified(true);
     };
 
-    if (user) autoNotify();
-  }, [user]); // Fire as soon as user is known — don't wait for orderData
+    if (user && orderData) autoNotify();
+  }, [user, orderData]); // Wait for BOTH user and orderData to be available
 
 
 

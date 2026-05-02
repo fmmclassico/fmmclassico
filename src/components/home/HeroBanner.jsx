@@ -10,9 +10,9 @@ const DEFAULT_SLIDES = [
   {
     id: 'default-1',
     badge: '🔥 New Arrivals',
-    title: 'Premium Phone Accessories',
+    title: 'Phones & Accessories',
     subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
-    bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
+    bg_gradient: 'from-[#00B3A6] via-[#00a396] to-[#008f83]',
     image_url: 'https://i.pinimg.com/1200x/99/64/a2/9964a202c67115b1f40714082848c312.jpg',
     cta_link: createPageUrl('Shop?category=phones'),
     cta_text: 'Shop Now',
@@ -110,7 +110,7 @@ export default function HeroBanner() {
                 </p>
               )}
               <Link to={ctaHref}>
-                <Button size="sm" className="bg-white font-bold shadow-lg text-sm" style={{ color: slide.id === 'default-2' ? '#0093A6' : slide.id === 'default-3' ? '#00B3A6' : '#991b1b' }}>
+                <Button size="sm" className="bg-white font-bold shadow-lg text-sm" style={{ color: '#0093A6' }}>
                   {slide.cta_text || 'Shop Now'} <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>

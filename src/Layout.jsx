@@ -133,6 +133,7 @@ export default function Layout({ children, currentPageName }) {
       { icon: Send, label: 'Broadcast to Customers', page: 'AdminBroadcast' },
       { icon: Phone, label: 'WhatsApp Broadcast', page: 'AdminSMSBroadcast' },
       { icon: Star, label: 'Manage Reviews', page: 'AdminReviews' },
+      { icon: Settings, label: 'Manage Products', page: 'AdminProducts' },
     ] : []),
   ];
 

@@ -10,8 +10,10 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Payment from './pages/Payment';
 import PaymentConfirmed from './pages/PaymentConfirmed';
 import AdminReviews from './pages/AdminReviews';
+import AdminProducts from './pages/AdminProducts';
 
 const { Pages, Layout, mainPage } = pagesConfig;
+// make Pages accessible in JSX scope for fallback routes
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
@@ -57,6 +59,14 @@ const AuthenticatedApp = () => {
           <AdminReviews />
         </LayoutWrapper>
       } />
+      <Route path="/AdminProducts" element={
+        <LayoutWrapper currentPageName="AdminProducts">
+          <AdminProducts />
+        </LayoutWrapper>
+      } />
+      {/* Case-insensitive fallback routes for common pages */}
+      <Route path="/shop" element={<LayoutWrapper currentPageName="Shop"><Pages.Shop /></LayoutWrapper>} />
+      <Route path="/shop/*" element={<LayoutWrapper currentPageName="Shop"><Pages.Shop /></LayoutWrapper>} />
       {/* PaymentConfirmed — WITH layout so header/nav is visible for tracking */}
       <Route path="/PaymentConfirmed" element={
         <LayoutWrapper currentPageName="PaymentConfirmed">

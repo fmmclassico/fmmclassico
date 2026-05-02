@@ -188,7 +188,7 @@ export default function Home() {
         })()}
       </div>
 
-      {/* ── FLASH SALES ── */}
+      {/* ── CLASSICO DEALS (Flash Sale) ── */}
       <div className="mt-4 mx-2 md:mx-4">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
@@ -202,7 +202,6 @@ export default function Home() {
               See All <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
-          {/* horizontal scroll — max 6 products visible */}
           <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
             {isLoading
               ? Array(5).fill(0).map((_, i) => (
@@ -232,6 +231,83 @@ export default function Home() {
                     )}
                   </Link>
                 ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── DONKOMI DEALS ── */}
+      <div className="mt-5 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-green-600" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Donkomi Deals</h2>
+              <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Best Prices</span>
+            </div>
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+            {isLoading
+              ? Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  </div>
+                ))
+              : (donkomiDeals.length > 0 ? donkomiDeals : products.slice(0, 5)).map(product => (
+                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
+                      {product.image_url
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                      <span className="absolute top-1 left-1 bg-green-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">🔥</span>
+                    </div>
+                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                    <p className="text-xs font-black text-green-700">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && (
+                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                    )}
+                  </Link>
+                ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── SHOP BY BRAND ── */}
+      <div className="mt-5 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <Gem className="h-5 w-5 text-purple-600" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Shop by Brand</h2>
+            </div>
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-4 gap-3 p-4">
+            {[
+              { name: 'Apple', link: createPageUrl('Shop?category=phones'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/120px-Apple_logo_black.svg.png' },
+              { name: 'Samsung', link: createPageUrl('Shop?category=phones'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Samsung_Logo.svg/200px-Samsung_Logo.svg.png' },
+              { name: 'Tecno', link: createPageUrl('Shop?category=phones'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/TECNO_Mobile_Logo.svg/200px-TECNO_Mobile_Logo.svg.png' },
+              { name: 'Infinix', link: createPageUrl('Shop?category=phones'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Infinix_Mobile_logo.svg/200px-Infinix_Mobile_logo.svg.png' },
+              { name: 'Itel', link: createPageUrl('Shop?category=phones'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Itel_logo.svg/200px-Itel_logo.svg.png' },
+              { name: 'Xiaomi', link: createPageUrl('Shop?category=phones'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Xiaomi_logo_%282021-%29.svg/200px-Xiaomi_logo_%282021-%29.svg.png' },
+              { name: 'Sony', link: createPageUrl('Shop?category=electronic_appliances'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Sony_logo.svg/200px-Sony_logo.svg.png' },
+              { name: 'JBL', link: createPageUrl('Shop?category=speakers'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/JBL_logo.svg/200px-JBL_logo.svg.png' },
+            ].map(brand => (
+              <Link key={brand.name} to={brand.link}
+                className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1">
+                <div className="w-10 h-10 flex items-center justify-center">
+                  <img src={brand.img} alt={brand.name} className="max-w-full max-h-full object-contain" />
+                </div>
+                <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
@@ -268,90 +344,6 @@ export default function Home() {
                     </div>
                     <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
                     <p className="text-xs font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
-                    {product.original_price > product.price && (
-                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
-                    )}
-                  </Link>
-                ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── CLASSICO DEALS ── */}
-      <div className="mt-5 mx-2 md:mx-4">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <Gem className="h-5 w-5 text-purple-600" />
-              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Classico Deals</h2>
-              <span className="bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Top Picks</span>
-            </div>
-            <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
-              See All <ChevronRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading
-              ? Array(5).fill(0).map((_, i) => (
-                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
-                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
-                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
-                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
-                  </div>
-                ))
-              : (classicoDeals.length > 0 ? classicoDeals : products.slice(0, 5)).map(product => (
-                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-purple-50 transition-colors p-1.5">
-                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
-                      {product.image_url
-                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                      <span className="absolute top-1 left-1 bg-purple-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">⭐ PICK</span>
-                    </div>
-                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                    <p className="text-xs font-black text-purple-700">₵{product.price?.toLocaleString()}</p>
-                    {product.original_price > product.price && (
-                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
-                    )}
-                  </Link>
-                ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── FALAA DEALS ── */}
-      <div className="mt-5 mx-2 md:mx-4">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <Tag className="h-5 w-5 text-green-600" />
-              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Donkomi Sales</h2>
-              <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Best Prices</span>
-            </div>
-            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
-              See All <ChevronRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading
-              ? Array(5).fill(0).map((_, i) => (
-                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
-                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
-                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
-                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
-                  </div>
-                ))
-              : (donkomiDeals.length > 0 ? donkomiDeals : products.slice(0, 5)).map(product => (
-                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
-                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
-                      {product.image_url
-                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                      <span className="absolute top-1 left-1 bg-green-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">🔥</span>
-                    </div>
-                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                    <p className="text-xs font-black text-green-700">₵{product.price?.toLocaleString()}</p>
                     {product.original_price > product.price && (
                       <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
                     )}

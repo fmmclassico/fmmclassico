@@ -36,6 +36,10 @@
       ],
       "description": "Product category"
     },
+    "brand": {
+      "type": "string",
+      "description": "Product brand e.g. Apple, Samsung, Tecno, Hisense, Oraimo, TCL, Roch, Silver Crest, Midea, Nasco, JBL, Sony, LG, Anker, Infinix, Itel, Xiaomi"
+    },
     "image_url": {
       "type": "string",
       "description": "Product main image URL"

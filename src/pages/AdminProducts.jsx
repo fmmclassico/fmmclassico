@@ -27,9 +27,16 @@ const CATEGORIES = [
   { value: 'home_appliances', label: 'Home Appliances' },
 ];
 
+const BRANDS = [
+  'Apple', 'Samsung', 'Tecno', 'Infinix', 'Itel', 'Xiaomi',
+  'Oraimo', 'JBL', 'Anker', 'Sony', 'LG',
+  'TCL', 'Hisense', 'Roch', 'Silver Crest', 'Midea', 'Nasco',
+  'Other',
+];
+
 const EMPTY_FORM = {
   name: '', description: '', price: '', original_price: '',
-  category: '', stock: '', featured: false, flash_sale: false,
+  category: '', brand: '', stock: '', featured: false, flash_sale: false,
   donkomi: false, review_enabled: true, rating: '', reviews_count: '',
   image_url: '', image_urls: [], video_url: '',
 };
@@ -119,6 +126,7 @@ export default function AdminProducts() {
       price: product.price ?? '',
       original_price: product.original_price ?? '',
       category: product.category || '',
+      brand: product.brand || '',
       stock: product.stock ?? '',
       featured: product.featured || false,
       flash_sale: product.flash_sale || false,
@@ -229,6 +237,15 @@ export default function AdminProducts() {
                 <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Brand</Label>
+              <Select value={form.brand} onValueChange={v => setForm(f => ({ ...f, brand: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select brand" /></SelectTrigger>
+                <SelectContent>
+                  {BRANDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

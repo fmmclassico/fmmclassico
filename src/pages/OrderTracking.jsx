@@ -24,7 +24,6 @@ import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 
 const statusSteps = [
-  { key: 'pending', label: 'Order Placed', icon: Clock },
   { key: 'confirmed', label: 'Confirmed', icon: CheckCircle2 },
   { key: 'processing', label: 'Processing', icon: Package },
   { key: 'shipped', label: 'Shipped', icon: Truck },

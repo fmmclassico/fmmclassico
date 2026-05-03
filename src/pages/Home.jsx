@@ -8,6 +8,40 @@ import { toast } from 'sonner';
 import HeroBanner from '../components/home/HeroBanner';
 import FlashSaleCountdown from '../components/home/FlashSaleCountdown';
 
+// Brands per category
+const CATEGORY_BRANDS = {
+  phones: [
+    { label: 'Apple (iPhone)', brand: 'Apple' },
+    { label: 'Samsung', brand: 'Samsung' },
+    { label: 'Tecno', brand: 'Tecno' },
+    { label: 'Infinix', brand: 'Infinix' },
+    { label: 'Itel', brand: 'Itel' },
+    { label: 'Xiaomi', brand: 'Xiaomi' },
+  ],
+  phone_accessories: [
+    { label: 'Oraimo', brand: 'Oraimo' },
+    { label: 'Apple', brand: 'Apple' },
+    { label: 'Samsung', brand: 'Samsung' },
+    { label: 'JBL', brand: 'JBL' },
+    { label: 'Anker', brand: 'Anker' },
+  ],
+  electronics: [
+    { label: 'Samsung', brand: 'Samsung' },
+    { label: 'TCL', brand: 'TCL' },
+    { label: 'Hisense', brand: 'Hisense' },
+    { label: 'Sony', brand: 'Sony' },
+    { label: 'LG', brand: 'LG' },
+  ],
+  home_appliances: [
+    { label: 'Hisense', brand: 'Hisense' },
+    { label: 'Roch', brand: 'Roch' },
+    { label: 'Silver Crest', brand: 'Silver Crest' },
+    { label: 'TCL', brand: 'TCL' },
+    { label: 'Midea', brand: 'Midea' },
+    { label: 'Nasco', brand: 'Nasco' },
+  ],
+};
+
 // Main categories shown on home page
 const HOME_CATEGORIES = [
   {
@@ -18,13 +52,7 @@ const HOME_CATEGORIES = [
     link: createPageUrl('Shop?category=phones'),
     image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
     match: (p) => p.category === 'phones',
-    subCategories: [
-      { label: 'iPhones', link: createPageUrl('Shop?category=phones') },
-      { label: 'Samsung', link: createPageUrl('Shop?category=phones') },
-      { label: 'Tecno', link: createPageUrl('Shop?category=phones') },
-      { label: 'Infinix', link: createPageUrl('Shop?category=phones') },
-      { label: 'All Phones', link: createPageUrl('Shop?category=phones') },
-    ],
+    brands: CATEGORY_BRANDS.phones,
     chipColor: 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100',
   },
   {
@@ -35,14 +63,7 @@ const HOME_CATEGORIES = [
     link: createPageUrl('Shop?category=phone_cases'),
     image: 'https://mate.net.in/public/uploads/all/UsReqZvujmEjMUb27qlTtRcCG8Pf18SyULO4HW7U.jpg',
     match: (p) => ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category),
-    subCategories: [
-      { label: 'Cases', link: createPageUrl('Shop?category=phone_cases') },
-      { label: 'Chargers', link: createPageUrl('Shop?category=chargers') },
-      { label: 'Holders', link: createPageUrl('Shop?category=holders') },
-      { label: 'Power Banks', link: createPageUrl('Shop?category=power_banks') },
-      { label: 'Earphones', link: createPageUrl('Shop?category=earphones') },
-      { label: 'Cables', link: createPageUrl('Shop?category=cables') },
-    ],
+    brands: CATEGORY_BRANDS.phone_accessories,
     chipColor: 'text-[#0093A6] bg-[#0093A6]/5 border-[#0093A6]/30 hover:bg-[#0093A6]/10',
   },
   {
@@ -53,13 +74,7 @@ const HOME_CATEGORIES = [
     link: createPageUrl('Shop?category=electronic_appliances'),
     image: 'https://ikonic.com/wp-content/uploads/2023/10/industries-consumer-electronics.jpeg',
     match: (p) => ['electronic_appliances','smart_watches'].includes(p.category),
-    subCategories: [
-      { label: 'Televisions', link: createPageUrl('Shop?category=electronic_appliances') },
-      { label: 'Smart Watches', link: createPageUrl('Shop?category=smart_watches') },
-      { label: 'Laptops', link: createPageUrl('Shop?category=electronic_appliances') },
-      { label: 'Cameras', link: createPageUrl('Shop?category=electronic_appliances') },
-      { label: 'All Electronics', link: createPageUrl('Shop?category=electronic_appliances') },
-    ],
+    brands: CATEGORY_BRANDS.electronics,
     chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100',
   },
   {
@@ -69,13 +84,7 @@ const HOME_CATEGORIES = [
     color: 'bg-green-100 text-green-700',
     link: createPageUrl('Shop?category=home_appliances'),
     match: (p) => p.category === 'home_appliances',
-    subCategories: [
-      { label: 'Fridges', link: createPageUrl('Shop?category=home_appliances') },
-      { label: 'Microwaves', link: createPageUrl('Shop?category=home_appliances') },
-      { label: 'Blenders', link: createPageUrl('Shop?category=home_appliances') },
-      { label: 'Irons', link: createPageUrl('Shop?category=home_appliances') },
-      { label: 'All Appliances', link: createPageUrl('Shop?category=home_appliances') },
-    ],
+    brands: CATEGORY_BRANDS.home_appliances,
     chipColor: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100',
   },
 ];
@@ -168,20 +177,23 @@ export default function Home() {
             );
           })}
         </div>
-        {/* Sub-categories — shown on click */}
+        {/* Brands — shown on click */}
         {expandedCat && (() => {
           const cat = HOME_CATEGORIES.find(c => c.id === expandedCat);
-          if (!cat?.subCategories) return null;
+          if (!cat?.brands) return null;
           return (
             <div className="mt-4 pt-3 border-t border-gray-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{cat.label}</p>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Shop {cat.label} by Brand</p>
               <div className="flex flex-wrap gap-2">
-                {cat.subCategories.map(sub => (
-                  <Link key={sub.label} to={sub.link}
+                {cat.brands.map(b => (
+                  <Link key={b.brand} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(b.brand)}`)}
                     className={`text-xs font-semibold border rounded-full px-3 py-1 transition-colors ${cat.chipColor}`}>
-                    {sub.label}
+                    {b.label}
                   </Link>
                 ))}
+                <Link to={cat.link} className={`text-xs font-semibold border rounded-full px-3 py-1 transition-colors ${cat.chipColor}`}>
+                  All {cat.label} →
+                </Link>
               </div>
             </div>
           );
@@ -291,19 +303,19 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-4 gap-3 p-4">
             {[
-              { name: 'Apple', link: createPageUrl('Shop?category=phones'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/120px-Apple_logo_black.svg.png' },
-              { name: 'Samsung', link: createPageUrl('Shop?category=phones'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Samsung_Logo.svg/200px-Samsung_Logo.svg.png' },
-              { name: 'Tecno', link: createPageUrl('Shop?category=phones'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/TECNO_Mobile_Logo.svg/200px-TECNO_Mobile_Logo.svg.png' },
-              { name: 'Infinix', link: createPageUrl('Shop?category=phones'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Infinix_Mobile_logo.svg/200px-Infinix_Mobile_logo.svg.png' },
-              { name: 'Itel', link: createPageUrl('Shop?category=phones'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Itel_logo.svg/200px-Itel_logo.svg.png' },
-              { name: 'Xiaomi', link: createPageUrl('Shop?category=phones'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Xiaomi_logo_%282021-%29.svg/200px-Xiaomi_logo_%282021-%29.svg.png' },
-              { name: 'Sony', link: createPageUrl('Shop?category=electronic_appliances'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Sony_logo.svg/200px-Sony_logo.svg.png' },
-              { name: 'JBL', link: createPageUrl('Shop?category=speakers'), img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/JBL_logo.svg/200px-JBL_logo.svg.png' },
+              { name: 'Apple', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/120px-Apple_logo_black.svg.png' },
+              { name: 'Samsung', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Samsung_Logo.svg/200px-Samsung_Logo.svg.png' },
+              { name: 'Tecno', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/TECNO_Mobile_Logo.svg/200px-TECNO_Mobile_Logo.svg.png' },
+              { name: 'Hisense', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Hisense_logo.svg/200px-Hisense_logo.svg.png' },
+              { name: 'TCL', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/TCL_Logo.svg/200px-TCL_Logo.svg.png' },
+              { name: 'Oraimo', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Oraimo_logo.svg/200px-Oraimo_logo.svg.png' },
+              { name: 'Sony', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Sony_logo.svg/200px-Sony_logo.svg.png' },
+              { name: 'JBL', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/JBL_logo.svg/200px-JBL_logo.svg.png' },
             ].map(brand => (
-              <Link key={brand.name} to={brand.link}
+              <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}
                 className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1">
                 <div className="w-10 h-10 flex items-center justify-center">
-                  <img src={brand.img} alt={brand.name} className="max-w-full max-h-full object-contain" />
+                  <img src={brand.img} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { e.target.style.display='none'; }} />
                 </div>
                 <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
               </Link>

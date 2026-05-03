@@ -11,6 +11,7 @@ import Payment from './pages/Payment';
 import PaymentConfirmed from './pages/PaymentConfirmed';
 import AdminReviews from './pages/AdminReviews';
 import AdminProducts from './pages/AdminProducts';
+import BrandProducts from './pages/BrandProducts';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 // make Pages accessible in JSX scope for fallback routes
@@ -62,6 +63,11 @@ const AuthenticatedApp = () => {
       <Route path="/AdminProducts" element={
         <LayoutWrapper currentPageName="AdminProducts">
           <AdminProducts />
+        </LayoutWrapper>
+      } />
+      <Route path="/BrandProducts" element={
+        <LayoutWrapper currentPageName="BrandProducts">
+          <BrandProducts />
         </LayoutWrapper>
       } />
       {/* Case-insensitive fallback routes for common pages */}

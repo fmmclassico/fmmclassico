@@ -134,6 +134,9 @@ export default function Layout({ children, currentPageName }) {
       { icon: Phone, label: 'WhatsApp Broadcast', page: 'AdminSMSBroadcast' },
       { icon: Star, label: 'Manage Reviews', page: 'AdminReviews' },
       { icon: Settings, label: 'Manage Products', page: 'AdminProducts' },
+      { icon: Settings, label: 'Category Images', page: 'AdminCategoryImages' },
+      { icon: Bell, label: 'Promo Notice Banners', page: 'AdminPromoBanners2' },
+      { icon: Bot, label: 'AI Assistant', page: 'AdminAI' },
     ] : []),
   ];
 

@@ -29,8 +29,8 @@ const CATEGORIES = [
 
 const BRANDS = [
   'Apple', 'Samsung', 'Tecno', 'Infinix', 'Itel', 'Xiaomi',
-  'Oraimo', 'JBL', 'Anker', 'Sony', 'LG',
-  'TCL', 'Hisense', 'Roch', 'Silver Crest', 'Midea', 'Nasco',
+  'Oraimo', 'JBL', 'Sony', 'Baseus', 'Remax', 'LG',
+  'TCL', 'Hisense', 'Midea', 'Roch', 'Silver Crest', 'Nasco', 'Hoffman',
   'Other',
 ];
 

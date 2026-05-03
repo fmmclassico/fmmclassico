@@ -23,7 +23,9 @@ const CATEGORY_BRANDS = {
     { label: 'Apple', brand: 'Apple' },
     { label: 'Samsung', brand: 'Samsung' },
     { label: 'JBL', brand: 'JBL' },
-    { label: 'Anker', brand: 'Anker' },
+    { label: 'Sony', brand: 'Sony' },
+    { label: 'Baseus', brand: 'Baseus' },
+    { label: 'Remax', brand: 'Remax' },
   ],
   electronics: [
     { label: 'Samsung', brand: 'Samsung' },
@@ -31,14 +33,18 @@ const CATEGORY_BRANDS = {
     { label: 'Hisense', brand: 'Hisense' },
     { label: 'Sony', brand: 'Sony' },
     { label: 'LG', brand: 'LG' },
+    { label: 'Midea', brand: 'Midea' },
+    { label: 'Oraimo', brand: 'Oraimo' },
   ],
   home_appliances: [
     { label: 'Hisense', brand: 'Hisense' },
     { label: 'Roch', brand: 'Roch' },
     { label: 'Silver Crest', brand: 'Silver Crest' },
     { label: 'TCL', brand: 'TCL' },
-    { label: 'Midea', brand: 'Midea' },
     { label: 'Nasco', brand: 'Nasco' },
+    { label: 'Hoffman', brand: 'Hoffman' },
+    { label: 'Samsung', brand: 'Samsung' },
+    { label: 'Oraimo', brand: 'Oraimo' },
   ],
 };
 
@@ -95,6 +101,20 @@ export default function Home() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
+  const { data: appSettings = [] } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: () => base44.entities.AppSetting.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const getPromoNotice = (key) => {
+    const raw = appSettings.find(s => s.key === key)?.value;
+    if (!raw) return null;
+    try { const d = JSON.parse(raw); return d?.active && d?.image_url ? d : null; } catch { return null; }
+  };
+  const notice1 = getPromoNotice('promo_notice_1');
+  const notice2 = getPromoNotice('promo_notice_2');
+
 
 
   useEffect(() => {
@@ -150,6 +170,21 @@ export default function Home() {
   return (
     <div className="pb-6 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
 
+      {/* Promo Notice Banners — only visible when admin activates them */}
+      {(notice1 || notice2) && (
+        <div className="mx-2 md:mx-4 mt-2 space-y-2">
+          {[notice1, notice2].filter(Boolean).map((notice, i) => (
+            notice.link
+              ? <a key={i} href={notice.link} className="block rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+                  <img src={notice.image_url} alt="Promo" className="w-full object-cover" />
+                </a>
+              : <div key={i} className="rounded-2xl overflow-hidden shadow-md">
+                  <img src={notice.image_url} alt="Promo" className="w-full object-cover" />
+                </div>
+          ))}
+        </div>
+      )}
+
       {/* Hero Slider */}
       <HeroBanner />
 
@@ -163,7 +198,8 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-4 gap-3">
           {HOME_CATEGORIES.map(cat => {
-            const displayImg = cat.image || products.find(cat.match)?.image_url;
+            const adminImg = appSettings.find(s => s.key === `cat_img_${cat.id}`)?.value;
+            const displayImg = adminImg || cat.image || products.find(cat.match)?.image_url;
             const isExpanded = expandedCat === cat.id;
             return (
               <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">

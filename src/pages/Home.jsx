@@ -170,21 +170,6 @@ export default function Home() {
   return (
     <div className="pb-6 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
 
-      {/* Promo Notice Banners — only visible when admin activates them */}
-      {(notice1 || notice2) && (
-        <div className="mx-2 md:mx-4 mt-2 space-y-2">
-          {[notice1, notice2].filter(Boolean).map((notice, i) => (
-            notice.link
-              ? <a key={i} href={notice.link} className="block rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-                  <img src={notice.image_url} alt="Promo" className="w-full object-cover" />
-                </a>
-              : <div key={i} className="rounded-2xl overflow-hidden shadow-md">
-                  <img src={notice.image_url} alt="Promo" className="w-full object-cover" />
-                </div>
-          ))}
-        </div>
-      )}
-
       {/* Hero Slider */}
       <HeroBanner />
 
@@ -236,6 +221,21 @@ export default function Home() {
         })()}
       </div>
 
+      {/* ── PROMO NOTICE BANNERS — placed between categories and deals ── */}
+      {(notice1 || notice2) && (
+        <div className="mx-2 md:mx-4 mt-3 space-y-2">
+          {[notice1, notice2].filter(Boolean).map((notice, i) => (
+            notice.link
+              ? <a key={i} href={notice.link} className="block rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+                  <img src={notice.image_url} alt="Promo" className="w-full object-cover" />
+                </a>
+              : <div key={i} className="rounded-2xl overflow-hidden shadow-md">
+                  <img src={notice.image_url} alt="Promo" className="w-full object-cover" />
+                </div>
+          ))}
+        </div>
+      )}
+
       {/* ── CLASSICO DEALS (Flash Sale) ── */}
       <div className="mt-4 mx-2 md:mx-4">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -261,7 +261,7 @@ export default function Home() {
                 ))
               : (flashItems.length > 0 ? flashItems : products.slice(0, 5)).map(product => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-orange-50 transition-colors p-1.5">
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
@@ -273,7 +273,7 @@ export default function Home() {
                       )}
                     </div>
                     <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                    <p className="text-xs font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
+                    <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
                     {product.original_price > product.price && (
                       <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
                     )}
@@ -339,18 +339,18 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-4 gap-3 p-4">
             {[
-              { name: 'Apple', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/120px-Apple_logo_black.svg.png' },
-              { name: 'Samsung', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Samsung_Logo.svg/200px-Samsung_Logo.svg.png' },
-              { name: 'Tecno', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/TECNO_Mobile_Logo.svg/200px-TECNO_Mobile_Logo.svg.png' },
-              { name: 'Hisense', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Hisense_logo.svg/200px-Hisense_logo.svg.png' },
-              { name: 'TCL', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/TCL_Logo.svg/200px-TCL_Logo.svg.png' },
-              { name: 'Oraimo', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Oraimo_logo.svg/200px-Oraimo_logo.svg.png' },
-              { name: 'Sony', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Sony_logo.svg/200px-Sony_logo.svg.png' },
-              { name: 'JBL', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/JBL_logo.svg/200px-JBL_logo.svg.png' },
+              { name: 'Apple', img: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
+              { name: 'Samsung', img: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },
+              { name: 'Tecno', img: 'https://upload.wikimedia.org/wikipedia/commons/a/a8/TECNO_Mobile_Logo.svg' },
+              { name: 'Hisense', img: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Hisense_logo.svg' },
+              { name: 'TCL', img: 'https://upload.wikimedia.org/wikipedia/commons/1/16/TCL_Logo.svg' },
+              { name: 'Oraimo', img: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },
+              { name: 'Sony', img: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
+              { name: 'JBL', img: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
             ].map(brand => (
               <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}
-                className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1">
-                <div className="w-10 h-10 flex items-center justify-center">
+                className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
+                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
                   <img src={brand.img} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { e.target.style.display='none'; }} />
                 </div>
                 <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
@@ -383,7 +383,7 @@ export default function Home() {
                 ))
               : (newArrivals.length > 0 ? newArrivals : products.slice(0, 6)).map(product => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-yellow-50 transition-colors p-1.5">
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
@@ -391,7 +391,7 @@ export default function Home() {
                       <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[8px] font-black px-1 py-0.5 rounded-full">NEW</span>
                     </div>
                     <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                    <p className="text-xs font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
+                    <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
                     {product.original_price > product.price && (
                       <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
                     )}
@@ -425,7 +425,7 @@ export default function Home() {
                 ))
               : (topSellingFallback.length > 0 ? topSellingFallback : products.slice(0, 6)).map((product, idx) => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-red-50 transition-colors p-1.5">
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
@@ -433,7 +433,7 @@ export default function Home() {
                       <span className="absolute top-1 left-1 bg-red-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">#{idx + 1}</span>
                     </div>
                     <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                    <p className="text-xs font-black text-orange-600">₵{product.price?.toLocaleString()}</p>
+                    <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
                     {product.reviews_count > 0 && (
                       <p className="text-[10px] text-yellow-600 font-bold">⭐ {product.reviews_count} sold</p>
                     )}

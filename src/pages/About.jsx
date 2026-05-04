@@ -53,7 +53,7 @@ export default function About() {
   return (
     <div className="pb-12">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-red-800 to-red-700 py-16 md:py-24">
+      <section className="relative bg-gradient-to-br from-[#2E86C1] to-[#1a6fa8] py-16 md:py-24">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1556656793-08538906a9f8?w=1200')] bg-cover bg-center opacity-10" />
         <div className="container mx-auto px-4 relative">
           <motion.div
@@ -83,7 +83,7 @@ export default function About() {
               transition={{ delay: i * 0.1 }}
             >
               <Card className="p-6 text-center shadow-lg hover:shadow-xl transition-shadow">
-                <stat.icon className="h-8 w-8 text-red-700 mx-auto mb-2" />
+                <stat.icon className="h-8 w-8 text-[#2E86C1] mx-auto mb-2" />
                 <p className="text-3xl font-bold text-gray-800">{stat.value}</p>
                 <p className="text-sm text-gray-500">{stat.label}</p>
               </Card>
@@ -122,7 +122,7 @@ export default function About() {
               alt="Phone Accessories"
               className="rounded-2xl shadow-xl"
             />
-            <div className="absolute -bottom-6 -left-6 bg-red-800 text-white p-6 rounded-2xl shadow-lg">
+            <div className="absolute -bottom-6 -left-6 bg-[#2E86C1] text-white p-6 rounded-2xl shadow-lg">
               <p className="text-3xl font-bold">5+</p>
               <p className="text-sm">Years of Excellence</p>
             </div>
@@ -147,8 +147,8 @@ export default function About() {
                 transition={{ delay: i * 0.1 }}
               >
                 <Card className="p-6 h-full hover:shadow-lg transition-shadow">
-                  <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
-                    <value.icon className="h-6 w-6 text-red-700" />
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                    <value.icon className="h-6 w-6 text-[#2E86C1]" />
                   </div>
                   <h3 className="font-bold text-gray-800 mb-2">{value.title}</h3>
                   <p className="text-sm text-gray-600">{value.desc}</p>
@@ -167,7 +167,7 @@ export default function About() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <Card className="p-8 h-full bg-gradient-to-br from-red-800 to-red-700 text-white">
+            <Card className="p-8 h-full bg-gradient-to-br from-[#2E86C1] to-[#1a6fa8] text-white">
               <Target className="h-10 w-10 mb-4" />
               <h3 className="text-xl font-bold mb-3">Our Mission</h3>
               <p className="text-white/90">
@@ -181,8 +181,8 @@ export default function About() {
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="p-8 h-full border-2 border-red-200">
-              <Award className="h-10 w-10 text-red-700 mb-4" />
+            <Card className="p-8 h-full border-2 border-blue-200">
+              <Award className="h-10 w-10 text-[#2E86C1] mb-4" />
               <h3 className="text-xl font-bold text-gray-800 mb-3">Our Vision</h3>
               <p className="text-gray-600">
                 To become the most trusted and preferred destination for Phones &amp; Accessories, Home Appliances and Electronics, known for our quality, reliability, and customer satisfaction.
@@ -201,29 +201,29 @@ export default function About() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             <div className="text-center">
-              <div className="w-14 h-14 rounded-full bg-red-700/20 flex items-center justify-center mx-auto mb-4">
-              <MapPin className="h-6 w-6 text-red-500" />
+              <div className="w-14 h-14 rounded-full bg-blue-600/20 flex items-center justify-center mx-auto mb-4">
+              <MapPin className="h-6 w-6 text-blue-400" />
               </div>
               <h3 className="font-bold mb-2">Tarkwa Location</h3>
               <p className="text-gray-400 text-sm">UMAT Main Campus, Tarkwa</p>
             </div>
             <div className="text-center">
-              <div className="w-14 h-14 rounded-full bg-red-700/20 flex items-center justify-center mx-auto mb-4">
-              <MapPin className="h-6 w-6 text-red-500" />
+              <div className="w-14 h-14 rounded-full bg-blue-600/20 flex items-center justify-center mx-auto mb-4">
+              <MapPin className="h-6 w-6 text-blue-400" />
               </div>
               <h3 className="font-bold mb-2">Accra Location</h3>
               <p className="text-gray-400 text-sm">Ashongman Estate, Accra</p>
             </div>
             <div className="text-center">
-              <div className="w-14 h-14 rounded-full bg-red-700/20 flex items-center justify-center mx-auto mb-4">
-              <Phone className="h-6 w-6 text-red-500" />
+              <div className="w-14 h-14 rounded-full bg-blue-600/20 flex items-center justify-center mx-auto mb-4">
+              <Phone className="h-6 w-6 text-blue-400" />
               </div>
               <h3 className="font-bold mb-2">Phone</h3>
               <p className="text-gray-400 text-sm">0599676419</p>
             </div>
             <div className="text-center">
-              <div className="w-14 h-14 rounded-full bg-red-700/20 flex items-center justify-center mx-auto mb-4">
-              <Mail className="h-6 w-6 text-red-500" />
+              <div className="w-14 h-14 rounded-full bg-blue-600/20 flex items-center justify-center mx-auto mb-4">
+              <Mail className="h-6 w-6 text-blue-400" />
               </div>
               <h3 className="font-bold mb-2">Email</h3>
               <p className="text-gray-400 text-sm">fmmcompanylimited@gmail.com</p>
@@ -246,7 +246,7 @@ export default function About() {
             Explore our wide range of Phones &amp; Accessories, Home Appliances and Electronics.
           </p>
           <Link to={createPageUrl('Shop')}>
-            <Button size="lg" className="bg-red-800 hover:bg-red-700 font-bold">
+            <Button size="lg" className="bg-[#2E86C1] hover:bg-[#2578ae] font-bold">
               Start Shopping
             </Button>
           </Link>

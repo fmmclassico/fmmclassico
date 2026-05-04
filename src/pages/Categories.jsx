@@ -174,7 +174,7 @@ export default function Categories() {
               
                   <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                   <div className={`absolute inset-0 bg-gradient-to-r ${cat.color} opacity-70 group-hover:opacity-80 transition-opacity`} />
-                  <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                  <div className="pt-6 pr-6 pb-6 pl-6 absolute inset-0 flex flex-col justify-end">
                     <h3 className="text-2xl font-bold text-white mb-1">{cat.name}</h3>
                     <p className="text-white/80 text-sm mb-3">{cat.desc}</p>
                     <div className="flex items-center text-white font-medium text-sm">

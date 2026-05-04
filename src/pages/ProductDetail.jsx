@@ -203,7 +203,7 @@ export default function ProductDetail() {
             </AnimatePresence>
 
             {discount > 0 && (
-              <Badge className="absolute top-4 left-4 bg-red-500 hover:bg-red-500 text-white text-lg px-3 py-1">
+              <Badge className="absolute top-4 left-4 bg-[#2E86C1] hover:bg-[#2E86C1] text-white text-lg px-3 py-1">
                 -{discount}%
               </Badge>
             )}
@@ -213,7 +213,7 @@ export default function ProductDetail() {
               <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
                 {galleryItems.map((_, idx) => (
                   <button key={idx} onClick={() => setSelectedImageIndex(idx)}
-                    className={`rounded-full transition-all ${idx === selectedImageIndex ? 'bg-orange-500 w-4 h-2' : 'bg-white/70 w-2 h-2'}`}
+                    className={`rounded-full transition-all ${idx === selectedImageIndex ? 'bg-[#2E86C1] w-4 h-2' : 'bg-white/70 w-2 h-2'}`}
                   />
                 ))}
               </div>
@@ -228,7 +228,7 @@ export default function ProductDetail() {
                 onClick={() => setSelectedImageIndex(idx)}
                 className={`aspect-square rounded-lg overflow-hidden border-2 transition-all relative ${
                   selectedImageIndex === idx 
-                    ? 'border-orange-500 shadow-md' 
+                    ? 'border-[#2E86C1] shadow-md' 
                     : 'border-transparent hover:border-gray-300'
                 }`}
               >
@@ -271,7 +271,7 @@ export default function ProductDetail() {
           </div>
 
           <div className="flex items-baseline gap-3">
-            <span className="text-4xl font-bold text-orange-600">₵{product.price?.toFixed(2)}</span>
+            <span className="text-4xl font-bold text-[#2E86C1]">₵{product.price?.toFixed(2)}</span>
             {product.original_price && (
               <span className="text-xl text-gray-400 line-through">₵{product.original_price?.toFixed(2)}</span>
             )}
@@ -281,7 +281,7 @@ export default function ProductDetail() {
             <details className="group border border-gray-200 rounded-xl overflow-hidden">
               <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer font-semibold text-gray-700 select-none list-none">
                 <span>Product Details</span>
-                <span className="text-orange-500 group-open:rotate-180 transition-transform">▼</span>
+                <span className="text-[#2E86C1] group-open:rotate-180 transition-transform">▼</span>
               </summary>
               <div className="px-4 py-3 text-gray-600 leading-relaxed text-sm">{product.description}</div>
             </details>
@@ -318,7 +318,7 @@ export default function ProductDetail() {
           <div className="flex gap-3">
             <Button 
               size="lg" 
-              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg"
+              className="flex-1 bg-[#2E86C1] hover:bg-[#2578ae] text-white font-bold shadow-lg"
               onClick={() => addToCartMutation.mutate()}
               disabled={addToCartMutation.isPending}
             >
@@ -330,7 +330,7 @@ export default function ProductDetail() {
           {/* Features */}
           <div className="grid grid-cols-1 gap-3 pt-4 border-t">
             <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg">
-              <Shield className="h-6 w-6 text-orange-500 mb-2" />
+              <Shield className="h-6 w-6 text-[#2E86C1] mb-2" />
               <span className="text-xs font-medium text-gray-600">Genuine Product</span>
             </div>
           </div>

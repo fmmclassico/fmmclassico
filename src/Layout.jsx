@@ -23,7 +23,8 @@ import {
   Bell,
   Send,
   Phone,
-  Star
+  Star,
+  Gem
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,7 +136,8 @@ export default function Layout({ children, currentPageName }) {
       { icon: Star, label: 'Manage Reviews', page: 'AdminReviews' },
       { icon: Settings, label: 'Manage Products', page: 'AdminProducts' },
       { icon: Settings, label: 'Category Images', page: 'AdminCategoryImages' },
-      { icon: Bell, label: 'Promo Notice Banners', page: 'AdminPromoBanners2' },
+      { icon: Bell, label: 'Promo Banner Cards', page: 'AdminPromoBanners2' },
+      { icon: Gem, label: 'Brand Logos', page: 'AdminBrandLogos' },
       { icon: Bot, label: 'AI Assistant', page: 'AdminAI' },
     ] : []),
   ];

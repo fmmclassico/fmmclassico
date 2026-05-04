@@ -31,7 +31,7 @@ export default function ProductCard({ product }) {
             className="w-full h-full object-contain p-1"
           />
           {discount > 0 && (
-            <div className="absolute top-1.5 right-1.5 bg-orange-50 border border-orange-200 text-orange-600 text-[11px] font-extrabold px-1.5 py-0.5 rounded">
+            <div className="absolute top-1.5 right-1.5 bg-blue-50 border border-blue-200 text-[#2E86C1] text-[11px] font-extrabold px-1.5 py-0.5 rounded">
               -{discount}%
             </div>
           )}

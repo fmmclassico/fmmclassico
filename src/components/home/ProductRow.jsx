@@ -22,7 +22,7 @@ export default function ProductRow({ title, products, isLoading, viewAllLink, la
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
         <h2 className="text-[14px] md:text-base font-extrabold text-gray-900 uppercase tracking-tight">{title}</h2>
         {viewAllLink && (
-          <Link to={viewAllLink} className="text-orange-500 text-[11px] font-bold hover:underline flex items-center border border-orange-400 rounded px-2 py-0.5">
+          <Link to={viewAllLink} className="text-[#2E86C1] text-[11px] font-bold hover:underline flex items-center border border-[#2E86C1] rounded px-2 py-0.5">
             SEE ALL <ChevronRight className="h-3 w-3" />
           </Link>
         )}
@@ -50,7 +50,7 @@ export default function ProductRow({ title, products, isLoading, viewAllLink, la
         <div className="relative group">
           <button
             onClick={() => scroll(-1)}
-            className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 hover:bg-orange-50 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <ChevronLeft className="h-4 w-4 text-gray-600" />
           </button>
@@ -77,7 +77,7 @@ export default function ProductRow({ title, products, isLoading, viewAllLink, la
 
           <button
             onClick={() => scroll(1)}
-            className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 hover:bg-orange-50 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <ChevronRight className="h-4 w-4 text-gray-600" />
           </button>

@@ -78,7 +78,7 @@ const HOME_CATEGORIES = [
     icon: Tv,
     color: 'bg-purple-100 text-purple-700',
     link: createPageUrl('Shop?category=electronic_appliances'),
-    image: 'https://ikonic.com/wp-content/uploads/2023/10/industries-consumer-electronics.jpeg',
+    image: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=400&q=90',
     match: (p) => ['electronic_appliances','smart_watches'].includes(p.category),
     brands: CATEGORY_BRANDS.electronics,
     chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100',
@@ -188,7 +188,7 @@ export default function Home() {
             const isExpanded = expandedCat === cat.id;
             return (
               <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
-                <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden shadow-sm border-2 group-hover:scale-105 transition-transform ${isExpanded ? 'border-orange-400' : 'border-white'} ${cat.color} flex items-center justify-center`}>
+                <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden shadow-sm border-2 group-hover:scale-105 transition-transform ${isExpanded ? 'border-[#2E86C1]' : 'border-white'} ${cat.color} flex items-center justify-center`}>
                   {displayImg
                     ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
                     : <cat.icon className="h-10 w-10 opacity-70" />}
@@ -221,29 +221,66 @@ export default function Home() {
         })()}
       </div>
 
-      {/* ── PROMO NOTICE BANNERS — placed between categories and deals ── */}
-      {(notice1 || notice2) && (
-        <div className="mx-2 md:mx-4 mt-3 space-y-2">
-          {[notice1, notice2].filter(Boolean).map((notice, i) => (
-            notice.link
-              ? <a key={i} href={notice.link} className="block rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-                  <img src={notice.image_url} alt="Promo" className="w-full object-cover" />
-                </a>
-              : <div key={i} className="rounded-2xl overflow-hidden shadow-md">
-                  <img src={notice.image_url} alt="Promo" className="w-full object-cover" />
-                </div>
-          ))}
-        </div>
-      )}
+      {/* ── PROMO CARDS SCROLL (same design as category cards) ── */}
+      {(() => {
+        const PROMO_KEYS = ['promo_card_1','promo_card_2','promo_card_3','promo_card_4','promo_card_5','promo_card_6'];
+        const allCards = PROMO_KEYS.map(k => {
+          const raw = appSettings.find(s => s.key === k)?.value;
+          if (!raw) return null;
+          try { const d = JSON.parse(raw); return d?.active ? { ...d, key: k } : null; } catch { return null; }
+        }).filter(Boolean);
+        const frontCards = allCards.filter(c => c.position === 'front');
+        const middleCards = allCards.filter(c => c.position === 'middle');
+        const backCards = allCards.filter(c => c.position === 'back' || !c.position);
+        const orderedCards = [...frontCards, ...middleCards, ...backCards];
+        if (!orderedCards.length) return null;
+        return (
+          <div className="mt-3 mx-2 md:mx-4">
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
+                <h2 className="font-black text-gray-900 text-sm uppercase tracking-wide">🎉 Promotions</h2>
+              </div>
+              <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+                {orderedCards.map(card => {
+                  const CardWrapper = card.link ? Link : 'div';
+                  const wrapperProps = card.link ? { to: card.link } : {};
+                  return (
+                    <CardWrapper key={card.key} {...wrapperProps}
+                      className="flex-shrink-0 w-[72vw] md:w-72 relative overflow-hidden"
+                      style={{ minHeight: 130 }}>
+                      <div className={`absolute inset-0 bg-gradient-to-r ${card.gradient || 'from-blue-600 to-blue-400'}`} />
+                      {card.image_url && (
+                        <img src={card.image_url} alt={card.title} className="absolute inset-0 w-full h-full object-cover opacity-60" />
+                      )}
+                      <div className="relative z-10 p-3 h-full flex flex-col justify-between" style={{ minHeight: 130 }}>
+                        <div>
+                          <p className="text-white font-black text-sm leading-tight drop-shadow">{card.title}</p>
+                          {card.subtitle && <p className="text-white/90 text-xs font-bold mt-0.5">{card.subtitle}</p>}
+                          {card.description && <p className="text-white/80 text-[11px] mt-1 leading-snug line-clamp-2">{card.description}</p>}
+                        </div>
+                        {card.cta_text && (
+                          <span className="mt-2 self-start bg-white text-[#2E86C1] text-[11px] font-black px-3 py-1 rounded-full shadow">
+                            {card.cta_text}
+                          </span>
+                        )}
+                      </div>
+                    </CardWrapper>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── CLASSICO DEALS (Flash Sale) ── */}
       <div className="mt-4 mx-2 md:mx-4">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
             <div className="flex items-center gap-2 flex-wrap">
-              <Zap className="h-5 w-5 text-orange-500 fill-orange-400" />
+              <Zap className="h-5 w-5 text-[#2E86C1] fill-[#2E86C1]" />
               <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">CLASSICO Deals</h2>
-              <span className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Flash Sale</span>
+              <span className="bg-blue-100 text-[#2E86C1] text-[10px] font-bold px-2 py-0.5 rounded-full">Flash Sale</span>
               <FlashSaleCountdown endTime={flashSaleEndTime} />
             </div>
             <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
@@ -267,9 +304,9 @@ export default function Home() {
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
                       {product.original_price > product.price && (
-                        <span className="absolute top-1 left-1 bg-red-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">
-                          -{Math.round((1 - product.price / product.original_price) * 100)}%
-                        </span>
+                       <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">
+                         -{Math.round((1 - product.price / product.original_price) * 100)}%
+                       </span>
                       )}
                     </div>
                     <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
@@ -339,23 +376,29 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-4 gap-3 p-4">
             {[
-              { name: 'Apple', img: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
-              { name: 'Samsung', img: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },
-              { name: 'Tecno', img: 'https://upload.wikimedia.org/wikipedia/commons/a/a8/TECNO_Mobile_Logo.svg' },
-              { name: 'Hisense', img: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Hisense_logo.svg' },
-              { name: 'TCL', img: 'https://upload.wikimedia.org/wikipedia/commons/1/16/TCL_Logo.svg' },
-              { name: 'Oraimo', img: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },
-              { name: 'Sony', img: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
-              { name: 'JBL', img: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
-            ].map(brand => (
-              <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}
-                className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
-                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
-                  <img src={brand.img} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { e.target.style.display='none'; }} />
-                </div>
-                <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
-              </Link>
-            ))}
+              { name: 'Apple', fallback: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
+              { name: 'Samsung', fallback: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },
+              { name: 'Tecno', fallback: 'https://upload.wikimedia.org/wikipedia/commons/a/a8/TECNO_Mobile_Logo.svg' },
+              { name: 'Hisense', fallback: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Hisense_logo.svg' },
+              { name: 'TCL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/1/16/TCL_Logo.svg' },
+              { name: 'Oraimo', fallback: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },
+              { name: 'Sony', fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
+              { name: 'JBL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
+            ].map(brand => {
+              const uploadedLogo = appSettings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
+              const logoSrc = uploadedLogo || brand.fallback;
+              return (
+                <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}
+                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
+                  <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
+                    {logoSrc
+                      ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { e.target.style.display='none'; }} />
+                      : <span className="text-[10px] font-black text-gray-400">{brand.name[0]}</span>}
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -406,9 +449,9 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-red-500" />
+              <TrendingUp className="h-5 w-5 text-[#2E86C1]" />
               <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Top Selling</h2>
-              <span className="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-full">🔥 Hot</span>
+              <span className="bg-blue-100 text-[#2E86C1] text-[10px] font-bold px-2 py-0.5 rounded-full">🔥 Hot</span>
             </div>
             <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
               See All <ChevronRight className="h-3 w-3" />
@@ -430,7 +473,7 @@ export default function Home() {
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                      <span className="absolute top-1 left-1 bg-red-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">#{idx + 1}</span>
+                      <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">#{idx + 1}</span>
                     </div>
                     <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
                     <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>

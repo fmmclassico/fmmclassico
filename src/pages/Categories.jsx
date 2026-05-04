@@ -212,17 +212,17 @@ export default function Categories() {
               </div> :
 
           <Link to={createPageUrl(`Shop?category=${cat.id}`)}>
-                <div className="group relative overflow-hidden rounded-2xl h-48 shadow-lg hover:shadow-xl transition-all duration-300 hidden">
-                  <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 hidden" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 opacity-70 group-hover:opacity-80 transition-opacity hidden" />
-                  <div className="absolute inset-0 p-6 flex flex-col justify-end hidden">
-                    <h3 className="text-2xl font-bold text-white mb-1">{cat.name}</h3>
-                    <p className="text-white/80 text-sm mb-3">{cat.desc}</p>
-                    <div className="flex items-center text-white font-medium text-sm opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      Shop Now <ChevronRight className="h-4 w-4 ml-1" />
-                    </div>
-                  </div>
-                </div>
+                
+
+
+
+
+
+
+
+
+
+            
               </Link>
           }
           </motion.div>

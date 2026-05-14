@@ -46,14 +46,14 @@
     },
     "image_url": {
       "type": "string",
-      "description": "Product main image URL"
+      "description": "Product main image \u2014 uploaded file URL (upload from computer only)"
     },
     "image_urls": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Additional product images (up to 4)"
+      "description": "Additional product images (up to 4) \u2014 uploaded file URLs"
     },
     "video_url": {
       "type": "string",

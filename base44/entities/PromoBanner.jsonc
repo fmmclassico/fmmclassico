@@ -1,0 +1,65 @@
+{
+  "name": "PromoBanner",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Banner headline"
+    },
+    "subtitle": {
+      "type": "string",
+      "description": "Banner subtitle/description"
+    },
+    "badge": {
+      "type": "string",
+      "description": "Small badge text e.g. \ud83c\udf89 Christmas Sale"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Banner image \u2014 uploaded file URL (upload from computer only)"
+    },
+    "bg_gradient": {
+      "type": "string",
+      "description": "Tailwind gradient class e.g. from-red-600 via-red-500 to-pink-400"
+    },
+    "cta_text": {
+      "type": "string",
+      "description": "Call-to-action button text"
+    },
+    "cta_link": {
+      "type": "string",
+      "description": "Link for CTA button"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this banner is visible"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

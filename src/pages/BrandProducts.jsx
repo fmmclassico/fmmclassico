@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { createPageUrl } from '../utils';
-import { ChevronRight, ShoppingBag } from 'lucide-react';
+import { ChevronRight, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProductCard from '../components/products/ProductCard';
 
-// Full product sub-type labels per category
 const CATEGORY_LABELS = {
   phones: 'Phones',
   phone_cases: 'Phone Cases',
-  chargers: 'Chargers & Power',
+  chargers: 'Chargers',
   earphones: 'Earphones & Audio',
   cables: 'Cables',
   power_banks: 'Power Banks',
@@ -24,42 +23,34 @@ const CATEGORY_LABELS = {
   home_appliances: 'Home Appliances',
 };
 
-// ─── STRICT CATEGORY ISOLATION ───────────────────────────────────────────────
-// BRAND_PRIMARY_CATEGORIES defines the ONLY categories a brand may show
-// when NO ?category param is in the URL.  This prevents Samsung's TVs from
-// appearing when the user browses Samsung Phones, for example.
-// The ?category URL param always overrides and narrows to a single category.
-
+// STRICT category isolation — defines which categories a brand is allowed to show
+// when NO ?category param is present in the URL.
 const BRAND_PRIMARY_CATEGORIES = {
-  // Phone-only brands
-  Apple:   ['phones', 'phone_cases'],
-  Samsung: ['phones', 'phone_cases', 'chargers', 'earphones'],
-  Tecno:   ['phones'],
-  Infinix: ['phones'],
-  Itel:    ['phones'],
-  // Phone-accessories-only brands
-  Oraimo:  ['earphones', 'chargers', 'power_banks', 'cables', 'smart_watches', 'speakers'],
-  JBL:     ['speakers', 'earphones'],
-  Sony:    ['earphones', 'speakers'],
-  // Electronics-only brands
-  TCL:     ['electronic_appliances'],
-  Hisense: ['electronic_appliances', 'home_appliances'],
-  LG:      ['electronic_appliances', 'home_appliances'],
-  Midea:   ['electronic_appliances', 'home_appliances'],
-  // Home-appliances-only brands
+  Apple:        ['phones', 'phone_cases', 'chargers', 'cables', 'earphones', 'smart_watches', 'screen_protectors'],
+  Samsung:      ['phones', 'phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'smart_watches'],
+  Tecno:        ['phones'],
+  Infinix:      ['phones'],
+  Itel:         ['phones'],
+  Oraimo:       ['earphones', 'chargers', 'power_banks', 'cables', 'smart_watches', 'speakers', 'phone_cases', 'holders'],
+  JBL:          ['speakers', 'earphones'],
+  Sony:         ['earphones', 'speakers'],
+  TCL:          ['electronic_appliances', 'home_appliances'],
+  Hisense:      ['electronic_appliances', 'home_appliances'],
+  LG:           ['electronic_appliances', 'home_appliances'],
+  Midea:        ['electronic_appliances', 'home_appliances'],
   Roch:         ['home_appliances'],
   'Silver Crest': ['home_appliances'],
   Nasco:        ['home_appliances'],
   Hoffman:      ['home_appliances'],
 };
 
-
-
 export default function BrandProducts() {
   const [searchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState('newest');
+  const navigate = useNavigate();
+
   const brand = searchParams.get('brand');
-  const category = searchParams.get('category');
+  const category = searchParams.get('category'); // null = show all allowed categories
 
   const { data: allProducts = [], isLoading } = useQuery({
     queryKey: ['products'],
@@ -67,12 +58,9 @@ export default function BrandProducts() {
     staleTime: 2 * 60 * 1000,
   });
 
-  // STRICT category isolation:
-  // 1. If ?category is in URL → show ONLY that exact category.
-  // 2. If no ?category → show only categories in BRAND_PRIMARY_CATEGORIES for this brand.
-  //    This prevents Samsung's TVs appearing when browsing Samsung Phones.
   const allowedCats = BRAND_PRIMARY_CATEGORIES[brand] || [];
 
+  // Filter strictly by brand + allowed categories
   let brandProducts = allProducts.filter(p => {
     const matchBrand = p.brand?.toLowerCase() === brand?.toLowerCase();
     const matchCat = category
@@ -81,118 +69,70 @@ export default function BrandProducts() {
     return matchBrand && matchCat;
   });
 
-  // Sort
+  // Apply sort
   if (sortBy === 'price_low') brandProducts = [...brandProducts].sort((a, b) => a.price - b.price);
   else if (sortBy === 'price_high') brandProducts = [...brandProducts].sort((a, b) => b.price - a.price);
 
-  const categories = [...new Set(brandProducts.map(p => p.category))].filter(Boolean);
+  // Unique categories present in the filtered results, preserving BRAND_PRIMARY_CATEGORIES order
+  const categoriesInResults = (allowedCats.length > 0 ? allowedCats : Object.keys(CATEGORY_LABELS))
+    .filter(cat => brandProducts.some(p => p.category === cat));
 
   if (!brand) {
     return <div className="container mx-auto px-4 py-12 text-center text-gray-500">No brand specified.</div>;
   }
 
+  const isSingleCategory = !!category || categoriesInResults.length <= 1;
+
   return (
-    <div className="container mx-auto px-4 py-6 max-w-5xl">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1 text-xs text-gray-400 mb-4 flex-wrap">
-        <Link to={createPageUrl('Home')} className="hover:text-gray-700">Home</Link>
-        <ChevronRight className="h-3 w-3" />
-        <span className="text-gray-700 font-semibold">{brand}</span>
-        {category && (
-          <>
-            <ChevronRight className="h-3 w-3" />
-            <Link to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand)}`)} className="text-gray-600 hover:text-gray-900">
-              {CATEGORY_LABELS[category] || category}
-            </Link>
-          </>
-        )}
+    <div className="container mx-auto px-4 py-4 max-w-5xl">
 
-      </div>
-
-      {/* Header */}
-      <div className="flex items-start justify-between mb-5 gap-3">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-gray-900">{brand}</h1>
-          <p className="text-gray-500 text-sm mt-1">{brandProducts.length} product{brandProducts.length !== 1 ? 's' : ''} found</p>
+      {/* Top bar: Back + Brand name + Sort */}
+      <div className="flex items-center justify-between mb-5 gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 text-gray-700" />
+          </button>
+          <div>
+            <h1 className="text-xl md:text-2xl font-black text-gray-900 leading-tight">
+              {brand}{category ? ` — ${CATEGORY_LABELS[category] || category}` : ''}
+            </h1>
+            <p className="text-gray-400 text-xs mt-0.5">{brandProducts.length} product{brandProducts.length !== 1 ? 's' : ''}</p>
+          </div>
         </div>
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-40 text-xs">
-            <SelectValue placeholder="Sort by" />
+          <SelectTrigger className="w-36 text-xs h-8">
+            <SelectValue placeholder="Sort" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="newest">Newest</SelectItem>
-            <SelectItem value="price_low">Price: Low to High</SelectItem>
-            <SelectItem value="price_high">Price: High to Low</SelectItem>
+            <SelectItem value="price_low">Price: Low → High</SelectItem>
+            <SelectItem value="price_high">Price: High → Low</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Category chips (shown when no category selected and brand has multiple allowed categories) */}
-      {!category && categories.length > 1 && (
-        <div className="mb-5">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Browse by Category</p>
-          <div className="flex flex-wrap gap-2">
-            {categories.map(cat => (
-              <Link
-                key={cat}
-                to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand)}&category=${cat}`)}
-                className="text-xs font-semibold px-3 py-1.5 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
-              >
-                {CATEGORY_LABELS[cat] || cat}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-
-
-
-
       {/* Products */}
       {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Array(8).fill(0).map((_, i) => (
-            <div key={i} className="space-y-2">
-              <Skeleton className="aspect-square rounded-xl" />
-              <Skeleton className="h-3 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
+        <div className="space-y-8">
+          {[1, 2].map(s => (
+            <div key={s}>
+              <Skeleton className="h-5 w-32 mb-3 rounded" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {Array(4).fill(0).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="aspect-square rounded-xl" />
+                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
-      ) : brandProducts.length > 0 ? (
-        !category && categories.length > 1 ? (
-          <div className="space-y-8">
-            {categories.map(cat => {
-              const catProducts = brandProducts.filter(p => p.category === cat);
-              return (
-                <div key={cat}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-black text-gray-800 text-base uppercase tracking-wide">{CATEGORY_LABELS[cat] || cat}</h2>
-                    <Link
-                      to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand)}&category=${cat}`)}
-                      className="text-xs text-blue-600 font-semibold flex items-center gap-0.5 hover:underline"
-                    >
-                      See all <ChevronRight className="h-3 w-3" />
-                    </Link>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {catProducts.slice(0, 4).map(product => (
-                      <ProductCard key={product.id} product={product} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {brandProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )
-      ) : (
+      ) : brandProducts.length === 0 ? (
         <div className="text-center py-16">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
             <ShoppingBag className="h-8 w-8 text-gray-300" />
@@ -202,6 +142,47 @@ export default function BrandProducts() {
           <Link to={createPageUrl('Shop')} className="text-blue-600 text-sm font-semibold hover:underline">
             Browse all products
           </Link>
+        </div>
+      ) : isSingleCategory ? (
+        /* Single category view — flat grid */
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {brandProducts.map(product => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      ) : (
+        /* Multi-category view — sectioned rows like homepage */
+        <div className="space-y-8">
+          {categoriesInResults.map(cat => {
+            const catProducts = brandProducts.filter(p => p.category === cat);
+            if (catProducts.length === 0) return null;
+            return (
+              <div key={cat}>
+                {/* Section header with blue bar accent — matches homepage style */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-5 rounded-full bg-blue-600" />
+                    <h2 className="font-black text-gray-800 text-base">
+                      {CATEGORY_LABELS[cat] || cat}
+                    </h2>
+                  </div>
+                  {catProducts.length > 4 && (
+                    <Link
+                      to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand)}&category=${cat}`)}
+                      className="text-xs text-blue-600 font-semibold flex items-center gap-0.5 hover:underline"
+                    >
+                      See all <ChevronRight className="h-3 w-3" />
+                    </Link>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {catProducts.slice(0, 4).map(product => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

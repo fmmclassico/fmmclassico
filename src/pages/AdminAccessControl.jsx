@@ -49,7 +49,7 @@ export default function AdminAccessControl() {
     'lovelyfedra@gmail.com'
   ];
 
-  const DEFAULT_ADMIN_PASSWORD = '0244129908fmm';
+  const DEFAULT_ADMIN_PASSWORD = '0599676419fmm';
 
   useEffect(() => {
     const checkMasterAdmin = async () => {

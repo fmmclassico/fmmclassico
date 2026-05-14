@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Send, Loader2, Sparkles, Trash2, User, Image, Download, X } from 'lucide-react';
+import { Bot, Send, Loader2, Sparkles, Trash2, User, Image, Download, X, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 
@@ -27,7 +27,10 @@ export default function AdminAI() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [attachedImage, setAttachedImage] = useState(null); // { url, file }
+  const [uploadingImage, setUploadingImage] = useState(false);
   const bottomRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     base44.auth.me().then(u => { setUser(u); setIsAdmin(u?.role === 'admin'); }).catch(() => {});
@@ -72,25 +75,60 @@ export default function AdminAI() {
     );
   };
 
+  const handleImageAttach = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setAttachedImage({ url: file_url, name: file.name });
+      toast.success('Image attached!');
+    } catch {
+      toast.error('Failed to upload image');
+    }
+    setUploadingImage(false);
+    e.target.value = '';
+  };
+
   const sendMessage = async (text) => {
     const msg = (text || input).trim();
-    if (!msg) return;
+    if (!msg && !attachedImage) return;
+    const displayMsg = msg || '🖼️ [Image attached — generate/edit based on this]';
     setInput('');
-    setMessages(m => [...m, { role: 'user', content: msg }]);
+    const imgUrl = attachedImage?.url || null;
+    setAttachedImage(null);
+
+    setMessages(m => [...m, { role: 'user', content: displayMsg, image_url: imgUrl }]);
     setLoading(true);
 
-    if (isImageRequest(msg)) {
-      // Generate image flyer
+    // If user attached an image, use it as reference for generation or editing
+    if (imgUrl || isImageRequest(msg)) {
       try {
-        const isProductImg = isPureProductImage(msg);
-        setMessages(m => [...m, { role: 'assistant', content: isProductImg ? '🖼️ Generating product image... this takes about 10-15 seconds...' : '🎨 Generating your flyer... this takes about 10-15 seconds...', isTemp: true }]);
-        const imagePrompt = isProductImg
-          ? `Ultra-realistic professional product photography. Subject: ${msg}. Pure white background, studio soft-box lighting from top-left, crisp shadows, hyper-detailed, 8K resolution, commercial e-commerce product shot, no text, no logos, no watermarks, isolated product only, photorealistic render.`
-          : `Professional high-quality advertising flyer for FMM CLASSICO Ghana store. ${msg}. Include bold text layout, vibrant colors, modern design, clean typography, product imagery. Style: photoshop-quality commercial banner, 4K resolution, professional marketing material.`;
-        const { url } = await base44.integrations.Core.GenerateImage({ prompt: imagePrompt });
+        const isProductImg = !imgUrl ? isPureProductImage(msg) : true;
+        setMessages(m => [...m, {
+          role: 'assistant',
+          content: imgUrl ? '🖼️ Analyzing your image and generating... ~15 seconds...' : (isProductImg ? '🖼️ Generating product image... this takes about 10-15 seconds...' : '🎨 Generating your flyer... this takes about 10-15 seconds...'),
+          isTemp: true
+        }]);
+
+        let imagePrompt;
+        if (imgUrl && msg) {
+          imagePrompt = `${msg}. Use the uploaded reference image as inspiration or as the subject to edit/recreate. Photorealistic, high quality, 4K.`;
+        } else if (imgUrl) {
+          imagePrompt = `Generate a high-quality photorealistic version of this product image. Clean white background, professional studio lighting, commercial e-commerce quality, no text, no logos.`;
+        } else if (isProductImg) {
+          imagePrompt = `Ultra-realistic professional product photography. Subject: ${msg}. Pure white background, studio soft-box lighting from top-left, crisp shadows, hyper-detailed, 8K resolution, commercial e-commerce product shot, no text, no logos, no watermarks, isolated product only, photorealistic render.`;
+        } else {
+          imagePrompt = `Professional high-quality advertising flyer for FMM CLASSICO Ghana store. ${msg}. Include bold text layout, vibrant colors, modern design, clean typography, product imagery. Style: photoshop-quality commercial banner, 4K resolution, professional marketing material.`;
+        }
+
+        const genPayload = { prompt: imagePrompt };
+        if (imgUrl) genPayload.existing_image_urls = [imgUrl];
+
+        const { url } = await base44.integrations.Core.GenerateImage(genPayload);
         setMessages(m => {
           const filtered = m.filter(x => !x.isTemp);
-          return [...filtered, { role: 'assistant', content: isProductImg ? '✅ Here is your generated product image!' : '✅ Here is your generated flyer!', image_url: url }];
+          return [...filtered, { role: 'assistant', content: '✅ Here is your generated image!', image_url: url }];
         });
       } catch (e) {
         setMessages(m => m.filter(x => !x.isTemp));
@@ -186,6 +224,11 @@ Respond in a helpful, practical and detailed way. Be specific to the Ghana/West 
                 </div>
               )}
               <div className={`max-w-[85%] ${msg.role === 'user' ? '' : ''}`}>
+                {msg.role === 'user' && msg.image_url && (
+                  <div className="mb-1">
+                    <img src={msg.image_url} alt="attached" className="rounded-xl max-h-40 object-cover border border-gray-300" />
+                  </div>
+                )}
                 {msg.content && (
                   <div className={`rounded-2xl px-4 py-2.5 text-sm ${msg.role === 'user' ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}>
                     {msg.role === 'assistant'
@@ -194,7 +237,7 @@ Respond in a helpful, practical and detailed way. Be specific to the Ghana/West 
                     }
                   </div>
                 )}
-                {msg.image_url && (
+                {msg.role === 'assistant' && msg.image_url && (
                   <div className="mt-2 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-md">
                     <img src={msg.image_url} alt="Generated flyer" className="w-full object-cover" style={{ maxHeight: 400 }} />
                     <div className="flex gap-2 p-3 bg-gray-50 border-t border-gray-100">
@@ -233,22 +276,38 @@ Respond in a helpful, practical and detailed way. Be specific to the Ghana/West 
         </div>
 
         {/* Input */}
-        <div className="p-3 border-t bg-white flex gap-2 items-end">
-          <div className="flex-1">
-            <Textarea
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder='Ask anything or say "Generate a flyer for..." to create a downloadable image...'
-              className="resize-none text-sm min-h-[44px] max-h-32"
-              rows={2}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-            />
-            <p className="text-[10px] text-gray-400 mt-1">💡 Say "design a product image for..." or "generate a flyer for..." to create downloadable images</p>
+        <div className="p-3 border-t bg-white">
+          {/* Attached image preview */}
+          {attachedImage && (
+            <div className="flex items-center gap-2 mb-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+              <img src={attachedImage.url} alt="attached" className="h-10 w-10 object-cover rounded" />
+              <span className="text-xs text-blue-700 flex-1 truncate">{attachedImage.name}</span>
+              <button onClick={() => setAttachedImage(null)} className="text-gray-400 hover:text-red-500"><X className="h-4 w-4" /></button>
+            </div>
+          )}
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <Textarea
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                placeholder='Ask anything, generate a flyer, or attach an image to edit/recreate it...'
+                className="resize-none text-sm min-h-[44px] max-h-32"
+                rows={2}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+              />
+              <p className="text-[10px] text-gray-400 mt-1">💡 Attach an image 📎 to generate similar or edited versions. Or type to generate from scratch.</p>
+            </div>
+            <div className="flex flex-col gap-1 self-end mb-5">
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageAttach} />
+              <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} title="Attach image">
+                {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+              </Button>
+              <Button onClick={() => sendMessage()} disabled={loading || (!input.trim() && !attachedImage)}
+                className="bg-blue-600 hover:bg-blue-700 px-3">
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          <Button onClick={() => sendMessage()} disabled={loading || !input.trim()}
-            className="bg-blue-600 hover:bg-blue-700 self-end px-3 mb-5">
-            <Send className="h-4 w-4" />
-          </Button>
         </div>
       </Card>
 

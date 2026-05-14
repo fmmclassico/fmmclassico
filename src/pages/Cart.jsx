@@ -166,11 +166,11 @@ export default function Cart() {
                     </Link>
                     <div className="flex-1 min-w-0">
                       <Link to={createPageUrl(`ProductDetail?id=${item.product_id}`)}>
-                        <h3 className="font-medium text-gray-800 hover:text-[#1B3A6B] transition-colors text-sm sm:text-base leading-tight line-clamp-2">
+                        <h3 className="font-medium text-gray-800 hover:text-[#1B3A6B] transition-colors text-xs sm:text-sm leading-tight line-clamp-2">
                           {item.product_name}
                         </h3>
                       </Link>
-                      <p className="text-base sm:text-lg font-bold text-[#1B3A6B] mt-1">
+                      <p className="text-sm sm:text-base font-bold text-[#1B3A6B] mt-1">
                         ₵{item.product_price?.toFixed(2)}
                       </p>
                       

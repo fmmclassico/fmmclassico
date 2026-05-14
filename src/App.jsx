@@ -17,6 +17,7 @@ import AdminAI from './pages/AdminAI';
 import AdminPromoBanners2 from './pages/AdminPromoBanners2';
 import AdminBrandLogos from './pages/AdminBrandLogos';
 import AdminAbout from './pages/AdminAbout';
+import AdminPageContent from './pages/AdminPageContent';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 // make Pages accessible in JSX scope for fallback routes
@@ -98,6 +99,11 @@ const AuthenticatedApp = () => {
       <Route path="/AdminAbout" element={
         <LayoutWrapper currentPageName="AdminAbout">
           <AdminAbout />
+        </LayoutWrapper>
+      } />
+      <Route path="/AdminPageContent" element={
+        <LayoutWrapper currentPageName="AdminPageContent">
+          <AdminPageContent />
         </LayoutWrapper>
       } />
       {/* Case-insensitive fallback routes for common pages */}

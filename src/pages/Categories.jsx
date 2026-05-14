@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Home } from 'lucide-react';
+import { ChevronDown, Home, Settings, Upload, X, Loader2 } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 const CATEGORIES = [
   {
@@ -101,6 +104,70 @@ export default function Categories() {
   const [expanded, setExpanded] = useState({});
   const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
 
+  const [user, setUser] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+  const [uploading, setUploading] = useState({});
+  const [editText, setEditText] = useState({});
+  const queryClient = useQueryClient();
+  const fileRefs = useRef({});
+
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
+
+  const { data: settings = [] } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: () => base44.entities.AppSetting.list(),
+  });
+
+  const isAdmin = user?.role === 'admin';
+
+  // Get overridden image for a category
+  const getCatImage = (catId) => {
+    const s = settings.find(x => x.key === `cat_bg_${catId}`);
+    return s?.value || null;
+  };
+
+  const getCatText = (catId, field, fallback) => {
+    const s = settings.find(x => x.key === `cat_text_${catId}_${field}`);
+    return s?.value || fallback;
+  };
+
+  const saveSetting = async (key, value) => {
+    const existing = settings.find(s => s.key === key);
+    if (existing) {
+      await base44.entities.AppSetting.update(existing.id, { value });
+    } else {
+      await base44.entities.AppSetting.create({ key, value });
+    }
+    queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+  };
+
+  const handleImageUpload = async (catId, file) => {
+    setUploading(u => ({ ...u, [catId]: true }));
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      await saveSetting(`cat_bg_${catId}`, file_url);
+      toast.success('Background image updated!');
+    } catch {
+      toast.error('Upload failed');
+    }
+    setUploading(u => ({ ...u, [catId]: false }));
+  };
+
+  const handleRemoveImage = async (catId) => {
+    await saveSetting(`cat_bg_${catId}`, '');
+    queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+    toast.success('Image removed');
+  };
+
+  const handleSaveText = async (catId, field) => {
+    const val = editText[`${catId}_${field}`];
+    if (val === undefined) return;
+    await saveSetting(`cat_text_${catId}_${field}`, val);
+    toast.success('Saved!');
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       {/* Breadcrumb */}
@@ -112,7 +179,18 @@ export default function Categories() {
         <span className="text-gray-700 font-semibold">Categories</span>
       </div>
 
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-5">Shop by Category</h1>
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Shop by Category</h1>
+        {isAdmin && (
+          <button
+            onClick={() => setEditMode(e => !e)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors font-medium ${editMode ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}
+          >
+            <Settings className="h-3.5 w-3.5" />
+            {editMode ? 'Done Editing' : 'Edit Page'}
+          </button>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
         {CATEGORIES.map((cat, i) => {
@@ -132,18 +210,73 @@ export default function Categories() {
               {/* Category card */}
               <div
                 className="group relative overflow-hidden rounded-2xl h-48 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-                onClick={() => toggle(cat.id)}
+                onClick={() => !editMode && toggle(cat.id)}
               >
-                <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <img
+                  src={getCatImage(cat.id) || cat.image}
+                  alt={cat.name}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
                 <div className={`absolute inset-0 bg-gradient-to-r ${cat.color} opacity-70 group-hover:opacity-80 transition-opacity`} />
                 <div className="absolute inset-0 flex flex-col justify-end p-6">
-                  <h3 className="text-2xl font-bold text-white mb-1">{cat.name}</h3>
-                  <p className="text-white/80 text-sm mb-3">{cat.desc}</p>
-                  <div className="flex items-center text-white font-medium text-sm">
-                    {isOpen ? 'Hide subcategories' : 'Browse subcategories'}
-                    <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-1">
+                    {getCatText(cat.id, 'name', cat.name)}
+                  </h3>
+                  <p className="text-white/80 text-sm mb-3">
+                    {getCatText(cat.id, 'desc', cat.desc)}
+                  </p>
+                  {!editMode && (
+                    <div className="flex items-center text-white font-medium text-sm">
+                      {isOpen ? 'Hide subcategories' : 'Browse subcategories'}
+                      <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  )}
                 </div>
+
+                {/* Admin edit overlay */}
+                {editMode && (
+                  <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 p-4" onClick={e => e.stopPropagation()}>
+                    <p className="text-white text-xs font-bold mb-1">Edit "{cat.name}" Card</p>
+                    <input
+                      type="text"
+                      defaultValue={getCatText(cat.id, 'name', cat.name)}
+                      placeholder="Title"
+                      className="w-full text-xs px-2 py-1 rounded border bg-white/90"
+                      onChange={e => setEditText(t => ({ ...t, [`${cat.id}_name`]: e.target.value }))}
+                      onBlur={() => handleSaveText(cat.id, 'name')}
+                    />
+                    <input
+                      type="text"
+                      defaultValue={getCatText(cat.id, 'desc', cat.desc)}
+                      placeholder="Description"
+                      className="w-full text-xs px-2 py-1 rounded border bg-white/90"
+                      onChange={e => setEditText(t => ({ ...t, [`${cat.id}_desc`]: e.target.value }))}
+                      onBlur={() => handleSaveText(cat.id, 'desc')}
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        ref={el => fileRefs.current[cat.id] = el}
+                        type="file" accept="image/*" className="hidden"
+                        onChange={e => e.target.files?.[0] && handleImageUpload(cat.id, e.target.files[0])}
+                      />
+                      <button
+                        className="flex items-center gap-1 bg-blue-500 text-white text-xs px-2 py-1 rounded hover:bg-blue-600"
+                        onClick={() => fileRefs.current[cat.id]?.click()}
+                      >
+                        {uploading[cat.id] ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                        Change Image
+                      </button>
+                      {getCatImage(cat.id) && (
+                        <button
+                          className="flex items-center gap-1 bg-red-500 text-white text-xs px-2 py-1 rounded hover:bg-red-600"
+                          onClick={() => handleRemoveImage(cat.id)}
+                        >
+                          <X className="h-3 w-3" /> Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Subcategory dropdown */}

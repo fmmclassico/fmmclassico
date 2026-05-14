@@ -15,7 +15,8 @@ import {
   Loader2, 
   CheckCircle, 
   AlertCircle,
-  Mail
+  Mail,
+  Settings
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link } from 'react-router-dom';
@@ -25,9 +26,20 @@ export default function AdminAccessControl() {
   const [user, setUser] = useState(null);
   const [isGranting, setIsGranting] = useState(null);
   const [isRevoking, setIsRevoking] = useState(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState(null);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationStep, setVerificationStep] = useState(null);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [sentCodeEmail, setSentCodeEmail] = useState('');
   const queryClient = useQueryClient();
 
   const MASTER_ADMIN_EMAIL = 'fmmclassico@gmail.com';
+  const VERIFICATION_EMAILS = ['fmmclassico@gmail.com', 'mensahfedramartha@gmail.com'];
   
   const ALLOWED_EMAILS = [
     'fmmclassico@gmail.com',
@@ -36,6 +48,8 @@ export default function AdminAccessControl() {
     'marthamensahfedra@gmail.com',
     'lovelyfedra@gmail.com'
   ];
+
+  const DEFAULT_ADMIN_PASSWORD = '0244129908fmm';
 
   useEffect(() => {
     const checkMasterAdmin = async () => {
@@ -64,47 +78,173 @@ export default function AdminAccessControl() {
     enabled: !!user,
   });
 
+  const { data: adminPasswordData } = useQuery({
+    queryKey: ['adminPassword'],
+    queryFn: () => base44.entities.AdminPassword.list(),
+    enabled: !!user,
+  });
+
+  const currentAdminPassword = adminPasswordData?.[0]?.password_hash || DEFAULT_ADMIN_PASSWORD;
+
   const adminUsers = allUsers.filter(u => ALLOWED_EMAILS.includes(u.email) && u.role === 'admin');
   const regularUsers = allUsers.filter(u => ALLOWED_EMAILS.includes(u.email) && u.role === 'user');
 
-  const handleToggleAdmin = async (userId, userEmail, currentRole) => {
+  const handleGrantClick = (userEmail) => {
     if (userEmail === MASTER_ADMIN_EMAIL) {
-      toast.error('Cannot revoke master admin access');
+      toast.error('Cannot modify master admin access');
+      return;
+    }
+    setPendingEmail(userEmail);
+    setShowPasswordModal(true);
+    setAdminPassword('');
+  };
+
+  const verifyPasswordAndGrant = async () => {
+    if (!adminPassword) {
+      toast.error('Please enter the admin password');
       return;
     }
 
-    if (!confirm(`${currentRole === 'admin' ? 'Remove' : 'Grant'} admin access for ${userEmail}?`)) {
+    // Verify password
+    if (adminPassword !== currentAdminPassword) {
+      toast.error('Incorrect password');
       return;
     }
 
-    setIsGranting(userEmail);
+    setShowPasswordModal(false);
+    
+    // Now grant admin access
+    const userInfo = allUsers.find(u => u.email === pendingEmail);
+    setIsGranting(pendingEmail);
     try {
-      if (currentRole === 'admin') {
-        // Revoke admin access - user must exist
-        if (!userId) {
-          throw new Error('User not found');
-        }
-        await base44.entities.User.update(userId, { role: 'user' });
-        toast.success(`✅ Admin access revoked for ${userEmail}`);
+      if (userInfo && userInfo.id) {
+        await base44.entities.User.update(userInfo.id, { role: 'admin' });
+        toast.success(`✅ Admin access granted to ${pendingEmail}`);
       } else {
-        // Grant admin access
-        const userInfo = allUsers.find(u => u.email === userEmail);
-        if (userInfo && userInfo.id) {
-          // User exists - update role
-          await base44.entities.User.update(userInfo.id, { role: 'admin' });
-          toast.success(`✅ Admin access granted to ${userEmail}`);
-        } else {
-          // User doesn't exist - invite them as admin
-          await base44.users.inviteUser(userEmail, 'admin');
-          toast.success(`✅ Invitation sent to ${userEmail}! Check your email for the invitation link.`);
-        }
+        await base44.users.inviteUser(pendingEmail, 'admin');
+        toast.success(`✅ Invitation sent to ${pendingEmail}! They will use the admin password to access admin features.`);
       }
       queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     } catch (error) {
-      console.error('Toggle error:', error);
-      toast.error(error.message || 'Failed to update access');
+      console.error('Grant error:', error);
+      toast.error(error.message || 'Failed to grant access');
     } finally {
       setIsGranting(null);
+      setPendingEmail(null);
+      setAdminPassword('');
+    }
+  };
+
+  const handleChangePasswordClick = () => {
+    setShowChangePassword(true);
+    setVerificationStep('password');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+
+  const sendVerificationCode = async () => {
+    if (!currentPassword || currentPassword !== currentAdminPassword) {
+      toast.error('Current password is incorrect');
+      return;
+    }
+
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    try {
+      // Send to both verification emails
+      for (const email of VERIFICATION_EMAILS) {
+        await base44.entities.VerificationCode.create({
+          email,
+          code,
+          purpose: 'password_change',
+          expires_at: expiresAt,
+          is_used: false
+        });
+        
+        // Send email notification
+        await base44.integrations.Core.SendEmail({
+          to: email,
+          subject: 'Admin Password Change Verification Code',
+          body: `Your verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email.`
+        });
+      }
+
+      setSentCodeEmail(VERIFICATION_EMAILS.join(' and '));
+      setVerificationStep('code');
+      toast.success(`✅ Verification code sent to ${VERIFICATION_EMAILS.join(' and ')}`);
+    } catch (error) {
+      console.error('Send code error:', error);
+      toast.error('Failed to send verification code: ' + error.message);
+    }
+  };
+
+  const verifyCodeAndChangePassword = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      toast.error('Please enter the 6-digit verification code');
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+
+    try {
+      // Verify code for both emails
+      let validCode = null;
+      for (const email of VERIFICATION_EMAILS) {
+        const codes = await base44.entities.VerificationCode.filter({
+          email,
+          code: verificationCode,
+          purpose: 'password_change',
+          is_used: false
+        });
+        
+        const valid = codes.find(c => new Date(c.expires_at) > new Date());
+        if (valid) {
+          validCode = valid;
+          break;
+        }
+      }
+
+      if (!validCode) {
+        toast.error('Invalid or expired verification code');
+        return;
+      }
+
+      // Mark code as used
+      await base44.entities.VerificationCode.update(validCode.id, { is_used: true });
+
+      // Update password
+      const existingPassword = adminPasswordData?.[0];
+      if (existingPassword) {
+        await base44.entities.AdminPassword.update(existingPassword.id, {
+          password_hash: newPassword,
+          created_by: user.email,
+          last_changed: new Date().toISOString()
+        });
+      } else {
+        await base44.entities.AdminPassword.create({
+          password_hash: newPassword,
+          created_by: user.email,
+          last_changed: new Date().toISOString()
+        });
+      }
+
+      toast.success('✅ Admin password changed successfully!');
+      setShowChangePassword(false);
+      queryClient.invalidateQueries({ queryKey: ['adminPassword'] });
+    } catch (error) {
+      console.error('Change password error:', error);
+      toast.error('Failed to change password: ' + error.message);
     }
   };
 
@@ -166,12 +306,23 @@ export default function AdminAccessControl() {
 
       {/* Authorized Emails */}
       <Card className="p-6 mb-6 shadow-md border-2 border-blue-200">
-        <div className="flex items-center gap-2 mb-4">
-          <Shield className="h-5 w-5 text-blue-800" />
-          <h2 className="font-bold text-gray-800">Authorized Emails</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-blue-800" />
+            <h2 className="font-bold text-gray-800">Authorized Emails</h2>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleChangePasswordClick}
+            className="text-blue-800 border-blue-800 hover:bg-blue-50"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Change Admin Password
+          </Button>
         </div>
         <p className="text-sm text-gray-600 mb-4">
-          Only these {ALLOWED_EMAILS.length} emails can be granted admin access. Click the toggle button to grant or revoke access.
+          Only these {ALLOWED_EMAILS.length} emails can be granted admin access. Enter the admin password to grant access.
         </p>
         <div className="space-y-2">
           {ALLOWED_EMAILS.map((email) => {
@@ -222,21 +373,37 @@ export default function AdminAccessControl() {
                   </div>
                 </div>
                 {!isMasterAdmin && (
-                  <Button
-                    variant={isAdmin ? "destructive" : "default"}
-                    size="sm"
-                    onClick={() => handleToggleAdmin(userInfo?.id, email, isAdmin ? 'admin' : 'user')}
-                    disabled={isGranting === email}
-                    className={isAdmin ? "bg-red-600 hover:bg-red-700" : "bg-blue-800 hover:bg-blue-900"}
-                  >
-                    {isGranting === email ? (
-                      <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Updating...</>
-                    ) : isAdmin ? (
-                      <><ShieldOff className="h-3 w-3 mr-2" /> Revoke</>
+                  <div className="flex gap-2">
+                    {isAdmin ? (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleRevokeAdmin(userInfo?.id, email)}
+                        disabled={isRevoking === userInfo?.id}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        {isRevoking === userInfo?.id ? (
+                          <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Removing...</>
+                        ) : (
+                          <><ShieldOff className="h-3 w-3 mr-2" /> Revoke</>
+                        )}
+                      </Button>
                     ) : (
-                      <><Shield className="h-3 w-3 mr-2" /> Grant</>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleGrantClick(email)}
+                        disabled={isGranting === email}
+                        className="bg-blue-800 hover:bg-blue-900"
+                      >
+                        {isGranting === email ? (
+                          <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Granting...</>
+                        ) : (
+                          <><Shield className="h-3 w-3 mr-2" /> Grant</>
+                        )}
+                      </Button>
                     )}
-                  </Button>
+                  </div>
                 )}
               </div>
             );
@@ -255,13 +422,165 @@ export default function AdminAccessControl() {
             <ul className="list-disc list-inside space-y-1 text-xs">
               <li>Only <strong>fmmclassico@gmail.com</strong> can access this page</li>
               <li>Only the {ALLOWED_EMAILS.length} authorized emails listed above can be granted admin access</li>
+              <li>Enter the admin password to grant admin access to any authorized email</li>
+              <li>Default password: <strong>0244129908fmm</strong></li>
+              <li>Change the password anytime using the button above (requires email verification)</li>
               <li>Granting admin access gives full control over all app features</li>
               <li>You cannot remove your own (master admin) access</li>
-              <li>Additional emails cannot be added to this list</li>
             </ul>
           </div>
         </div>
       </div>
+
+      {/* Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">Enter Admin Password</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Grant admin access to <strong>{pendingEmail}</strong>
+            </p>
+            <Input
+              type="password"
+              placeholder="Enter admin password"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && verifyPasswordAndGrant()}
+              className="mb-4"
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setPendingEmail(null);
+                  setAdminPassword('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={verifyPasswordAndGrant}
+                disabled={isGranting === pendingEmail}
+                className="bg-blue-800 hover:bg-blue-900"
+              >
+                {isGranting === pendingEmail ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Granting...</>
+                ) : (
+                  'Grant Access'
+                )}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-lg w-full p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Change Admin Password</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Verification will be sent to: <strong>{VERIFICATION_EMAILS.join(' and ')}</strong>
+            </p>
+
+            {verificationStep === 'password' && (
+              <div className="space-y-4">
+                <div>
+                  <Label>Current Password</Label>
+                  <Input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowChangePassword(false);
+                      setVerificationStep(null);
+                      setCurrentPassword('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={sendVerificationCode}
+                    className="bg-blue-800 hover:bg-blue-900"
+                  >
+                    Send Verification Code
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {verificationStep === 'code' && (
+              <div className="space-y-4">
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-800">
+                    ✅ Verification code sent to <strong>{sentCodeEmail}</strong>
+                  </p>
+                </div>
+                <div>
+                  <Label>Verification Code</Label>
+                  <Input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="Enter 6-digit code"
+                    className="mt-1"
+                    maxLength={6}
+                  />
+                </div>
+                <div>
+                  <Label>New Password</Label>
+                  <Input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Confirm New Password</Label>
+                  <Input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowChangePassword(false);
+                      setVerificationStep(null);
+                      setCurrentPassword('');
+                      setNewPassword('');
+                      setConfirmPassword('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={verifyCodeAndChangePassword}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    Change Password
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

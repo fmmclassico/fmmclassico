@@ -1,0 +1,60 @@
+{
+  "name": "VerificationCode",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "description": "Email to verify"
+    },
+    "code": {
+      "type": "string",
+      "description": "6-digit verification code"
+    },
+    "purpose": {
+      "type": "string",
+      "enum": [
+        "password_change",
+        "admin_verification"
+      ],
+      "description": "Purpose of verification"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When code expires (10 minutes from creation)"
+    },
+    "is_used": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether code has been used"
+    }
+  },
+  "required": [
+    "email",
+    "code",
+    "purpose",
+    "expires_at"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

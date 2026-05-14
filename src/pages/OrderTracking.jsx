@@ -146,35 +146,88 @@ export default function OrderTracking() {
         </Card>
       )}
 
-      {/* ── Tracking History ── */}
-      {order.tracking_updates?.length > 0 && (
-        <Card className="p-6 mb-6 shadow-md">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Tracking History</h2>
-          <div className="space-y-0">
-            {[...order.tracking_updates].reverse().map((update, index, arr) => {
-              const isGreen = ['confirmed', 'processing', 'shipped', 'in_transit', 'delivered', 'payment confirmed'].some(s =>
-                update.status?.toLowerCase().includes(s)
-              );
-              const isLast = index === arr.length - 1;
-              return (
-                <div key={index} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className={`w-3.5 h-3.5 rounded-full flex-shrink-0 mt-1 ${isGreen ? 'bg-green-500' : 'bg-orange-400'}`} />
-                    {!isLast && <div className="w-0.5 flex-1 bg-gray-200 my-1 min-h-[20px]" />}
+      {/* ── Tracking History — 5-step timeline ── */}
+      <Card className="p-6 mb-6 shadow-md">
+        <h2 className="text-lg font-bold text-gray-800 mb-5">Tracking History</h2>
+        {(() => {
+          const tracking = order.tracking_updates || [];
+          const hasStatus = (keywords) => tracking.some(t =>
+            keywords.some(k => t.status?.toLowerCase().includes(k.toLowerCase()) || t.message?.toLowerCase().includes(k.toLowerCase()))
+          );
+          const getTimestamp = (keywords) => {
+            const match = tracking.find(t =>
+              keywords.some(k => t.status?.toLowerCase().includes(k.toLowerCase()) || t.message?.toLowerCase().includes(k.toLowerCase()))
+            );
+            return match?.timestamp ? format(new Date(match.timestamp), 'MMM d, yyyy h:mm a') : null;
+          };
+
+          const steps = [
+            {
+              label: 'Payment Confirmed',
+              desc: 'Payment has been verified and confirmed.',
+              done: hasStatus(['payment confirmed','confirmed','processing','shipped','in_transit','delivered']) || ['confirmed','processing','shipped','in_transit','delivered'].includes(order.status),
+              time: getTimestamp(['payment confirmed','confirmed']),
+              icon: CheckCircle2,
+            },
+            {
+              label: 'Order Processing',
+              desc: 'Your order is being prepared and packed.',
+              done: hasStatus(['processing','shipped','in_transit','delivered']) || ['processing','shipped','in_transit','delivered'].includes(order.status),
+              time: getTimestamp(['processing']),
+              icon: Package,
+            },
+            {
+              label: 'Shipped',
+              desc: 'Your order has been dispatched for delivery.',
+              done: hasStatus(['shipped','in_transit','delivered']) || ['shipped','in_transit','delivered'].includes(order.status),
+              time: getTimestamp(['shipped']),
+              icon: Truck,
+            },
+            {
+              label: 'In Transit',
+              desc: 'Your order is on its way to you.',
+              done: hasStatus(['in_transit','delivered']) || ['in_transit','delivered'].includes(order.status),
+              time: getTimestamp(['in_transit','transit']),
+              icon: MapPin,
+            },
+            {
+              label: 'Delivered',
+              desc: 'Your order has been delivered successfully.',
+              done: hasStatus(['delivered']) || order.status === 'delivered',
+              time: getTimestamp(['delivered']),
+              icon: Home,
+            },
+          ];
+
+          return (
+            <div className="space-y-0">
+              {steps.map((step, i) => {
+                const isLast = i === steps.length - 1;
+                const Icon = step.icon;
+                return (
+                  <div key={i} className="flex gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
+                        step.done ? 'bg-[#1B3A6B] border-[#1B3A6B]' : 'bg-white border-gray-200'
+                      }`}>
+                        <Icon className={`h-4 w-4 ${step.done ? 'text-white' : 'text-gray-300'}`} />
+                      </div>
+                      {!isLast && <div className={`w-0.5 flex-1 my-1 min-h-[24px] ${step.done ? 'bg-[#1B3A6B]' : 'bg-gray-200'}`} />}
+                    </div>
+                    <div className="flex-1 pb-5">
+                      <p className={`font-bold text-sm ${step.done ? 'text-[#1B3A6B]' : 'text-gray-400'}`}>{step.label}</p>
+                      <p className={`text-xs mt-0.5 ${step.done ? 'text-gray-600' : 'text-gray-400'}`}>{step.desc}</p>
+                      {step.done && step.time && (
+                        <p className="text-[11px] text-gray-400 mt-1">{step.time}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className={`flex-1 pb-4 ${!isLast ? '' : ''}`}>
-                    <p className={`font-semibold text-sm ${isGreen ? 'text-green-700' : 'text-orange-600'}`}>{update.status}</p>
-                    <p className="text-sm text-gray-600 mt-0.5">{update.message}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {format(new Date(update.timestamp), 'MMM d, yyyy h:mm a')}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      )}
+                );
+              })}
+            </div>
+          );
+        })()}
+      </Card>
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Order Items */}

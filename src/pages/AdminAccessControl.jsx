@@ -23,12 +23,19 @@ import { createPageUrl } from '../utils';
 
 export default function AdminAccessControl() {
   const [user, setUser] = useState(null);
-  const [newAdminEmail, setNewAdminEmail] = useState('');
-  const [isGranting, setIsGranting] = useState(false);
+  const [isGranting, setIsGranting] = useState(null);
   const [isRevoking, setIsRevoking] = useState(null);
   const queryClient = useQueryClient();
 
   const MASTER_ADMIN_EMAIL = 'fmmclassico@gmail.com';
+  
+  const ALLOWED_EMAILS = [
+    'fmmclassico@gmail.com',
+    'fmmcompanylimited@gmail.com',
+    'mensahfedramartha@gmail.com',
+    'marthamensahfedra@gmail.com',
+    'lovelyfedra@gmail.com'
+  ];
 
   useEffect(() => {
     const checkMasterAdmin = async () => {
@@ -57,43 +64,33 @@ export default function AdminAccessControl() {
     enabled: !!user,
   });
 
-  const adminUsers = allUsers.filter(u => u.role === 'admin');
-  const regularUsers = allUsers.filter(u => u.role === 'user');
+  const adminUsers = allUsers.filter(u => ALLOWED_EMAILS.includes(u.email) && u.role === 'admin');
+  const regularUsers = allUsers.filter(u => ALLOWED_EMAILS.includes(u.email) && u.role === 'user');
 
-  const handleGrantAdmin = async (e) => {
-    e.preventDefault();
-    if (!newAdminEmail.trim()) {
-      toast.error('Please enter an email address');
+  const handleToggleAdmin = async (userId, userEmail, currentRole) => {
+    if (userEmail === MASTER_ADMIN_EMAIL) {
+      toast.error('Cannot revoke master admin access');
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newAdminEmail)) {
-      toast.error('Please enter a valid email address');
+    if (!confirm(`${currentRole === 'admin' ? 'Remove' : 'Grant'} admin access for ${userEmail}?`)) {
       return;
     }
 
-    setIsGranting(true);
+    setIsGranting(userEmail);
     try {
-      // Find user by email
-      const existingUser = allUsers.find(u => u.email === newAdminEmail);
-      
-      if (existingUser) {
-        // Update existing user
-        await base44.entities.User.update(existingUser.id, { role: 'admin' });
-        toast.success(`✅ ${newAdminEmail} is now an admin!`);
+      if (currentRole === 'admin') {
+        await base44.entities.User.update(userId, { role: 'user' });
+        toast.success(`✅ Admin access revoked for ${userEmail}`);
       } else {
-        // User doesn't exist - invite them
-        await base44.users.inviteUser(newAdminEmail, 'admin');
-        toast.success(`✅ Admin invitation sent to ${newAdminEmail}`);
+        await base44.entities.User.update(userId, { role: 'admin' });
+        toast.success(`✅ Admin access granted to ${userEmail}`);
       }
-      
-      setNewAdminEmail('');
       queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     } catch (error) {
-      toast.error('Failed to grant admin access: ' + error.message);
+      toast.error('Failed to update access: ' + error.message);
     } finally {
-      setIsGranting(false);
+      setIsGranting(null);
     }
   };
 
@@ -153,155 +150,87 @@ export default function AdminAccessControl() {
         </Badge>
       </div>
 
-      {/* Grant Admin Access */}
+      {/* Authorized Emails */}
       <Card className="p-6 mb-6 shadow-md border-2 border-blue-200">
         <div className="flex items-center gap-2 mb-4">
-          <Plus className="h-5 w-5 text-blue-800" />
-          <h2 className="font-bold text-gray-800">Grant Admin Access</h2>
+          <Shield className="h-5 w-5 text-blue-800" />
+          <h2 className="font-bold text-gray-800">Authorized Emails</h2>
         </div>
-        
-        <form onSubmit={handleGrantAdmin} className="space-y-4">
-          <div>
-            <Label className="text-sm font-medium text-gray-700">Email Address</Label>
-            <div className="flex gap-2 mt-2">
-              <Input
-                type="email"
-                placeholder="Enter email to grant admin access"
-                value={newAdminEmail}
-                onChange={(e) => setNewAdminEmail(e.target.value)}
-                className="flex-1"
-                disabled={isGranting}
-              />
-              <Button 
-                type="submit" 
-                className="bg-blue-800 hover:bg-blue-900 whitespace-nowrap"
-                disabled={isGranting}
-              >
-                {isGranting ? (
-                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Granting...</>
-                ) : (
-                  <><Shield className="h-4 w-4 mr-2" /> Grant Admin</>
-                )}
-              </Button>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Enter an email address. If the user exists, they'll become admin immediately. If not, they'll receive an invitation.
-            </p>
-          </div>
-        </form>
-      </Card>
-
-      {/* Current Admins */}
-      <Card className="p-6 mb-6 shadow-md">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-blue-800" />
-            <h2 className="font-bold text-gray-800">Current Admins ({adminUsers.length})</h2>
-          </div>
-        </div>
-
-        {isLoading ? (
-          <div className="text-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin mx-auto text-blue-800" />
-            <p className="text-gray-500 text-sm mt-2">Loading admins...</p>
-          </div>
-        ) : adminUsers.length === 0 ? (
-          <div className="text-center py-8 text-gray-400">
-            <ShieldOff className="h-12 w-12 mx-auto mb-2 opacity-30" />
-            <p>No admins found</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {adminUsers.map((admin) => (
+        <p className="text-sm text-gray-600 mb-4">
+          Only these {ALLOWED_EMAILS.length} emails can be granted admin access. Click the toggle button to grant or revoke access.
+        </p>
+        <div className="space-y-2">
+          {ALLOWED_EMAILS.map((email) => {
+            const userInfo = allUsers.find(u => u.email === email);
+            const isAdmin = userInfo?.role === 'admin';
+            const isMasterAdmin = email === MASTER_ADMIN_EMAIL;
+            
+            return (
               <div 
-                key={admin.id} 
+                key={email}
                 className={`flex items-center justify-between p-3 rounded-lg border ${
-                  admin.email === MASTER_ADMIN_EMAIL 
+                  isMasterAdmin 
                     ? 'bg-blue-50 border-blue-200' 
-                    : 'bg-white border-gray-200'
+                    : isAdmin 
+                      ? 'bg-green-50 border-green-200' 
+                      : 'bg-gray-50 border-gray-200'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    admin.email === MASTER_ADMIN_EMAIL 
+                    isMasterAdmin 
                       ? 'bg-blue-800 text-white' 
-                      : 'bg-gray-100 text-gray-600'
+                      : isAdmin 
+                        ? 'bg-green-600 text-white' 
+                        : 'bg-gray-200 text-gray-600'
                   }`}>
                     <Mail className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-800 text-sm">{admin.email}</p>
-                    {admin.email === MASTER_ADMIN_EMAIL && (
-                      <Badge className="text-xs bg-blue-800 text-white">
-                        <Shield className="h-3 w-3 mr-1" />
-                        Master Admin
-                      </Badge>
-                    )}
-                    <p className="text-xs text-gray-500">
-                      Added: {new Date(admin.created_date).toLocaleDateString()}
-                    </p>
+                    <p className="font-medium text-gray-800 text-sm">{email}</p>
+                    <div className="flex gap-2 mt-1">
+                      {isMasterAdmin ? (
+                        <Badge className="text-xs bg-blue-800 text-white">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Master Admin
+                        </Badge>
+                      ) : isAdmin ? (
+                        <Badge className="text-xs bg-green-600 text-white">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Admin Access
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs text-gray-600">
+                          No Admin Access
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
-                {admin.email !== MASTER_ADMIN_EMAIL && (
+                {!isMasterAdmin && (
                   <Button
-                    variant="outline"
+                    variant={isAdmin ? "destructive" : "default"}
                     size="sm"
-                    onClick={() => handleRevokeAdmin(admin.id, admin.email)}
-                    disabled={isRevoking === admin.id}
-                    className="text-red-600 hover:bg-red-50 border-red-200"
+                    onClick={() => handleToggleAdmin(userInfo?.id, email, isAdmin ? 'admin' : 'user')}
+                    disabled={isGranting === email || !userInfo}
+                    className={isAdmin ? "bg-red-600 hover:bg-red-700" : "bg-blue-800 hover:bg-blue-900"}
                   >
-                    {isRevoking === admin.id ? (
-                      <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Removing...</>
+                    {isGranting === email ? (
+                      <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Updating...</>
+                    ) : isAdmin ? (
+                      <><ShieldOff className="h-3 w-3 mr-2" /> Revoke</>
                     ) : (
-                      <><Trash2 className="h-3 w-3 mr-2" /> Remove</>
+                      <><Shield className="h-3 w-3 mr-2" /> Grant</>
                     )}
                   </Button>
                 )}
               </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {/* Regular Users */}
-      <Card className="p-6 shadow-md">
-        <div className="flex items-center gap-2 mb-4">
-          <Users className="h-5 w-5 text-gray-600" />
-          <h2 className="font-bold text-gray-800">Regular Users ({regularUsers.length})</h2>
+            );
+          })}
         </div>
-
-        {regularUsers.length === 0 ? (
-          <div className="text-center py-8 text-gray-400">
-            <Users className="h-12 w-12 mx-auto mb-2 opacity-30" />
-            <p>No regular users yet</p>
-          </div>
-        ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {regularUsers.map((user) => (
-              <div 
-                key={user.id} 
-                className="flex items-center justify-between p-2 rounded-lg border bg-white border-gray-200"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                    <Mail className="h-4 w-4 text-gray-600" />
-                  </div>
-                  <p className="text-sm text-gray-700">{user.email}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setNewAdminEmail(user.email)}
-                  className="text-blue-600 hover:bg-blue-50"
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Make Admin
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
       </Card>
+
+
 
       {/* Info Box */}
       <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -311,9 +240,10 @@ export default function AdminAccessControl() {
             <p className="font-semibold mb-1">Important Notes:</p>
             <ul className="list-disc list-inside space-y-1 text-xs">
               <li>Only <strong>fmmclassico@gmail.com</strong> can access this page</li>
+              <li>Only the {ALLOWED_EMAILS.length} authorized emails listed above can be granted admin access</li>
               <li>Granting admin access gives full control over all app features</li>
               <li>You cannot remove your own (master admin) access</li>
-              <li>New admins can immediately access all admin panels</li>
+              <li>Additional emails cannot be added to this list</li>
             </ul>
           </div>
         </div>

@@ -123,27 +123,37 @@ export default function Checkout() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        const locationText = `My Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-        const googleMapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        const googleMapsLink = `https://www.google.com/maps?q=${latitude.toFixed(6)},${longitude.toFixed(6)}&z=15`;
         
-        // Append location to delivery address
+        // Set delivery address to Google Maps link
         setFormData(prev => ({
           ...prev,
-          delivery_address: prev.delivery_address 
-            ? `${prev.delivery_address} - ${googleMapsLink}`
-            : googleMapsLink
+          delivery_address: googleMapsLink
         }));
-        toast.success('Location added to delivery address!');
+        toast.success('📍 Location detected! Google Maps link added to address field.');
       },
       (error) => {
         let errorMsg = 'Unable to get your location';
-        if (error.code === 1) errorMsg = 'Location access denied. Please enable location permissions.';
-        if (error.code === 2) errorMsg = 'Location service unavailable.';
-        if (error.code === 3) errorMsg = 'Location request timed out.';
-        setLocationError(errorMsg);
+        if (error.code === 1) {
+          errorMsg = 'Location access denied';
+          setLocationError(errorMsg);
+          // Open phone's location settings after a short delay
+          setTimeout(() => {
+            if (confirm('Location permission is needed to auto-detect your location.\n\nTap OK to open your phone\'s location settings.')) {
+              // Try to open location settings (works on most mobile devices)
+              window.open('https://support.google.com/android/answer/3457478?hl=en', '_blank');
+            }
+          }, 500);
+        } else if (error.code === 2) {
+          errorMsg = 'Location service unavailable';
+          setLocationError(errorMsg);
+        } else if (error.code === 3) {
+          errorMsg = 'Location request timed out';
+          setLocationError(errorMsg);
+        }
         toast.error(errorMsg);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
@@ -331,21 +341,32 @@ export default function Checkout() {
                     <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
                       <span className="text-lg">📍</span>
                       <div className="flex-1 text-xs text-blue-700">
-                        <span className="font-semibold">Get your current location</span> automatically
+                        <span className="font-semibold">Auto-detect your current location</span>
                       </div>
                       <button
                         type="button"
                         onClick={getCurrentLocation}
-                        className="flex-shrink-0 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
+                        className="flex-shrink-0 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
                       >
-                        📍 Get Location
+                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        Get Location
                       </button>
                     </div>
                     <p className="text-xs text-gray-500">
-                      Click "Get Location" to auto-fill your GPS coordinates, or open Google Maps, copy your location link and paste it above.
+                      Click to automatically detect and add your GPS location to the address field. If permission is denied, you'll be guided to enable location services.
                     </p>
                     {locationError && (
-                      <p className="text-xs text-red-600 font-medium">⚠️ {locationError}</p>
+                      <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-xs text-red-700 font-medium mb-1">⚠️ {locationError}</p>
+                        <button
+                          onClick={() => {
+                            window.open('https://support.google.com/android/answer/3457478?hl=en', '_blank');
+                          }}
+                          className="text-xs text-blue-600 underline font-medium hover:text-blue-800"
+                        >
+                          📱 Tap here to open Location Settings guide
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

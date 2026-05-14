@@ -465,7 +465,7 @@ export default function Layout({ children, currentPageName }) {
             href="https://wa.me/233509896035"
             target="_blank"
             rel="noopener noreferrer"
-            className="fixed bottom-24 md:bottom-8 right-4 z-50 flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-2.5 py-1.5 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95"
+            className="fixed bottom-20 md:bottom-8 right-4 z-50 flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-2.5 py-1.5 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95"
             style={{ boxShadow: '0 4px 20px rgba(34,197,94,0.5)' }}
           >
             <svg className="h-4 w-4 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -475,7 +475,7 @@ export default function Layout({ children, currentPageName }) {
           </a>
           <Link
             to={createPageUrl('Chat')}
-            className="fixed bottom-36 md:bottom-20 right-4 z-50 flex items-center gap-1.5 text-white px-2.5 py-1.5 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95"
+            className="fixed bottom-32 md:bottom-16 right-4 z-50 flex items-center gap-1.5 text-white px-2.5 py-1.5 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95"
             style={{ background: ASH, boxShadow: '0 4px 20px rgba(31,41,55,0.5)' }}
           >
             <Bot className="h-4 w-4" />

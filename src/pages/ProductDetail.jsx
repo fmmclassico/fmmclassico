@@ -337,7 +337,7 @@ export default function ProductDetail() {
           </div>
 
           {/* Features */}
-          <div className="grid grid-cols-1 gap-3 pt-4 border-t">
+          <div className="grid grid-cols-1 gap-3 pt-4 border-t relative" id="product-features">
             <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg">
               <Shield className="h-6 w-6 text-[#2E86C1] mb-2" />
               <span className="text-xs font-medium text-gray-600">Genuine Product</span>

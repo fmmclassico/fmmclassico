@@ -121,8 +121,9 @@ export default function AdminAccessControl() {
         await base44.entities.User.update(userInfo.id, { role: 'admin' });
         toast.success(`✅ Admin access granted to ${pendingEmail}`);
       } else {
-        await base44.users.inviteUser(pendingEmail, 'admin');
-        toast.success(`✅ Invitation sent to ${pendingEmail}! They will use the admin password to access admin features.`);
+        // User doesn't exist - invite them first with user role, then grant admin
+        await base44.users.inviteUser(pendingEmail, 'user');
+        toast.success(`✅ Invitation sent to ${pendingEmail}. Once they register, you can grant admin access.`);
       }
       queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     } catch (error) {
@@ -422,11 +423,6 @@ export default function AdminAccessControl() {
             <ul className="list-disc list-inside space-y-1 text-xs">
               <li>Only <strong>fmmclassico@gmail.com</strong> can access this page</li>
               <li>Only the {ALLOWED_EMAILS.length} authorized emails listed above can be granted admin access</li>
-              <li>Enter the admin password to grant admin access to any authorized email</li>
-              <li>Default password: <strong>0244129908fmm</strong></li>
-              <li>Change the password anytime using the button above (requires email verification)</li>
-              <li>Granting admin access gives full control over all app features</li>
-              <li>You cannot remove your own (master admin) access</li>
             </ul>
           </div>
         </div>

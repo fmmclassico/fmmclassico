@@ -80,11 +80,21 @@ export default function AdminAccessControl() {
     setIsGranting(userEmail);
     try {
       if (currentRole === 'admin') {
+        // Revoke admin access
         await base44.entities.User.update(userId, { role: 'user' });
         toast.success(`✅ Admin access revoked for ${userEmail}`);
       } else {
-        await base44.entities.User.update(userId, { role: 'admin' });
-        toast.success(`✅ Admin access granted to ${userEmail}`);
+        // Grant admin access
+        const userInfo = allUsers.find(u => u.email === userEmail);
+        if (userInfo && userInfo.id) {
+          // User exists - update role
+          await base44.entities.User.update(userInfo.id, { role: 'admin' });
+          toast.success(`✅ Admin access granted to ${userEmail}`);
+        } else {
+          // User doesn't exist - invite them as admin
+          await base44.users.inviteUser(userEmail, 'admin');
+          toast.success(`✅ Admin invitation sent to ${userEmail}`);
+        }
       }
       queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     } catch (error) {
@@ -212,7 +222,7 @@ export default function AdminAccessControl() {
                     variant={isAdmin ? "destructive" : "default"}
                     size="sm"
                     onClick={() => handleToggleAdmin(userInfo?.id, email, isAdmin ? 'admin' : 'user')}
-                    disabled={isGranting === email || !userInfo}
+                    disabled={isGranting === email}
                     className={isAdmin ? "bg-red-600 hover:bg-red-700" : "bg-blue-800 hover:bg-blue-900"}
                   >
                     {isGranting === email ? (

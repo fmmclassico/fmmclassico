@@ -315,7 +315,7 @@ export default function Checkout() {
                     required
                   />
                   {formData.city && (
-                    <p className={`text-xs font-medium mt-1 ${shipping === 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                    <p className={`text-xs font-medium mt-1 ${shipping === 0 ? 'text-green-600' : 'text-[#1B3A6B]'}`}>
                       📍 Delivery: {getShippingLabel()}
                     </p>
                   )}
@@ -369,7 +369,7 @@ export default function Checkout() {
                     <div className="flex-1">
                       <p className="font-medium text-sm text-gray-800 line-clamp-1">{item.product_name}</p>
                       <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-                      <p className="font-semibold text-orange-600">₵{(item.product_price * item.quantity).toFixed(2)}</p>
+                      <p className="font-semibold text-[#1B3A6B]">₵{(item.product_price * item.quantity).toFixed(2)}</p>
                     </div>
                   </div>
                 ))}
@@ -385,7 +385,7 @@ export default function Checkout() {
                 <div className="flex flex-col gap-0.5">
                   <div className="flex justify-between text-gray-600">
                     <span>Delivery</span>
-                    <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-semibold text-orange-600'}>
+                    <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-semibold text-[#1B3A6B]'}>
                       {shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}
                     </span>
                   </div>
@@ -396,7 +396,7 @@ export default function Checkout() {
                 <Separator />
                 <div className="flex justify-between text-lg font-bold text-gray-800">
                   <span>Total</span>
-                  <span className="text-orange-600">₵{total.toFixed(2)}</span>
+                  <span className="text-[#1B3A6B]">₵{total.toFixed(2)}</span>
                 </div>
               </div>
 

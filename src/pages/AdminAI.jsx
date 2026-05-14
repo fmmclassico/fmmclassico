@@ -215,7 +215,13 @@ Respond in a helpful, practical and detailed way. Be specific to the Ghana/West 
   };
 
   if (!user) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
-  if (!isAdmin) return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
+  if (!isAdmin) {
+    const adminVerified = sessionStorage.getItem(`admin_verified_${user.email}`);
+    if (!adminVerified) {
+      return <div className="p-8 text-center text-gray-500">Admin password verification required. Please logout and login again.</div>;
+    }
+    return <div className="p-8 text-center text-gray-500">Your account does not have admin privileges.</div>;
+  }
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">

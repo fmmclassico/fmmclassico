@@ -346,11 +346,11 @@ export default function Checkout() {
                 <h2 className="text-base font-bold text-gray-800">Payment Method</h2>
               </div>
               
-              <div className="p-3 border-2 border-[#1B3A6B] rounded-lg bg-blue-50 flex items-center gap-3">
+              <div className="p-3 border-2 border-[#1B3A6B] rounded-lg bg-blue-50 flex items-center justify-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-[#1B3A6B] flex items-center justify-center flex-shrink-0">
                   <span className="text-white text-base">💳</span>
                 </div>
-                <div>
+                <div className="text-center">
                   <span className="font-bold text-gray-800 text-sm block">Pay with Paystack</span>
                   <span className="text-xs text-gray-600">Mobile Money, Card & Bank Transfer – secure checkout</span>
                 </div>
@@ -361,7 +361,7 @@ export default function Checkout() {
           {/* Order Summary */}
           <div className="lg:col-span-1">
             <Card className="p-4 md:p-6 shadow-md sticky top-20">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">Order Summary</h2>
+              <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Order Summary</h2>
               
               <div className="space-y-3 mb-4 max-h-48 md:max-h-64 overflow-y-auto">
                 {cartItems.map((item) => (
@@ -392,12 +392,12 @@ export default function Checkout() {
                 <div className="flex flex-col gap-0.5">
                   <div className="flex justify-between text-sm md:text-base text-gray-600">
                     <span>Delivery</span>
-                    <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-semibold text-[#1B3A6B]'}>
+                    <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-semibold text-[#1B3A6B3A6B]'}>
                       {shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}
                     </span>
                   </div>
                   {cartZoneName && (
-                    <p className="text-xs text-gray-400 text-right">{cartZoneName}</p>
+                    <p className="text-xs text-gray-400 text-center">{cartZoneName}</p>
                   )}
                 </div>
                 <Separator />
@@ -407,20 +407,22 @@ export default function Checkout() {
                 </div>
               </div>
 
-              <Button 
-                type="submit"
-                className="w-full mt-6 bg-[#1B3A6B] hover:bg-[#152f5a] text-white font-bold py-4 md:py-6 text-base md:text-lg"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  '💳 Place Order & Pay with Paystack'
-                )}
-              </Button>
+              <div className="flex justify-center mt-6">
+                <Button 
+                  type="submit"
+                  className="w-full max-w-sm bg-[#1B3A6B] hover:bg-[#152f5a] text-white font-bold py-4 md:py-6 text-base md:text-lg"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    '💳 Place Order & Pay with Paystack'
+                  )}
+                </Button>
+              </div>
             </Card>
           </div>
         </div>

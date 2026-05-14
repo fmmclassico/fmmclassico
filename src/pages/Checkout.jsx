@@ -211,26 +211,26 @@ export default function Checkout() {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Your cart is empty</h2>
-        <button onClick={() => navigate(-1)} className="text-blue-600 font-semibold hover:underline">
-          ← Back to Payment
+        <button onClick={() => navigate('/Checkout')} className="text-blue-600 font-semibold hover:underline">
+          ← Back to Checkout
         </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-3 md:px-4 py-4 md:py-6">
-        <div className="mb-3 md:mb-6">
-          <h1 className="text-xl md:text-3xl font-bold text-gray-800">Checkout</h1>
+    <div className="min-h-screen bg-gray-50 pb-8">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Checkout</h1>
         </div>
 
       <form onSubmit={handleSubmit}>
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Delivery Info */}
-          <div className="lg:col-span-2 space-y-4 md:space-y-6">
-            <Card className="p-4 md:p-6 shadow-md">
-              <div className="flex items-center justify-between mb-4">
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="p-5 sm:p-6 shadow-md">
+              <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
                   <Truck className="h-5 w-5 text-[#1B3A6B]" />
                   <h2 className="text-lg font-bold text-gray-800">Delivery Information</h2>
@@ -245,9 +245,9 @@ export default function Checkout() {
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="customer_name">Full Name *</Label>
+                  <Label htmlFor="customer_name" className="text-sm">Full Name *</Label>
                   <Input
                     id="customer_name"
                     name="customer_name"
@@ -255,10 +255,11 @@ export default function Checkout() {
                     onChange={handleInputChange}
                     placeholder="Enter your full name"
                     required
+                    className="h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customer_phone">Active Phone Number * <span className="text-xs text-[#1B3A6B] font-normal">(must be reachable)</span></Label>
+                  <Label htmlFor="customer_phone" className="text-sm">Active Phone Number * <span className="text-xs text-[#1B3A6B] font-normal">(must be reachable)</span></Label>
                   <Input
                     id="customer_phone"
                     name="customer_phone"
@@ -266,6 +267,7 @@ export default function Checkout() {
                     onChange={handleInputChange}
                     placeholder="e.g. 0244123456 – must be active"
                     required
+                    className="h-11"
                   />
                   <p className="text-xs text-gray-400">We'll call/SMS this number for delivery. Make sure it's switched on and reachable.</p>
                 </div>
@@ -281,16 +283,17 @@ export default function Checkout() {
                   </div>
                 )}
 
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="delivery_address">Delivery Address / Landmark *</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="delivery_address" className="text-sm">Delivery Address / Landmark *</Label>
                   <Textarea
                     id="delivery_address"
                     name="delivery_address"
                     value={formData.delivery_address}
                     onChange={handleInputChange}
                     placeholder="Enter your full delivery address or landmark"
-                    rows={2}
+                    rows={3}
                     required
+                    className="resize-y"
                   />
                   <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
                     <span className="text-lg">📍</span>
@@ -309,7 +312,7 @@ export default function Checkout() {
                   <p className="text-xs text-gray-400">Open Google Maps, copy your location link and paste it in the address field or send to <strong>0509896035</strong> on WhatsApp.</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="city">City / Town *</Label>
+                  <Label htmlFor="city" className="text-sm">City / Town *</Label>
                   <Input
                     id="city"
                     name="city"
@@ -317,6 +320,7 @@ export default function Checkout() {
                     onChange={handleInputChange}
                     placeholder="e.g. Tarkwa, Accra, Tema, Madina..."
                     required
+                    className="h-11"
                   />
                   {formData.city && (
                     <p className={`text-xs font-medium mt-1 ${shipping === 0 ? 'text-green-600' : 'text-[#1B3A6B]'}`}>
@@ -325,13 +329,14 @@ export default function Checkout() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="notes">Order Notes (Optional)</Label>
+                  <Label htmlFor="notes" className="text-sm">Order Notes (Optional)</Label>
                   <Input
                     id="notes"
                     name="notes"
                     value={formData.notes}
                     onChange={handleInputChange}
                     placeholder="Any special instructions"
+                    className="h-11"
                   />
                 </div>
               </div>
@@ -357,10 +362,10 @@ export default function Checkout() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <Card className="p-4 md:p-6 shadow-md sticky top-20">
-              <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Order Summary</h2>
+            <Card className="p-5 sm:p-6 shadow-md sticky top-4">
+              <h2 className="text-lg font-bold text-gray-800 mb-5 text-center">Order Summary</h2>
               
-              <div className="space-y-3 mb-4 max-h-48 md:max-h-64 overflow-y-auto">
+              <div className="space-y-3 mb-5 max-h-56 overflow-y-auto">
                 {cartItems.map((item) => (
                   <div key={item.id} className="flex gap-3">
                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
@@ -381,24 +386,24 @@ export default function Checkout() {
 
               <Separator className="my-4" />
               
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm md:text-base text-gray-600">
+              <div className="space-y-4">
+                <div className="flex justify-between text-base text-gray-600">
                   <span>Subtotal</span>
                   <span>₵{subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex flex-col gap-0.5">
-                  <div className="flex justify-between text-sm md:text-base text-gray-600">
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-base text-gray-600">
                     <span>Delivery</span>
-                    <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-semibold text-[#1B3A6B3A6B]'}>
+                    <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-semibold text-[#1B3A6B]'}>
                       {shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}
                     </span>
                   </div>
                   {cartZoneName && (
-                    <p className="text-xs text-gray-400 text-center max-w-[200px] mx-auto leading-tight">{cartZoneName}</p>
+                    <p className="text-xs text-gray-500 text-center max-w-full mx-auto leading-tight">{cartZoneName}</p>
                   )}
                 </div>
                 <Separator />
-                <div className="flex justify-between text-base md:text-lg font-bold text-gray-800">
+                <div className="flex justify-between text-lg font-bold text-gray-800">
                   <span>Total</span>
                   <span className="text-[#1B3A6B]">₵{total.toFixed(2)}</span>
                 </div>
@@ -407,12 +412,12 @@ export default function Checkout() {
               <div className="flex justify-center mt-6">
                 <Button 
                   type="submit"
-                  className="w-full max-w-sm bg-[#1B3A6B] hover:bg-[#152f5a] text-white font-bold py-3 md:py-4 text-sm md:text-base"
+                  className="w-full bg-[#1B3A6B] hover:bg-[#152f5a] text-white font-bold py-4 text-base"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Processing...
                     </>
                   ) : (

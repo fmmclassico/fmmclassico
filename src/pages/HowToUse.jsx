@@ -13,7 +13,7 @@ const steps = [
   { step: '3', title: 'Checkout', desc: 'Go to your Cart, select a delivery zone, then tap Checkout.' },
   { step: '4', title: 'Fill Delivery Info', desc: 'Enter your name, active phone number and delivery address.' },
   { step: '5', title: 'Pay on Paystack', desc: 'Complete payment via Mobile Money or Card on Paystack.' },
-  { step: '6', title: 'Notify Us', desc: 'Click "I\'ve Paid – Continue" and we\'ll verify within 2–5 minutes.' },
+  { step: '6', title: 'Track Your Order', desc: 'After payment, track your order status in real-time from "My Orders" page.' },
 ];
 
 export default function HowToUse() {
@@ -122,6 +122,11 @@ export default function HowToUse() {
             </label>
             {uploadError && <p className="text-red-500 text-xs mt-2">{uploadError}</p>}
             <p className="text-xs text-gray-400 mt-1 text-center">Only you (admin) can see this upload button</p>
+        <Link to={createPageUrl('AdminPageContent')}>
+          <Button variant="outline" className="gap-2 w-full mt-2">
+            📝 Edit This Page Content
+          </Button>
+        </Link>
           </div>
         )}
       </Card>
@@ -146,16 +151,23 @@ export default function HowToUse() {
 
       {/* CTA */}
       <div className="text-center space-y-3">
-        <Link to={createPageUrl('Shop')}>
-          <Button className="w-full bg-blue-800 hover:bg-blue-900 font-bold">
-            Start Shopping Now
-          </Button>
-        </Link>
-        <a href="https://wa.me/233599676419" target="_blank" rel="noopener noreferrer">
-          <Button variant="outline" className="w-full gap-2 text-green-700 border-green-300 hover:bg-green-50">
-            Need Help? WhatsApp Us
-          </Button>
-        </a>
+        <div className="grid grid-cols-1 gap-3">
+          <Link to={createPageUrl('Shop')}>
+            <Button className="w-full bg-blue-800 hover:bg-blue-900 font-bold">
+              Start Shopping Now
+            </Button>
+          </Link>
+          <Link to={createPageUrl('Orders')}>
+            <Button variant="outline" className="w-full gap-2">
+              📦 Track My Orders
+            </Button>
+          </Link>
+          <a href="https://wa.me/233599676419" target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" className="w-full gap-2 text-green-700 border-green-300 hover:bg-green-50">
+              Need Help? WhatsApp Us
+            </Button>
+          </a>
+        </div>
       </div>
     </div>
   );

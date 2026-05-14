@@ -1,297 +1,231 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import { toast } from 'sonner';
-
-// Default content values (fallback if not yet saved in AppSetting)
-const DEFAULT_CONTENT = {
-  // Cart page
-  cart_page_title: 'Shopping Cart',
-  cart_empty_title: 'Your cart is empty',
-  cart_empty_subtitle: "Looks like you haven't added anything yet",
-  cart_checkout_btn: '💳 Place Order & Pay with Paystack',
-  cart_continue_btn: 'Continue Shopping',
-  cart_delivery_label: 'Delivery / Pickup',
-  cart_order_summary_title: 'Order Summary',
-  cart_subtotal_label: 'Subtotal',
-  cart_delivery_fee_label: 'Delivery Fee',
-  cart_total_label: 'Total',
-  cart_location_prompt: '📍 Tap to pick your location',
-
-  // Checkout page
-  checkout_page_title: 'Checkout',
-  checkout_delivery_section_title: 'Delivery Information',
-  checkout_payment_section_title: 'Payment Method',
-  checkout_order_summary_title: 'Order Summary',
-  checkout_submit_btn: '💳 Place Order & Pay with Paystack',
-  checkout_fullname_label: 'Full Name *',
-  checkout_phone_label: 'Active Phone Number *',
-  checkout_address_label: 'Delivery Address / Landmark *',
-  checkout_city_label: 'City / Town *',
-  checkout_notes_label: 'Order Notes (Optional)',
-  checkout_payment_name: 'Pay with Paystack',
-  checkout_payment_desc: 'Mobile Money, Card & Bank Transfer – secure checkout',
-
-  // Payment Confirmed page
-  confirmed_title: 'Payment Submitted!',
-  confirmed_processing_msg: 'Processing your order...',
-  confirmed_success_msg: 'Payment confirmed. Your order is being processed and will be verified shortly.',
-  confirmed_admin_verified_msg: '🎉 Payment verified! Your order is being prepared.',
-  confirmed_track_btn: 'Track My Order',
-  confirmed_all_orders_btn: 'View All My Orders',
-  confirmed_support_btn: 'Contact Support on WhatsApp',
-  confirmed_home_btn: 'Return to Home',
-
-  // Account / Settings page
-  account_page_title: 'Account Settings',
-  account_personal_section: 'Personal Information',
-  account_address_section: 'Delivery Address',
-  account_notifications_section: 'Notifications',
-  account_save_btn: 'Save Changes',
-  account_logout_btn: 'Logout',
-
-  // Orders page
-  orders_page_title: 'My Orders',
-  orders_empty_title: 'No orders yet',
-  orders_empty_subtitle: 'Your order history will appear here once you place an order',
-  orders_start_shopping_btn: 'Start Shopping',
-};
-
-const SECTIONS = [
-  { id: 'cart', label: '🛒 Cart Page', keys: Object.keys(DEFAULT_CONTENT).filter(k => k.startsWith('cart_')) },
-  { id: 'checkout', label: '📦 Checkout Page', keys: Object.keys(DEFAULT_CONTENT).filter(k => k.startsWith('checkout_')) },
-  { id: 'confirmed', label: '✅ Payment Confirmed Page', keys: Object.keys(DEFAULT_CONTENT).filter(k => k.startsWith('confirmed_')) },
-  { id: 'account', label: '👤 Account / Settings Page', keys: Object.keys(DEFAULT_CONTENT).filter(k => k.startsWith('account_')) },
-  { id: 'orders', label: '📋 Orders Page', keys: Object.keys(DEFAULT_CONTENT).filter(k => k.startsWith('orders_')) },
-];
-
-function prettyKey(key) {
-  return key.replace(/^(cart|checkout|confirmed|account|orders)_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
+import { Label } from "@/components/ui/label";
+import { Upload, Loader2, Save, PlayCircle, Video } from 'lucide-react';
+import { toast } from "sonner";
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '../utils';
 
 export default function AdminPageContent() {
   const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [openSection, setOpenSection] = useState('cart');
-  const [localValues, setLocalValues] = useState({ ...DEFAULT_CONTENT });
-  const [saving, setSaving] = useState({});
-  const queryClient = useQueryClient();
-
-  // Delivery zones state
-  const [deliveryZones, setDeliveryZones] = useState([]);
-  const [savingZones, setSavingZones] = useState(false);
+  const [steps, setSteps] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    base44.auth.me().then(u => { setUser(u); setIsAdmin(u?.role === 'admin'); }).catch(() => {});
+    const checkAdmin = async () => {
+      const isAuth = await base44.auth.isAuthenticated();
+      if (!isAuth) {
+        toast.error('Please login as admin');
+        return;
+      }
+      const userData = await base44.auth.me();
+      if (userData.role !== 'admin') {
+        toast.error('Admin access required');
+        return;
+      }
+      setUser(userData);
+    };
+    checkAdmin();
   }, []);
 
-  const { data: settings = [] } = useQuery({
+  const { data: settings = [], refetch: refetchSettings } = useQuery({
     queryKey: ['appSettings'],
     queryFn: () => base44.entities.AppSetting.list(),
-    enabled: isAdmin,
-    onSuccess: (data) => {
-      const merged = { ...DEFAULT_CONTENT };
-      data.forEach(s => { if (merged.hasOwnProperty(s.key)) merged[s.key] = s.value; });
-      setLocalValues(merged);
-
-      // Load delivery zones
-      const zonesEntry = data.find(s => s.key === 'delivery_zones');
-      if (zonesEntry) {
-        try { setDeliveryZones(JSON.parse(zonesEntry.value)); } catch {}
-      } else {
-        setDeliveryZones(DEFAULT_DELIVERY_ZONES);
-      }
-    }
+    enabled: !!user,
   });
 
+  const videoSetting = settings.find(s => s.key === 'tutorial_video');
+  const videoUrl = videoSetting?.value || null;
+
+  // Fetch or initialize steps
   useEffect(() => {
-    if (settings.length > 0) {
-      const merged = { ...DEFAULT_CONTENT };
-      settings.forEach(s => { if (merged.hasOwnProperty(s.key)) merged[s.key] = s.value; });
-      setLocalValues(merged);
-      const zonesEntry = settings.find(s => s.key === 'delivery_zones');
-      if (zonesEntry) {
-        try { setDeliveryZones(JSON.parse(zonesEntry.value)); } catch {}
+    const fetchSteps = async () => {
+      const stepsSetting = settings.find(s => s.key === 'howto_steps');
+      if (stepsSetting?.value) {
+        try {
+          setSteps(JSON.parse(stepsSetting.value));
+        } catch {
+          setSteps(defaultSteps);
+        }
       } else {
-        setDeliveryZones(DEFAULT_DELIVERY_ZONES);
+        setSteps(defaultSteps);
       }
-    }
+    };
+    if (settings.length) fetchSteps();
   }, [settings]);
 
-  const saveSetting = async (key) => {
-    setSaving(s => ({ ...s, [key]: true }));
-    const existing = settings.find(s => s.key === key);
-    if (existing) {
-      await base44.entities.AppSetting.update(existing.id, { value: localValues[key] });
-    } else {
-      await base44.entities.AppSetting.create({ key, value: localValues[key] });
-    }
-    queryClient.invalidateQueries({ queryKey: ['appSettings'] });
-    setSaving(s => ({ ...s, [key]: false }));
-    toast.success('Saved!');
-  };
+  const defaultSteps = [
+    { step: '1', title: 'Browse Products', desc: 'Go to Shop or Categories to find what you need.' },
+    { step: '2', title: 'Add to Cart', desc: 'Tap "Add to Cart" on any product you want to buy.' },
+    { step: '3', title: 'Checkout', desc: 'Go to your Cart, select a delivery zone, then tap Checkout.' },
+    { step: '4', title: 'Fill Delivery Info', desc: 'Enter your name, active phone number and delivery address.' },
+    { step: '5', title: 'Pay on Paystack', desc: 'Complete payment via Mobile Money or Card on Paystack.' },
+    { step: '6', title: 'Track Your Order', desc: 'After payment, track your order status in real-time from "My Orders" page.' },
+  ];
 
-  const saveAllInSection = async (sectionKeys) => {
-    for (const key of sectionKeys) {
-      const existing = settings.find(s => s.key === key);
-      if (existing) {
-        await base44.entities.AppSetting.update(existing.id, { value: localValues[key] });
+  const handleVideoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      toast.error('Please upload a video file.');
+      return;
+    }
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      if (videoSetting?.id) {
+        await base44.entities.AppSetting.update(videoSetting.id, { value: file_url });
       } else {
-        await base44.entities.AppSetting.create({ key, value: localValues[key] });
+        await base44.entities.AppSetting.create({ key: 'tutorial_video', value: file_url });
       }
+      refetchSettings();
+      toast.success('Video uploaded successfully!');
+    } catch (error) {
+      toast.error('Failed to upload video');
+    } finally {
+      setUploading(false);
     }
-    queryClient.invalidateQueries({ queryKey: ['appSettings'] });
-    toast.success('All saved!');
   };
 
-  const saveDeliveryZones = async () => {
-    setSavingZones(true);
-    const existing = settings.find(s => s.key === 'delivery_zones');
-    const value = JSON.stringify(deliveryZones);
-    if (existing) {
-      await base44.entities.AppSetting.update(existing.id, { value });
-    } else {
-      await base44.entities.AppSetting.create({ key: 'delivery_zones', value });
-    }
-    queryClient.invalidateQueries({ queryKey: ['appSettings'] });
-    setSavingZones(false);
-    toast.success('Delivery zones saved!');
+  const handleStepChange = (index, field, value) => {
+    const newSteps = [...steps];
+    newSteps[index][field] = value;
+    setSteps(newSteps);
   };
 
-  if (!user) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
-  if (!isAdmin) return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
+  const handleSaveSteps = async () => {
+    try {
+      const stepsSetting = settings.find(s => s.key === 'howto_steps');
+      if (stepsSetting?.id) {
+        await base44.entities.AppSetting.update(stepsSetting.id, { value: JSON.stringify(steps) });
+      } else {
+        await base44.entities.AppSetting.create({ key: 'howto_steps', value: JSON.stringify(steps) });
+      }
+      toast.success('Steps saved successfully!');
+    } catch (error) {
+      toast.error('Failed to save steps');
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
+        <Card className="p-8 text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-800" />
+          <p className="text-gray-600">Loading...</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-3xl">
-      <div className="flex items-center gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-black text-gray-900">Edit Page Content</h1>
-          <p className="text-gray-500 text-sm">Edit all text and labels shown on customer-facing pages</p>
-        </div>
-        <Badge className="ml-auto bg-green-100 text-green-700 border-green-200">Admin Only</Badge>
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="mb-6">
+        <Link to={createPageUrl('HowToUse')}>
+          <Button variant="outline" className="gap-2">
+            ← Back to How To Use Page
+          </Button>
+        </Link>
       </div>
 
-      {/* Content Sections */}
-      {SECTIONS.map(section => (
-        <Card key={section.id} className="mb-4 overflow-hidden">
-          <button
-            className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
-            onClick={() => setOpenSection(openSection === section.id ? null : section.id)}
-          >
-            <span className="font-bold text-gray-800">{section.label}</span>
-            {openSection === section.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </button>
-          {openSection === section.id && (
-            <div className="px-5 pb-5 space-y-4 border-t">
-              <div className="space-y-3 mt-4">
-                {section.keys.map(key => (
-                  <div key={key} className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{prettyKey(key)}</label>
-                    <div className="flex gap-2">
-                      {localValues[key]?.length > 60 ? (
-                        <Textarea
-                          value={localValues[key]}
-                          onChange={e => setLocalValues(v => ({ ...v, [key]: e.target.value }))}
-                          className="text-sm resize-none"
-                          rows={2}
-                        />
-                      ) : (
-                        <Input
-                          value={localValues[key]}
-                          onChange={e => setLocalValues(v => ({ ...v, [key]: e.target.value }))}
-                          className="text-sm"
-                        />
-                      )}
-                      <Button size="sm" onClick={() => saveSetting(key)} disabled={saving[key]} className="flex-shrink-0 bg-[#1B3A6B] hover:bg-[#162f58]">
-                        {saving[key] ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Button size="sm" variant="outline" className="w-full mt-2" onClick={() => saveAllInSection(section.keys)}>
-                Save All in This Section
-              </Button>
-            </div>
-          )}
-        </Card>
-      ))}
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">Edit "How to Use" Page Content</h1>
 
-      {/* Delivery Zones Editor */}
-      <Card className="mb-4 overflow-hidden">
-        <button
-          className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
-          onClick={() => setOpenSection(openSection === 'zones' ? null : 'zones')}
-        >
-          <span className="font-bold text-gray-800">🚚 Delivery / Pickup Dropdown Options</span>
-          {openSection === 'zones' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
-        {openSection === 'zones' && (
-          <div className="px-5 pb-5 border-t">
-            <p className="text-xs text-gray-500 mt-3 mb-3">Edit the delivery options shown in the Cart and Checkout delivery dropdown. Changes apply to both pages.</p>
-            <div className="space-y-3">
-              {deliveryZones.map((zone, i) => (
-                <div key={zone.id || i} className="flex gap-2 items-start p-3 bg-gray-50 rounded-lg border">
-                  <div className="flex-1 space-y-1.5">
-                    <Input
-                      placeholder="Label (e.g. 🏠 Tarkwa Doorstep)"
-                      value={zone.label}
-                      onChange={e => setDeliveryZones(z => z.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
-                      className="text-xs"
-                    />
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Note (e.g. ₵10 to your door)"
-                        value={zone.note}
-                        onChange={e => setDeliveryZones(z => z.map((x, j) => j === i ? { ...x, note: e.target.value } : x))}
-                        className="text-xs flex-1"
-                      />
-                      <Input
-                        placeholder="Fee"
-                        type="number"
-                        value={zone.fee}
-                        onChange={e => setDeliveryZones(z => z.map((x, j) => j === i ? { ...x, fee: Number(e.target.value) } : x))}
-                        className="text-xs w-20"
-                      />
-                    </div>
-                  </div>
-                  <Button size="icon" variant="ghost" className="text-red-500 hover:bg-red-50 flex-shrink-0" onClick={() => setDeliveryZones(z => z.filter((_, j) => j !== i))}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-            <Button variant="outline" size="sm" className="w-full mt-3 gap-2" onClick={() => setDeliveryZones(z => [...z, { id: `zone_${Date.now()}`, label: '', note: '', fee: 0 }])}>
-              <Plus className="h-4 w-4" /> Add Zone
-            </Button>
-            <Button className="w-full mt-2 bg-[#1B3A6B] hover:bg-[#162f58]" onClick={saveDeliveryZones} disabled={savingZones}>
-              {savingZones ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-              Save Delivery Zones
-            </Button>
+      {/* Video Upload Section */}
+      <Card className="p-5 mb-6 shadow-md">
+        <h2 className="font-bold text-gray-800 mb-4">Tutorial Video</h2>
+        {videoUrl ? (
+          <div className="rounded-xl overflow-hidden bg-black aspect-video mb-4">
+            <video src={videoUrl} controls className="w-full h-full" />
+          </div>
+        ) : (
+          <div className="rounded-xl bg-gray-100 aspect-video mb-4 flex flex-col items-center justify-center text-gray-400 gap-2">
+            <Video className="h-12 w-12 opacity-30" />
+            <p className="text-sm">No tutorial video uploaded yet</p>
           </div>
         )}
+        <label className="block">
+          <input
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={handleVideoUpload}
+            disabled={uploading}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2 cursor-pointer w-full"
+            disabled={uploading}
+            onClick={() => document.querySelector('input[type=file]').click()}
+          >
+            {uploading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Uploading video...</>
+            ) : (
+              <><Upload className="h-4 w-4" /> {videoUrl ? 'Replace Video' : 'Upload Tutorial Video'}</>
+            )}
+          </Button>
+        </label>
       </Card>
+
+      {/* Steps Editor */}
+      <Card className="p-5 mb-6 shadow-md">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="font-bold text-gray-800">Step-by-Step Guide</h2>
+          <Button onClick={handleSaveSteps} className="gap-2">
+            <Save className="h-4 w-4" /> Save Changes
+          </Button>
+        </div>
+        <div className="space-y-4">
+          {steps.map((step, index) => (
+            <div key={index} className="border rounded-lg p-4 bg-gray-50">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-full bg-blue-800 text-white font-bold text-sm flex items-center justify-center">
+                  {step.step}
+                </div>
+                <h3 className="font-semibold text-gray-700">Step {step.step}</h3>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs text-gray-500">Step Number</Label>
+                  <Input
+                    value={step.step}
+                    onChange={(e) => handleStepChange(index, 'step', e.target.value)}
+                    className="h-8"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Title</Label>
+                  <Input
+                    value={step.title}
+                    onChange={(e) => handleStepChange(index, 'title', e.target.value)}
+                    className="h-8"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Description</Label>
+                  <Textarea
+                    value={step.desc}
+                    onChange={(e) => handleStepChange(index, 'desc', e.target.value)}
+                    className="h-20"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <Button onClick={handleSaveSteps} className="w-full mt-4 gap-2">
+          <Save className="h-4 w-4" /> Save All Changes
+        </Button>
+      </Card>
+
+      <div className="text-center text-sm text-gray-500">
+        <p>Changes will be reflected on the "How to Use" page immediately after saving.</p>
+      </div>
     </div>
   );
 }
-
-const DEFAULT_DELIVERY_ZONES = [
-  { id: 'umat_pickup', label: '🏫 UMAT Campus – Pickup / Meeting Point', fee: 0, note: 'FREE – collect on campus' },
-  { id: 'umat_doorstep', label: '🏠 UMAT Campus – Doorstep Delivery', fee: 10, note: '₵10 to your door' },
-  { id: 'tarkwa_station', label: '🚌 Tarkwa – Delivery to a Station / Car', fee: 20, note: '₵20 to a station or car' },
-  { id: 'tarkwa', label: '🏘️ Tarkwa (Outside UMAT) – Doorstep', fee: 25, note: '₵25 delivery fee' },
-  { id: 'ashongman', label: '🏠 Ashongman Estate – Pickup Point', fee: 0, note: 'FREE – pickup from our location' },
-  { id: 'airport', label: '🏠 Airport Residential Area – Pickup Point', fee: 0, note: 'FREE – pickup from our location' },
-  { id: 'accra_station', label: '🚌 Accra – Delivery to a Station / Car', fee: 25, note: '₵25 to a station or car' },
-  { id: 'accra_delivery', label: '🚗 Delivery Within Accra', fee: 25, note: '₵25 delivery fee' },
-  { id: 'yango', label: '🛵 Yango Delivery – Pay on Delivery', fee: 0, note: 'Yango rider fee paid when product arrives' },
-  { id: 'uber', label: '🚗 Uber Delivery – Pay on Delivery', fee: 0, note: 'Uber rider fee paid when product arrives' },
-  { id: 'bolt', label: '⚡ Bolt Delivery – Pay on Delivery', fee: 0, note: 'Bolt rider fee paid when product arrives' },
-  { id: 'other', label: '📦 Outside Accra & Tarkwa', fee: 50, note: '₵50 flat rate' },
-];

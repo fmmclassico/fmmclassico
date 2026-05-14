@@ -81,7 +81,8 @@ export default function HeroBanner() {
 
   return (
     <div
-      className={`relative bg-gradient-to-r ${slide.bg_gradient || 'from-red-800 via-red-700 to-red-600'} overflow-hidden transition-all duration-700`}
+      className="relative overflow-hidden transition-all duration-700"
+      style={{ background: 'linear-gradient(to right, #00A3A6, #0093A6, #007a8a)' }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >

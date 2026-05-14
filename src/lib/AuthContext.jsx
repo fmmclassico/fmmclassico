@@ -92,6 +92,26 @@ export const AuthProvider = ({ children }) => {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
+      
+      // Check if user needs to verify admin password
+      const ADMIN_EMAILS = ['fmmcompanylimited@gmail.com', 'mensahfedramartha@gmail.com', 'marthamensahfedra@gmail.com'];
+      const isAdminEmail = ADMIN_EMAILS.includes(currentUser.email?.toLowerCase());
+      
+      if (currentUser.role === 'admin' && isAdminEmail) {
+        const adminVerified = sessionStorage.getItem(`admin_verified_${currentUser.email}`);
+        if (!adminVerified) {
+          setUser(currentUser);
+          setIsAuthenticated(true);
+          setAuthError({
+            type: 'admin_verification_required',
+            email: currentUser.email,
+            message: 'Admin password verification required'
+          });
+          setIsLoadingAuth(false);
+          return;
+        }
+      }
+      
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
@@ -107,6 +127,13 @@ export const AuthProvider = ({ children }) => {
           message: 'Authentication required'
         });
       }
+    }
+  };
+
+  const verifyAdminPassword = () => {
+    if (user?.email) {
+      sessionStorage.setItem(`admin_verified_${user.email}`, 'true');
+      setAuthError(null);
     }
   };
 
@@ -138,7 +165,8 @@ export const AuthProvider = ({ children }) => {
       appPublicSettings,
       logout,
       navigateToLogin,
-      checkAppState
+      checkAppState,
+      verifyAdminPassword
     }}>
       {children}
     </AuthContext.Provider>

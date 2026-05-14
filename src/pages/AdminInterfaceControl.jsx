@@ -6,11 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Toggle } from "@/components/ui/toggle";
-import { Loader2, Eye, EyeOff, Settings, Layers } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Settings, Layers, Zap } from 'lucide-react';
+import { Input } from "@/components/ui/input";
 
 export default function AdminInterfaceControl() {
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState({});
+  const [flashEndTime, setFlashEndTime] = useState('');
+  const [showFlashTimer, setShowFlashTimer] = useState(true);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -20,7 +23,19 @@ export default function AdminInterfaceControl() {
   const { data: settings = [] } = useQuery({
     queryKey: ['appSettings'],
     queryFn: () => base44.entities.AppSetting.list(),
+    staleTime: 30000,
   });
+
+  useEffect(() => {
+    const flashSaleConfig = settings.find(s => s.key === 'flash_sale_config')?.value;
+    if (flashSaleConfig) {
+      try {
+        const config = JSON.parse(flashSaleConfig);
+        setFlashEndTime(config.end_time || '');
+        setShowFlashTimer(config.show_timer !== false);
+      } catch {}
+    }
+  }, [settings]);
 
   const getSetting = (key) => {
     const val = settings.find(s => s.key === key)?.value;
@@ -43,6 +58,24 @@ export default function AdminInterfaceControl() {
       toast.error('Failed to save');
     }
     setSaving(s => ({ ...s, [key]: false }));
+  };
+
+  const saveFlashSaleConfig = async () => {
+    setSaving(s => ({ ...s, flash_sale: true }));
+    try {
+      const config = { end_time: flashEndTime, show_timer: showFlashTimer };
+      const existing = settings.find(s => s.key === 'flash_sale_config');
+      if (existing) {
+        await base44.entities.AppSetting.update(existing.id, { value: JSON.stringify(config) });
+      } else {
+        await base44.entities.AppSetting.create({ key: 'flash_sale_config', value: JSON.stringify(config) });
+      }
+      queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+      toast.success('Flash sale settings updated!');
+    } catch {
+      toast.error('Failed to save');
+    }
+    setSaving(s => ({ ...s, flash_sale: false }));
   };
 
   if (!user) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
@@ -92,10 +125,54 @@ export default function AdminInterfaceControl() {
             </Button>
           </div>
 
-          {/* Brand Click Behavior Note */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm font-semibold text-blue-900 mb-1.5">Brand Click Behavior</p>
-            <p className="text-xs text-blue-800">When users click a brand in the "Shop by Category" section, they now see expandable subcategory bars showing available products per subcategory.</p>
+        </CardContent>
+      </Card>
+
+      {/* Flash Sale Timer Control */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Zap className="h-4 w-4 text-yellow-500" />
+            Flash Sale Timer
+          </CardTitle>
+          <p className="text-xs text-gray-500 mt-1">Control the countdown timer on CLASSICO Deals</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 bg-gray-50 rounded-lg space-y-3">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Timer End Time</label>
+              <Input
+                type="datetime-local"
+                value={flashEndTime}
+                onChange={(e) => setFlashEndTime(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500 mt-1">Set when the flash sale countdown ends</p>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded">
+              <div>
+                <p className="font-semibold text-gray-800">Show Timer</p>
+                <p className="text-xs text-gray-500">Display countdown on homepage</p>
+              </div>
+              <Button
+                size="sm"
+                variant={showFlashTimer ? "default" : "outline"}
+                onClick={() => setShowFlashTimer(!showFlashTimer)}
+                className="gap-1.5"
+              >
+                {showFlashTimer ? 'Visible' : 'Hidden'}
+              </Button>
+            </div>
+
+            <Button
+              onClick={saveFlashSaleConfig}
+              disabled={saving['flash_sale']}
+              className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+            >
+              {saving['flash_sale'] && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Save Flash Sale Settings
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -7,6 +7,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import AdminAuthModal from '@/components/AdminAuthModal';
 import Payment from './pages/Payment';
 import PaymentConfirmed from './pages/PaymentConfirmed';
 import AdminReviews from './pages/AdminReviews';
@@ -31,7 +32,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, verifyAdminPassword } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -46,6 +47,20 @@ const AuthenticatedApp = () => {
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
+    } else if (authError.type === 'admin_verification_required') {
+      return (
+        <>
+          <AdminAuthModal
+            isOpen={true}
+            onClose={() => navigateToLogin()}
+            onSuccess={verifyAdminPassword}
+            userEmail={authError.email}
+          />
+          <Routes>
+            <Route path="*" element={<div />} />
+          </Routes>
+        </>
+      );
     } else if (authError.type === 'auth_required') {
       // Redirect to login automatically
       navigateToLogin();

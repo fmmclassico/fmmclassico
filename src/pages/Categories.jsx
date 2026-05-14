@@ -108,6 +108,8 @@ export default function Categories() {
   const [editMode, setEditMode] = useState(false);
   const [uploading, setUploading] = useState({});
   const [editText, setEditText] = useState({});
+  const [editingSubcat, setEditingSubcat] = useState(null);
+  const [subcatForm, setSubcatForm] = useState({ label: '', shopCategory: '' });
   const queryClient = useQueryClient();
   const fileRefs = useRef({});
 
@@ -166,6 +168,28 @@ export default function Categories() {
     if (val === undefined) return;
     await saveSetting(`cat_text_${catId}_${field}`, val);
     toast.success('Saved!');
+  };
+
+  const handleAddSubcategory = async (catId) => {
+    if (!subcatForm.label || !subcatForm.shopCategory) {
+      toast.error('Fill all fields');
+      return;
+    }
+    const cat = CATEGORIES.find(c => c.id === catId);
+    if (!cat) return;
+    cat.subCategories.push({ label: subcatForm.label, shopCategory: subcatForm.shopCategory });
+    await saveSetting(`cat_subcats_${catId}`, JSON.stringify(cat.subCategories));
+    setSubcatForm({ label: '', shopCategory: '' });
+    setEditingSubcat(null);
+    toast.success('Subcategory added!');
+  };
+
+  const handleDeleteSubcategory = async (catId, idx) => {
+    const cat = CATEGORIES.find(c => c.id === catId);
+    if (!cat) return;
+    cat.subCategories.splice(idx, 1);
+    await saveSetting(`cat_subcats_${catId}`, JSON.stringify(cat.subCategories));
+    toast.success('Subcategory removed!');
   };
 
   return (
@@ -289,13 +313,36 @@ export default function Categories() {
                     className="overflow-hidden"
                   >
                     <div className={`grid grid-cols-2 gap-2 mt-2 p-3 rounded-2xl border ${sc.border} ${sc.bg}`}>
-                      {cat.subCategories.map((sub) => (
-                        <Link key={sub.label} to={getSubLink(sub)}>
-                          <div className={`border rounded-xl p-3 transition-colors bg-white ${sc.border} ${sc.hover}`}>
-                            <p className={`font-semibold text-sm ${sc.text}`}>{sub.label}</p>
-                          </div>
-                        </Link>
+                      {cat.subCategories.map((sub, idx) => (
+                        <div key={idx} className="relative">
+                          <Link to={getSubLink(sub)}>
+                            <div className={`border rounded-xl p-3 transition-colors bg-white ${sc.border} ${sc.hover}`}>
+                              <p className={`font-semibold text-sm ${sc.text}`}>{sub.label}</p>
+                            </div>
+                          </Link>
+                          {editMode && (
+                            <button
+                              onClick={() => handleDeleteSubcategory(cat.id, idx)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full text-xs flex items-center justify-center hover:bg-red-600"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
                       ))}
+                      {editMode && editingSubcat === cat.id && (
+                        <div className="col-span-2 space-y-2 p-2 bg-white border rounded-xl">
+                          <input type="text" placeholder="Label" value={subcatForm.label} onChange={e => setSubcatForm(s => ({ ...s, label: e.target.value }))} className="w-full text-xs px-2 py-1 border rounded" />
+                          <input type="text" placeholder="Shop Category" value={subcatForm.shopCategory} onChange={e => setSubcatForm(s => ({ ...s, shopCategory: e.target.value }))} className="w-full text-xs px-2 py-1 border rounded" />
+                          <div className="flex gap-1">
+                            <button onClick={() => handleAddSubcategory(cat.id)} className="flex-1 bg-blue-500 text-white text-xs px-2 py-1 rounded hover:bg-blue-600">Add</button>
+                            <button onClick={() => setEditingSubcat(null)} className="flex-1 bg-gray-400 text-white text-xs px-2 py-1 rounded">Cancel</button>
+                          </div>
+                        </div>
+                      )}
+                      {editMode && editingSubcat !== cat.id && (
+                        <button onClick={() => { setEditingSubcat(cat.id); setSubcatForm({ label: '', shopCategory: '' }); }} className="col-span-2 text-xs text-blue-600 font-bold p-2 border-dashed rounded hover:bg-blue-50">+ Add Subcategory</button>
+                      )}
                       <Link to={allLink} className="col-span-2">
                         <div className={`border rounded-xl p-3 transition-colors text-center ${sc.allBorder} ${sc.allBg} ${sc.hover}`}>
                           <p className={`font-bold text-sm ${sc.text}`}>View All {cat.name} →</p>

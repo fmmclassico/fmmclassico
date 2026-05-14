@@ -286,23 +286,27 @@ export default function AdminHomeEditor() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Core sections */}
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-gray-700">Core Sections</p>
-                {CORE_SECTIONS.map((sec, idx) => (
-                  <div key={sec.id} className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg">{sec.icon}</span>
-                      <p className="text-sm font-medium text-gray-700 flex-1">{sec.name}</p>
-                    </div>
-                    <SettingTextRow
-                      label="Section Title"
-                      value={getSetting(`home_${sec.id}_title`) || sec.name}
-                      onChange={v => setLocalSettings(l => ({ ...l, [`home_${sec.id}_title`]: v }))}
-                      onSave={() => saveSetting(`home_${sec.id}_title`, getSetting(`home_${sec.id}_title`) || sec.name)}
-                      saving={saving[`home_${sec.id}_title`]}
-                    />
-                  </div>
-                ))}
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-gray-700">Core Sections</p>
+                      {CORE_SECTIONS.map((sec, idx) => (
+                        <div key={sec.id} className="p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-lg">{sec.icon}</span>
+                            <p className="text-sm font-medium text-gray-700 flex-1">{sec.name}</p>
+                            <label className="flex items-center gap-2 text-xs cursor-pointer">
+                              <input type="checkbox" checked={getSetting(`home_${sec.id}_visible`) !== 'false'} onChange={e => saveSetting(`home_${sec.id}_visible`, e.target.checked ? 'true' : 'false')} />
+                              Visible
+                            </label>
+                          </div>
+                          <SettingTextRow
+                            label="Section Title"
+                            value={getSetting(`home_${sec.id}_title`) || sec.name}
+                            onChange={v => setLocalSettings(l => ({ ...l, [`home_${sec.id}_title`]: v }))}
+                            onSave={() => saveSetting(`home_${sec.id}_title`, getSetting(`home_${sec.id}_title`) || sec.name)}
+                            saving={saving[`home_${sec.id}_title`]}
+                          />
+                        </div>
+                      ))}
               </div>
 
               {/* Custom sections */}

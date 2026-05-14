@@ -181,7 +181,7 @@ export default function ProductDetail() {
         >
           {/* Main display with swipe */}
           <div
-            className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-lg cursor-grab active:cursor-grabbing"
+            className="relative w-full max-w-md mx-auto aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-lg cursor-grab active:cursor-grabbing"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >

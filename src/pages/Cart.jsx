@@ -216,7 +216,7 @@ export default function Cart() {
         {/* Order Summary */}
         <div className="lg:col-span-1">
           <Card className="p-4 sm:p-6 shadow-md lg:sticky lg:top-24">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">Order Summary</h2>
+            <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Order Summary</h2>
             
             <div className="space-y-3">
               <div className="flex justify-between text-gray-600">
@@ -286,21 +286,23 @@ export default function Cart() {
               )}
             </div>
 
-            <Button 
-              className={`w-full mt-4 sm:mt-6 font-bold py-4 sm:py-6 text-base sm:text-lg ${selectedZone ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-              disabled={!selectedZone}
-              onClick={() => {
-                if (!selectedZone) {
-                  toast.error('Please select your delivery location first');
-                  return;
-                }
-                const params = `?zone=${selectedZone.id}&zoneName=${encodeURIComponent(selectedZone.label)}&fee=${selectedZone.fee}`;
-                navigate(createPageUrl('Checkout') + params);
-              }}
-            >
-              💳 Place Order & Pay with Paystack
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            <div className="flex justify-center">
+              <Button 
+                className={`w-full max-w-sm mt-4 sm:mt-6 font-bold py-4 sm:py-6 text-base sm:text-lg ${selectedZone ? 'bg-[#1B3A6B] hover:bg-[#162f58] text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                disabled={!selectedZone}
+                onClick={() => {
+                  if (!selectedZone) {
+                    toast.error('Please select your delivery location first');
+                    return;
+                  }
+                  const params = `?zone=${selectedZone.id}&zoneName=${encodeURIComponent(selectedZone.label)}&fee=${selectedZone.fee}`;
+                  navigate(createPageUrl('Checkout') + params);
+                }}
+              >
+                💳 Place Order & Pay with Paystack
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
             {!selectedZone && (
             <p className="text-xs text-center text-[#1B3A6B] mt-2 font-medium">⚠️ Please select a delivery location to continue</p>
             )}

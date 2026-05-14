@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createPageUrl } from '../utils';
 import { ChevronRight, ShoppingBag } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProductCard from '../components/products/ProductCard';
 
 // Full product sub-type labels per category
@@ -52,96 +53,13 @@ const BRAND_PRIMARY_CATEGORIES = {
   Hoffman:      ['home_appliances'],
 };
 
-const BRAND_PRODUCT_TYPES = {
-  // ── PHONES (only phone models, never accessories/electronics/appliances) ──
-  Apple: {
-    phones: ['iPhone 11', 'iPhone 12 Series', 'iPhone 13 Series', 'iPhone 14 Series', 'iPhone 15 Series', 'iPhone SE'],
-  },
-  Samsung: {
-    phones: ['Galaxy A Series', 'Galaxy S Series', 'Galaxy Z Fold/Flip'],
-    // Samsung also appears under phone_accessories, electronic_appliances, home_appliances
-    // but those entries live in their own category-scoped sections below.
-    phone_cases: ['Samsung Galaxy Cases'],
-    chargers: ['Samsung Fast Charger', 'Samsung Wireless Charger'],
-    earphones: ['Galaxy Buds', 'Galaxy Buds Pro'],
-    electronic_appliances: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Soundbar', 'Home Theatre'],
-    home_appliances: ['Refrigerator', 'Washing Machine', 'Microwave', 'Air Conditioner'],
-  },
-  Tecno: {
-    phones: ['Spark Series', 'Camon Series', 'Phantom Series', 'Pop Series'],
-  },
-  Infinix: {
-    phones: ['Hot Series', 'Note Series', 'Smart Series', 'Zero Series'],
-  },
-  Itel: {
-    phones: ['A Series', 'S Series', 'P Series (Big Battery)'],
-  },
 
-  // ── PHONE ACCESSORIES (only accessory categories, never phones/electronics/appliances) ──
-  Oraimo: {
-    earphones: ['FreePods (Wireless Earbuds)', 'Neckband Earphones', 'Wired Earphones', 'Bluetooth Headphones'],
-    chargers: ['Fast Charger (20W)', 'Car Charger', 'Wireless Charger', 'Multi-port Charger'],
-    power_banks: ['Power Bank 10,000mAh', 'Power Bank 20,000mAh', 'Solar Power Bank'],
-    cables: ['USB-C Cable', 'Lightning Cable', 'Micro USB Cable', 'Braided Cable'],
-    smart_watches: ['Oraimo Watch', 'Oraimo Watch Pro'],
-    speakers: ['Bluetooth Speaker', 'Mini Speaker'],
-  },
-  JBL: {
-    speakers: ['JBL Go', 'JBL Flip', 'JBL Charge', 'JBL Xtreme', 'JBL PartyBox'],
-    earphones: ['JBL Tune Earbuds', 'JBL Free X', 'JBL Live Series', 'JBL Wired Earphones'],
-  },
-
-  // ── ELECTRONICS (only electronic_appliances, never phones/accessories/home) ──
-  Sony: {
-    electronic_appliances: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Soundbar', 'Home Theatre'],
-    earphones: ['Sony WF Series (Earbuds)', 'Sony WH Series (Headphones)', 'Sony Wired Earphones'],
-    speakers: ['Sony Portable Speaker', 'Sony Party Speaker'],
-  },
-  TCL: {
-    electronic_appliances: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Smart TV 65"', 'Android TV', '4K UHD TV'],
-  },
-  Hisense: {
-    electronic_appliances: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Smart TV 65"', 'QLED TV'],
-    home_appliances: ['Refrigerator (Single Door)', 'Refrigerator (Double Door)', 'Chest Freezer', 'Washing Machine', 'Air Conditioner', 'Microwave'],
-  },
-  LG: {
-    electronic_appliances: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'OLED TV', 'Soundbar'],
-    home_appliances: ['Refrigerator', 'Washing Machine', 'Air Conditioner', 'Microwave'],
-  },
-  Midea: {
-    electronic_appliances: ['Air Conditioner Split Unit', 'Air Purifier'],
-    home_appliances: ['Refrigerator', 'Washing Machine', 'Air Conditioner', 'Microwave', 'Rice Cooker', 'Blender'],
-  },
-
-  // ── HOME APPLIANCES (only home_appliances, never phones/accessories/electronics) ──
-  Roch: {
-    home_appliances: ['Refrigerator (Single Door)', 'Refrigerator (Double Door)', 'Chest Freezer', 'Washing Machine', 'Blender', 'Rice Cooker', 'Electric Kettle', 'Microwave', 'Standing Fan', 'Air Conditioner'],
-  },
-  'Silver Crest': {
-    home_appliances: ['Blender', 'Rice Cooker', 'Electric Kettle', 'Microwave', 'Toaster', 'Sandwich Maker', 'Food Processor', 'Juicer', 'Standing Fan'],
-  },
-  Nasco: {
-    home_appliances: ['Refrigerator', 'Chest Freezer', 'Washing Machine', 'Blender', 'Rice Cooker', 'Electric Kettle', 'Standing Fan', 'Air Conditioner'],
-  },
-  Hoffman: {
-    home_appliances: ['Refrigerator', 'Chest Freezer', 'Washing Machine', 'Air Conditioner', 'Standing Fan', 'Blender', 'Rice Cooker', 'Electric Kettle'],
-  },
-};
-
-// ── CATEGORY-SCOPED subtype lookup ────────────────────────────────────────────
-// When ?category is present, only return subtypes for that exact category key.
-// This prevents a brand's subtypes from other categories leaking through.
-function getSubTypes(brand, category) {
-  const map = BRAND_PRODUCT_TYPES[brand] || {};
-  if (!category) return [];
-  return map[category] || [];
-}
 
 export default function BrandProducts() {
   const [searchParams] = useSearchParams();
+  const [sortBy, setSortBy] = useState('newest');
   const brand = searchParams.get('brand');
   const category = searchParams.get('category');
-  const subtype = searchParams.get('subtype');
 
   const { data: allProducts = [], isLoading } = useQuery({
     queryKey: ['products'],
@@ -155,19 +73,19 @@ export default function BrandProducts() {
   //    This prevents Samsung's TVs appearing when browsing Samsung Phones.
   const allowedCats = BRAND_PRIMARY_CATEGORIES[brand] || [];
 
-  const brandProducts = allProducts.filter(p => {
+  let brandProducts = allProducts.filter(p => {
     const matchBrand = p.brand?.toLowerCase() === brand?.toLowerCase();
     const matchCat = category
       ? p.category === category
       : allowedCats.length === 0 || allowedCats.includes(p.category);
-    const matchSub = subtype ? (p.subcategory?.toLowerCase().includes(subtype.toLowerCase()) || p.name?.toLowerCase().includes(subtype.toLowerCase())) : true;
-    return matchBrand && matchCat && matchSub;
+    return matchBrand && matchCat;
   });
 
-  const categories = [...new Set(brandProducts.map(p => p.category))].filter(Boolean);
+  // Sort
+  if (sortBy === 'price_low') brandProducts = [...brandProducts].sort((a, b) => a.price - b.price);
+  else if (sortBy === 'price_high') brandProducts = [...brandProducts].sort((a, b) => b.price - a.price);
 
-  // Get sub-types for this brand+category combo — strictly scoped to current category
-  const subTypes = getSubTypes(brand, category);
+  const categories = [...new Set(brandProducts.map(p => p.category))].filter(Boolean);
 
   if (!brand) {
     return <div className="container mx-auto px-4 py-12 text-center text-gray-500">No brand specified.</div>;
@@ -188,20 +106,25 @@ export default function BrandProducts() {
             </Link>
           </>
         )}
-        {subtype && (
-          <>
-            <ChevronRight className="h-3 w-3" />
-            <span className="text-gray-700 font-semibold">{subtype}</span>
-          </>
-        )}
+
       </div>
 
       {/* Header */}
-      <div className="mb-5">
-        <h1 className="text-2xl md:text-3xl font-black text-gray-900">
-          {brand}{category ? ` — ${CATEGORY_LABELS[category] || category}` : ''}{subtype ? ` — ${subtype}` : ''}
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">{brandProducts.length} product{brandProducts.length !== 1 ? 's' : ''} found</p>
+      <div className="flex items-start justify-between mb-5 gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900">{brand}</h1>
+          <p className="text-gray-500 text-sm mt-1">{brandProducts.length} product{brandProducts.length !== 1 ? 's' : ''} found</p>
+        </div>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-40 text-xs">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">Newest</SelectItem>
+            <SelectItem value="price_low">Price: Low to High</SelectItem>
+            <SelectItem value="price_high">Price: High to Low</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Category chips (shown when no category selected and brand has multiple allowed categories) */}
@@ -222,29 +145,7 @@ export default function BrandProducts() {
         </div>
       )}
 
-      {/* Sub-type chips (shown when category selected) */}
-      {category && subTypes.length > 0 && (
-        <div className="mb-5">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Product Types</p>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand)}&category=${category}`)}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${!subtype ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-300 text-gray-600 hover:bg-gray-100'}`}
-            >
-              All
-            </Link>
-            {subTypes.map(st => (
-              <Link
-                key={st}
-                to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand)}&category=${category}&subtype=${encodeURIComponent(st)}`)}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${subtype === st ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-300 text-gray-600 hover:bg-gray-100'}`}
-              >
-                {st}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+
 
 
 

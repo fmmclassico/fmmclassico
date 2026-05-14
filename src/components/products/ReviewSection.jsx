@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Star } from 'lucide-react';
+import { Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ReviewSection({ product, user }) {
@@ -11,6 +11,7 @@ export default function ReviewSection({ product, user }) {
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showReviews, setShowReviews] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: reviews = [] } = useQuery({
@@ -61,9 +62,17 @@ export default function ReviewSection({ product, user }) {
             </div>
           )}
         </div>
-        <Button size="sm" variant="outline" onClick={() => setShowForm(s => !s)}>
-          {showForm ? 'Cancel' : 'Write a Review'}
-        </Button>
+        <div className="flex gap-2">
+          {reviews.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => setShowReviews(s => !s)}>
+              {showReviews ? 'Hide Reviews' : 'Show Reviews'}
+              {showReviews ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={() => setShowForm(s => !s)}>
+            {showForm ? 'Cancel' : 'Write a Review'}
+          </Button>
+        </div>
       </div>
 
       {showForm && (
@@ -99,7 +108,7 @@ export default function ReviewSection({ product, user }) {
 
       {reviews.length === 0 ? (
         <p className="text-gray-400 text-sm text-center py-6">No reviews yet. Be the first!</p>
-      ) : (
+      ) : showReviews ? (
         <div className="space-y-4">
           {reviews.map(review => (
             <div key={review.id} className="bg-gray-50 rounded-xl p-4">
@@ -119,6 +128,10 @@ export default function ReviewSection({ product, user }) {
               <p className="text-sm text-gray-600">{review.comment}</p>
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="text-center py-4 bg-gray-50 rounded-xl">
+          <p className="text-sm text-gray-500">Click "Show Reviews" to read {reviews.length} customer review{reviews.length !== 1 ? 's' : ''}</p>
         </div>
       )}
     </div>

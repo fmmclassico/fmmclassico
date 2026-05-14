@@ -193,7 +193,7 @@ export default function PaymentConfirmed() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-3">
             <CheckCircle2 className="h-10 w-10 text-green-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">Payment Submitted!</h1>
+          <h1 className="text-xl font-bold text-gray-800">Payment Submitted!</h1>
         </div>
 
         {/* Notifying status */}

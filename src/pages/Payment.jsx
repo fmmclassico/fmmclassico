@@ -139,7 +139,7 @@ export default function Payment() {
                 <Menu className="h-7 w-7 text-white" style={{ strokeWidth: 3 }} />
               </Button>
               <Link to="/" className="flex items-center">
-                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight whitespace-nowrap">
+                <h1 className="text-lg md:text-xl font-black text-white tracking-tight whitespace-nowrap">
                   FMM CLASSICO
                 </h1>
               </Link>

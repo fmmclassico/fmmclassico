@@ -366,17 +366,17 @@ export default function Checkout() {
               <div className="space-y-3 mb-4 max-h-48 md:max-h-64 overflow-y-auto">
                 {cartItems.map((item) => (
                   <div key={item.id} className="flex gap-3">
-                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                       <img
                         src={item.product_image || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=100'}
                         alt={item.product_name}
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm text-gray-800 line-clamp-1">{item.product_name}</p>
-                      <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-                      <p className="font-semibold text-[#1B3A6B]">₵{(item.product_price * item.quantity).toFixed(2)}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-xs text-gray-800 line-clamp-2 leading-tight">{item.product_name}</p>
+                      <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                      <p className="font-semibold text-[#1B3A6B] text-sm">₵{(item.product_price * item.quantity).toFixed(2)}</p>
                     </div>
                   </div>
                 ))}
@@ -397,7 +397,7 @@ export default function Checkout() {
                     </span>
                   </div>
                   {cartZoneName && (
-                    <p className="text-xs text-gray-400 text-center">{cartZoneName}</p>
+                    <p className="text-xs text-gray-400 text-center max-w-[200px] mx-auto leading-tight">{cartZoneName}</p>
                   )}
                 </div>
                 <Separator />
@@ -410,12 +410,12 @@ export default function Checkout() {
               <div className="flex justify-center mt-6">
                 <Button 
                   type="submit"
-                  className="w-full max-w-sm bg-[#1B3A6B] hover:bg-[#152f5a] text-white font-bold py-4 md:py-6 text-base md:text-lg"
+                  className="w-full max-w-sm bg-[#1B3A6B] hover:bg-[#152f5a] text-white font-bold py-3 md:py-4 text-sm md:text-base"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Processing...
                     </>
                   ) : (

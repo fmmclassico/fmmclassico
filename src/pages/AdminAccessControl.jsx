@@ -80,7 +80,10 @@ export default function AdminAccessControl() {
     setIsGranting(userEmail);
     try {
       if (currentRole === 'admin') {
-        // Revoke admin access
+        // Revoke admin access - user must exist
+        if (!userId) {
+          throw new Error('User not found');
+        }
         await base44.entities.User.update(userId, { role: 'user' });
         toast.success(`✅ Admin access revoked for ${userEmail}`);
       } else {
@@ -92,20 +95,14 @@ export default function AdminAccessControl() {
           toast.success(`✅ Admin access granted to ${userEmail}`);
         } else {
           // User doesn't exist - invite them as admin
-          try {
-            await base44.users.inviteUser(userEmail, 'admin');
-            toast.success(`✅ Invitation sent to ${userEmail}! They will receive an email to register as admin.`);
-          } catch (inviteError) {
-            console.error('Invite error:', inviteError);
-            // If invite fails, try creating as user first then updating
-            throw new Error('Could not send invitation. Please try again or contact support.');
-          }
+          await base44.users.inviteUser(userEmail, 'admin');
+          toast.success(`✅ Invitation sent to ${userEmail}! Check your email for the invitation link.`);
         }
       }
       queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     } catch (error) {
       console.error('Toggle error:', error);
-      toast.error('Error: ' + (error.message || 'Failed to update access'));
+      toast.error(error.message || 'Failed to update access');
     } finally {
       setIsGranting(null);
     }

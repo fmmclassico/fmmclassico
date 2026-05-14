@@ -1,0 +1,45 @@
+{
+  "name": "ContactSetting",
+  "type": "object",
+  "properties": {
+    "setting_key": {
+      "type": "string",
+      "description": "Setting identifier (e.g. contact_email, contact_phone, whatsapp_number)"
+    },
+    "setting_value": {
+      "type": "string",
+      "description": "The actual value (email, phone number, etc.)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of what this setting controls"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this setting is currently active"
+    }
+  },
+  "required": [
+    "setting_key",
+    "setting_value"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -26,6 +26,7 @@ import DownloadApp from './pages/DownloadApp';
 import Policies from './pages/Policies';
 import AdminSMSBroadcast from './pages/AdminSMSBroadcast';
 import AdminAccessControl from './pages/AdminAccessControl';
+import AdminContactSettings from './pages/AdminContactSettings';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 // make Pages accessible in JSX scope for fallback routes
@@ -161,6 +162,11 @@ const AuthenticatedApp = () => {
       <Route path="/AdminAccessControl" element={
         <LayoutWrapper currentPageName="AdminAccessControl">
           <AdminAccessControl />
+        </LayoutWrapper>
+      } />
+      <Route path="/AdminContactSettings" element={
+        <LayoutWrapper currentPageName="AdminContactSettings">
+          <AdminContactSettings />
         </LayoutWrapper>
       } />
       {/* Case-insensitive fallback routes for common pages */}

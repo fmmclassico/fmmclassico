@@ -98,7 +98,7 @@ export default function BrandProducts() {
       <div className="flex items-start justify-between mb-5 gap-3">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-gray-900">{brand}</h1>
-          <p className="text-gray-500 text-sm mt-1">{brandProducts.length} product{brandProducts.length !== 1 ? 's' : ''} found</p>
+
         </div>
         <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-40 text-xs">

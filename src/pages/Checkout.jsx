@@ -211,9 +211,9 @@ export default function Checkout() {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Your cart is empty</h2>
-        <Link to={createPageUrl('Shop')}>
-          <Button>Go to Shop</Button>
-        </Link>
+        <button onClick={() => navigate(-1)} className="text-blue-600 font-semibold hover:underline">
+          ← Back to Payment
+        </button>
       </div>
     );
   }
@@ -222,9 +222,6 @@ export default function Checkout() {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-6">
         <div className="mb-3 md:mb-6">
-          <button onClick={() => navigate(createPageUrl('Checkout'))} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-2">
-            <ChevronLeft className="h-4 w-4" /> Back
-          </button>
           <h1 className="text-xl md:text-3xl font-bold text-gray-800">Checkout</h1>
         </div>
 

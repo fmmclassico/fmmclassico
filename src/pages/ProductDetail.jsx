@@ -181,7 +181,7 @@ export default function ProductDetail() {
         >
           {/* Main display with swipe */}
           <div
-            className="relative w-full max-w-md mx-auto aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-lg cursor-grab active:cursor-grabbing"
+            className="relative w-full max-w-sm mx-auto aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-lg cursor-grab active:cursor-grabbing"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
@@ -265,7 +265,7 @@ export default function ProductDetail() {
         >
           <div>
             <Badge variant="outline" className="mb-1.5 text-xs">{categoryNames[product.category]}</Badge>
-            <h1 className="text-lg md:text-xl font-bold text-gray-800 mb-1.5 leading-snug">{product.name}</h1>
+            <h1 className="text-base md:text-lg font-bold text-gray-800 mb-1.5 leading-snug">{product.name}</h1>
             <div className="flex items-center gap-1.5">
               <div className="flex items-center">
                 {[1,2,3,4,5].map(i => (
@@ -280,7 +280,7 @@ export default function ProductDetail() {
           </div>
 
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[#2E86C1]">₵{product.price?.toFixed(2)}</span>
+            <span className="text-xl font-bold text-[#2E86C1]">₵{product.price?.toFixed(2)}</span>
             {product.original_price && (
               <span className="text-base text-gray-400 line-through">₵{product.original_price?.toFixed(2)}</span>
             )}

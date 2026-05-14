@@ -129,11 +129,7 @@ export default function ReviewSection({ product, user }) {
             </div>
           ))}
         </div>
-      ) : (
-        <div className="text-center py-4 bg-gray-50 rounded-xl">
-          <p className="text-sm text-gray-500">Click "Show Reviews" to read {reviews.length} customer review{reviews.length !== 1 ? 's' : ''}</p>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

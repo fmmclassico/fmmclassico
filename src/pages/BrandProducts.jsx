@@ -23,22 +23,31 @@ const CATEGORY_LABELS = {
   home_appliances: 'Home Appliances',
 };
 
-// Sub-product types per brand → shows as pill filters on brand page
+// ─── STRICT CATEGORY ISOLATION ───────────────────────────────────────────────
+// Each brand entry only contains the ONE main category it belongs to in this
+// context. When the user arrives via ?category=phones, only phones subtypes
+// are shown. When via ?category=earphones, only earphone subtypes, etc.
+// Phones brands → only 'phones' subtypes.
+// Phone Accessories brands → only phone-accessory category subtypes.
+// Electronics brands → only 'electronic_appliances' subtypes.
+// Home Appliances brands → only 'home_appliances' subtypes.
+// A brand like Samsung that exists in ALL four areas is NEVER mixed here —
+// the ?category param on the URL is the authority for which slice to show.
+
 const BRAND_PRODUCT_TYPES = {
-  // Phones
+  // ── PHONES (only phone models, never accessories/electronics/appliances) ──
   Apple: {
     phones: ['iPhone 11', 'iPhone 12 Series', 'iPhone 13 Series', 'iPhone 14 Series', 'iPhone 15 Series', 'iPhone SE'],
-    earphones: ['AirPods', 'AirPods Pro', 'AirPods Max'],
-    chargers: ['Apple Charger (20W)', 'MagSafe Charger', 'Apple Car Charger'],
-    cables: ['Lightning Cable', 'USB-C to Lightning'],
-    smart_watches: ['Apple Watch Series 8', 'Apple Watch Ultra', 'Apple Watch SE'],
   },
   Samsung: {
     phones: ['Galaxy A Series', 'Galaxy S Series', 'Galaxy Z Fold/Flip'],
+    // Samsung also appears under phone_accessories, electronic_appliances, home_appliances
+    // but those entries live in their own category-scoped sections below.
+    phone_cases: ['Samsung Galaxy Cases'],
+    chargers: ['Samsung Fast Charger', 'Samsung Wireless Charger'],
+    earphones: ['Galaxy Buds', 'Galaxy Buds Pro'],
     electronic_appliances: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Soundbar', 'Home Theatre'],
     home_appliances: ['Refrigerator', 'Washing Machine', 'Microwave', 'Air Conditioner'],
-    earphones: ['Galaxy Buds', 'Galaxy Buds Pro'],
-    chargers: ['Samsung Fast Charger', 'Samsung Wireless Charger'],
   },
   Tecno: {
     phones: ['Spark Series', 'Camon Series', 'Phantom Series', 'Pop Series'],
@@ -49,9 +58,8 @@ const BRAND_PRODUCT_TYPES = {
   Itel: {
     phones: ['A Series', 'S Series', 'P Series (Big Battery)'],
   },
-  Xiaomi: {
-    phones: ['Redmi 12', 'Redmi Note Series', 'Poco Series', 'Mi Series'],
-  },
+
+  // ── PHONE ACCESSORIES (only accessory categories, never phones/electronics/appliances) ──
   Oraimo: {
     earphones: ['FreePods (Wireless Earbuds)', 'Neckband Earphones', 'Wired Earphones', 'Bluetooth Headphones'],
     chargers: ['Fast Charger (20W)', 'Car Charger', 'Wireless Charger', 'Multi-port Charger'],
@@ -59,33 +67,20 @@ const BRAND_PRODUCT_TYPES = {
     cables: ['USB-C Cable', 'Lightning Cable', 'Micro USB Cable', 'Braided Cable'],
     smart_watches: ['Oraimo Watch', 'Oraimo Watch Pro'],
     speakers: ['Bluetooth Speaker', 'Mini Speaker'],
-    home_appliances: ['Electric Kettle', 'Rice Cooker', 'Blender', 'Air Fryer'],
-    electronic_appliances: ['Smart TV', 'Sound System'],
   },
   JBL: {
     speakers: ['JBL Go', 'JBL Flip', 'JBL Charge', 'JBL Xtreme', 'JBL PartyBox'],
     earphones: ['JBL Tune Earbuds', 'JBL Free X', 'JBL Live Series', 'JBL Wired Earphones'],
   },
+
+  // ── ELECTRONICS (only electronic_appliances, never phones/accessories/home) ──
   Sony: {
     electronic_appliances: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Soundbar', 'Home Theatre'],
     earphones: ['Sony WF Series (Earbuds)', 'Sony WH Series (Headphones)', 'Sony Wired Earphones'],
     speakers: ['Sony Portable Speaker', 'Sony Party Speaker'],
   },
-  Baseus: {
-    chargers: ['Fast Charger', 'GaN Charger', 'Car Charger', 'Wireless Charger'],
-    cables: ['USB-C Cable', 'Lightning Cable', 'Braided Cable'],
-    holders: ['Car Phone Holder', 'Desk Stand'],
-    power_banks: ['Power Bank 10,000mAh', 'Power Bank 20,000mAh'],
-  },
-  Remax: {
-    chargers: ['Fast Charger', 'Car Charger'],
-    cables: ['USB-C Cable', 'Lightning Cable', 'Micro USB Cable'],
-    earphones: ['Wired Earphones', 'Bluetooth Earphones'],
-    holders: ['Phone Holder'],
-  },
   TCL: {
     electronic_appliances: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Smart TV 65"', 'Android TV', '4K UHD TV'],
-    home_appliances: ['Refrigerator', 'Washing Machine', 'Air Conditioner'],
   },
   Hisense: {
     electronic_appliances: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Smart TV 65"', 'QLED TV'],
@@ -99,6 +94,8 @@ const BRAND_PRODUCT_TYPES = {
     electronic_appliances: ['Air Conditioner Split Unit', 'Air Purifier'],
     home_appliances: ['Refrigerator', 'Washing Machine', 'Air Conditioner', 'Microwave', 'Rice Cooker', 'Blender'],
   },
+
+  // ── HOME APPLIANCES (only home_appliances, never phones/accessories/electronics) ──
   Roch: {
     home_appliances: ['Refrigerator (Single Door)', 'Refrigerator (Double Door)', 'Chest Freezer', 'Washing Machine', 'Blender', 'Rice Cooker', 'Electric Kettle', 'Microwave', 'Standing Fan', 'Air Conditioner'],
   },
@@ -112,6 +109,15 @@ const BRAND_PRODUCT_TYPES = {
     home_appliances: ['Refrigerator', 'Chest Freezer', 'Washing Machine', 'Air Conditioner', 'Standing Fan', 'Blender', 'Rice Cooker', 'Electric Kettle'],
   },
 };
+
+// ── CATEGORY-SCOPED subtype lookup ────────────────────────────────────────────
+// When ?category is present, only return subtypes for that exact category key.
+// This prevents a brand's subtypes from other categories leaking through.
+function getSubTypes(brand, category) {
+  const map = BRAND_PRODUCT_TYPES[brand] || {};
+  if (!category) return [];
+  return map[category] || [];
+}
 
 export default function BrandProducts() {
   const [searchParams] = useSearchParams();
@@ -141,9 +147,10 @@ export default function BrandProducts() {
     .filter(Boolean)
     .filter(c => brandTypeCategories.length === 0 || brandTypeCategories.includes(c));
 
-  // Get sub-types for this brand+category combo
+  // Get sub-types for this brand+category combo — strictly scoped to current category
+  const subTypes = getSubTypes(brand, category);
+  // Category chips only shown when NO category is selected AND brand has multiple categories in the db
   const brandTypeMap = BRAND_PRODUCT_TYPES[brand] || {};
-  const subTypes = category ? (brandTypeMap[category] || []) : [];
 
   if (!brand) {
     return <div className="container mx-auto px-4 py-12 text-center text-gray-500">No brand specified.</div>;

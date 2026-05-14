@@ -34,11 +34,15 @@
         "electronic_appliances",
         "home_appliances"
       ],
-      "description": "Product category"
+      "description": "Product category (strict \u2014 determines which main group this product belongs to)"
     },
     "brand": {
       "type": "string",
-      "description": "Product brand e.g. Apple, Samsung, Tecno, Hisense, Oraimo, TCL, Roch, Silver Crest, Midea, Nasco, JBL, Sony, LG, Anker, Infinix, Itel, Xiaomi"
+      "description": "Product brand. Must belong to the correct category group."
+    },
+    "subcategory": {
+      "type": "string",
+      "description": "Product type/subcategory within the brand+category, e.g. iPhone 15 Series, Galaxy Buds, Smart TV 43\""
     },
     "image_url": {
       "type": "string",

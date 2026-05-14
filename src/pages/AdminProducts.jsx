@@ -12,31 +12,120 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Upload, X, Pencil, Plus, Trash2, ImagePlus, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
-const CATEGORIES = [
-  { value: 'phones', label: 'Phones' },
-  { value: 'phone_cases', label: 'Phone Cases' },
-  { value: 'chargers', label: 'Chargers' },
-  { value: 'earphones', label: 'Earphones' },
-  { value: 'cables', label: 'Cables' },
-  { value: 'power_banks', label: 'Power Banks' },
-  { value: 'screen_protectors', label: 'Screen Protectors' },
-  { value: 'holders', label: 'Holders' },
-  { value: 'speakers', label: 'Speakers' },
-  { value: 'smart_watches', label: 'Smart Watches' },
-  { value: 'electronic_appliances', label: 'Electronic Appliances' },
-  { value: 'home_appliances', label: 'Home Appliances' },
+// ── STRICT CATEGORY STRUCTURE ─────────────────────────────────────────────────
+// Main category groups → their db category values → allowed brands → subcategories
+// A product uploaded here is ONLY stored under the selected category and will
+// NEVER appear in another category even if the same brand exists there.
+
+const MAIN_CATEGORY_GROUPS = [
+  { label: 'Phones', id: 'phones' },
+  { label: 'Phone Accessories', id: 'phone_accessories' },
+  { label: 'Electronics', id: 'electronics' },
+  { label: 'Home Appliances', id: 'home_appliances_group' },
 ];
 
-const BRANDS = [
-  'Apple', 'Samsung', 'Tecno', 'Infinix', 'Itel', 'Xiaomi',
-  'Oraimo', 'JBL', 'Sony', 'Baseus', 'Remax', 'LG',
-  'TCL', 'Hisense', 'Midea', 'Roch', 'Silver Crest', 'Nasco', 'Hoffman',
-  'Other',
-];
+// db category values per main group
+const GROUP_CATEGORIES = {
+  phones: [
+    { value: 'phones', label: 'Phones' },
+  ],
+  phone_accessories: [
+    { value: 'phone_cases', label: 'Phone Cases' },
+    { value: 'chargers', label: 'Chargers' },
+    { value: 'earphones', label: 'Earphones' },
+    { value: 'cables', label: 'Cables' },
+    { value: 'power_banks', label: 'Power Banks' },
+    { value: 'screen_protectors', label: 'Screen Protectors' },
+    { value: 'holders', label: 'Holders & Mounts' },
+    { value: 'speakers', label: 'Speakers' },
+    { value: 'smart_watches', label: 'Smart Watches' },
+  ],
+  electronics: [
+    { value: 'electronic_appliances', label: 'Electronic Appliances' },
+  ],
+  home_appliances_group: [
+    { value: 'home_appliances', label: 'Home Appliances' },
+  ],
+};
+
+// Brands allowed per main group (strictly isolated)
+const GROUP_BRANDS = {
+  phones: ['Apple', 'Samsung', 'Tecno', 'Infinix', 'Itel', 'Other'],
+  phone_accessories: ['Apple', 'Samsung', 'Oraimo', 'JBL', 'Sony', 'LG', 'Other'],
+  electronics: ['Samsung', 'Sony', 'LG', 'TCL', 'Hisense', 'Midea', 'Other'],
+  home_appliances_group: ['Samsung', 'LG', 'Hisense', 'TCL', 'Midea', 'Roch', 'Silver Crest', 'Nasco', 'Hoffman', 'Other'],
+};
+
+// Subcategories per brand+category — only relevant items for that exact slot
+const BRAND_SUBCATEGORIES = {
+  phones: {
+    Apple: ['iPhone SE', 'iPhone 11', 'iPhone 12 Series', 'iPhone 13 Series', 'iPhone 14 Series', 'iPhone 15 Series'],
+    Samsung: ['Galaxy A Series', 'Galaxy S Series', 'Galaxy Z Fold/Flip'],
+    Tecno: ['Spark Series', 'Camon Series', 'Phantom Series', 'Pop Series'],
+    Infinix: ['Hot Series', 'Note Series', 'Smart Series', 'Zero Series'],
+    Itel: ['A Series', 'S Series', 'P Series (Big Battery)'],
+  },
+  phone_cases: {
+    Apple: ['iPhone Cases'], Samsung: ['Galaxy Cases'], Oraimo: ['Universal Cases'],
+  },
+  chargers: {
+    Apple: ['Apple 20W Charger', 'MagSafe Charger', 'Apple Car Charger'],
+    Samsung: ['Samsung Fast Charger', 'Samsung Wireless Charger'],
+    Oraimo: ['Fast Charger 20W', 'Car Charger', 'Wireless Charger', 'Multi-port Charger'],
+  },
+  earphones: {
+    Apple: ['AirPods', 'AirPods Pro', 'AirPods Max'],
+    Samsung: ['Galaxy Buds', 'Galaxy Buds Pro'],
+    Oraimo: ['FreePods (Wireless Earbuds)', 'Neckband Earphones', 'Wired Earphones', 'Bluetooth Headphones'],
+    JBL: ['JBL Tune Earbuds', 'JBL Free X', 'JBL Live Series', 'JBL Wired Earphones'],
+    Sony: ['Sony WF Series (Earbuds)', 'Sony WH Series (Headphones)', 'Sony Wired Earphones'],
+  },
+  cables: {
+    Apple: ['Lightning Cable', 'USB-C to Lightning'],
+    Samsung: ['USB-C Cable', 'Samsung Data Cable'],
+    Oraimo: ['USB-C Cable', 'Lightning Cable', 'Micro USB Cable', 'Braided Cable'],
+  },
+  power_banks: {
+    Oraimo: ['Power Bank 10,000mAh', 'Power Bank 20,000mAh', 'Solar Power Bank'],
+    Samsung: ['Samsung Power Bank'],
+  },
+  screen_protectors: { Apple: ['iPhone Screen Protector'], Samsung: ['Galaxy Screen Protector'] },
+  holders: { Oraimo: ['Car Phone Holder', 'Desk Stand'], Samsung: ['Samsung Phone Stand'] },
+  speakers: {
+    JBL: ['JBL Go', 'JBL Flip', 'JBL Charge', 'JBL Xtreme', 'JBL PartyBox'],
+    Sony: ['Sony Portable Speaker', 'Sony Party Speaker'],
+    Oraimo: ['Bluetooth Speaker', 'Mini Speaker'],
+  },
+  smart_watches: {
+    Apple: ['Apple Watch SE', 'Apple Watch Series 8', 'Apple Watch Ultra'],
+    Samsung: ['Galaxy Watch'],
+    Oraimo: ['Oraimo Watch', 'Oraimo Watch Pro'],
+  },
+  electronic_appliances: {
+    Samsung: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Soundbar', 'Home Theatre'],
+    Sony: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Soundbar', 'Home Theatre'],
+    LG: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'OLED TV', 'Soundbar'],
+    TCL: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Smart TV 65"', 'Android TV', '4K UHD TV'],
+    Hisense: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Smart TV 65"', 'QLED TV'],
+    Midea: ['Air Conditioner Split Unit', 'Air Purifier'],
+  },
+  home_appliances: {
+    Samsung: ['Refrigerator', 'Washing Machine', 'Microwave', 'Air Conditioner'],
+    LG: ['Refrigerator', 'Washing Machine', 'Air Conditioner', 'Microwave'],
+    Hisense: ['Refrigerator (Single Door)', 'Refrigerator (Double Door)', 'Chest Freezer', 'Washing Machine', 'Air Conditioner', 'Microwave'],
+    TCL: ['Refrigerator', 'Washing Machine', 'Air Conditioner'],
+    Midea: ['Refrigerator', 'Washing Machine', 'Air Conditioner', 'Microwave', 'Rice Cooker', 'Blender'],
+    Roch: ['Refrigerator (Single Door)', 'Refrigerator (Double Door)', 'Chest Freezer', 'Washing Machine', 'Blender', 'Rice Cooker', 'Electric Kettle', 'Microwave', 'Standing Fan', 'Air Conditioner'],
+    'Silver Crest': ['Blender', 'Rice Cooker', 'Electric Kettle', 'Microwave', 'Toaster', 'Sandwich Maker', 'Food Processor', 'Juicer', 'Standing Fan'],
+    Nasco: ['Refrigerator', 'Chest Freezer', 'Washing Machine', 'Blender', 'Rice Cooker', 'Electric Kettle', 'Standing Fan', 'Air Conditioner'],
+    Hoffman: ['Refrigerator', 'Chest Freezer', 'Washing Machine', 'Air Conditioner', 'Standing Fan', 'Blender', 'Rice Cooker', 'Electric Kettle'],
+  },
+};
 
 const EMPTY_FORM = {
   name: '', description: '', price: '', original_price: '',
-  category: '', brand: '', stock: '', featured: false, flash_sale: false,
+  main_group: '', category: '', brand: '', subcategory: '',
+  stock: '', featured: false, flash_sale: false,
   donkomi: false, review_enabled: true, rating: '', reviews_count: '',
   image_url: '', image_urls: [], video_url: '',
 };
@@ -66,8 +155,9 @@ export default function AdminProducts() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
+      const { main_group, ...rest } = data; // don't store main_group in db
       const payload = {
-        ...data,
+        ...rest,
         price: parseFloat(data.price) || 0,
         original_price: data.original_price ? parseFloat(data.original_price) : undefined,
         stock: data.stock !== '' ? parseInt(data.stock) : undefined,
@@ -120,13 +210,22 @@ export default function AdminProducts() {
 
   const handleEdit = (product) => {
     setEditingProduct(product);
+    // Determine main_group from category
+    const cat = product.category || '';
+    let main_group = '';
+    if (cat === 'phones') main_group = 'phones';
+    else if (cat === 'electronic_appliances') main_group = 'electronics';
+    else if (cat === 'home_appliances') main_group = 'home_appliances_group';
+    else if (cat) main_group = 'phone_accessories';
     setForm({
       name: product.name || '',
       description: product.description || '',
       price: product.price ?? '',
       original_price: product.original_price ?? '',
+      main_group,
       category: product.category || '',
       brand: product.brand || '',
+      subcategory: product.subcategory || '',
       stock: product.stock ?? '',
       featured: product.featured || false,
       flash_sale: product.flash_sale || false,
@@ -227,25 +326,66 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            <div>
+            <div className="md:col-span-2">
               <Label>Product Name *</Label>
               <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. iPhone 14 Pro Max" />
             </div>
+
+            {/* ── STEP 1: Main Category Group ── */}
             <div>
-              <Label>Category *</Label>
-              <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+              <Label>Step 1 — Main Category *</Label>
+              <Select value={form.main_group} onValueChange={v => setForm(f => ({ ...f, main_group: v, category: '', brand: '', subcategory: '' }))}>
+                <SelectTrigger><SelectValue placeholder="Select main category" /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  {MAIN_CATEGORY_GROUPS.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* ── STEP 2: Subcategory (only visible for phone_accessories group) ── */}
             <div>
-              <Label>Brand</Label>
-              <Select value={form.brand} onValueChange={v => setForm(f => ({ ...f, brand: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select brand" /></SelectTrigger>
+              <Label>Step 2 — Subcategory *</Label>
+              <Select
+                value={form.category}
+                onValueChange={v => setForm(f => ({ ...f, category: v, brand: '', subcategory: '' }))}
+                disabled={!form.main_group}
+              >
+                <SelectTrigger><SelectValue placeholder={form.main_group ? 'Select subcategory' : 'Select main category first'} /></SelectTrigger>
                 <SelectContent>
-                  {BRANDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                  {(GROUP_CATEGORIES[form.main_group] || []).map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* ── STEP 3: Brand (filtered to this category group) ── */}
+            <div>
+              <Label>Step 3 — Brand *</Label>
+              <Select
+                value={form.brand}
+                onValueChange={v => setForm(f => ({ ...f, brand: v, subcategory: '' }))}
+                disabled={!form.category}
+              >
+                <SelectTrigger><SelectValue placeholder={form.category ? 'Select brand' : 'Select subcategory first'} /></SelectTrigger>
+                <SelectContent>
+                  {(GROUP_BRANDS[form.main_group] || []).map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* ── STEP 4: Product Subcategory/Type ── */}
+            <div>
+              <Label>Step 4 — Product Type</Label>
+              <Select
+                value={form.subcategory}
+                onValueChange={v => setForm(f => ({ ...f, subcategory: v }))}
+                disabled={!form.brand}
+              >
+                <SelectTrigger><SelectValue placeholder={form.brand ? 'Select product type' : 'Select brand first'} /></SelectTrigger>
+                <SelectContent>
+                  {((BRAND_SUBCATEGORIES[form.category] || {})[form.brand] || []).map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                  <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>

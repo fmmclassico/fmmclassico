@@ -181,7 +181,7 @@ export default function ProductDetail() {
         >
           {/* Main display with swipe */}
           <div
-            className="relative w-full max-w-sm mx-auto aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-lg cursor-grab active:cursor-grabbing"
+            className="relative w-full max-w-[280px] sm:max-w-md mx-auto aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-lg cursor-grab active:cursor-grabbing"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
@@ -230,7 +230,7 @@ export default function ProductDetail() {
           </div>
 
           {/* Thumbnail Gallery — 4 images + video */}
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-5 gap-2 max-w-[280px] sm:max-w-md mx-auto">
             {galleryItems.map((item, idx) => (
               <button
                 key={idx}

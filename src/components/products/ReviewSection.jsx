@@ -102,13 +102,10 @@ export default function ReviewSection({ product, user }) {
           >
             {submitMutation.isPending ? 'Submitting...' : 'Submit Review'}
           </Button>
-          <p className="text-xs text-gray-400 text-center">Reviews are approved by admin before going live.</p>
         </div>
       )}
 
-      {reviews.length === 0 ? (
-        <p className="text-gray-400 text-sm text-center py-6">No reviews yet. Be the first!</p>
-      ) : showReviews ? (
+      {reviews.length === 0 ? null : showReviews ? (
         <div className="space-y-4">
           {reviews.map(review => (
             <div key={review.id} className="bg-gray-50 rounded-xl p-4">

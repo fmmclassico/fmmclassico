@@ -184,11 +184,8 @@ export default function Checkout() {
       city: formData.city,
     }));
 
-    // Clear the cart immediately when customer proceeds to payment
-    base44.entities.CartItem.filter({ user_email: user.email })
-      .then(items => Promise.all(items.map(item => base44.entities.CartItem.delete(item.id).catch(() => {}))))
-      .then(() => queryClient.invalidateQueries({ queryKey: ['cartItems'] }))
-      .catch(() => {});
+    // Clear the cart AFTER successful payment (not before)
+    // Cart will be cleared in PaymentConfirmed page after payment completion
 
     setOrderSubmitted(true);
     setIsSubmitting(false);

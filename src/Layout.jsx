@@ -125,7 +125,6 @@ export default function Layout({ children, currentPageName }) {
     { icon: MessageCircle, label: 'Chat Support', page: 'Chat' },
     { icon: MessageCircle, label: 'Feedback / Report Issue', page: 'Feedback' },
     { icon: Info, label: 'How to Use the Site', page: 'HowToUse' },
-    { icon: FileText, label: 'Store Policies', page: 'Policies' },
     { icon: Info, label: 'About Us', page: 'About' },
     { icon: Settings, label: 'Settings', page: 'Settings' },
     ...(isAdmin ? [
@@ -340,6 +339,7 @@ export default function Layout({ children, currentPageName }) {
                       { label: '💳 How to Pay for an Order', page: 'HowToUse' },
                       { label: '📦 Track Your Order', page: 'Orders' },
                       { label: '❌ Cancel an Order', page: 'Orders' },
+                      { label: '📄 Store Policies', page: 'Policies' },
                     ].map(item => (
                       <Link key={item.page + item.label} to={createPageUrl(item.page)} onClick={() => setHelpOpen(false)}
                         className="flex items-center px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">

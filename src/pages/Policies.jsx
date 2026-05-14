@@ -281,11 +281,7 @@ export default function Policies() {
         </CardContent>
       </Card>
 
-      <div className="text-center text-sm text-gray-500 mt-6">
-        <p>Last updated: {new Date().toLocaleDateString('en-GH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-        <p className="mt-1">FMM CLASSICO - UMAT Campus, Tarkwa | Ashongman Estate, Accra</p>
-        <p>WhatsApp: 0509 896 035 | Email: fmmclassico@gmail.com</p>
-      </div>
+
     </div>
   );
 }

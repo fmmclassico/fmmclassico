@@ -9,19 +9,21 @@ import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 
 const QUICK_PROMPTS = [
-  'Generate a flyer for a 20% off flash sale on phones',
-  'Create a banner for Oraimo earbuds at ₵150',
-  'Generate a promotional flyer for new Samsung phones arrival',
-  'Write a WhatsApp broadcast message for a weekend sale',
-  'Suggest product descriptions for Samsung Galaxy A15',
-  'What promotions should I run for Donkomi deals section?',
+  '🎨 Generate a flyer for a 20% off flash sale on phones',
+  '🎨 Create a banner for Oraimo earbuds at ₵150',
+  '📣 Write a WhatsApp broadcast for a weekend sale',
+  '📝 Write a product description for Samsung Galaxy A15',
+  '💡 Suggest promotions for the Donkomi deals section',
+  '📧 Write a customer email for order delivery update',
+  '💰 How should I price Tecno Spark 20 competitively in Ghana?',
+  '🛒 Give me 5 upsell ideas for phone cases',
 ];
 
 export default function AdminAI() {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hello! I'm your CLASSICO AI Assistant. I can help you:\n\n- 🎨 **Generate professional flyers & banners** (just describe what you want)\n- **Create promo banner text** for your homepage\n- **Write product descriptions** and marketing copy\n- **Suggest deals & promotions** for your store\n- **Generate WhatsApp broadcast messages**\n\nTry: *\"Generate a flyer for a 50% off sale on Tecno phones\"*" }
+    { role: 'assistant', content: "Hello! I'm your **CLASSICO AI Assistant** — powered by Claude, one of the world's most capable AI models.\n\nI can help you with anything for your store:\n\n- 🎨 **Generate flyers & banners** — describe what you want and I'll create a downloadable image\n- 📣 **Marketing copy** — WhatsApp broadcasts, product descriptions, promo campaigns\n- 💡 **Business advice** — pricing strategies, promotions, upsell ideas for the Ghana market\n- 🛒 **Store content** — banner text (title, subtitle, CTA, gradient), notification messages\n- 📊 **Sales strategy** — deal ideas, seasonal campaigns, customer retention tips\n- ✍️ **Any writing task** — emails, announcements, customer replies\n\nJust type what you need or pick a quick prompt below!" }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -67,10 +69,11 @@ export default function AdminAI() {
 
     const history = messages.map(m => `${m.role === 'user' ? 'Admin' : 'AI'}: ${m.content}`).join('\n');
     const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are the AI assistant for FMM CLASSICO, an online store in Ghana selling phones, phone accessories, electronics, and home appliances.
+      model: 'claude_sonnet_4_6',
+      prompt: `You are the AI assistant for FMM CLASSICO, a premium online store in Ghana selling phones, phone accessories, electronics, and home appliances.
 
 Store context:
-- Store name: FMM CLASSICO
+- Store name: FMM CLASSICO (also known as FMMCLASSICO)
 - Locations: Tarkwa (UMAT Campus) and Accra (Ashongman Estate)
 - Currency: GHS (₵)
 - Key brands: Apple, Samsung, Tecno, Infinix, Oraimo, JBL, TCL, Hisense, Roch, Silver Crest, Midea, Nasco, Hoffman
@@ -78,12 +81,22 @@ Store context:
 - Payment: Mobile Money, Card
 - WhatsApp: 0509 896 035
 
+You can help the admin with:
+- Writing product descriptions, promo copy, marketing messages
+- Creating WhatsApp broadcast messages
+- Suggesting promotional strategies, pricing ideas, discount campaigns
+- Generating promo banner text (title, subtitle, badge, gradient, CTA)
+- Writing customer emails or notifications
+- Giving business advice specific to the Ghana electronics market
+- Analyzing sales strategies for the store
+- Any other business or content task the admin needs
+
 Previous conversation:
 ${history}
 
 Admin's latest message: ${msg}
 
-Respond helpfully. If asked to create promo banner text, provide: title, subtitle, badge text, a gradient suggestion (Tailwind classes), and call-to-action. Be specific and practical for the Ghana market.`,
+Respond in a helpful, practical and detailed way. Be specific to the Ghana/West Africa market context. If asked to create promo banner text, provide all fields: title, subtitle, badge text, Tailwind gradient classes, and call-to-action button text.`,
     });
 
     setMessages(m => [...m, { role: 'assistant', content: response }]);

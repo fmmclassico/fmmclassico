@@ -23,15 +23,10 @@ import {
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 
-const statusSteps = [
-  { key: 'confirmed', label: 'Confirmed', icon: CheckCircle2 },
-  { key: 'processing', label: 'Processing', icon: Package },
-  { key: 'shipped', label: 'Shipped', icon: Truck },
-  { key: 'in_transit', label: 'In Transit', icon: MapPin },
-  { key: 'delivered', label: 'Delivered', icon: Home },
-];
-
-const statusOrder = ['pending', 'confirmed', 'processing', 'shipped', 'in_transit', 'delivered'];
+const statusLabels = {
+  confirmed: 'Confirmed', processing: 'Processing', shipped: 'Shipped',
+  in_transit: 'In Transit', delivered: 'Delivered', pending: 'Pending',
+};
 
 export default function OrderTracking() {
   const [user, setUser] = useState(null);
@@ -59,7 +54,6 @@ export default function OrderTracking() {
   });
 
   const order = orders.find(o => o.id === orderId);
-  const currentStatusIndex = order ? statusOrder.indexOf(order.status) : -1;
   const isCancelled = order?.status === 'cancelled';
 
   if (isLoading || !user) {
@@ -106,45 +100,12 @@ export default function OrderTracking() {
           </Badge>
         ) : (
           <Badge className="bg-orange-100 text-orange-800 text-lg px-4 py-2">
-            {statusSteps.find(s => s.key === order.status)?.label || order.status}
+            {statusLabels[order.status] || order.status}
           </Badge>
         )}
       </div>
 
-      {/* ── Visual Progress Tracker ── */}
-      {!isCancelled && (
-        <Card className="p-6 mb-6 shadow-md overflow-x-auto">
-          <h2 className="text-lg font-bold text-gray-800 mb-5">Order Progress</h2>
-          <div className="flex items-start min-w-max gap-0">
-            {statusSteps.map((step, i) => {
-              const isDone = currentStatusIndex >= i;
-              const isActive = currentStatusIndex === i;
-              const Icon = step.icon;
-              return (
-                <div key={step.key} className="flex items-center">
-                  <div className="flex flex-col items-center w-20">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
-                      isDone
-                        ? 'bg-green-500 border-green-500'
-                        : isActive
-                          ? 'bg-orange-100 border-orange-500 animate-pulse'
-                          : 'bg-white border-gray-200'
-                    }`}>
-                      <Icon className={`h-5 w-5 ${isDone ? 'text-white' : isActive ? 'text-orange-500' : 'text-gray-300'}`} />
-                    </div>
-                    <p className={`text-[10px] font-semibold text-center mt-1.5 leading-tight w-16 ${isDone ? 'text-green-700' : isActive ? 'text-orange-600' : 'text-gray-400'}`}>
-                      {step.label}
-                    </p>
-                  </div>
-                  {i < statusSteps.length - 1 && (
-                    <div className={`h-1 w-8 rounded flex-shrink-0 mb-5 ${isDone && currentStatusIndex > i ? 'bg-green-500' : 'bg-gray-200'}`} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      )}
+
 
       {/* ── Tracking History — 5-step timeline ── */}
       <Card className="p-6 mb-6 shadow-md">

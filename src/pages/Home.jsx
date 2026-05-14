@@ -400,6 +400,34 @@ export default function Home() {
         </div>
       </div>
 
+      {/* ── OTHER FEATURED CATEGORIES ── */}
+      <div className="mt-5 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Other Featured Categories</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4">
+            {[
+              { label: 'Smart Phones', link: createPageUrl('Shop?category=phones'), image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400' },
+              { label: 'Headphones', link: createPageUrl('Shop?category=earphones'), image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400' },
+              { label: 'Chargers', link: createPageUrl('Shop?category=chargers'), image: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=400' },
+              { label: 'Ear Buds', link: createPageUrl('Shop?category=earphones'), image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400' },
+              { label: 'Power Banks', link: createPageUrl('Shop?category=power_banks'), image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=400' },
+              { label: 'Cables', link: createPageUrl('Shop?category=cables'), image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400' },
+              { label: 'Smart Watches', link: createPageUrl('Shop?category=smart_watches'), image: 'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=400' },
+              { label: 'Phone Cases', link: createPageUrl('Shop?category=phone_cases'), image: 'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=400' },
+            ].map(item => (
+              <Link key={item.label} to={item.link}
+                className="relative rounded-xl overflow-hidden aspect-square group border border-gray-100 hover:border-blue-300 transition-all shadow-sm">
+                <img src={item.image} alt={item.label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div className="absolute inset-0 bg-black/35 group-hover:bg-black/45 transition-colors" />
+                <span className="absolute bottom-2 left-0 right-0 text-center text-white text-xs font-black drop-shadow px-1">{item.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* ── NEW ARRIVALS ── */}
       <div className="mt-5 mx-2 md:mx-4">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">

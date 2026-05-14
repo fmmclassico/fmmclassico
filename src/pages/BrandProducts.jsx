@@ -93,21 +93,6 @@ export default function BrandProducts() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1 text-xs text-gray-400 mb-4 flex-wrap">
-        <Link to={createPageUrl('Home')} className="hover:text-gray-700">Home</Link>
-        <ChevronRight className="h-3 w-3" />
-        <span className="text-gray-700 font-semibold">{brand}</span>
-        {category && (
-          <>
-            <ChevronRight className="h-3 w-3" />
-            <Link to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand)}`)} className="text-gray-600 hover:text-gray-900">
-              {CATEGORY_LABELS[category] || category}
-            </Link>
-          </>
-        )}
-
-      </div>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-5 gap-3">

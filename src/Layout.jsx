@@ -141,6 +141,7 @@ export default function Layout({ children, currentPageName }) {
       { icon: Info, label: 'Edit About Page', page: 'AdminAbout' },
       { icon: Settings, label: 'Edit Page Content', page: 'AdminPageContent' },
       { icon: Home, label: 'Edit Home & Categories', page: 'AdminHomeEditor' },
+      { icon: Settings, label: 'Interface Control', page: 'AdminInterfaceControl' },
       { icon: Bot, label: 'AI Assistant', page: 'AdminAI' },
     ] : []),
   ];

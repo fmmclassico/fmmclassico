@@ -95,6 +95,7 @@ const HOME_CATEGORIES = [
 export default function Home() {
   const [user, setUser] = useState(null);
   const [expandedCat, setExpandedCat] = useState(null);
+  const [expandedBrand, setExpandedBrand] = useState(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -111,6 +112,8 @@ export default function Home() {
   };
   const notice1 = getPromoNotice('promo_notice_1');
   const notice2 = getPromoNotice('promo_notice_2');
+
+  const showBrandSection = appSettings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
 
 
 
@@ -358,6 +361,7 @@ export default function Home() {
       </div>
 
       {/* ── SHOP BY BRAND ── */}
+      {showBrandSection && (
       <div className="mt-5 mx-2 md:mx-4">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
@@ -382,21 +386,46 @@ export default function Home() {
             ].map(brand => {
               const uploadedLogo = appSettings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
               const logoSrc = uploadedLogo || brand.fallback;
+              const isExpanded = expandedBrand === brand.name;
+              const brandProducts = products.filter(p => p.brand === brand.name);
+              const subcategories = [...new Set(brandProducts.map(p => p.category))];
               return (
-                <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}
-                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
-                  <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
-                    {logoSrc
-                      ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { e.target.style.display='none'; }} />
-                      : <span className="text-[10px] font-black text-gray-400">{brand.name[0]}</span>}
-                  </div>
-                  <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
-                </Link>
+                <div key={brand.name}>
+                  <button
+                    onClick={() => setExpandedBrand(isExpanded ? null : brand.name)}
+                    className="w-full flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5"
+                  >
+                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
+                      {logoSrc
+                        ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { e.target.style.display='none'; }} />
+                        : <span className="text-[10px] font-black text-gray-400">{brand.name[0]}</span>}
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
+                  </button>
+                  {/* Brand subcategories bar */}
+                  {isExpanded && subcategories.length > 0 && (
+                    <div className="col-span-4 mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-[10px] font-bold text-blue-900 mb-1.5">Available in:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {subcategories.map(cat => (
+                          <Link
+                            key={cat}
+                            to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}&category=${cat}`)}
+                            className="text-[9px] px-2 py-1 rounded-full bg-white border border-blue-300 text-blue-700 hover:bg-blue-100 font-semibold"
+                          >
+                            {cat.replace(/_/g, ' ')}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
         </div>
       </div>
+      )}
 
       {/* ── NEW ARRIVALS ── */}
       <div className="mt-5 mx-2 md:mx-4">

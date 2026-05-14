@@ -17,7 +17,8 @@ import {
   XCircle,
   CreditCard,
   Trash2,
-  Check
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
@@ -38,6 +39,8 @@ const statusConfig = {
 export default function Orders() {
   const [user, setUser] = useState(null);
   const [selectedOrders, setSelectedOrders] = useState([]);
+  const [cancellingOrder, setCancellingOrder] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -117,6 +120,35 @@ export default function Orders() {
     }
   };
 
+  const cancelOrderMutation = useMutation({
+    mutationFn: async ({ order, reason }) => {
+      const newTracking = [
+        ...(order.tracking_updates || []),
+        {
+          status: 'Cancelled',
+          message: `Order cancelled by customer. Reason: ${reason || 'No reason given'}`,
+          timestamp: new Date().toISOString()
+        }
+      ];
+      await base44.entities.Order.update(order.id, { status: 'cancelled', tracking_updates: newTracking });
+      await base44.entities.Notification.create({
+        user_email: order.customer_email,
+        title: '❌ Order Cancelled',
+        message: `Your order #${order.order_number} has been cancelled. If you paid, please contact us on WhatsApp: 0509 896 035 for a refund.`,
+        type: 'order_cancelled',
+        order_id: order.id,
+        order_number: order.order_number,
+        is_read: false
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      setCancellingOrder(null);
+      setCancelReason('');
+      toast.success('Order cancelled successfully.');
+    }
+  });
+
   const handleDeleteSelected = () => {
     if (selectedOrders.length === 0) return;
     if (confirm(`Delete ${selectedOrders.length} order(s)? This cannot be undone.`)) {
@@ -135,13 +167,13 @@ export default function Orders() {
   if (orders.length === 0) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
-          <Package className="h-8 w-8 text-red-700" />
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+          <Package className="h-8 w-8 text-blue-800" />
         </div>
         <h3 className="text-lg font-medium text-gray-800 mb-2">No orders yet</h3>
         <p className="text-gray-500 mb-4">Start shopping to see your orders here</p>
         <Link to={createPageUrl('Shop')}>
-          <Button className="bg-red-700 hover:bg-red-800">Go to Shop</Button>
+          <Button className="bg-blue-800 hover:bg-blue-900">Go to Shop</Button>
         </Link>
       </div>
     );
@@ -151,8 +183,8 @@ export default function Orders() {
     <div className="container mx-auto px-4 py-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-red-100 rounded-full">
-            <Package className="h-6 w-6 text-red-700" />
+          <div className="p-2 bg-blue-100 rounded-full">
+            <Package className="h-6 w-6 text-blue-800" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">My Orders</h1>
@@ -225,7 +257,7 @@ export default function Orders() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-black text-red-700 text-base">₵{order.total_amount?.toFixed(2)}</p>
+                      <p className="font-black text-blue-800 text-base">₵{order.total_amount?.toFixed(2)}</p>
                       <Badge className={`text-[10px] ${statusConfig[order.status]?.color || 'bg-gray-100 text-gray-800'}`}>
                         {statusConfig[order.status]?.label || order.status}
                       </Badge>
@@ -308,6 +340,17 @@ export default function Orders() {
                           Awaiting Verification
                         </Button>
                       )}
+                      {(order.status === 'pending' || order.status === 'confirmed') && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => { setCancellingOrder(order); setCancelReason(''); }}
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Cancel Order
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Card>
@@ -316,6 +359,64 @@ export default function Orders() {
           })
         )}
       </div>
+
+      {/* Cancel Order Modal */}
+      {cancellingOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <h2 className="font-bold text-gray-800 text-lg">Cancel Order</h2>
+                <p className="text-xs text-gray-500">#{cancellingOrder.order_number}</p>
+              </div>
+            </div>
+
+            {/* Cancellation Policy */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+              <p className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2">📋 Cancellation Policy</p>
+              <ul className="text-xs text-amber-800 space-y-1.5 list-disc list-inside">
+                <li>Orders can only be cancelled while in <strong>Pending</strong> or <strong>Confirmed</strong> status.</li>
+                <li>Once an order is <strong>Shipped or In Transit</strong>, it cannot be cancelled.</li>
+                <li>If you have already paid, contact us on WhatsApp <strong>0509 896 035</strong> to arrange a refund.</li>
+                <li>Refunds are processed within <strong>1–3 business days</strong> via Mobile Money.</li>
+                <li>Custom or special orders may not be eligible for cancellation.</li>
+              </ul>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reason for cancellation <span className="text-gray-400 font-normal">(optional)</span></label>
+              <textarea
+                className="w-full border rounded-lg px-3 py-2 text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
+                rows={3}
+                placeholder="Tell us why you're cancelling..."
+                value={cancelReason}
+                onChange={e => setCancelReason(e.target.value)}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setCancellingOrder(null); setCancelReason(''); }}
+              >
+                Keep Order
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                onClick={() => cancelOrderMutation.mutate({ order: cancellingOrder, reason: cancelReason })}
+                disabled={cancelOrderMutation.isPending}
+              >
+                <XCircle className="h-4 w-4 mr-1" />
+                {cancelOrderMutation.isPending ? 'Cancelling...' : 'Confirm Cancel'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,9 +8,9 @@ export default function InvoiceTemplate({ order, invoiceRef }) {
   return (
     <div ref={invoiceRef} className="bg-white p-6 md:p-8 max-w-2xl mx-auto font-sans text-gray-800" style={{ minHeight: '100vh' }}>
       {/* Header */}
-      <div className="flex items-start justify-between border-b-2 border-red-700 pb-5 mb-5">
+      <div className="flex items-start justify-between border-b-2 border-blue-800 pb-5 mb-5">
         <div>
-          <h1 className="text-lg font-black text-red-700 tracking-tight">FMM CLASSICO</h1>
+          <h1 className="text-lg font-black text-blue-800 tracking-tight">FMM CLASSICO</h1>
           <p className="text-[10px] text-gray-500 mt-0.5">Phones &amp; Accessories · Home Appliances · Electronics</p>
           <p className="text-[10px] text-gray-500">Tarkwa (UMAT Campus) &amp; Accra (Ashongman Estate)</p>
           <p className="text-[10px] text-gray-500">Tel: 0509 896 035 | fmmclassico@gmail.com</p>
@@ -27,13 +27,13 @@ export default function InvoiceTemplate({ order, invoiceRef }) {
       {/* Bill To / Deliver To */}
       <div className="grid grid-cols-2 gap-6 mb-6">
         <div>
-          <p className="text-[10px] font-bold text-red-700 uppercase tracking-wider mb-1">Bill To</p>
+          <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-1">Bill To</p>
           <p className="text-sm font-semibold text-gray-800">{order.customer_name}</p>
           <p className="text-xs text-gray-600">{order.customer_email}</p>
           <p className="text-xs text-gray-600">{order.customer_phone}</p>
         </div>
         <div>
-          <p className="text-[10px] font-bold text-red-700 uppercase tracking-wider mb-1">Deliver To</p>
+          <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-1">Deliver To</p>
           <p className="text-xs text-gray-600">{order.delivery_address}</p>
           <p className="text-xs text-gray-600">{order.city}</p>
           {order.notes && <p className="text-[10px] text-gray-400 mt-0.5">Note: {order.notes}</p>}
@@ -43,7 +43,7 @@ export default function InvoiceTemplate({ order, invoiceRef }) {
       {/* Items Table */}
       <table className="w-full mb-5 text-xs">
         <thead>
-          <tr className="bg-red-700 text-white">
+          <tr className="bg-blue-800 text-white">
             <th className="text-left px-3 py-1.5 rounded-tl font-semibold">Product</th>
             <th className="text-center px-3 py-1.5 font-semibold">Qty</th>
             <th className="text-right px-3 py-1.5 font-semibold">Unit Price</th>
@@ -75,7 +75,7 @@ export default function InvoiceTemplate({ order, invoiceRef }) {
               <span>₵{shipping.toFixed(2)}</span>
             </div>
           )}
-          <div className="flex justify-between py-1.5 border-t-2 border-red-700 mt-1 font-black text-sm text-gray-900">
+          <div className="flex justify-between py-1.5 border-t-2 border-blue-800 mt-1 font-black text-sm text-gray-900">
             <span>TOTAL</span>
             <span>₵{order.total_amount?.toFixed(2)}</span>
           </div>
@@ -87,7 +87,7 @@ export default function InvoiceTemplate({ order, invoiceRef }) {
         <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
           order.status === 'delivered' ? 'bg-green-100 text-green-700' :
           order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-          'bg-red-100 text-red-700'
+          'bg-blue-100 text-blue-800'
         }`}>
           Status: {order.status?.replace('_', ' ')}
         </span>

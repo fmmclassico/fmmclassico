@@ -64,8 +64,8 @@ export default function HowToUse() {
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 mb-3">
-          <PlayCircle className="h-8 w-8 text-orange-600" />
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-3">
+          <PlayCircle className="h-8 w-8 text-blue-800" />
         </div>
         <h1 className="text-2xl font-black text-gray-800 mb-1">How to Use FMM CLASSICO</h1>
         <p className="text-gray-500 text-sm">Follow these simple steps to shop with us</p>
@@ -74,7 +74,7 @@ export default function HowToUse() {
       {/* Video Section */}
       <Card className="p-5 mb-6 shadow-md">
         <div className="flex items-center gap-2 mb-4">
-          <Video className="h-5 w-5 text-orange-500" />
+          <Video className="h-5 w-5 text-blue-800" />
           <h2 className="font-bold text-gray-800">Tutorial Video</h2>
         </div>
 
@@ -132,7 +132,7 @@ export default function HowToUse() {
         <div className="space-y-4">
           {steps.map((s) => (
             <div key={s.step} className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500 text-white font-bold text-sm flex items-center justify-center">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-800 text-white font-bold text-sm flex items-center justify-center">
                 {s.step}
               </div>
               <div>
@@ -147,7 +147,7 @@ export default function HowToUse() {
       {/* CTA */}
       <div className="text-center space-y-3">
         <Link to={createPageUrl('Shop')}>
-          <Button className="w-full bg-orange-500 hover:bg-orange-600 font-bold">
+          <Button className="w-full bg-blue-800 hover:bg-blue-900 font-bold">
             Start Shopping Now
           </Button>
         </Link>

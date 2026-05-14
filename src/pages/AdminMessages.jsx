@@ -163,8 +163,8 @@ export default function AdminMessages() {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-orange-100 rounded-full">
-          <MessageCircle className="h-6 w-6 text-orange-600" />
+        <div className="p-2 bg-blue-100 rounded-full">
+          <MessageCircle className="h-6 w-6 text-blue-800" />
         </div>
         <h1 className="text-2xl font-bold text-gray-800">Customer Messages & Notifications</h1>
       </div>
@@ -173,7 +173,7 @@ export default function AdminMessages() {
       <div className="flex gap-2 mb-6">
         <Button
           variant={activeTab === 'messages' ? 'default' : 'outline'}
-          className={activeTab === 'messages' ? 'bg-orange-500 hover:bg-orange-600' : ''}
+          className={activeTab === 'messages' ? 'bg-blue-800 hover:bg-blue-900' : ''}
           onClick={() => setActiveTab('messages')}
         >
           <MessageCircle className="h-4 w-4 mr-2" />
@@ -181,7 +181,7 @@ export default function AdminMessages() {
         </Button>
         <Button
           variant={activeTab === 'send_notification' ? 'default' : 'outline'}
-          className={activeTab === 'send_notification' ? 'bg-orange-500 hover:bg-orange-600' : ''}
+          className={activeTab === 'send_notification' ? 'bg-blue-800 hover:bg-blue-900' : ''}
           onClick={() => setActiveTab('send_notification')}
         >
           <Bell className="h-4 w-4 mr-2" />
@@ -202,7 +202,7 @@ export default function AdminMessages() {
                 onChange={e => setSearchQuery(e.target.value)}
                 className="border-0 p-0 h-auto text-sm focus-visible:ring-0"
               />
-              <button onClick={() => refetch()} className="text-gray-400 hover:text-orange-500">
+              <button onClick={() => refetch()} className="text-gray-400 hover:text-blue-800">
                 <RefreshCw className="h-4 w-4" />
               </button>
             </div>
@@ -218,7 +218,7 @@ export default function AdminMessages() {
                   <button
                     key={conv.user_email}
                     onClick={() => setSelectedConversation(conv.user_email)}
-                    className={`w-full text-left p-3 border-b hover:bg-orange-50 transition-colors ${selectedConversation === conv.user_email ? 'bg-orange-50 border-l-4 border-l-orange-500' : ''}`}
+                    className={`w-full text-left p-3 border-b hover:bg-blue-50 transition-colors ${selectedConversation === conv.user_email ? 'bg-blue-50 border-l-4 border-l-blue-800' : ''}`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
@@ -228,7 +228,7 @@ export default function AdminMessages() {
                         <span className="text-sm font-medium text-gray-800 truncate max-w-[120px]">{conv.user_email}</span>
                       </div>
                       {conv.unread > 0 && (
-                        <Badge className="bg-orange-500 text-white text-xs px-1.5 py-0.5 min-w-[20px] text-center">
+                        <Badge className="bg-blue-800 text-white text-xs px-1.5 py-0.5 min-w-[20px] text-center">
                           {conv.unread}
                         </Badge>
                       )}
@@ -258,8 +258,8 @@ export default function AdminMessages() {
               <>
                 {/* Header */}
                 <div className="p-4 border-b bg-gray-50 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center">
-                    <User className="h-5 w-5 text-orange-600" />
+                  <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
+                    <User className="h-5 w-5 text-blue-800" />
                   </div>
                   <div>
                     <p className="font-semibold text-gray-800 text-sm">{selectedConversation}</p>
@@ -277,9 +277,9 @@ export default function AdminMessages() {
                         </div>
                       )}
                       <div className="flex flex-col gap-1">
-                        <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${msg.role === 'user' ? 'bg-gray-100 text-gray-800 rounded-tl-none' : 'bg-orange-500 text-white rounded-tr-none'}`}>
+                        <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${msg.role === 'user' ? 'bg-gray-100 text-gray-800 rounded-tl-none' : 'bg-blue-800 text-white rounded-tr-none'}`}>
                           <p className="whitespace-pre-wrap">{msg.content}</p>
-                          <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-orange-100'}`}>
+                          <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>
                             {msg.created_date && format(new Date(msg.created_date), 'h:mm a')}
                             {msg.role === 'assistant' && ' · Admin'}
                           </p>
@@ -314,7 +314,7 @@ export default function AdminMessages() {
                   <Button
                     onClick={() => replyMutation.mutate()}
                     disabled={!replyText.trim() || replyMutation.isPending}
-                    className="bg-orange-500 hover:bg-orange-600 self-end"
+                    className="bg-blue-800 hover:bg-blue-900 self-end"
                   >
                     <Send className="h-4 w-4" />
                   </Button>
@@ -329,7 +329,7 @@ export default function AdminMessages() {
       {activeTab === 'send_notification' && (
         <Card className="max-w-xl p-6 shadow-md">
           <div className="flex items-center gap-2 mb-4">
-            <Bell className="h-5 w-5 text-orange-500" />
+            <Bell className="h-5 w-5 text-blue-800" />
             <h2 className="text-lg font-bold text-gray-800">Send Notification to Customers</h2>
           </div>
           <div className="space-y-4">
@@ -370,7 +370,7 @@ export default function AdminMessages() {
             <Button
               onClick={() => sendNotificationMutation.mutate()}
               disabled={!notifTitle.trim() || !notifMessage.trim() || sendNotificationMutation.isPending}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-5"
+              className="w-full bg-blue-800 hover:bg-blue-900 text-white font-bold py-5"
             >
               <Bell className="h-4 w-4 mr-2" />
               {notifTarget ? `Send to ${notifTarget}` : '📢 Broadcast to All Customers'}

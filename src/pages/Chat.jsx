@@ -149,8 +149,8 @@ export default function Chat() {
   return (
     <div className="container mx-auto px-4 py-6 max-w-3xl">
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-3 rounded-full bg-orange-100">
-          <MessageCircle className="h-6 w-6 text-orange-600" />
+        <div className="p-3 rounded-full bg-blue-100">
+          <MessageCircle className="h-6 w-6 text-blue-800" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Chat Support</h1>
@@ -172,7 +172,7 @@ export default function Chat() {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex gap-3"
               >
-                <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center flex-shrink-0">
                   <Bot className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1 bg-gray-100 rounded-2xl rounded-tl-none p-4 max-w-[80%]">
@@ -192,14 +192,14 @@ export default function Chat() {
                   className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}
                 >
                   {message.role === 'assistant' && (
-                    <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center flex-shrink-0">
                       <Bot className="h-5 w-5 text-white" />
                     </div>
                   )}
                   <div className={`
                     max-w-[80%] rounded-2xl p-4
                     ${message.role === 'user' 
-                      ? 'bg-orange-500 text-white rounded-tr-none' 
+                      ? 'bg-blue-800 text-white rounded-tr-none' 
                       : 'bg-gray-100 text-gray-800 rounded-tl-none'}
                   `}>
                     {message.role === 'assistant' ? (
@@ -225,7 +225,7 @@ export default function Chat() {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex gap-3"
               >
-                <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center flex-shrink-0">
                   <Bot className="h-5 w-5 text-white" />
                 </div>
                 <div className="bg-gray-100 rounded-2xl rounded-tl-none p-4">
@@ -251,7 +251,7 @@ export default function Chat() {
             />
             <Button 
               type="submit" 
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-blue-800 hover:bg-blue-900"
               disabled={isLoading || !inputMessage.trim()}
             >
               <Send className="h-4 w-4" />

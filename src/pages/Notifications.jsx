@@ -17,7 +17,7 @@ const typeConfig = {
   order_shipped: { icon: Truck, color: 'text-purple-500', bg: 'bg-purple-50', label: 'Shipped' },
   order_delivered: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', label: 'Delivered' },
   order_cancelled: { icon: Clock, color: 'text-red-500', bg: 'bg-red-50', label: 'Cancelled' },
-  delivery_update: { icon: Truck, color: 'text-orange-500', bg: 'bg-orange-50', label: 'Delivery Update' },
+  delivery_update: { icon: Truck, color: 'text-blue-700', bg: 'bg-blue-50', label: 'Delivery Update' },
   general: { icon: Bell, color: 'text-gray-500', bg: 'bg-gray-50', label: 'Notice' },
 };
 
@@ -128,10 +128,10 @@ export default function Notifications() {
     <div className="container mx-auto px-4 py-6 max-w-2xl">
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-orange-100 rounded-full relative">
-            <Bell className="h-6 w-6 text-orange-600" />
+          <div className="p-2 bg-blue-100 rounded-full relative">
+            <Bell className="h-6 w-6 text-blue-800" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-800 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                 {unreadCount}
               </span>
             )}
@@ -179,7 +179,7 @@ export default function Notifications() {
               size="sm"
               onClick={handleMarkAllRead}
               disabled={isProcessing}
-              className="text-orange-600 border-orange-200 flex-1 sm:flex-none"
+              className="text-blue-800 border-blue-200 flex-1 sm:flex-none"
             >
               <Check className="h-4 w-4 mr-1" />
               {isProcessing ? 'Updating...' : 'Mark all read'}
@@ -235,7 +235,7 @@ export default function Notifications() {
           <h3 className="text-gray-500 font-medium">No notifications yet</h3>
           <p className="text-sm text-gray-400 mt-1">Order updates will appear here</p>
           <Link to={createPageUrl('Shop')} className="inline-block mt-4">
-            <button className="text-orange-600 font-medium text-sm">Start Shopping →</button>
+            <button className="text-blue-800 font-medium text-sm">Start Shopping →</button>
           </Link>
         </div>
       ) : (
@@ -256,7 +256,7 @@ export default function Notifications() {
                     isSelected
                       ? 'bg-blue-50 border-blue-300'
                       : !notif.is_read
-                      ? 'border-orange-200 bg-orange-50'
+                      ? 'border-blue-200 bg-blue-50'
                       : 'border-gray-100 bg-white'
                   }`}
                 >
@@ -274,10 +274,10 @@ export default function Notifications() {
                       <Icon className={`h-5 w-5 ${config.color}`} />
                     </div>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <Badge className={`text-xs ${!notif.is_read ? 'bg-orange-500' : 'bg-gray-400'}`}>
+                      <Badge className={`text-xs ${!notif.is_read ? 'bg-blue-800' : 'bg-gray-400'}`}>
                         {config.label}
                       </Badge>
-                      {!notif.is_read && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />}
+                      {!notif.is_read && <span className="w-2 h-2 rounded-full bg-blue-800 animate-pulse" />}
                     </div>
                     <p className="text-sm font-semibold text-gray-800">{notif.title}</p>
                     <p className="text-sm text-gray-600 mt-0.5">{notif.message}</p>
@@ -288,7 +288,7 @@ export default function Notifications() {
                       to={createPageUrl(isAdmin ? 'AdminOrders' : `OrderTracking?id=${notif.order_id}`)}
                       onClick={e => e.stopPropagation()}
                     >
-                      <ChevronRight className="h-4 w-4 text-gray-400 mt-1 hover:text-orange-500" />
+                      <ChevronRight className="h-4 w-4 text-gray-400 mt-1 hover:text-blue-800" />
                     </Link>
                   )}
                 </div>

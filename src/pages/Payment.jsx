@@ -213,7 +213,7 @@ export default function Payment() {
         {/* Back + title row */}
         <div className="flex items-start justify-between mb-4">
           <div>
-            <button onClick={() => navigate(-1)}
+            <button onClick={() => navigate('/Checkout')}
               className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-2 transition-colors">
               <ChevronLeft className="h-4 w-4" /> Back
             </button>

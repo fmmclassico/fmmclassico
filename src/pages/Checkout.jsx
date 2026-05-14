@@ -14,7 +14,8 @@ import {
   Truck,
   CreditCard,
   Loader2,
-  Info
+  Info,
+  ChevronLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DeliveryInfoModal from '../components/delivery/DeliveryInfoModal';
@@ -218,14 +219,20 @@ export default function Checkout() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Checkout</h1>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-6">
+        <div className="mb-3 md:mb-6">
+          <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-2">
+            <ChevronLeft className="h-4 w-4" /> Back
+          </button>
+          <h1 className="text-xl md:text-3xl font-bold text-gray-800">Checkout</h1>
+        </div>
 
       <form onSubmit={handleSubmit}>
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Delivery Info */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="p-6 shadow-md">
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
+            <Card className="p-4 md:p-6 shadow-md">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Truck className="h-5 w-5 text-[#1B3A6B]" />
@@ -241,7 +248,7 @@ export default function Checkout() {
                 />
               </div>
               
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="customer_name">Full Name *</Label>
                   <Input
@@ -268,11 +275,11 @@ export default function Checkout() {
                 
                 {/* Cart delivery selection banner */}
                 {cartZoneId && cartZoneName && (
-                  <div className="md:col-span-2 p-3 bg-green-50 border border-green-300 rounded-lg flex items-center gap-3">
+                  <div className="md:col-span-2 p-3 bg-blue-50 border border-blue-300 rounded-lg flex items-center gap-3">
                     <span className="text-2xl">🚚</span>
                     <div>
-                      <p className="text-sm font-bold text-green-800">Delivery selected from cart:</p>
-                      <p className="text-sm text-green-700">{cartZoneName} — <strong>{cartZoneFee === 0 ? 'FREE' : `₵${cartZoneFee}`}</strong></p>
+                      <p className="text-sm font-bold text-[#1B3A6B]">Delivery selected from cart:</p>
+                      <p className="text-sm text-[#1B3A6B]">{cartZoneName} — <strong>{cartZoneFee === 0 ? 'FREE' : `₵${cartZoneFee}`}</strong></p>
                     </div>
                   </div>
                 )}
@@ -339,8 +346,8 @@ export default function Checkout() {
                 <h2 className="text-base font-bold text-gray-800">Payment Method</h2>
               </div>
               
-              <div className="p-3 border-2 border-green-500 rounded-lg bg-green-50 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+              <div className="p-3 border-2 border-[#1B3A6B] rounded-lg bg-blue-50 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#1B3A6B] flex items-center justify-center flex-shrink-0">
                   <span className="text-white text-base">💳</span>
                 </div>
                 <div>
@@ -353,10 +360,10 @@ export default function Checkout() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <Card className="p-6 shadow-md sticky top-24">
+            <Card className="p-4 md:p-6 shadow-md sticky top-20">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Order Summary</h2>
               
-              <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+              <div className="space-y-3 mb-4 max-h-48 md:max-h-64 overflow-y-auto">
                 {cartItems.map((item) => (
                   <div key={item.id} className="flex gap-3">
                     <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
@@ -378,12 +385,12 @@ export default function Checkout() {
               <Separator className="my-4" />
               
               <div className="space-y-3">
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-sm md:text-base text-gray-600">
                   <span>Subtotal</span>
                   <span>₵{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex flex-col gap-0.5">
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-sm md:text-base text-gray-600">
                     <span>Delivery</span>
                     <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-semibold text-[#1B3A6B]'}>
                       {shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}
@@ -394,7 +401,7 @@ export default function Checkout() {
                   )}
                 </div>
                 <Separator />
-                <div className="flex justify-between text-lg font-bold text-gray-800">
+                <div className="flex justify-between text-base md:text-lg font-bold text-gray-800">
                   <span>Total</span>
                   <span className="text-[#1B3A6B]">₵{total.toFixed(2)}</span>
                 </div>
@@ -402,7 +409,7 @@ export default function Checkout() {
 
               <Button 
                 type="submit"
-                className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-6 text-lg"
+                className="w-full mt-6 bg-[#1B3A6B] hover:bg-[#152f5a] text-white font-bold py-4 md:py-6 text-base md:text-lg"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -418,6 +425,7 @@ export default function Checkout() {
           </div>
         </div>
       </form>
+      </div>
     </div>
   );
 }

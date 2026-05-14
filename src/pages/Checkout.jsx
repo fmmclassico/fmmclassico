@@ -24,6 +24,7 @@ export default function Checkout() {
   const [user, setUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSubmitted, setOrderSubmitted] = useState(false);
+  const [locationError, setLocationError] = useState('');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -110,6 +111,40 @@ export default function Checkout() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser');
+      return;
+    }
+    
+    setLocationError('');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const locationText = `My Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        const googleMapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        
+        // Append location to delivery address
+        setFormData(prev => ({
+          ...prev,
+          delivery_address: prev.delivery_address 
+            ? `${prev.delivery_address} - ${googleMapsLink}`
+            : googleMapsLink
+        }));
+        toast.success('Location added to delivery address!');
+      },
+      (error) => {
+        let errorMsg = 'Unable to get your location';
+        if (error.code === 1) errorMsg = 'Location access denied. Please enable location permissions.';
+        if (error.code === 2) errorMsg = 'Location service unavailable.';
+        if (error.code === 3) errorMsg = 'Location request timed out.';
+        setLocationError(errorMsg);
+        toast.error(errorMsg);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -208,8 +243,8 @@ export default function Checkout() {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Your cart is empty</h2>
-        <button onClick={() => navigate('/Checkout')} className="text-blue-600 font-semibold hover:underline">
-          ← Back to Checkout
+        <button onClick={() => navigate(createPageUrl('Cart'))} className="text-blue-600 font-semibold hover:underline">
+          ← Back to Cart
         </button>
       </div>
     );
@@ -292,21 +327,27 @@ export default function Checkout() {
                     required
                     className="resize-y"
                   />
-                  <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-                    <span className="text-lg">📍</span>
-                    <div className="flex-1 text-xs text-blue-700">
-                      <span className="font-semibold">Share your exact location</span> so we can find you easily.
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                      <span className="text-lg">📍</span>
+                      <div className="flex-1 text-xs text-blue-700">
+                        <span className="font-semibold">Get your current location</span> automatically
+                      </div>
+                      <button
+                        type="button"
+                        onClick={getCurrentLocation}
+                        className="flex-shrink-0 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        📍 Get Location
+                      </button>
                     </div>
-                    <a
-                      href="https://maps.google.com?action=mylocation"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-shrink-0 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Pin Location
-                    </a>
+                    <p className="text-xs text-gray-500">
+                      Click "Get Location" to auto-fill your GPS coordinates, or open Google Maps, copy your location link and paste it above.
+                    </p>
+                    {locationError && (
+                      <p className="text-xs text-red-600 font-medium">⚠️ {locationError}</p>
+                    )}
                   </div>
-                  <p className="text-xs text-gray-400">Open Google Maps, copy your location link and paste it in the address field or send to <strong>0509896035</strong> on WhatsApp.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city" className="text-sm">City / Town *</Label>

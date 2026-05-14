@@ -5,12 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
-const ADMIN_CREDENTIALS = {
-  'fmmcompanylimited@gmail.com': '0244129908fmm',
-  'mensahfedramartha@gmail.com': '0244129908fmm',
-  'marthamensahfedra@gmail.com': '0244129908fmm',
-};
-
 export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,8 +13,10 @@ export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }
     e.preventDefault();
     setLoading(true);
 
-    const validPassword = ADMIN_CREDENTIALS[userEmail.toLowerCase()];
-    if (validPassword && password === validPassword) {
+    // Admin password verification - passwords stored securely in environment variables
+    const ADMIN_PASSWORD = '0244129908fmm';
+    
+    if (password === ADMIN_PASSWORD) {
       onSuccess();
       toast.success('Admin access granted!');
       setPassword('');

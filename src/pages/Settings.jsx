@@ -87,7 +87,7 @@ export default function Settings() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto text-orange-500" />
+        <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#1B3A6B]" />
       </div>
     );
   }
@@ -106,14 +106,14 @@ export default function Settings() {
         animate={{ opacity: 1, y: 0 }}
       >
         <Card className="mb-6 shadow-md overflow-hidden">
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6">
+          <div className="bg-gradient-to-r from-[#1B3A6B] to-[#2E86C1] p-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
                 <User className="h-8 w-8 text-white" />
               </div>
               <div className="text-white">
                 <h2 className="text-xl font-bold">{user.full_name || 'User'}</h2>
-                <p className="text-orange-100">{user.email}</p>
+                <p className="text-blue-100">{user.email}</p>
               </div>
             </div>
           </div>
@@ -129,7 +129,7 @@ export default function Settings() {
         <Card className="mb-6 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-orange-500" />
+              <User className="h-5 w-5 text-[#1B3A6B]" />
               Personal Information
             </CardTitle>
           </CardHeader>
@@ -184,7 +184,7 @@ export default function Settings() {
         <Card className="mb-6 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-orange-500" />
+              <MapPin className="h-5 w-5 text-[#1B3A6B]" />
               Delivery Address
             </CardTitle>
           </CardHeader>
@@ -222,7 +222,7 @@ export default function Settings() {
         <Card className="mb-6 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-orange-500" />
+              <Bell className="h-5 w-5 text-[#1B3A6B]" />
               Notifications
             </CardTitle>
           </CardHeader>
@@ -261,7 +261,7 @@ export default function Settings() {
       >
         <Button 
           onClick={handleSave}
-          className="w-full bg-orange-500 hover:bg-orange-600 font-bold py-6"
+          className="w-full bg-[#1B3A6B] hover:bg-[#162f58] font-bold py-6"
           disabled={isSaving}
         >
           {isSaving ? (

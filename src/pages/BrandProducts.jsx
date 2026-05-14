@@ -24,15 +24,33 @@ const CATEGORY_LABELS = {
 };
 
 // ─── STRICT CATEGORY ISOLATION ───────────────────────────────────────────────
-// Each brand entry only contains the ONE main category it belongs to in this
-// context. When the user arrives via ?category=phones, only phones subtypes
-// are shown. When via ?category=earphones, only earphone subtypes, etc.
-// Phones brands → only 'phones' subtypes.
-// Phone Accessories brands → only phone-accessory category subtypes.
-// Electronics brands → only 'electronic_appliances' subtypes.
-// Home Appliances brands → only 'home_appliances' subtypes.
-// A brand like Samsung that exists in ALL four areas is NEVER mixed here —
-// the ?category param on the URL is the authority for which slice to show.
+// BRAND_PRIMARY_CATEGORIES defines the ONLY categories a brand may show
+// when NO ?category param is in the URL.  This prevents Samsung's TVs from
+// appearing when the user browses Samsung Phones, for example.
+// The ?category URL param always overrides and narrows to a single category.
+
+const BRAND_PRIMARY_CATEGORIES = {
+  // Phone-only brands
+  Apple:   ['phones', 'phone_cases'],
+  Samsung: ['phones', 'phone_cases', 'chargers', 'earphones'],
+  Tecno:   ['phones'],
+  Infinix: ['phones'],
+  Itel:    ['phones'],
+  // Phone-accessories-only brands
+  Oraimo:  ['earphones', 'chargers', 'power_banks', 'cables', 'smart_watches', 'speakers'],
+  JBL:     ['speakers', 'earphones'],
+  Sony:    ['earphones', 'speakers'],
+  // Electronics-only brands
+  TCL:     ['electronic_appliances'],
+  Hisense: ['electronic_appliances', 'home_appliances'],
+  LG:      ['electronic_appliances', 'home_appliances'],
+  Midea:   ['electronic_appliances', 'home_appliances'],
+  // Home-appliances-only brands
+  Roch:         ['home_appliances'],
+  'Silver Crest': ['home_appliances'],
+  Nasco:        ['home_appliances'],
+  Hoffman:      ['home_appliances'],
+};
 
 const BRAND_PRODUCT_TYPES = {
   // ── PHONES (only phone models, never accessories/electronics/appliances) ──
@@ -131,26 +149,25 @@ export default function BrandProducts() {
     staleTime: 2 * 60 * 1000,
   });
 
-  // STRICT category isolation: if category param is present, ONLY show products in that exact category.
-  // Never mix products across categories even if the brand name is shared.
+  // STRICT category isolation:
+  // 1. If ?category is in URL → show ONLY that exact category.
+  // 2. If no ?category → show only categories in BRAND_PRIMARY_CATEGORIES for this brand.
+  //    This prevents Samsung's TVs appearing when browsing Samsung Phones.
+  const allowedCats = BRAND_PRIMARY_CATEGORIES[brand] || [];
+
   const brandProducts = allProducts.filter(p => {
     const matchBrand = p.brand?.toLowerCase() === brand?.toLowerCase();
-    const matchCat = category ? p.category === category : true;
-    const matchSub = subtype ? p.name?.toLowerCase().includes(subtype.toLowerCase()) : true;
+    const matchCat = category
+      ? p.category === category
+      : allowedCats.length === 0 || allowedCats.includes(p.category);
+    const matchSub = subtype ? (p.subcategory?.toLowerCase().includes(subtype.toLowerCase()) || p.name?.toLowerCase().includes(subtype.toLowerCase())) : true;
     return matchBrand && matchCat && matchSub;
   });
 
-  // When no category is specified, only group by categories that actually match
-  // the brand's explicitly defined type map to avoid cross-category contamination.
-  const brandTypeCategories = Object.keys(BRAND_PRODUCT_TYPES[brand] || {});
-  const categories = [...new Set(brandProducts.map(p => p.category))]
-    .filter(Boolean)
-    .filter(c => brandTypeCategories.length === 0 || brandTypeCategories.includes(c));
+  const categories = [...new Set(brandProducts.map(p => p.category))].filter(Boolean);
 
   // Get sub-types for this brand+category combo — strictly scoped to current category
   const subTypes = getSubTypes(brand, category);
-  // Category chips only shown when NO category is selected AND brand has multiple categories in the db
-  const brandTypeMap = BRAND_PRODUCT_TYPES[brand] || {};
 
   if (!brand) {
     return <div className="container mx-auto px-4 py-12 text-center text-gray-500">No brand specified.</div>;
@@ -187,12 +204,12 @@ export default function BrandProducts() {
         <p className="text-gray-500 text-sm mt-1">{brandProducts.length} product{brandProducts.length !== 1 ? 's' : ''} found</p>
       </div>
 
-      {/* Category chips (shown when no category selected) */}
-      {!category && Object.keys(brandTypeMap).length > 0 && (
+      {/* Category chips (shown when no category selected and brand has multiple allowed categories) */}
+      {!category && categories.length > 1 && (
         <div className="mb-5">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Browse by Category</p>
           <div className="flex flex-wrap gap-2">
-            {Object.keys(brandTypeMap).map(cat => (
+            {categories.map(cat => (
               <Link
                 key={cat}
                 to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand)}&category=${cat}`)}
@@ -229,20 +246,7 @@ export default function BrandProducts() {
         </div>
       )}
 
-      {/* Category filter chips when no type map exists */}
-      {!category && categories.length > 1 && Object.keys(brandTypeMap).length === 0 && (
-        <div className="flex flex-wrap gap-2 mb-5">
-          {categories.map(cat => (
-            <Link
-              key={cat}
-              to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand)}&category=${cat}`)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
-            >
-              {CATEGORY_LABELS[cat] || cat}
-            </Link>
-          ))}
-        </div>
-      )}
+
 
       {/* Products */}
       {isLoading ? (

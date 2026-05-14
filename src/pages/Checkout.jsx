@@ -228,12 +228,12 @@ export default function Checkout() {
             <Card className="p-6 shadow-md">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-orange-500" />
+                  <Truck className="h-5 w-5 text-[#1B3A6B]" />
                   <h2 className="text-lg font-bold text-gray-800">Delivery Information</h2>
                 </div>
                 <DeliveryInfoModal 
                   trigger={
-                    <Button variant="outline" size="sm" className="gap-1 text-orange-600 border-orange-200 hover:bg-orange-50">
+                    <Button variant="outline" size="sm" className="gap-1 text-[#1B3A6B] border-blue-200 hover:bg-blue-50">
                       <Info className="h-4 w-4" />
                       Delivery Rates
                     </Button>
@@ -254,7 +254,7 @@ export default function Checkout() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customer_phone">Active Phone Number * <span className="text-xs text-orange-600 font-normal">(must be reachable)</span></Label>
+                  <Label htmlFor="customer_phone">Active Phone Number * <span className="text-xs text-[#1B3A6B] font-normal">(must be reachable)</span></Label>
                   <Input
                     id="customer_phone"
                     name="customer_phone"
@@ -335,7 +335,7 @@ export default function Checkout() {
 
             <Card className="p-4 shadow-md">
               <div className="flex items-center gap-2 mb-3">
-                <CreditCard className="h-4 w-4 text-orange-500" />
+                <CreditCard className="h-4 w-4 text-[#1B3A6B]" />
                 <h2 className="text-base font-bold text-gray-800">Payment Method</h2>
               </div>
               

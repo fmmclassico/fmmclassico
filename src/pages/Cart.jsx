@@ -121,13 +121,13 @@ export default function Cart() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-orange-100 mb-6">
-            <ShoppingBag className="h-12 w-12 text-orange-500" />
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 mb-6">
+            <ShoppingBag className="h-12 w-12 text-[#1B3A6B]" />
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
           <p className="text-gray-500 mb-6">Looks like you haven't added anything yet</p>
           <Link to={createPageUrl('Shop')}>
-            <Button className="bg-orange-500 hover:bg-orange-600">
+            <Button className="bg-[#1B3A6B] hover:bg-[#162f58]">
               Start Shopping
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -166,11 +166,11 @@ export default function Cart() {
                     </Link>
                     <div className="flex-1 min-w-0">
                       <Link to={createPageUrl(`ProductDetail?id=${item.product_id}`)}>
-                        <h3 className="font-medium text-gray-800 hover:text-orange-600 transition-colors text-sm sm:text-base leading-tight line-clamp-2">
+                        <h3 className="font-medium text-gray-800 hover:text-[#1B3A6B] transition-colors text-sm sm:text-base leading-tight line-clamp-2">
                           {item.product_name}
                         </h3>
                       </Link>
-                      <p className="text-base sm:text-lg font-bold text-orange-600 mt-1">
+                      <p className="text-base sm:text-lg font-bold text-[#1B3A6B] mt-1">
                         ₵{item.product_price?.toFixed(2)}
                       </p>
                       
@@ -227,24 +227,24 @@ export default function Cart() {
               {/* Delivery Location Picker */}
               <div>
                 <div className="flex items-center gap-1 mb-1.5">
-                  <Truck className="h-4 w-4 text-orange-500" />
+                  <Truck className="h-4 w-4 text-[#1B3A6B]" />
                   <span className="text-sm font-semibold text-gray-700">Delivery / Pickup</span>
                 </div>
                 <button
                   onClick={() => setLocationPickerOpen(o => !o)}
-                  className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border-2 border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors text-left"
+                  className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors text-left"
                 >
                   <div className="flex-1 min-w-0 pr-2">
                     {selectedZone ? (
                       <>
                         <p className="text-xs sm:text-sm font-semibold text-gray-800 break-words leading-snug">{selectedZone.label}</p>
-                        <p className="text-xs text-orange-600 mt-0.5">{selectedZone.note}</p>
+                        <p className="text-xs text-[#1B3A6B] mt-0.5">{selectedZone.note}</p>
                       </>
                     ) : (
-                      <p className="text-xs sm:text-sm text-orange-700 font-medium">📍 Tap to pick your location</p>
+                      <p className="text-xs sm:text-sm text-[#1B3A6B] font-medium">📍 Tap to pick your location</p>
                     )}
                   </div>
-                  <ChevronDown className={`h-4 w-4 text-orange-500 flex-shrink-0 transition-transform ${locationPickerOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`h-4 w-4 text-[#1B3A6B] flex-shrink-0 transition-transform ${locationPickerOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {locationPickerOpen && (
@@ -253,13 +253,13 @@ export default function Cart() {
                       <button
                         key={zone.id}
                         onClick={() => { setSelectedLocation(zone.id); setLocationPickerOpen(false); }}
-                        className={`w-full flex items-start justify-between px-3 py-2.5 hover:bg-orange-50 text-left border-b border-gray-100 last:border-0 transition-colors ${selectedLocation === zone.id ? 'bg-orange-50 border-l-4 border-l-orange-500' : ''}`}
+                        className={`w-full flex items-start justify-between px-3 py-2.5 hover:bg-blue-50 text-left border-b border-gray-100 last:border-0 transition-colors ${selectedLocation === zone.id ? 'bg-blue-50 border-l-4 border-l-[#1B3A6B]' : ''}`}
                       >
                         <div className="flex-1 min-w-0 pr-2">
                           <p className="text-xs sm:text-sm font-medium text-gray-800 leading-snug">{zone.label}</p>
                           <p className="text-xs text-gray-500 mt-0.5">{zone.note}</p>
                         </div>
-                        <span className={`text-xs sm:text-sm font-bold flex-shrink-0 ${zone.fee === 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                        <span className={`text-xs sm:text-sm font-bold flex-shrink-0 ${zone.fee === 0 ? 'text-green-600' : 'text-[#1B3A6B]'}`}>
                           {zone.fee === 0 ? 'FREE' : `₵${zone.fee}`}
                         </span>
                       </button>
@@ -282,7 +282,7 @@ export default function Cart() {
                 <span>₵{total.toFixed(2)}</span>
               </div>
               {!selectedZone && (
-                <p className="text-xs text-center text-orange-600">Select your location above to see final total</p>
+                <p className="text-xs text-center text-[#1B3A6B]">Select your location above to see final total</p>
               )}
             </div>
 
@@ -302,7 +302,7 @@ export default function Cart() {
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             {!selectedZone && (
-              <p className="text-xs text-center text-red-500 mt-2 font-medium">⚠️ Please select a delivery location to continue</p>
+            <p className="text-xs text-center text-[#1B3A6B] mt-2 font-medium">⚠️ Please select a delivery location to continue</p>
             )}
 
             <Link to={createPageUrl('Shop')}>

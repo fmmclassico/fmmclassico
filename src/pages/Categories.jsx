@@ -19,7 +19,6 @@ const CATEGORIES = [
       { label: 'Tecno Phones', brand: 'Tecno', category: 'phones' },
       { label: 'Infinix Phones', brand: 'Infinix', category: 'phones' },
       { label: 'Itel Phones', brand: 'Itel', category: 'phones' },
-      { label: 'Xiaomi Phones', brand: 'Xiaomi', category: 'phones' },
     ],
   },
   {
@@ -31,8 +30,8 @@ const CATEGORIES = [
     subColor: 'rose',
     subCategories: [
       { label: 'Phone Cases', shopCategory: 'phone_cases' },
-      { label: 'Chargers', shopCategory: 'chargers' },
-      { label: 'Earphones', shopCategory: 'earphones' },
+      { label: 'Chargers & Power', shopCategory: 'chargers' },
+      { label: 'Earphones & Audio', shopCategory: 'earphones' },
       { label: 'Cables', shopCategory: 'cables' },
       { label: 'Power Banks', shopCategory: 'power_banks' },
       { label: 'Screen Protectors', shopCategory: 'screen_protectors' },

@@ -11,21 +11,18 @@ import FlashSaleCountdown from '../components/home/FlashSaleCountdown';
 // Brands per category
 const CATEGORY_BRANDS = {
   phones: [
-    { label: 'Apple (iPhone)', brand: 'Apple' },
-    { label: 'Samsung', brand: 'Samsung' },
-    { label: 'Tecno', brand: 'Tecno' },
-    { label: 'Infinix', brand: 'Infinix' },
-    { label: 'Itel', brand: 'Itel' },
-    { label: 'Xiaomi', brand: 'Xiaomi' },
+    { label: 'Apple (iPhone)', brand: 'Apple', category: 'phones' },
+    { label: 'Samsung', brand: 'Samsung', category: 'phones' },
+    { label: 'Tecno', brand: 'Tecno', category: 'phones' },
+    { label: 'Infinix', brand: 'Infinix', category: 'phones' },
+    { label: 'Itel', brand: 'Itel', category: 'phones' },
   ],
   phone_accessories: [
-    { label: 'Oraimo', brand: 'Oraimo' },
-    { label: 'Apple', brand: 'Apple' },
-    { label: 'Samsung', brand: 'Samsung' },
-    { label: 'JBL', brand: 'JBL' },
-    { label: 'Sony', brand: 'Sony' },
-    { label: 'Baseus', brand: 'Baseus' },
-    { label: 'Remax', brand: 'Remax' },
+    { label: 'Oraimo', brand: 'Oraimo', category: 'earphones' },
+    { label: 'Apple', brand: 'Apple', category: 'phone_cases' },
+    { label: 'Samsung', brand: 'Samsung', category: 'phone_cases' },
+    { label: 'JBL', brand: 'JBL', category: 'speakers' },
+    { label: 'Sony', brand: 'Sony', category: 'earphones' },
   ],
   electronics: [
     { label: 'Samsung', brand: 'Samsung' },
@@ -207,7 +204,7 @@ export default function Home() {
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Shop {cat.label} by Brand</p>
               <div className="flex flex-wrap gap-2">
                 {cat.brands.map(b => (
-                  <Link key={b.brand} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(b.brand)}`)}
+                  <Link key={b.brand + b.category} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(b.brand)}&category=${b.category}`)}
                     className={`text-xs font-semibold border rounded-full px-3 py-1 transition-colors ${cat.chipColor}`}>
                     {b.label}
                   </Link>

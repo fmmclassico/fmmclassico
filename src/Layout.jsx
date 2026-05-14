@@ -124,6 +124,7 @@ export default function Layout({ children, currentPageName }) {
     { icon: MessageCircle, label: 'Chat Support', page: 'Chat' },
     { icon: MessageCircle, label: 'Feedback / Report Issue', page: 'Feedback' },
     { icon: Info, label: 'How to Use the Site', page: 'HowToUse' },
+    { icon: FileText, label: 'Store Policies', page: 'Policies' },
     { icon: Info, label: 'About Us', page: 'About' },
     { icon: Settings, label: 'Settings', page: 'Settings' },
     ...(isAdmin ? [

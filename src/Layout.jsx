@@ -138,6 +138,7 @@ export default function Layout({ children, currentPageName }) {
       { icon: Settings, label: 'Category Images', page: 'AdminCategoryImages' },
       { icon: Bell, label: 'Promo Banner Cards', page: 'AdminPromoBanners2' },
       { icon: Gem, label: 'Brand Logos', page: 'AdminBrandLogos' },
+      { icon: Info, label: 'Edit About Page', page: 'AdminAbout' },
       { icon: Bot, label: 'AI Assistant', page: 'AdminAI' },
     ] : []),
   ];

@@ -10,12 +10,12 @@ import ReactMarkdown from 'react-markdown';
 
 const QUICK_PROMPTS = [
   '🎨 Generate a flyer for a 20% off flash sale on phones',
-  '🎨 Create a banner for Oraimo earbuds at ₵150',
+  '🖼️ Design a product image for iPhone 15 Pro Max on white background',
+  '🖼️ Design a product banner for Oraimo earbuds – sleek modern look',
+  '🎨 Create a promotional banner for Tecno Spark 20 at ₵1,200',
   '📣 Write a WhatsApp broadcast for a weekend sale',
   '📝 Write a product description for Samsung Galaxy A15',
   '💡 Suggest promotions for the Donkomi deals section',
-  '📧 Write a customer email for order delivery update',
-  '💰 How should I price Tecno Spark 20 competitively in Ghana?',
   '🛒 Give me 5 upsell ideas for phone cases',
 ];
 
@@ -23,7 +23,7 @@ export default function AdminAI() {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hello! I'm your **CLASSICO AI Assistant** — powered by Claude, one of the world's most capable AI models.\n\nI can help you with anything for your store:\n\n- 🎨 **Generate flyers & banners** — describe what you want and I'll create a downloadable image\n- 📣 **Marketing copy** — WhatsApp broadcasts, product descriptions, promo campaigns\n- 💡 **Business advice** — pricing strategies, promotions, upsell ideas for the Ghana market\n- 🛒 **Store content** — banner text (title, subtitle, CTA, gradient), notification messages\n- 📊 **Sales strategy** — deal ideas, seasonal campaigns, customer retention tips\n- ✍️ **Any writing task** — emails, announcements, customer replies\n\nJust type what you need or pick a quick prompt below!" }
+    { role: 'assistant', content: "Hello! I'm your **CLASSICO AI Assistant** — powered by advanced AI.\n\nI can help you with anything for your store:\n\n- 🖼️ **Generate product images** — say *\"design a product image for iPhone 15 Pro Max\"* to get a photorealistic product photo\n- 🎨 **Generate flyers & banners** — say *\"create a flyer for 20% off sale\"* to get a downloadable marketing image\n- 📣 **Marketing copy** — WhatsApp broadcasts, product descriptions, promo campaigns\n- 💡 **Business advice** — pricing strategies, promotions, upsell ideas for the Ghana market\n- 🛒 **Store content** — banner text (title, subtitle, CTA, gradient), notification messages\n- 📊 **Sales strategy** — deal ideas, seasonal campaigns, customer retention tips\n- ✍️ **Any writing task** — emails, announcements, customer replies\n\nJust type what you need or pick a quick prompt below!" }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,7 +39,16 @@ export default function AdminAI() {
 
   const isImageRequest = (msg) => {
     const lower = msg.toLowerCase();
-    return (lower.includes('flyer') || lower.includes('banner') || lower.includes('poster') || lower.includes('generate image') || lower.includes('create image') || lower.includes('design a') || lower.includes('make a flyer') || lower.includes('make a banner'));
+    return (
+      lower.includes('flyer') || lower.includes('banner') || lower.includes('poster') ||
+      lower.includes('generate image') || lower.includes('create image') ||
+      lower.includes('design a') || lower.includes('design product') ||
+      lower.includes('make a flyer') || lower.includes('make a banner') ||
+      lower.includes('product image') || lower.includes('product photo') ||
+      lower.includes('product picture') || lower.includes('generate a photo') ||
+      lower.includes('draw') || lower.includes('create a picture') ||
+      lower.includes('generate a picture')
+    );
   };
 
   const sendMessage = async (text) => {
@@ -53,7 +62,12 @@ export default function AdminAI() {
       // Generate image flyer
       try {
         setMessages(m => [...m, { role: 'assistant', content: '🎨 Generating your flyer... this takes about 10-15 seconds...', isTemp: true }]);
-        const imagePrompt = `Professional high-quality advertising flyer for FMM CLASSICO Ghana store. ${msg}. Include bold text layout, vibrant colors, modern design, clean typography, product imagery. Style: photoshop-quality commercial banner, 4K resolution, professional marketing material.`;
+        // Determine if product image or marketing flyer
+        const lower = msg.toLowerCase();
+        const isProductImage = lower.includes('product image') || lower.includes('product photo') || lower.includes('product picture') || lower.includes('product banner') || lower.includes('design product');
+        const imagePrompt = isProductImage
+          ? `Professional high-quality product photography for FMM CLASSICO Ghana electronics store. ${msg}. Clean white or gradient background, studio lighting, ultra-sharp focus, commercial product shot, 4K resolution, photorealistic, suitable for e-commerce listing.`
+          : `Professional high-quality advertising flyer for FMM CLASSICO Ghana store. ${msg}. Include bold text layout, vibrant colors, modern design, clean typography, product imagery. Style: photoshop-quality commercial banner, 4K resolution, professional marketing material.`;
         const { url } = await base44.integrations.Core.GenerateImage({ prompt: imagePrompt });
         setMessages(m => {
           const filtered = m.filter(x => !x.isTemp);
@@ -127,7 +141,7 @@ Respond in a helpful, practical and detailed way. Be specific to the Ghana/West 
         </div>
         <div>
           <h1 className="text-2xl font-black text-gray-900">CLASSICO AI Assistant</h1>
-          <p className="text-gray-500 text-sm">Generate flyers, banners, promo copy, product advice & more</p>
+          <p className="text-gray-500 text-sm">Generate flyers, product images, banners, promo copy & business advice</p>
         </div>
         <Badge className="ml-auto bg-green-100 text-green-700 border-green-200">Admin Only</Badge>
       </div>
@@ -210,7 +224,7 @@ Respond in a helpful, practical and detailed way. Be specific to the Ghana/West 
               rows={2}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
             />
-            <p className="text-[10px] text-gray-400 mt-1">💡 Say "generate a flyer for..." to create a downloadable image banner</p>
+            <p className="text-[10px] text-gray-400 mt-1">💡 Say "design a product image for..." or "generate a flyer for..." to create downloadable images</p>
           </div>
           <Button onClick={() => sendMessage()} disabled={loading || !input.trim()}
             className="bg-blue-600 hover:bg-blue-700 self-end px-3 mb-5">

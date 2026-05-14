@@ -139,8 +139,8 @@ export default function Feedback() {
   return (
     <div className="container mx-auto px-4 py-6 max-w-lg">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
-          <MessageCircle className="h-5 w-5 text-orange-600" />
+        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+          <MessageCircle className="h-5 w-5 text-[#1B3A6B]" />
         </div>
         <div>
           <h1 className="text-xl font-bold text-gray-800">Customer Feedback</h1>
@@ -236,12 +236,12 @@ export default function Feedback() {
             {/* Image Upload */}
             <div className="space-y-2">
               <Label className="flex items-center gap-1">
-                <ImageIcon className="h-3.5 w-3.5 text-orange-500" />
+                <ImageIcon className="h-3.5 w-3.5 text-[#1B3A6B]" />
                 Upload Screenshots / Product Photos (optional)
               </Label>
               <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
               <button type="button" onClick={() => fileInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-orange-300 rounded-xl hover:bg-orange-50 transition-colors text-sm text-orange-600 font-medium">
+                className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-blue-300 rounded-xl hover:bg-blue-50 transition-colors text-sm text-[#1B3A6B] font-medium">
                 {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {isUploading ? 'Uploading...' : 'Tap to upload images or screenshots'}
               </button>
@@ -262,7 +262,8 @@ export default function Feedback() {
 
             <Button
               type="submit"
-              className="w-full bg-orange-500 hover:bg-orange-600 font-bold"
+              className="w-full font-bold text-white"
+              style={{ background: '#1B3A6B' }}
               disabled={submitMutation.isPending}
             >
               {submitMutation.isPending ? (
@@ -305,8 +306,8 @@ export default function Feedback() {
                     </div>
                     <p className="text-sm text-gray-700 mb-1">{fb.message}</p>
                     {fb.admin_response && (
-                      <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                        <p className="text-xs font-bold text-orange-700 mb-0.5">FMM CLASSICO Response:</p>
+                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs font-bold text-blue-800 mb-0.5">FMM CLASSICO Response:</p>
                         <p className="text-xs text-gray-700">{fb.admin_response}</p>
                       </div>
                     )}
@@ -364,7 +365,8 @@ function AdminFeedbackView({ feedbacks, onRespond }) {
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    className="bg-orange-500 hover:bg-orange-600 text-xs"
+                    className="text-white text-xs"
+                    style={{ background: '#1B3A6B' }}
                     onClick={() => onRespond({ id: fb.id, response: responses[fb.id] || '', status: 'in_review' })}
                   >
                     Save Response

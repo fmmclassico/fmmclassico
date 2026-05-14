@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Trash2, Sparkles, Eye, EyeOff, Pencil, X, Check } from 'lucide-react';
+import { Loader2, Plus, Trash2, Sparkles, Eye, EyeOff, Pencil, X, Check, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 const GRADIENTS = [
@@ -71,6 +71,27 @@ const DEFAULT_SLIDES = [
   },
 ];
 
+function ImageUploadButton({ imageUrl, onUpload }) {
+  const [uploading, setUploading] = useState(false);
+  const handleChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    onUpload(file_url);
+    setUploading(false);
+  };
+  return (
+    <label className="cursor-pointer flex-1">
+      <div className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold w-full transition-colors ${uploading ? 'bg-gray-100 text-gray-400' : 'bg-blue-50 border border-blue-300 text-blue-700 hover:bg-blue-100'}`}>
+        {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+        {uploading ? 'Uploading...' : imageUrl ? 'Replace Image' : 'Upload Image from Computer'}
+      </div>
+      <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleChange} />
+    </label>
+  );
+}
+
 function BannerForm({ initial, onSave, onCancel, isSaving, isNew }) {
   const [form, setForm] = useState(initial);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -105,15 +126,19 @@ function BannerForm({ initial, onSave, onCancel, isSaving, isNew }) {
           <Input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))} placeholder="Short description..." />
         </div>
         <div>
-          <Label className="text-xs mb-1 block">Image URL (paste URL or generate with AI)</Label>
-          <div className="flex gap-2">
-            <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="https://..." />
-            <Button type="button" variant="outline" onClick={handleGenerateImage} disabled={isGenerating} className="flex-shrink-0 border-blue-300 text-blue-600">
+          <Label className="text-xs mb-1 block">Banner Image</Label>
+          <div className="flex gap-2 mb-2">
+            <ImageUploadButton
+              imageUrl={form.image_url}
+              onUpload={(url) => setForm(f => ({ ...f, image_url: url }))}
+            />
+            <Button type="button" variant="outline" onClick={handleGenerateImage} disabled={isGenerating} className="flex-shrink-0 border-blue-300 text-blue-600 text-xs gap-1">
               {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              AI Generate
             </Button>
           </div>
           {form.image_url && (
-            <img src={form.image_url} alt="preview" className="mt-2 h-24 w-full object-cover rounded-lg" />
+            <img src={form.image_url} alt="preview" className="mt-1 h-24 w-full object-cover rounded-lg" />
           )}
         </div>
         <div>

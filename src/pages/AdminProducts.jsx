@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Upload, X, Pencil, Plus, Trash2, ImagePlus, Loader2, Check } from 'lucide-react';
+// Image upload only — no URL input fields for images
 import { toast } from 'sonner';
 
 // ── STRICT CATEGORY STRUCTURE ─────────────────────────────────────────────────
@@ -284,21 +285,15 @@ export default function AdminProducts() {
                     : <ImagePlus className="h-8 w-8 text-gray-300" />}
                 </div>
                 <div className="flex-1 space-y-2">
-                  <label className="cursor-pointer">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors w-fit">
-                      {uploadingMain ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                      {uploadingMain ? 'Uploading...' : 'Upload Image'}
-                    </div>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadMain} disabled={uploadingMain} />
-                  </label>
-                  <p className="text-xs text-gray-400">Or paste an image URL below:</p>
-                  <Input
-                    placeholder="https://... (image URL)"
-                    value={form.image_url}
-                    onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))}
-                    className="text-xs"
-                  />
-                </div>
+                   <label className="cursor-pointer">
+                     <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors w-fit">
+                       {uploadingMain ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                       {uploadingMain ? 'Uploading...' : form.image_url ? 'Replace Image' : 'Upload Image from Computer'}
+                     </div>
+                     <input type="file" accept="image/*" className="hidden" onChange={handleUploadMain} disabled={uploadingMain} />
+                   </label>
+                   {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Image uploaded</p>}
+                 </div>
               </div>
             </div>
 

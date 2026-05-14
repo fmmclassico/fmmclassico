@@ -37,6 +37,36 @@ const DEFAULT_SLIDES = [
     cta_link: createPageUrl('Shop?category=home_appliances'),
     cta_text: 'Shop Now',
   },
+  {
+    id: 'default-4',
+    badge: '📱 Top Brands',
+    title: 'Samsung & Apple',
+    subtitle: 'Genuine Samsung & Apple products at great prices',
+    bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
+    image_url: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=600&q=80',
+    cta_link: createPageUrl('BrandProducts?brand=Samsung'),
+    cta_text: 'Shop Brands',
+  },
+  {
+    id: 'default-5',
+    badge: '🎧 Accessories',
+    title: 'Earphones & Speakers',
+    subtitle: 'Premium sound at affordable prices — Oraimo, JBL & more',
+    bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
+    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80',
+    cta_link: createPageUrl('Shop?category=earphones'),
+    cta_text: 'Shop Now',
+  },
+  {
+    id: 'default-6',
+    badge: '⌚ Smart Wear',
+    title: 'Smart Watches',
+    subtitle: 'Stay connected with the latest smartwatches',
+    bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
+    image_url: 'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=600&q=80',
+    cta_link: createPageUrl('Shop?category=smart_watches'),
+    cta_text: 'Shop Now',
+  },
 ];
 
 export default function HeroBanner() {
@@ -79,10 +109,14 @@ export default function HeroBanner() {
     ? (slide.cta_link.startsWith('http') ? slide.cta_link : createPageUrl(slide.cta_link))
     : createPageUrl('Shop');
 
+  // Use bg_gradient class if it's a Tailwind class, else fallback inline style
+  const gradientClass = slide.bg_gradient && !slide.bg_gradient.startsWith('#')
+    ? slide.bg_gradient
+    : 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]';
+
   return (
     <div
-      className="relative overflow-hidden transition-all duration-700"
-      style={{ background: 'linear-gradient(to right, #00A3A6, #0093A6, #007a8a)' }}
+      className={`relative bg-gradient-to-r ${gradientClass} overflow-hidden transition-all duration-700`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >

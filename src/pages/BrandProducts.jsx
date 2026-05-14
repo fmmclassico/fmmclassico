@@ -125,6 +125,8 @@ export default function BrandProducts() {
     staleTime: 2 * 60 * 1000,
   });
 
+  // STRICT category isolation: if category param is present, ONLY show products in that exact category.
+  // Never mix products across categories even if the brand name is shared.
   const brandProducts = allProducts.filter(p => {
     const matchBrand = p.brand?.toLowerCase() === brand?.toLowerCase();
     const matchCat = category ? p.category === category : true;
@@ -132,7 +134,12 @@ export default function BrandProducts() {
     return matchBrand && matchCat && matchSub;
   });
 
-  const categories = [...new Set(brandProducts.map(p => p.category))].filter(Boolean);
+  // When no category is specified, only group by categories that actually match
+  // the brand's explicitly defined type map to avoid cross-category contamination.
+  const brandTypeCategories = Object.keys(BRAND_PRODUCT_TYPES[brand] || {});
+  const categories = [...new Set(brandProducts.map(p => p.category))]
+    .filter(Boolean)
+    .filter(c => brandTypeCategories.length === 0 || brandTypeCategories.includes(c));
 
   // Get sub-types for this brand+category combo
   const brandTypeMap = BRAND_PRODUCT_TYPES[brand] || {};

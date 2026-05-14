@@ -92,13 +92,20 @@ export default function AdminAccessControl() {
           toast.success(`✅ Admin access granted to ${userEmail}`);
         } else {
           // User doesn't exist - invite them as admin
-          await base44.users.inviteUser(userEmail, 'admin');
-          toast.success(`✅ Admin invitation sent to ${userEmail}`);
+          try {
+            await base44.users.inviteUser(userEmail, 'admin');
+            toast.success(`✅ Invitation sent to ${userEmail}! They will receive an email to register as admin.`);
+          } catch (inviteError) {
+            console.error('Invite error:', inviteError);
+            // If invite fails, try creating as user first then updating
+            throw new Error('Could not send invitation. Please try again or contact support.');
+          }
         }
       }
       queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     } catch (error) {
-      toast.error('Failed to update access: ' + error.message);
+      console.error('Toggle error:', error);
+      toast.error('Error: ' + (error.message || 'Failed to update access'));
     } finally {
       setIsGranting(null);
     }

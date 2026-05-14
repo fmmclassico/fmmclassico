@@ -13,6 +13,7 @@ const QUICK_PROMPTS = [
   '🖼️ Show me an image of AirPods Pro on white background',
   '🖼️ Photo of iPhone 15 charger – product image',
   '🎨 Create a promotional banner for Tecno Spark 20 at ₵1,200',
+  '🎬 Generate a 6-second video of iPhone 15 Pro',
   '📣 Write a WhatsApp broadcast for a weekend sale',
   '📝 Write a product description for Samsung Galaxy A15',
   '💡 Suggest promotions for the Donkomi deals section',
@@ -23,12 +24,13 @@ export default function AdminAI() {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hello! I'm your **CLASSICO AI Assistant** — powered by advanced AI.\n\nI can help you with anything for your store:\n\n- 🖼️ **Generate product images** — say *\"design a product image for iPhone 15 Pro Max\"* to get a photorealistic product photo\n- 🎨 **Generate flyers & banners** — say *\"create a flyer for 20% off sale\"* to get a downloadable marketing image\n- 📣 **Marketing copy** — WhatsApp broadcasts, product descriptions, promo campaigns\n- 💡 **Business advice** — pricing strategies, promotions, upsell ideas for the Ghana market\n- 🛒 **Store content** — banner text (title, subtitle, CTA, gradient), notification messages\n- 📊 **Sales strategy** — deal ideas, seasonal campaigns, customer retention tips\n- ✍️ **Any writing task** — emails, announcements, customer replies\n\nJust type what you need or pick a quick prompt below!" }
+    { role: 'assistant', content: "Hello! I'm your **CLASSICO AI Assistant** — powered by advanced AI.\n\nI can help you with anything for your store:\n\n- 🖼️ **Generate product images** — say *\"design a product image for iPhone 15 Pro Max\"* to get a photorealistic product photo\n- 🎬 **Generate videos** — say *\"create a 6-second video of AirPods Pro\"* for promotional videos\n- 💧 **Add watermark** — say *\"add FMM CLASSICO watermark\"* to any product image generation\n- 🎨 **Generate flyers & banners** — say *\"create a flyer for 20% off sale\"* to get a downloadable marketing image\n- 📣 **Marketing copy** — WhatsApp broadcasts, product descriptions, promo campaigns\n- 💡 **Business advice** — pricing strategies, promotions, upsell ideas for the Ghana market\n- 🛒 **Store content** — banner text (title, subtitle, CTA, gradient), notification messages\n- 📊 **Sales strategy** — deal ideas, seasonal campaigns, customer retention tips\n- ✍️ **Any writing task** — emails, announcements, customer replies\n\nJust type what you need or pick a quick prompt below!" }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [attachedImage, setAttachedImage] = useState(null); // { url, file }
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [watermarkBrand, setWatermarkBrand] = useState('FMM CLASSICO');
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -53,21 +55,26 @@ export default function AdminAI() {
     'product', 'gadget', 'device', 'accessory', 'accessories'
   ];
 
+  const isVideoRequest = (msg) => {
+   const lower = msg.toLowerCase();
+   return lower.includes('video') || lower.includes('motion') || lower.includes('animate') || lower.includes('animated');
+  };
+
   const isImageRequest = (msg) => {
-    const lower = msg.toLowerCase();
-    const hasMarketingWord = lower.includes('flyer') || lower.includes('banner') || lower.includes('poster') || lower.includes('promotional') || lower.includes('advertisement');
-    const hasImageWord = lower.includes('generate') || lower.includes('create') || lower.includes('design') || lower.includes('make') || lower.includes('show') || lower.includes('draw') || lower.includes('render') || lower.includes('give me') || lower.includes('get me') || lower.includes('i want');
-    const hasProductWord = PRODUCT_KEYWORDS.some(k => lower.includes(k));
-    return (
-      hasMarketingWord ||
-      lower.includes('generate image') || lower.includes('create image') ||
-      lower.includes('product image') || lower.includes('product photo') ||
-      lower.includes('product picture') || lower.includes('generate a photo') ||
-      lower.includes('generate a picture') || lower.includes('image of') ||
-      lower.includes('picture of') || lower.includes('photo of') ||
-      lower.includes('generate only') || lower.includes('show me an image') ||
-      (hasImageWord && hasProductWord)
-    );
+   const lower = msg.toLowerCase();
+   const hasMarketingWord = lower.includes('flyer') || lower.includes('banner') || lower.includes('poster') || lower.includes('promotional') || lower.includes('advertisement');
+   const hasImageWord = lower.includes('generate') || lower.includes('create') || lower.includes('design') || lower.includes('make') || lower.includes('show') || lower.includes('draw') || lower.includes('render') || lower.includes('give me') || lower.includes('get me') || lower.includes('i want');
+   const hasProductWord = PRODUCT_KEYWORDS.some(k => lower.includes(k));
+   return (
+     hasMarketingWord ||
+     lower.includes('generate image') || lower.includes('create image') ||
+     lower.includes('product image') || lower.includes('product photo') ||
+     lower.includes('product picture') || lower.includes('generate a photo') ||
+     lower.includes('generate a picture') || lower.includes('image of') ||
+     lower.includes('picture of') || lower.includes('photo of') ||
+     lower.includes('generate only') || lower.includes('show me an image') ||
+     (hasImageWord && hasProductWord)
+   );
   };
 
   const isPureProductImage = (msg) => {
@@ -102,6 +109,24 @@ export default function AdminAI() {
     setMessages(m => [...m, { role: 'user', content: displayMsg, image_url: imgUrl }]);
     setLoading(true);
 
+    // Handle video generation
+    if (isVideoRequest(msg)) {
+      try {
+        setMessages(m => [...m, { role: 'assistant', content: '🎬 Generating your video... this takes about 30-60 seconds...', isTemp: true }]);
+        const videoPrompt = `Create a cinematic, realistic 6-second video. ${msg}. High quality, well-lit, professional product showcase, smooth camera movement, modern style.`;
+        const { url } = await base44.integrations.Core.GenerateVideo({ prompt: videoPrompt, label: 'Product Video' });
+        setMessages(m => {
+          const filtered = m.filter(x => !x.isTemp);
+          return [...filtered, { role: 'assistant', content: '✅ Here is your generated video!', video_url: url }];
+        });
+      } catch (e) {
+        setMessages(m => m.filter(x => !x.isTemp));
+        setMessages(m => [...m, { role: 'assistant', content: 'Sorry, video generation failed. Please try again.' }]);
+      }
+      setLoading(false);
+      return;
+    }
+
     // If user attached an image, use it as reference for generation or editing
     if (imgUrl || isImageRequest(msg)) {
       try {
@@ -118,8 +143,9 @@ export default function AdminAI() {
         } else if (imgUrl) {
           imagePrompt = `Generate a high-quality photorealistic version of this product image. Clean white background, professional studio lighting, commercial e-commerce quality, no text, no logos.`;
         } else if (isProductImg) {
-          imagePrompt = `Ultra-realistic professional product photography. Subject: ${msg}. Pure white background, studio soft-box lighting from top-left, crisp shadows, hyper-detailed, 8K resolution, commercial e-commerce product shot, no text, no logos, no watermarks, isolated product only, photorealistic render.`;
-        } else {
+           const hasWatermark = msg.toLowerCase().includes('watermark') || msg.toLowerCase().includes(watermarkBrand.toLowerCase());
+           imagePrompt = `Ultra-realistic professional product photography. Subject: ${msg}. Pure white background, studio soft-box lighting from top-left, crisp shadows, hyper-detailed, 8K resolution, commercial e-commerce product shot, isolated product only, photorealistic render.${hasWatermark ? ` Add a subtle semi-transparent watermark or badge with "${watermarkBrand}" in the corner.` : ' No text, no logos, no watermarks.'}`;
+         } else {
           imagePrompt = `Professional high-quality advertising flyer for FMM CLASSICO Ghana store. ${msg}. Include bold text layout, vibrant colors, modern design, clean typography, product imagery. Style: photoshop-quality commercial banner, 4K resolution, professional marketing material.`;
         }
 
@@ -239,18 +265,28 @@ Respond in a helpful, practical and detailed way. Be specific to the Ghana/West 
                   </div>
                 )}
                 {msg.role === 'assistant' && msg.image_url && (
-                  <div className="mt-2 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-md">
-                    <img src={msg.image_url} alt="Generated flyer" className="w-full object-cover" style={{ maxHeight: 400 }} />
-                    <div className="flex gap-2 p-3 bg-gray-50 border-t border-gray-100">
-                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700 gap-1.5 flex-1" onClick={() => handleDownload(msg.image_url)}>
-                        <Download className="h-4 w-4" /> Download Image
-                      </Button>
-                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.open(msg.image_url, '_blank')}>
-                        Open Full Size
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                   <div className="mt-2 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-md">
+                     <img src={msg.image_url} alt="Generated flyer" className="w-full object-cover" style={{ maxHeight: 400 }} />
+                     <div className="flex gap-2 p-3 bg-gray-50 border-t border-gray-100">
+                       <Button size="sm" className="bg-blue-600 hover:bg-blue-700 gap-1.5 flex-1" onClick={() => handleDownload(msg.image_url)}>
+                         <Download className="h-4 w-4" /> Download Image
+                       </Button>
+                       <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.open(msg.image_url, '_blank')}>
+                         Open Full Size
+                       </Button>
+                     </div>
+                   </div>
+                 )}
+                {msg.role === 'assistant' && msg.video_url && (
+                   <div className="mt-2 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-md">
+                     <video src={msg.video_url} controls className="w-full object-cover" style={{ maxHeight: 400 }} />
+                     <div className="flex gap-2 p-3 bg-gray-50 border-t border-gray-100">
+                       <Button size="sm" className="bg-green-600 hover:bg-green-700 gap-1.5 flex-1" onClick={() => window.open(msg.video_url, '_blank')}>
+                         <Download className="h-4 w-4" /> Download Video
+                       </Button>
+                     </div>
+                   </div>
+                 )}
               </div>
               {msg.role === 'user' && (
                 <div className="w-7 h-7 rounded-lg bg-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -276,10 +312,23 @@ Respond in a helpful, practical and detailed way. Be specific to the Ghana/West 
           <div ref={bottomRef} />
         </div>
 
-        {/* Input */}
-        <div className="p-3 border-t bg-white">
-          {/* Attached image preview */}
-          {attachedImage && (
+        {/* Watermark settings */}
+          <div className="p-3 border-b bg-gray-50 flex gap-2 items-center">
+            <label className="text-xs font-medium text-gray-600">Watermark Brand:</label>
+            <input
+              type="text"
+              value={watermarkBrand}
+              onChange={e => setWatermarkBrand(e.target.value)}
+              placeholder="e.g., FMM CLASSICO"
+              className="flex-1 text-xs border rounded px-2 py-1"
+            />
+            <span className="text-[10px] text-gray-500">Use in prompts: "add watermark" or "with FMM CLASSICO watermark"</span>
+          </div>
+
+          {/* Input */}
+          <div className="p-3 border-t bg-white">
+            {/* Attached image preview */}
+            {attachedImage && (
             <div className="flex items-center gap-2 mb-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
               <img src={attachedImage.url} alt="attached" className="h-10 w-10 object-cover rounded" />
               <span className="text-xs text-blue-700 flex-1 truncate">{attachedImage.name}</span>

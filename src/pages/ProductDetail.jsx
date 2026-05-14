@@ -132,6 +132,15 @@ export default function ProductDetail() {
     setTouchStart(null);
   };
 
+  // Auto-scroll product images every 10 seconds
+  useEffect(() => {
+    if (allImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setSelectedImageIndex(prev => (prev + 1) % allImages.length);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [allImages.length]);
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-6">

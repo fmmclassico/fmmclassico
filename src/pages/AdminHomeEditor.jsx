@@ -6,22 +6,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Loader2, Save, X, Plus, Trash2, Home, Grid3X3, Image, Type, Link as LinkIcon } from 'lucide-react';
+import { Upload, Loader2, Save, X, Plus, Trash2, Home, Grid3X3, Image, Type, Link as LinkIcon, ChevronDown, ChevronUp } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const SETTING_KEYS = {
-  // Hero banner
-  hero_title: { label: 'Hero Title', type: 'text', section: 'hero' },
-  hero_subtitle: { label: 'Hero Subtitle', type: 'text', section: 'hero' },
-  hero_cta: { label: 'Hero Button Text', type: 'text', section: 'hero' },
-  hero_bg_image: { label: 'Hero Background Image', type: 'image', section: 'hero' },
-  // Section labels
-  home_flash_title: { label: 'Flash Sale Section Title', type: 'text', section: 'sections' },
-  home_deals_title: { label: 'CLASSICO Deals Title', type: 'text', section: 'sections' },
-  home_donkomi_title: { label: 'Donkomi Section Title', type: 'text', section: 'sections' },
-  home_arrivals_title: { label: 'New Arrivals Title', type: 'text', section: 'sections' },
-  home_topselling_title: { label: 'Top Selling Title', type: 'text', section: 'sections' },
-};
+const CORE_SECTIONS = [
+  { id: 'flash', name: 'Flash Sale', icon: '⚡' },
+  { id: 'deals', name: 'CLASSICO Deals', icon: '🎁' },
+  { id: 'donkomi', name: 'Donkomi (Best Prices)', icon: '💰' },
+  { id: 'arrivals', name: 'New Arrivals', icon: '✨' },
+  { id: 'topselling', name: 'Top Selling', icon: '🔥' },
+];
 
 const CATEGORY_DEFS = [
   { id: 'phones', name: 'Phones', defaultImage: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600' },
@@ -35,7 +29,11 @@ export default function AdminHomeEditor() {
   const [localSettings, setLocalSettings] = useState({});
   const [saving, setSaving] = useState({});
   const [uploading, setUploading] = useState({});
+  const [customCategories, setCustomCategories] = useState([]);
+  const [newHeroTitle, setNewHeroTitle] = useState('');
+  const [newSectionTitle, setNewSectionTitle] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
+  const [expandedSections, setExpandedSections] = useState({ hero: true });
   const fileRefs = useRef({});
   const queryClient = useQueryClient();
 
@@ -52,6 +50,21 @@ export default function AdminHomeEditor() {
     queryKey: ['promoBanners'],
     queryFn: () => base44.entities.PromoBanner.list(),
   });
+
+  // Load custom categories from settings
+  useEffect(() => {
+    const cats = settings.filter(s => s.key.startsWith('custom_cat_'));
+    if (cats.length > 0) {
+      const parsed = cats.map(c => {
+        try {
+          return JSON.parse(c.value);
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
+      setCustomCategories(parsed);
+    }
+  }, [settings]);
 
   useEffect(() => {
     const map = {};
@@ -121,6 +134,88 @@ export default function AdminHomeEditor() {
     toast.success('Saved!');
   };
 
+  const addCustomCategory = async () => {
+    if (!newHeroTitle.trim()) return;
+    const newCat = { id: `custom_${Date.now()}`, name: newHeroTitle, image: '', desc: '' };
+    const key = `custom_cat_${newCat.id}`;
+    await base44.entities.AppSetting.create({ key, value: JSON.stringify(newCat) });
+    queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+    setCustomCategories([...customCategories, newCat]);
+    setNewHeroTitle('');
+    toast.success('Category added!');
+  };
+
+  const updateCustomCategory = async (cat, field, value) => {
+    const updated = { ...cat, [field]: value };
+    const key = `custom_cat_${cat.id}`;
+    const existing = settings.find(s => s.key === key);
+    if (existing) {
+      await base44.entities.AppSetting.update(existing.id, { value: JSON.stringify(updated) });
+    }
+    queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+    setCustomCategories(customCategories.map(c => c.id === cat.id ? updated : c));
+    toast.success('Saved!');
+  };
+
+  const deleteCustomCategory = async (catId) => {
+    const key = `custom_cat_${catId}`;
+    const existing = settings.find(s => s.key === key);
+    if (existing) {
+      await base44.entities.AppSetting.delete(existing.id);
+    }
+    queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+    setCustomCategories(customCategories.filter(c => c.id !== catId));
+    toast.success('Removed!');
+  };
+
+  const addCustomSection = async () => {
+    if (!newSectionTitle.trim()) return;
+    const idx = CORE_SECTIONS.length + customCategories.length;
+    await base44.entities.AppSetting.create({
+      key: `custom_section_${idx}`,
+      value: newSectionTitle,
+    });
+    queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+    setNewSectionTitle('');
+    toast.success('Section added!');
+  };
+
+  const getSectionTitle = (idx) => {
+    if (idx < CORE_SECTIONS.length) {
+      const sec = CORE_SECTIONS[idx];
+      return getSetting(`home_${sec.id}_title`) || sec.name;
+    } else {
+      return getSetting(`custom_section_${idx}`) || '';
+    }
+  };
+
+  const saveSectionTitle = async (idx, value) => {
+    if (idx < CORE_SECTIONS.length) {
+      const sec = CORE_SECTIONS[idx];
+      await saveSetting(`home_${sec.id}_title`, value);
+    } else {
+      const key = `custom_section_${idx}`;
+      const existing = settings.find(s => s.key === key);
+      if (existing) {
+        await base44.entities.AppSetting.update(existing.id, { value });
+      } else {
+        await base44.entities.AppSetting.create({ key, value });
+      }
+      queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+    }
+    toast.success('Saved!');
+  };
+
+  const deleteCustomSection = async (idx) => {
+    const key = `custom_section_${idx}`;
+    const existing = settings.find(s => s.key === key);
+    if (existing) {
+      await base44.entities.AppSetting.delete(existing.id);
+      queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+      toast.success('Removed!');
+    }
+  };
+
   if (!user) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
   if (user?.role !== 'admin') return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
 
@@ -148,28 +243,36 @@ export default function AdminHomeEditor() {
         {/* ── HERO ── */}
         <TabsContent value="hero">
           <Card>
-            <CardHeader><CardTitle className="text-base">Hero / Top Banner Section</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">Hero / Top Banner Section</CardTitle>
+              <p className="text-xs text-gray-500 mt-1">Add, edit, or delete hero banners</p>
+            </CardHeader>
             <CardContent className="space-y-5">
-              {['hero_title', 'hero_subtitle', 'hero_cta'].map(key => (
-                <SettingTextRow
-                  key={key}
-                  label={SETTING_KEYS[key].label}
-                  value={getSetting(key)}
-                  onChange={v => setLocalSettings(l => ({ ...l, [key]: v }))}
-                  onSave={() => saveSetting(key, getSetting(key))}
-                  saving={saving[key]}
-                />
-              ))}
-              <ImageUploadRow
-                label="Hero Background Image"
-                settingKey="hero_bg_image"
-                currentUrl={getSetting('hero_bg_image')}
-                uploading={uploading['hero_bg_image']}
-                fileRef={el => fileRefs.current['hero_bg_image'] = el}
-                onUpload={f => handleUpload('hero_bg_image', f)}
-                onRemove={() => handleRemoveImage('hero_bg_image')}
-                onUrlSave={url => saveSetting('hero_bg_image', url)}
-              />
+              {/* Existing hero */}
+              <div className="p-3 bg-gray-50 rounded-lg space-y-3">
+                <p className="font-semibold text-sm text-gray-700">Main Hero Banner</p>
+                {['hero_title', 'hero_subtitle', 'hero_cta'].map(key => (
+                  <SettingTextRow
+                    key={key}
+                    label={key === 'hero_title' ? 'Title' : key === 'hero_subtitle' ? 'Subtitle' : 'Button Text'}
+                    value={getSetting(key)}
+                    onChange={v => setLocalSettings(l => ({ ...l, [key]: v }))}
+                    onSave={() => saveSetting(key, getSetting(key))}
+                    saving={saving[key]}
+                  />
+                ))}
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 mb-2">Background Image</p>
+                  <FileUploadBar
+                    label="Upload Hero Background"
+                    settingKey="hero_bg_image"
+                    currentUrl={getSetting('hero_bg_image')}
+                    uploading={uploading['hero_bg_image']}
+                    onUpload={f => handleUpload('hero_bg_image', f)}
+                    onRemove={() => handleRemoveImage('hero_bg_image')}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -177,18 +280,67 @@ export default function AdminHomeEditor() {
         {/* ── SECTION TITLES ── */}
         <TabsContent value="sections">
           <Card>
-            <CardHeader><CardTitle className="text-base">Homepage Section Titles</CardTitle></CardHeader>
-            <CardContent className="space-y-5">
-              {['home_flash_title', 'home_deals_title', 'home_donkomi_title', 'home_arrivals_title', 'home_topselling_title'].map(key => (
-                <SettingTextRow
-                  key={key}
-                  label={SETTING_KEYS[key].label}
-                  value={getSetting(key)}
-                  onChange={v => setLocalSettings(l => ({ ...l, [key]: v }))}
-                  onSave={() => saveSetting(key, getSetting(key))}
-                  saving={saving[key]}
-                />
-              ))}
+            <CardHeader>
+              <CardTitle className="text-base">Homepage Sections</CardTitle>
+              <p className="text-xs text-gray-500 mt-1">Edit core sections or add custom ones</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Core sections */}
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-gray-700">Core Sections</p>
+                {CORE_SECTIONS.map((sec, idx) => (
+                  <div key={sec.id} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">{sec.icon}</span>
+                      <p className="text-sm font-medium text-gray-700 flex-1">{sec.name}</p>
+                    </div>
+                    <SettingTextRow
+                      label="Section Title"
+                      value={getSetting(`home_${sec.id}_title`) || sec.name}
+                      onChange={v => setLocalSettings(l => ({ ...l, [`home_${sec.id}_title`]: v }))}
+                      onSave={() => saveSetting(`home_${sec.id}_title`, getSetting(`home_${sec.id}_title`) || sec.name)}
+                      saving={saving[`home_${sec.id}_title`]}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Custom sections */}
+              {settings.filter(s => s.key.startsWith('custom_section_')).length > 0 && (
+                <div className="space-y-3 pt-4 border-t">
+                  <p className="text-sm font-semibold text-gray-700">Custom Sections</p>
+                  {settings.filter(s => s.key.startsWith('custom_section_')).map(sec => (
+                    <div key={sec.id} className="p-3 bg-blue-50 rounded-lg flex gap-2">
+                      <input
+                        type="text"
+                        defaultValue={sec.value}
+                        className="flex-1 border rounded px-2 py-1 text-sm"
+                        onBlur={e => saveSectionTitle(parseInt(sec.key.split('_')[2]), e.target.value)}
+                      />
+                      <Button size="sm" variant="destructive" className="h-8" onClick={() => deleteCustomSection(parseInt(sec.key.split('_')[2]))}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add custom section */}
+              <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200 space-y-2">
+                <p className="text-sm font-semibold text-indigo-900">Add Custom Section</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g., Featured Brands, Weekend Specials..."
+                    value={newSectionTitle}
+                    onChange={e => setNewSectionTitle(e.target.value)}
+                    className="flex-1 border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                  <Button size="sm" className="gap-1.5" onClick={addCustomSection}>
+                    <Plus className="h-3.5 w-3.5" /> Add
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -196,22 +348,46 @@ export default function AdminHomeEditor() {
         {/* ── PROMO BANNERS ── */}
         <TabsContent value="banners">
           <Card>
-            <CardHeader><CardTitle className="text-base">Promotional Banners (Slider)</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">Promotional Banners (Slider)</CardTitle>
+              <p className="text-xs text-gray-500 mt-1">Upload image files or use URLs</p>
+            </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-2">
+              {/* Add new banner with file upload */}
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
+                <p className="text-sm font-semibold text-green-900">Add New Banner</p>
                 <input
-                  type="text"
-                  placeholder="Paste image URL to add a new banner..."
-                  value={bannerUrl}
-                  onChange={e => setBannerUrl(e.target.value)}
-                  className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                  ref={el => fileRefs.current['banner_upload'] = el}
+                  type="file" accept="image/*" className="hidden"
+                  onChange={async (e) => {
+                    if (!e.target.files?.[0]) return;
+                    setUploading(u => ({ ...u, banner_upload: true }));
+                    try {
+                      const { file_url } = await base44.integrations.Core.UploadFile({ file: e.target.files[0] });
+                      await base44.entities.PromoBanner.create({
+                        title: 'New Banner',
+                        subtitle: '',
+                        image_url: file_url,
+                        is_active: true,
+                        order: banners.length,
+                      });
+                      queryClient.invalidateQueries({ queryKey: ['promoBanners'] });
+                      toast.success('Banner added!');
+                    } catch {
+                      toast.error('Upload failed');
+                    }
+                    setUploading(u => ({ ...u, banner_upload: false }));
+                    e.target.value = '';
+                  }}
                 />
-                <Button size="sm" onClick={handleAddBanner} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> Add
+                <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => fileRefs.current['banner_upload']?.click()} disabled={uploading['banner_upload']}>
+                  {uploading['banner_upload'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Upload Banner Image
                 </Button>
               </div>
+
               {banners.length === 0 && (
-                <p className="text-center text-gray-400 text-sm py-4">No banners yet. Add one above.</p>
+                <p className="text-center text-gray-400 text-sm py-4">No banners yet. Upload one above.</p>
               )}
               {banners.map(b => (
                 <div key={b.id} className="border rounded-xl overflow-hidden bg-gray-50">
@@ -221,11 +397,36 @@ export default function AdminHomeEditor() {
                     <EditableField label="Subtitle" value={b.subtitle} onSave={v => handleBannerFieldSave(b, 'subtitle', v)} />
                     <EditableField label="CTA Text" value={b.cta_text} onSave={v => handleBannerFieldSave(b, 'cta_text', v)} />
                     <EditableField label="CTA Link" value={b.cta_link} onSave={v => handleBannerFieldSave(b, 'cta_link', v)} />
-                    <EditableField label="Image URL" value={b.image_url} onSave={v => handleBannerFieldSave(b, 'image_url', v)} />
+                    {/* File upload for image */}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Change Image:</p>
+                      <input
+                        ref={el => fileRefs.current[`banner_${b.id}`] = el}
+                        type="file" accept="image/*" className="hidden"
+                        onChange={async (e) => {
+                          if (!e.target.files?.[0]) return;
+                          setUploading(u => ({ ...u, [`banner_${b.id}`]: true }));
+                          try {
+                            const { file_url } = await base44.integrations.Core.UploadFile({ file: e.target.files[0] });
+                            await base44.entities.PromoBanner.update(b.id, { image_url: file_url });
+                            queryClient.invalidateQueries({ queryKey: ['promoBanners'] });
+                            toast.success('Image updated!');
+                          } catch {
+                            toast.error('Upload failed');
+                          }
+                          setUploading(u => ({ ...u, [`banner_${b.id}`]: false }));
+                          e.target.value = '';
+                        }}
+                      />
+                      <Button size="sm" variant="outline" className="w-full text-xs h-7 gap-1.5" onClick={() => fileRefs.current[`banner_${b.id}`]?.click()} disabled={uploading[`banner_${b.id}`]}>
+                        {uploading[`banner_${b.id}`] ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                        Upload New Image
+                      </Button>
+                    </div>
                     <div className="flex items-center justify-between pt-1">
                       <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                         <input type="checkbox" checked={!!b.is_active} onChange={e => handleBannerFieldSave(b, 'is_active', e.target.checked)} />
-                        Active (visible on site)
+                        Active
                       </label>
                       <button onClick={() => handleDeleteBanner(b.id)} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700">
                         <Trash2 className="h-3.5 w-3.5" /> Remove
@@ -241,73 +442,133 @@ export default function AdminHomeEditor() {
         {/* ── CATEGORIES ── */}
         <TabsContent value="categories">
           <Card>
-            <CardHeader><CardTitle className="text-base">Category Card Images & Text</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">Category Cards</CardTitle>
+              <p className="text-xs text-gray-500 mt-1">Edit default categories or add custom ones</p>
+            </CardHeader>
             <CardContent className="space-y-6">
-              {CATEGORY_DEFS.map(cat => {
-                const bgKey = `cat_bg_${cat.id}`;
-                const nameKey = `cat_text_${cat.id}_name`;
-                const descKey = `cat_text_${cat.id}_desc`;
-                const currentImg = getSetting(bgKey) || cat.defaultImage;
-                return (
-                  <div key={cat.id} className="border rounded-xl overflow-hidden">
-                    <div className="relative h-28">
-                      <img src={currentImg} alt={cat.name} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2">
-                        <input ref={el => fileRefs.current[bgKey] = el} type="file" accept="image/*" className="hidden"
-                          onChange={e => e.target.files?.[0] && handleUpload(bgKey, e.target.files[0])} />
-                        <button
-                          className="flex items-center gap-1 bg-white/90 text-gray-800 text-xs px-3 py-1.5 rounded-lg hover:bg-white font-medium"
-                          onClick={() => fileRefs.current[bgKey]?.click()}
-                        >
-                          {uploading[bgKey] ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                          Upload Image
-                        </button>
-                        {getSetting(bgKey) && (
+              {/* Default categories */}
+              <div className="space-y-4">
+                <p className="text-sm font-semibold text-gray-700">Default Categories</p>
+                {CATEGORY_DEFS.map(cat => {
+                  const bgKey = `cat_bg_${cat.id}`;
+                  const nameKey = `cat_text_${cat.id}_name`;
+                  const descKey = `cat_text_${cat.id}_desc`;
+                  const currentImg = getSetting(bgKey) || cat.defaultImage;
+                  return (
+                    <div key={cat.id} className="border rounded-xl overflow-hidden">
+                      <div className="relative h-28">
+                        <img src={currentImg} alt={cat.name} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2">
+                          <input ref={el => fileRefs.current[bgKey] = el} type="file" accept="image/*" className="hidden"
+                            onChange={e => e.target.files?.[0] && handleUpload(bgKey, e.target.files[0])} />
                           <button
-                            className="flex items-center gap-1 bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-red-600 font-medium"
-                            onClick={() => handleRemoveImage(bgKey)}
+                            className="flex items-center gap-1 bg-white/90 text-gray-800 text-xs px-3 py-1.5 rounded-lg hover:bg-white font-medium"
+                            onClick={() => fileRefs.current[bgKey]?.click()}
                           >
-                            <X className="h-3.5 w-3.5" /> Reset
+                            {uploading[bgKey] ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                            Upload
                           </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="p-4 space-y-3 bg-gray-50">
-                      <p className="text-sm font-bold text-gray-700">{cat.name}</p>
-                      <SettingTextRow
-                        label="Card Title"
-                        value={getSetting(nameKey) || cat.name}
-                        onChange={v => setLocalSettings(l => ({ ...l, [nameKey]: v }))}
-                        onSave={() => saveSetting(nameKey, getSetting(nameKey) || cat.name)}
-                        saving={saving[nameKey]}
-                      />
-                      <SettingTextRow
-                        label="Card Description"
-                        value={getSetting(descKey)}
-                        onChange={v => setLocalSettings(l => ({ ...l, [descKey]: v }))}
-                        onSave={() => saveSetting(descKey, getSetting(descKey))}
-                        saving={saving[descKey]}
-                      />
-                      {/* Paste URL directly */}
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Or paste image URL directly:</p>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="https://..."
-                            className="flex-1 border rounded-lg px-2 py-1.5 text-xs"
-                            value={getSetting(bgKey)}
-                            onChange={e => setLocalSettings(l => ({ ...l, [bgKey]: e.target.value }))}
-                          />
-                          <Button size="sm" className="text-xs h-7 px-3" onClick={() => saveSetting(bgKey, getSetting(bgKey))}>
-                            {saving[bgKey] ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                          </Button>
+                          {getSetting(bgKey) && (
+                            <button
+                              className="flex items-center gap-1 bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-red-600 font-medium"
+                              onClick={() => handleRemoveImage(bgKey)}
+                            >
+                              <X className="h-3.5 w-3.5" /> Reset
+                            </button>
+                          )}
                         </div>
                       </div>
+                      <div className="p-4 space-y-3 bg-gray-50">
+                        <p className="text-sm font-bold text-gray-700">{cat.name}</p>
+                        <SettingTextRow
+                          label="Card Title"
+                          value={getSetting(nameKey) || cat.name}
+                          onChange={v => setLocalSettings(l => ({ ...l, [nameKey]: v }))}
+                          onSave={() => saveSetting(nameKey, getSetting(nameKey) || cat.name)}
+                          saving={saving[nameKey]}
+                        />
+                        <SettingTextRow
+                          label="Description"
+                          value={getSetting(descKey)}
+                          onChange={v => setLocalSettings(l => ({ ...l, [descKey]: v }))}
+                          onSave={() => saveSetting(descKey, getSetting(descKey))}
+                          saving={saving[descKey]}
+                        />
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+
+              {/* Custom categories */}
+              {customCategories.length > 0 && (
+                <div className="space-y-4 pt-6 border-t">
+                  <p className="text-sm font-semibold text-gray-700">Custom Categories</p>
+                  {customCategories.map(cat => (
+                    <div key={cat.id} className="border border-purple-200 rounded-xl overflow-hidden bg-purple-50">
+                      {cat.image && <img src={cat.image} alt={cat.name} className="w-full h-32 object-cover" />}
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-bold text-gray-700">{cat.name}</p>
+                          <Button size="sm" variant="destructive" className="h-7" onClick={() => deleteCustomCategory(cat.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <input
+                          type="text" placeholder="Title"
+                          defaultValue={cat.name}
+                          onBlur={e => updateCustomCategory(cat, 'name', e.target.value)}
+                          className="w-full border rounded px-2 py-1 text-sm"
+                        />
+                        <input
+                          type="text" placeholder="Description"
+                          defaultValue={cat.desc}
+                          onBlur={e => updateCustomCategory(cat, 'desc', e.target.value)}
+                          className="w-full border rounded px-2 py-1 text-sm"
+                        />
+                        <input
+                          ref={el => fileRefs.current[`custom_${cat.id}`] = el}
+                          type="file" accept="image/*" className="hidden"
+                          onChange={async (e) => {
+                            if (!e.target.files?.[0]) return;
+                            setUploading(u => ({ ...u, [`custom_${cat.id}`]: true }));
+                            try {
+                              const { file_url } = await base44.integrations.Core.UploadFile({ file: e.target.files[0] });
+                              await updateCustomCategory(cat, 'image', file_url);
+                            } catch {
+                              toast.error('Upload failed');
+                            }
+                            setUploading(u => ({ ...u, [`custom_${cat.id}`]: false }));
+                            e.target.value = '';
+                          }}
+                        />
+                        <Button size="sm" variant="outline" className="w-full text-xs h-7 gap-1.5" onClick={() => fileRefs.current[`custom_${cat.id}`]?.click()}>
+                          {uploading[`custom_${cat.id}`] ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                          Upload Image
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add custom category */}
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200 space-y-2">
+                <p className="text-sm font-semibold text-purple-900">Add Custom Category</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g., Gaming Gear, Smart Devices..."
+                    value={newHeroTitle}
+                    onChange={e => setNewHeroTitle(e.target.value)}
+                    className="flex-1 border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                  />
+                  <Button size="sm" className="gap-1.5" onClick={addCustomCategory}>
+                    <Plus className="h-3.5 w-3.5" /> Add
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -394,6 +655,31 @@ function EditableField({ label, value, onSave }) {
         className="flex-1 border rounded px-2 py-1 text-xs"
         placeholder={`${label}...`}
       />
+    </div>
+  );
+}
+
+function FileUploadBar({ label, settingKey, currentUrl, uploading, onUpload, onRemove }) {
+  const fileRef = useRef(null);
+  return (
+    <div className="space-y-2">
+      <input
+        ref={fileRef}
+        type="file" accept="image/*" className="hidden"
+        onChange={e => e.target.files?.[0] && onUpload(e.target.files[0])}
+      />
+      {currentUrl && <img src={currentUrl} alt="current" className="w-full h-24 object-cover rounded border" />}
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => fileRef?.current?.click()} disabled={uploading}>
+          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+          {label}
+        </Button>
+        {currentUrl && (
+          <Button size="sm" variant="destructive" onClick={onRemove}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

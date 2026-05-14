@@ -10,8 +10,8 @@ import ReactMarkdown from 'react-markdown';
 
 const QUICK_PROMPTS = [
   '🎨 Generate a flyer for a 20% off flash sale on phones',
-  '🖼️ Design a product image for iPhone 15 Pro Max on white background',
-  '🖼️ Design a product banner for Oraimo earbuds – sleek modern look',
+  '🖼️ Show me an image of AirPods Pro on white background',
+  '🖼️ Photo of iPhone 15 charger – product image',
   '🎨 Create a promotional banner for Tecno Spark 20 at ₵1,200',
   '📣 Write a WhatsApp broadcast for a weekend sale',
   '📝 Write a product description for Samsung Galaxy A15',
@@ -47,7 +47,28 @@ export default function AdminAI() {
       lower.includes('product image') || lower.includes('product photo') ||
       lower.includes('product picture') || lower.includes('generate a photo') ||
       lower.includes('draw') || lower.includes('create a picture') ||
-      lower.includes('generate a picture')
+      lower.includes('generate a picture') || lower.includes('show me') ||
+      lower.includes('image of') || lower.includes('picture of') ||
+      lower.includes('photo of') || lower.includes('generate only')
+    );
+  };
+
+  const isPureProductImage = (msg) => {
+    const lower = msg.toLowerCase();
+    return (
+      lower.includes('product image') || lower.includes('product photo') ||
+      lower.includes('product picture') || lower.includes('design product') ||
+      lower.includes('image of') || lower.includes('picture of') ||
+      lower.includes('photo of') || lower.includes('show me') ||
+      lower.includes('generate only') ||
+      // If it has a product name but NOT a marketing term
+      (!lower.includes('flyer') && !lower.includes('banner') && !lower.includes('poster') &&
+       (lower.includes('airpods') || lower.includes('iphone') || lower.includes('samsung') ||
+        lower.includes('charger') || lower.includes('earphone') || lower.includes('earbuds') ||
+        lower.includes('cable') || lower.includes('phone case') || lower.includes('power bank') ||
+        lower.includes('speaker') || lower.includes('watch') || lower.includes('laptop') ||
+        lower.includes('tablet') || lower.includes('tv') || lower.includes('fridge') ||
+        lower.includes('blender') || lower.includes('microwave') || lower.includes('headphone')))
     );
   };
 
@@ -61,17 +82,15 @@ export default function AdminAI() {
     if (isImageRequest(msg)) {
       // Generate image flyer
       try {
-        setMessages(m => [...m, { role: 'assistant', content: '🎨 Generating your flyer... this takes about 10-15 seconds...', isTemp: true }]);
-        // Determine if product image or marketing flyer
-        const lower = msg.toLowerCase();
-        const isProductImage = lower.includes('product image') || lower.includes('product photo') || lower.includes('product picture') || lower.includes('product banner') || lower.includes('design product');
-        const imagePrompt = isProductImage
-          ? `Professional high-quality product photography for FMM CLASSICO Ghana electronics store. ${msg}. Clean white or gradient background, studio lighting, ultra-sharp focus, commercial product shot, 4K resolution, photorealistic, suitable for e-commerce listing.`
+        const isProductImg = isPureProductImage(msg);
+        setMessages(m => [...m, { role: 'assistant', content: isProductImg ? '🖼️ Generating product image... this takes about 10-15 seconds...' : '🎨 Generating your flyer... this takes about 10-15 seconds...', isTemp: true }]);
+        const imagePrompt = isProductImg
+          ? `Ultra-realistic professional product photography. Subject: ${msg}. Pure white background, studio soft-box lighting from top-left, crisp shadows, hyper-detailed, 8K resolution, commercial e-commerce product shot, no text, no logos, no watermarks, isolated product only, photorealistic render.`
           : `Professional high-quality advertising flyer for FMM CLASSICO Ghana store. ${msg}. Include bold text layout, vibrant colors, modern design, clean typography, product imagery. Style: photoshop-quality commercial banner, 4K resolution, professional marketing material.`;
         const { url } = await base44.integrations.Core.GenerateImage({ prompt: imagePrompt });
         setMessages(m => {
           const filtered = m.filter(x => !x.isTemp);
-          return [...filtered, { role: 'assistant', content: '✅ Here is your generated flyer!', image_url: url }];
+          return [...filtered, { role: 'assistant', content: isProductImg ? '✅ Here is your generated product image!' : '✅ Here is your generated flyer!', image_url: url }];
         });
       } catch (e) {
         setMessages(m => m.filter(x => !x.isTemp));
@@ -180,7 +199,7 @@ Respond in a helpful, practical and detailed way. Be specific to the Ghana/West 
                     <img src={msg.image_url} alt="Generated flyer" className="w-full object-cover" style={{ maxHeight: 400 }} />
                     <div className="flex gap-2 p-3 bg-gray-50 border-t border-gray-100">
                       <Button size="sm" className="bg-blue-600 hover:bg-blue-700 gap-1.5 flex-1" onClick={() => handleDownload(msg.image_url)}>
-                        <Download className="h-4 w-4" /> Download Flyer
+                        <Download className="h-4 w-4" /> Download Image
                       </Button>
                       <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.open(msg.image_url, '_blank')}>
                         Open Full Size

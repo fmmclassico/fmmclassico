@@ -16,7 +16,7 @@ const typeLabels = {
   complaint: { label: 'Complaint', color: 'bg-red-100 text-red-700' },
   suggestion: { label: 'Suggestion', color: 'bg-blue-100 text-blue-700' },
   compliment: { label: 'Compliment', color: 'bg-green-100 text-green-700' },
-  order_issue: { label: 'Order Issue', color: 'bg-orange-100 text-orange-700' },
+  order_issue: { label: 'Order Issue', color: 'bg-blue-100 text-blue-700' },
   delivery_issue: { label: 'Delivery Issue', color: 'bg-purple-100 text-purple-700' },
   other: { label: 'Other', color: 'bg-gray-100 text-gray-700' },
 };

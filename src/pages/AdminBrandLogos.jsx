@@ -163,15 +163,7 @@ export default function AdminBrandLogos() {
 function BrandCard({ brand, logo, isUploading, isCustom, onUpload, onRemoveLogo, onDeleteBrand }) {
   return (
     <Card className="p-3 flex flex-col items-center gap-2 relative">
-      {isCustom && onDeleteBrand && (
-        <button
-          onClick={onDeleteBrand}
-          className="absolute top-1.5 right-1.5 w-5 h-5 bg-red-100 hover:bg-red-200 text-red-500 rounded-full flex items-center justify-center transition-colors"
-          title="Delete this brand"
-        >
-          <X className="h-3 w-3" />
-        </button>
-      )}
+
       <span className="text-xs font-bold text-gray-700 text-center leading-tight">{brand}</span>
       <div className="w-16 h-16 rounded-xl border border-gray-200 bg-white flex items-center justify-center overflow-hidden">
         {logo
@@ -186,11 +178,21 @@ function BrandCard({ brand, logo, isUploading, isCustom, onUpload, onRemoveLogo,
         <input type="file" accept="image/*" className="hidden" disabled={isUploading}
           onChange={e => onUpload(e.target.files?.[0])} />
       </label>
-      {logo && (
-        <button onClick={onRemoveLogo} className="text-[11px] text-red-400 hover:text-red-600 flex items-center gap-1">
-          <Trash2 className="h-3 w-3" /> Remove Logo
-        </button>
-      )}
+      <button
+        onClick={onRemoveLogo}
+        disabled={!logo}
+        className={`text-[11px] flex items-center gap-1 transition-colors ${logo ? 'text-red-400 hover:text-red-600' : 'text-gray-200 cursor-not-allowed'}`}
+      >
+        <Trash2 className="h-3 w-3" /> Remove Logo
+      </button>
+      <button
+        onClick={onDeleteBrand || (() => {})}
+        disabled={!onDeleteBrand}
+        className={`text-[10px] flex items-center gap-1 transition-colors px-2 py-0.5 rounded border ${onDeleteBrand ? 'text-red-600 border-red-200 hover:bg-red-50' : 'text-gray-300 border-gray-100 cursor-not-allowed'}`}
+        title={onDeleteBrand ? 'Remove brand from app' : 'Default brand cannot be removed'}
+      >
+        <X className="h-3 w-3" /> {onDeleteBrand ? 'Remove Brand' : 'Default'}
+      </button>
     </Card>
   );
 }

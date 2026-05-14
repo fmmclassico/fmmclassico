@@ -140,6 +140,7 @@ export default function Layout({ children, currentPageName }) {
       { icon: Gem, label: 'Brand Logos', page: 'AdminBrandLogos' },
       { icon: Info, label: 'Edit About Page', page: 'AdminAbout' },
       { icon: Settings, label: 'Edit Page Content', page: 'AdminPageContent' },
+      { icon: Home, label: 'Edit Home & Categories', page: 'AdminHomeEditor' },
       { icon: Bot, label: 'AI Assistant', page: 'AdminAI' },
     ] : []),
   ];

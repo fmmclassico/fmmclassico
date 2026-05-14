@@ -47,7 +47,7 @@ const CATEGORIES = [
     id: 'electronics',
     name: 'Electronics',
     desc: 'TVs, laptops, cameras, audio & more',
-    image: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=400&q=90',
+    image: 'https://sp-ao.shortpixel.ai/client/to_auto,q_glossy,ret_img,w_800,h_586/https://ikonic.com/wp-content/uploads/2023/10/industries-consumer-electronics.jpeg',
     color: 'from-cyan-500 to-blue-600',
     subColor: 'blue',
     shopCategory: 'electronic_appliances',

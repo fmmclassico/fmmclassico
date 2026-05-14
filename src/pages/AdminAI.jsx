@@ -40,39 +40,40 @@ export default function AdminAI() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const PRODUCT_KEYWORDS = [
+    'airpods', 'iphone', 'samsung', 'tecno', 'infinix', 'itel', 'oraimo',
+    'charger', 'earphone', 'earbuds', 'earbud', 'cable', 'phone case', 'power bank',
+    'speaker', 'watch', 'laptop', 'tablet', 'tv', 'fridge', 'blender', 'microwave',
+    'headphone', 'headphones', 'keyboard', 'mouse', 'router', 'modem', 'printer',
+    'camera', 'tripod', 'selfie stick', 'ring light', 'powerbank', 'adapter',
+    'screen protector', 'tempered glass', 'phone holder', 'car charger', 'wireless charger',
+    'bluetooth', 'neckband', 'TWS', 'air fryer', 'kettle', 'iron', 'fan', 'ac unit',
+    'smart watch', 'smartwatch', 'washing machine', 'refrigerator', 'air conditioner',
+    'jbl', 'apple', 'huawei', 'oppo', 'realme', 'xiaomi', 'redmi', 'nokia', 'itel',
+    'product', 'gadget', 'device', 'accessory', 'accessories'
+  ];
+
   const isImageRequest = (msg) => {
     const lower = msg.toLowerCase();
+    const hasMarketingWord = lower.includes('flyer') || lower.includes('banner') || lower.includes('poster') || lower.includes('promotional') || lower.includes('advertisement');
+    const hasImageWord = lower.includes('generate') || lower.includes('create') || lower.includes('design') || lower.includes('make') || lower.includes('show') || lower.includes('draw') || lower.includes('render') || lower.includes('give me') || lower.includes('get me') || lower.includes('i want');
+    const hasProductWord = PRODUCT_KEYWORDS.some(k => lower.includes(k));
     return (
-      lower.includes('flyer') || lower.includes('banner') || lower.includes('poster') ||
+      hasMarketingWord ||
       lower.includes('generate image') || lower.includes('create image') ||
-      lower.includes('design a') || lower.includes('design product') ||
-      lower.includes('make a flyer') || lower.includes('make a banner') ||
       lower.includes('product image') || lower.includes('product photo') ||
       lower.includes('product picture') || lower.includes('generate a photo') ||
-      lower.includes('draw') || lower.includes('create a picture') ||
-      lower.includes('generate a picture') || lower.includes('show me') ||
-      lower.includes('image of') || lower.includes('picture of') ||
-      lower.includes('photo of') || lower.includes('generate only')
+      lower.includes('generate a picture') || lower.includes('image of') ||
+      lower.includes('picture of') || lower.includes('photo of') ||
+      lower.includes('generate only') || lower.includes('show me an image') ||
+      (hasImageWord && hasProductWord)
     );
   };
 
   const isPureProductImage = (msg) => {
     const lower = msg.toLowerCase();
-    return (
-      lower.includes('product image') || lower.includes('product photo') ||
-      lower.includes('product picture') || lower.includes('design product') ||
-      lower.includes('image of') || lower.includes('picture of') ||
-      lower.includes('photo of') || lower.includes('show me') ||
-      lower.includes('generate only') ||
-      // If it has a product name but NOT a marketing term
-      (!lower.includes('flyer') && !lower.includes('banner') && !lower.includes('poster') &&
-       (lower.includes('airpods') || lower.includes('iphone') || lower.includes('samsung') ||
-        lower.includes('charger') || lower.includes('earphone') || lower.includes('earbuds') ||
-        lower.includes('cable') || lower.includes('phone case') || lower.includes('power bank') ||
-        lower.includes('speaker') || lower.includes('watch') || lower.includes('laptop') ||
-        lower.includes('tablet') || lower.includes('tv') || lower.includes('fridge') ||
-        lower.includes('blender') || lower.includes('microwave') || lower.includes('headphone')))
-    );
+    const hasMarketingWord = lower.includes('flyer') || lower.includes('banner') || lower.includes('poster') || lower.includes('advertisement');
+    return !hasMarketingWord;
   };
 
   const handleImageAttach = async (e) => {

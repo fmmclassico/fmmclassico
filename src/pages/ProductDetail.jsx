@@ -252,28 +252,28 @@ export default function ProductDetail() {
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="space-y-6"
+          className="space-y-4"
         >
           <div>
-            <Badge variant="outline" className="mb-2">{categoryNames[product.category]}</Badge>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">{product.name}</h1>
-            <div className="flex items-center gap-2">
+            <Badge variant="outline" className="mb-1.5 text-xs">{categoryNames[product.category]}</Badge>
+            <h1 className="text-lg md:text-xl font-bold text-gray-800 mb-1.5 leading-snug">{product.name}</h1>
+            <div className="flex items-center gap-1.5">
               <div className="flex items-center">
                 {[1,2,3,4,5].map(i => (
                   <Star 
                     key={i} 
-                    className={`h-5 w-5 ${i <= (product.rating || 4) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
+                    className={`h-3.5 w-3.5 ${i <= (product.rating || 4) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
                   />
                 ))}
               </div>
-              <span className="text-gray-600">({product.reviews_count || 0} reviews)</span>
+              <span className="text-gray-500 text-xs">({product.reviews_count || 0} reviews)</span>
             </div>
           </div>
 
-          <div className="flex items-baseline gap-3">
-            <span className="text-4xl font-bold text-[#2E86C1]">₵{product.price?.toFixed(2)}</span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-[#2E86C1]">₵{product.price?.toFixed(2)}</span>
             {product.original_price && (
-              <span className="text-xl text-gray-400 line-through">₵{product.original_price?.toFixed(2)}</span>
+              <span className="text-base text-gray-400 line-through">₵{product.original_price?.toFixed(2)}</span>
             )}
           </div>
 
@@ -287,8 +287,8 @@ export default function ProductDetail() {
             </details>
           )}
 
-          <div className="flex items-center gap-4">
-            <span className="text-gray-600 font-medium">Quantity:</span>
+          <div className="flex items-center gap-3">
+            <span className="text-gray-600 font-medium text-sm">Quantity:</span>
             <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
               <Button 
                 size="icon" 
@@ -309,7 +309,7 @@ export default function ProductDetail() {
               </Button>
             </div>
             {product.stock != null && (
-              <span className={`text-sm font-semibold ${product.stock <= 5 ? 'text-red-500' : 'text-gray-500'}`}>
+              <span className={`text-xs font-semibold ${product.stock <= 5 ? 'text-red-500' : 'text-gray-500'}`}>
                 {product.stock} in stock
               </span>
             )}

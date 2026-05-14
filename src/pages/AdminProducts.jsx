@@ -171,8 +171,10 @@ export default function AdminProducts() {
       return base44.entities.Product.create(payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products-admin'] });
+      queryClient.removeQueries({ queryKey: ['products'] });
+      queryClient.removeQueries({ queryKey: ['products-admin'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['products-admin'] });
       toast.success(editingProduct ? 'Product updated!' : 'Product created!');
       setShowForm(false);
       setEditingProduct(null);
@@ -183,8 +185,10 @@ export default function AdminProducts() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Product.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products-admin'] });
+      queryClient.removeQueries({ queryKey: ['products'] });
+      queryClient.removeQueries({ queryKey: ['products-admin'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['products-admin'] });
       toast.success('Product deleted');
     }
   });

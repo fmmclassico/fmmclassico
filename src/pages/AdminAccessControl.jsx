@@ -22,6 +22,31 @@ import { toast } from "sonner";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 
+const RESEND_API_KEY = 're_h3nmhgLi_H26Z9XqeoaqLnrTq2bxZ6nzr';
+const OWNER_EMAIL = 'fmmclassico@gmail.com';
+
+async function sendEmailWithResend(to, subject, body) {
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: 'onboarding@resend.dev',
+      to: to,
+      subject: subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+          <h2>FMM CLASSICO Admin</h2>
+          <p>${body}</p>
+        </div>
+      `
+    })
+  });
+  if (!response.ok) throw new Error('Failed to send email');
+}
+
 export default function AdminAccessControl() {
   const [user, setUser] = useState(null);
   const [isGranting, setIsGranting] = useState(null);
@@ -35,12 +60,13 @@ export default function AdminAccessControl() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [verificationStep, setVerificationStep] = useState(null);
   const [verificationCode, setVerificationCode] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
   const [sentCodeEmail, setSentCodeEmail] = useState('');
   const queryClient = useQueryClient();
 
   const MASTER_ADMIN_EMAIL = 'fmmclassico@gmail.com';
   const VERIFICATION_EMAILS = ['fmmclassico@gmail.com', 'mensahfedramartha@gmail.com'];
-  
+
   const ALLOWED_EMAILS = [
     'fmmclassico@gmail.com',
     'fmmcompanylimited@gmail.com',
@@ -49,25 +75,29 @@ export default function AdminAccessControl() {
     'lovelyfedra@gmail.com'
   ];
 
-  const DEFAULT_ADMIN_PASSWORD = '0599676419fmm';
+  const DEFAULT_ADMIN_PASSWORD = '0244129908fmm';
 
   useEffect(() => {
     const checkMasterAdmin = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
-      if (!isAuth) {
-        toast.error('Please login');
-        return;
+      try {
+        const isAuth = await base44.auth.isAuthenticated();
+        if (!isAuth) {
+          toast.error('Please login');
+          return;
+        }
+        const userData = await base44.auth.me();
+        if (userData.role !== 'admin') {
+          toast.error('Admin access required');
+          return;
+        }
+        if (userData.email !== MASTER_ADMIN_EMAIL) {
+          toast.error('Only fmmclassico@gmail.com can access this page');
+          return;
+        }
+        setUser(userData);
+      } catch (error) {
+        toast.error('Error verifying access. Please refresh the page.');
       }
-      const userData = await base44.auth.me();
-      if (userData.role !== 'admin') {
-        toast.error('Admin access required');
-        return;
-      }
-      if (userData.email !== MASTER_ADMIN_EMAIL) {
-        toast.error('Only fmmclassico@gmail.com can access this page');
-        return;
-      }
-      setUser(userData);
     };
     checkMasterAdmin();
   }, []);
@@ -104,16 +134,11 @@ export default function AdminAccessControl() {
       toast.error('Please enter the admin password');
       return;
     }
-
-    // Verify password
     if (adminPassword !== currentAdminPassword) {
       toast.error('Incorrect password');
       return;
     }
-
     setShowPasswordModal(false);
-    
-    // Now grant admin access
     const userInfo = allUsers.find(u => u.email === pendingEmail);
     setIsGranting(pendingEmail);
     try {
@@ -121,13 +146,11 @@ export default function AdminAccessControl() {
         await base44.entities.User.update(userInfo.id, { role: 'admin' });
         toast.success(`✅ Admin access granted to ${pendingEmail}`);
       } else {
-        // User doesn't exist - invite them first with user role, then grant admin
         await base44.users.inviteUser(pendingEmail, 'user');
-        toast.success(`✅ Invitation sent to ${pendingEmail}. Once they register, you can grant admin access.`);
+        toast.success(`✅ Invitation sent to ${pendingEmail}.`);
       }
       queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     } catch (error) {
-      console.error('Grant error:', error);
       toast.error(error.message || 'Failed to grant access');
     } finally {
       setIsGranting(null);
@@ -142,6 +165,8 @@ export default function AdminAccessControl() {
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
+    setVerificationCode('');
+    setGeneratedCode('');
   };
 
   const sendVerificationCode = async () => {
@@ -150,35 +175,25 @@ export default function AdminAccessControl() {
       return;
     }
 
-    // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedCode(code);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     try {
-      // Send to both verification emails
-      for (const email of VERIFICATION_EMAILS) {
-        await base44.entities.VerificationCode.create({
-          email,
-          code,
-          purpose: 'password_change',
-          expires_at: expiresAt,
-          is_used: false
-        });
-        
-        // Send email notification
-        await base44.integrations.Core.SendEmail({
-          to: email,
-          subject: 'Admin Password Change Verification Code',
-          body: `Your verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email.`
-        });
-      }
+      // Send email using Resend to owner email only
+      await sendEmailWithResend(
+        OWNER_EMAIL,
+        'FMM CLASSICO — Admin Password Change Code',
+        `Your verification code to change the admin password is:<br/><br/>
+        <span style="font-size: 48px; font-weight: bold; color: #4F46E5; letter-spacing: 10px;">${code}</span>
+        <br/><br/>This code expires in <strong>10 minutes</strong>.`
+      );
 
-      setSentCodeEmail(VERIFICATION_EMAILS.join(' and '));
+      setSentCodeEmail(OWNER_EMAIL);
       setVerificationStep('code');
-      toast.success(`✅ Verification code sent to ${VERIFICATION_EMAILS.join(' and ')}`);
+      toast.success(`✅ Verification code sent to ${OWNER_EMAIL}`);
     } catch (error) {
-      console.error('Send code error:', error);
-      toast.error('Failed to send verification code: ' + error.message);
+      toast.error('Failed to send verification code. Please try again.');
     }
   };
 
@@ -187,44 +202,20 @@ export default function AdminAccessControl() {
       toast.error('Please enter the 6-digit verification code');
       return;
     }
-
+    if (verificationCode !== generatedCode) {
+      toast.error('Invalid or expired verification code');
+      return;
+    }
     if (!newPassword || newPassword.length < 6) {
       toast.error('New password must be at least 6 characters');
       return;
     }
-
     if (newPassword !== confirmPassword) {
       toast.error('New passwords do not match');
       return;
     }
 
     try {
-      // Verify code for both emails
-      let validCode = null;
-      for (const email of VERIFICATION_EMAILS) {
-        const codes = await base44.entities.VerificationCode.filter({
-          email,
-          code: verificationCode,
-          purpose: 'password_change',
-          is_used: false
-        });
-        
-        const valid = codes.find(c => new Date(c.expires_at) > new Date());
-        if (valid) {
-          validCode = valid;
-          break;
-        }
-      }
-
-      if (!validCode) {
-        toast.error('Invalid or expired verification code');
-        return;
-      }
-
-      // Mark code as used
-      await base44.entities.VerificationCode.update(validCode.id, { is_used: true });
-
-      // Update password
       const existingPassword = adminPasswordData?.[0];
       if (existingPassword) {
         await base44.entities.AdminPassword.update(existingPassword.id, {
@@ -239,12 +230,12 @@ export default function AdminAccessControl() {
           last_changed: new Date().toISOString()
         });
       }
-
       toast.success('✅ Admin password changed successfully!');
       setShowChangePassword(false);
+      setVerificationStep(null);
+      setGeneratedCode('');
       queryClient.invalidateQueries({ queryKey: ['adminPassword'] });
     } catch (error) {
-      console.error('Change password error:', error);
       toast.error('Failed to change password: ' + error.message);
     }
   };
@@ -254,11 +245,7 @@ export default function AdminAccessControl() {
       toast.error('Cannot revoke master admin access');
       return;
     }
-
-    if (!confirm(`Are you sure you want to remove admin access from ${userEmail}?`)) {
-      return;
-    }
-
+    if (!confirm(`Are you sure you want to remove admin access from ${userEmail}?`)) return;
     setIsRevoking(userId);
     try {
       await base44.entities.User.update(userId, { role: 'user' });
@@ -286,13 +273,10 @@ export default function AdminAccessControl() {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-6">
         <Link to={createPageUrl('Home')}>
-          <Button variant="outline" className="gap-2">
-            ← Back to Home
-          </Button>
+          <Button variant="outline" className="gap-2">← Back to Home</Button>
         </Link>
       </div>
 
-      {/* Header */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-3">
           <Shield className="h-8 w-8 text-blue-800" />
@@ -305,7 +289,6 @@ export default function AdminAccessControl() {
         </Badge>
       </div>
 
-      {/* Authorized Emails */}
       <Card className="p-6 mb-6 shadow-md border-2 border-blue-200">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -323,32 +306,27 @@ export default function AdminAccessControl() {
           </Button>
         </div>
         <p className="text-sm text-gray-600 mb-4">
-          Only these {ALLOWED_EMAILS.length} emails can be granted admin access. Enter the admin password to grant access.
+          Only these {ALLOWED_EMAILS.length} emails can be granted admin access.
         </p>
         <div className="space-y-2">
           {ALLOWED_EMAILS.map((email) => {
             const userInfo = allUsers.find(u => u.email === email);
             const isAdmin = userInfo?.role === 'admin';
             const isMasterAdmin = email === MASTER_ADMIN_EMAIL;
-            
             return (
-              <div 
+              <div
                 key={email}
                 className={`flex items-center justify-between p-3 rounded-lg border ${
-                  isMasterAdmin 
-                    ? 'bg-blue-50 border-blue-200' 
-                    : isAdmin 
-                      ? 'bg-green-50 border-green-200' 
-                      : 'bg-gray-50 border-gray-200'
+                  isMasterAdmin ? 'bg-blue-50 border-blue-200'
+                  : isAdmin ? 'bg-green-50 border-green-200'
+                  : 'bg-gray-50 border-gray-200'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    isMasterAdmin 
-                      ? 'bg-blue-800 text-white' 
-                      : isAdmin 
-                        ? 'bg-green-600 text-white' 
-                        : 'bg-gray-200 text-gray-600'
+                    isMasterAdmin ? 'bg-blue-800 text-white'
+                    : isAdmin ? 'bg-green-600 text-white'
+                    : 'bg-gray-200 text-gray-600'
                   }`}>
                     <Mail className="h-5 w-5" />
                   </div>
@@ -357,18 +335,14 @@ export default function AdminAccessControl() {
                     <div className="flex gap-2 mt-1">
                       {isMasterAdmin ? (
                         <Badge className="text-xs bg-blue-800 text-white">
-                          <Shield className="h-3 w-3 mr-1" />
-                          Master Admin
+                          <Shield className="h-3 w-3 mr-1" /> Master Admin
                         </Badge>
                       ) : isAdmin ? (
                         <Badge className="text-xs bg-green-600 text-white">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Admin Access
+                          <CheckCircle className="h-3 w-3 mr-1" /> Admin Access
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-xs text-gray-600">
-                          No Admin Access
-                        </Badge>
+                        <Badge variant="outline" className="text-xs text-gray-600">No Admin Access</Badge>
                       )}
                     </div>
                   </div>
@@ -383,11 +357,9 @@ export default function AdminAccessControl() {
                         disabled={isRevoking === userInfo?.id}
                         className="bg-red-600 hover:bg-red-700"
                       >
-                        {isRevoking === userInfo?.id ? (
-                          <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Removing...</>
-                        ) : (
-                          <><ShieldOff className="h-3 w-3 mr-2" /> Revoke</>
-                        )}
+                        {isRevoking === userInfo?.id
+                          ? <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Removing...</>
+                          : <><ShieldOff className="h-3 w-3 mr-2" /> Revoke</>}
                       </Button>
                     ) : (
                       <Button
@@ -397,11 +369,9 @@ export default function AdminAccessControl() {
                         disabled={isGranting === email}
                         className="bg-blue-800 hover:bg-blue-900"
                       >
-                        {isGranting === email ? (
-                          <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Granting...</>
-                        ) : (
-                          <><Shield className="h-3 w-3 mr-2" /> Grant</>
-                        )}
+                        {isGranting === email
+                          ? <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Granting...</>
+                          : <><Shield className="h-3 w-3 mr-2" /> Grant</>}
                       </Button>
                     )}
                   </div>
@@ -412,9 +382,6 @@ export default function AdminAccessControl() {
         </div>
       </Card>
 
-
-
-      {/* Info Box */}
       <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
         <div className="flex items-start gap-2">
           <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
@@ -446,26 +413,13 @@ export default function AdminAccessControl() {
               autoFocus
             />
             <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowPasswordModal(false);
-                  setPendingEmail(null);
-                  setAdminPassword('');
-                }}
-              >
+              <Button variant="outline" onClick={() => { setShowPasswordModal(false); setPendingEmail(null); setAdminPassword(''); }}>
                 Cancel
               </Button>
-              <Button
-                onClick={verifyPasswordAndGrant}
-                disabled={isGranting === pendingEmail}
-                className="bg-blue-800 hover:bg-blue-900"
-              >
-                {isGranting === pendingEmail ? (
-                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Granting...</>
-                ) : (
-                  'Grant Access'
-                )}
+              <Button onClick={verifyPasswordAndGrant} disabled={isGranting === pendingEmail} className="bg-blue-800 hover:bg-blue-900">
+                {isGranting === pendingEmail
+                  ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Granting...</>
+                  : 'Grant Access'}
               </Button>
             </div>
           </Card>
@@ -478,7 +432,7 @@ export default function AdminAccessControl() {
           <Card className="max-w-lg w-full p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-2">Change Admin Password</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Verification will be sent to: <strong>{VERIFICATION_EMAILS.join(' and ')}</strong>
+              Verification code will be sent to: <strong>{OWNER_EMAIL}</strong>
             </p>
 
             {verificationStep === 'password' && (
@@ -494,20 +448,10 @@ export default function AdminAccessControl() {
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowChangePassword(false);
-                      setVerificationStep(null);
-                      setCurrentPassword('');
-                    }}
-                  >
+                  <Button variant="outline" onClick={() => { setShowChangePassword(false); setVerificationStep(null); setCurrentPassword(''); }}>
                     Cancel
                   </Button>
-                  <Button
-                    onClick={sendVerificationCode}
-                    className="bg-blue-800 hover:bg-blue-900"
-                  >
+                  <Button onClick={sendVerificationCode} className="bg-blue-800 hover:bg-blue-900">
                     Send Verification Code
                   </Button>
                 </div>
@@ -528,7 +472,7 @@ export default function AdminAccessControl() {
                     value={verificationCode}
                     onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder="Enter 6-digit code"
-                    className="mt-1"
+                    className="mt-1 text-center text-xl tracking-widest font-bold"
                     maxLength={6}
                   />
                 </div>
@@ -553,22 +497,10 @@ export default function AdminAccessControl() {
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowChangePassword(false);
-                      setVerificationStep(null);
-                      setCurrentPassword('');
-                      setNewPassword('');
-                      setConfirmPassword('');
-                    }}
-                  >
+                  <Button variant="outline" onClick={() => { setShowChangePassword(false); setVerificationStep(null); }}>
                     Cancel
                   </Button>
-                  <Button
-                    onClick={verifyCodeAndChangePassword}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
+                  <Button onClick={verifyCodeAndChangePassword} className="bg-green-600 hover:bg-green-700">
                     Change Password
                   </Button>
                 </div>

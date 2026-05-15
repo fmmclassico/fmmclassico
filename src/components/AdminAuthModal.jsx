@@ -4,18 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Lock, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
 
 const ADMIN_PASSWORD = '0244129908fmm';
 const OWNER_EMAIL = 'fmmclassico@gmail.com';
+const RESEND_API_KEY = 're_h3nmhgLi_H26Z9XqeoaqLnrTq2bxZ6nzr';
 
-// Generate a 6-digit code
 function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }) {
-  const [step, setStep] = useState('password'); // 'password' | 'otp'
+  const [step, setStep] = useState('password');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
@@ -32,13 +31,36 @@ export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }
     setGeneratedCode(code);
 
     try {
-      // Send verification code to OWNER's email only (do NOT show destination to user)
-      await base44.integrations.Core.SendEmail({
-        to: OWNER_EMAIL,
-        subject: 'FMM CLASSICO — Admin Verification Code',
-        body: `Someone is trying to access the admin panel.\n\nVerification Code: ${code}\n\nThis code expires in 10 minutes.\n\nIf this wasn't you, please change your admin password immediately.`,
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'onboarding@resend.dev',
+          to: OWNER_EMAIL,
+          subject: 'FMM CLASSICO — Admin Verification Code',
+          html: `
+            <div style="font-family: Arial, sans-serif; text-align: center; padding: 40px;">
+              <h2>FMM CLASSICO Admin Access</h2>
+              <p>Someone is trying to access the admin panel.</p>
+              <p>Your verification code is:</p>
+              <h1 style="color: #4F46E5; font-size: 56px; letter-spacing: 10px; font-weight: bold;">
+                ${code}
+              </h1>
+              <p>This code expires in <strong>10 minutes</strong>.</p>
+              <p style="color: grey; font-size: 12px;">If this was not you, please change your admin password immediately.</p>
+            </div>
+          `
+        })
       });
-      toast.success('Verification code sent. Please enter it below.');
+
+      if (!response.ok) {
+        throw new Error('Email failed');
+      }
+
+      toast.success('Verification code sent to your email!');
       setStep('otp');
     } catch {
       toast.error('Failed to send verification code. Try again.');
@@ -94,7 +116,7 @@ export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }
         ) : (
           <form onSubmit={handleOtpSubmit} className="space-y-4">
             <p className="text-sm text-gray-500">
-              A verification code has been sent. Please enter it below to complete login.
+              A verification code has been sent to your email. Enter it below to complete login.
             </p>
             <div>
               <label className="text-sm font-semibold text-gray-700">Verification Code</label>

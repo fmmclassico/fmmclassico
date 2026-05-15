@@ -55,9 +55,6 @@ export default function AdminAccessControl() {
   const [accessDenied, setAccessDenied] = useState(false);
   const [isGranting, setIsGranting] = useState(null);
   const [isRevoking, setIsRevoking] = useState(null);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState(null);
-  const [adminPassword, setAdminPassword] = useState('');
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -104,43 +101,46 @@ export default function AdminAccessControl() {
 
   const currentAdminPassword = adminPasswordData?.[0]?.password_hash || DEFAULT_ADMIN_PASSWORD;
 
-  const handleGrantClick = (userEmail) => {
+  // Grant access directly — no password needed
+  const handleGrantClick = async (userEmail) => {
     if (userEmail === MASTER_ADMIN_EMAIL) {
       toast.error('Cannot modify master admin access');
       return;
     }
-    setPendingEmail(userEmail);
-    setShowPasswordModal(true);
-    setAdminPassword('');
-  };
-
-  const verifyPasswordAndGrant = async () => {
-    if (!adminPassword) {
-      toast.error('Please enter the admin password');
-      return;
-    }
-    if (adminPassword !== currentAdminPassword) {
-      toast.error('Incorrect password');
-      return;
-    }
-    setShowPasswordModal(false);
-    const userInfo = allUsers.find(u => u.email === pendingEmail);
-    setIsGranting(pendingEmail);
+    const userInfo = allUsers.find(u => u.email === userEmail);
+    setIsGranting(userEmail);
     try {
       if (userInfo && userInfo.id) {
         await base44.entities.User.update(userInfo.id, { role: 'admin' });
-        toast.success(`✅ Admin access granted to ${pendingEmail}`);
+        toast.success(`✅ Admin access granted to ${userEmail}`);
       } else {
-        await base44.users.inviteUser(pendingEmail, 'user');
-        toast.success(`✅ Invitation sent to ${pendingEmail}.`);
+        await base44.users.inviteUser(userEmail, 'user');
+        toast.success(`✅ Invitation sent to ${userEmail}.`);
       }
       queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     } catch (error) {
       toast.error(error.message || 'Failed to grant access');
     } finally {
       setIsGranting(null);
-      setPendingEmail(null);
-      setAdminPassword('');
+    }
+  };
+
+  // Revoke access directly — no password needed
+  const handleRevokeAdmin = async (userId, userEmail) => {
+    if (userEmail === MASTER_ADMIN_EMAIL) {
+      toast.error('Cannot revoke master admin access');
+      return;
+    }
+    if (!confirm(`Are you sure you want to remove admin access from ${userEmail}?`)) return;
+    setIsRevoking(userId);
+    try {
+      await base44.entities.User.update(userId, { role: 'user' });
+      toast.success(`✅ Admin access revoked for ${userEmail}`);
+      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
+    } catch (error) {
+      toast.error('Failed to revoke admin access: ' + error.message);
+    } finally {
+      setIsRevoking(null);
     }
   };
 
@@ -161,7 +161,6 @@ export default function AdminAccessControl() {
       toast.error('New passwords do not match');
       return;
     }
-
     setChangingPassword(true);
     try {
       const existingPassword = adminPasswordData?.[0];
@@ -178,7 +177,6 @@ export default function AdminAccessControl() {
           last_changed: new Date().toISOString()
         });
       }
-
       await sendEmailWithResend(
         MASTER_ADMIN_EMAIL,
         'FMM CLASSICO — Admin Password Changed',
@@ -192,8 +190,7 @@ export default function AdminAccessControl() {
           </div>
         `
       );
-
-      toast.success('✅ Password changed successfully! A confirmation email has been sent.');
+      toast.success('✅ Password changed! A confirmation email has been sent.');
       setShowChangePassword(false);
       setCurrentPassword('');
       setNewPassword('');
@@ -203,24 +200,6 @@ export default function AdminAccessControl() {
       toast.error('Failed to change password: ' + error.message);
     } finally {
       setChangingPassword(false);
-    }
-  };
-
-  const handleRevokeAdmin = async (userId, userEmail) => {
-    if (userEmail === MASTER_ADMIN_EMAIL) {
-      toast.error('Cannot revoke master admin access');
-      return;
-    }
-    if (!confirm(`Are you sure you want to remove admin access from ${userEmail}?`)) return;
-    setIsRevoking(userId);
-    try {
-      await base44.entities.User.update(userId, { role: 'user' });
-      toast.success(`✅ Admin access revoked for ${userEmail}`);
-      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
-    } catch (error) {
-      toast.error('Failed to revoke admin access: ' + error.message);
-    } finally {
-      setIsRevoking(null);
     }
   };
 
@@ -373,34 +352,6 @@ export default function AdminAccessControl() {
           </div>
         </div>
       </div>
-
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Enter Admin Password</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Grant admin access to <strong>{pendingEmail}</strong>
-            </p>
-            <Input
-              type="password"
-              placeholder="Enter admin password"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && verifyPasswordAndGrant()}
-              className="mb-4"
-              autoFocus
-            />
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => { setShowPasswordModal(false); setPendingEmail(null); setAdminPassword(''); }}>
-                Cancel
-              </Button>
-              <Button onClick={verifyPasswordAndGrant} className="bg-blue-800 hover:bg-blue-900">
-                Grant Access
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
 
       {showChangePassword && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

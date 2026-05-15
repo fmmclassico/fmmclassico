@@ -139,6 +139,8 @@ export default function AdminProducts() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
@@ -254,6 +256,30 @@ export default function AdminProducts() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === products.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(products.map(p => p.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    if (!confirm(`Delete ${selectedIds.length} product(s)? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    await Promise.all(selectedIds.map(id => base44.entities.Product.delete(id)));
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+    queryClient.invalidateQueries({ queryKey: ['products-admin'] });
+    setSelectedIds([]);
+    setBulkDeleting(false);
+    toast.success(`${selectedIds.length} product(s) deleted`);
+  };
+
   if (!isAdmin && user) {
     return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
   }
@@ -263,12 +289,42 @@ export default function AdminProducts() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-gray-800">Manage Products</h1>
         <Button onClick={handleNew} className="gap-2 bg-blue-600 hover:bg-blue-700">
           <Plus className="h-4 w-4" /> Add Product
         </Button>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {products.length > 0 && (
+        <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200 flex-wrap">
+          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
+            <input
+              type="checkbox"
+              checked={selectedIds.length === products.length && products.length > 0}
+              onChange={toggleSelectAll}
+              className="w-4 h-4"
+            />
+            {selectedIds.length === products.length ? 'Deselect All' : 'Select All'}
+          </label>
+          {selectedIds.length > 0 && (
+            <>
+              <span className="text-sm text-gray-500">{selectedIds.length} selected</span>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="gap-1.5"
+              >
+                {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                Delete Selected
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Form */}
       {showForm && (
@@ -462,35 +518,69 @@ export default function AdminProducts() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {products.map(product => (
-            <Card key={product.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-              <div className="aspect-square bg-gray-50 relative overflow-hidden">
-                {product.image_url
-                  ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                  : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
-                <div className="absolute top-1 left-1 flex flex-col gap-1">
-                  {product.featured && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
-                  {product.flash_sale && <Badge className="text-[9px] px-1 py-0 bg-orange-500">Flash</Badge>}
-                  {product.donkomi && <Badge className="text-[9px] px-1 py-0 bg-green-500">Donkomi</Badge>}
+          {products.map(product => {
+            const isSelected = selectedIds.includes(product.id);
+            return (
+              <Card key={product.id} className={`overflow-hidden shadow-sm hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
+                <div className="aspect-square bg-gray-50 relative overflow-hidden">
+                  {product.image_url
+                    ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
+                  {/* Selection checkbox */}
+                  <div className="absolute top-1.5 right-1.5">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(product.id)}
+                      className="w-4 h-4 cursor-pointer accent-blue-600"
+                      onClick={e => e.stopPropagation()}
+                    />
+                  </div>
+                  <div className="absolute top-1 left-1 flex flex-col gap-1">
+                    {product.featured && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
+                    {product.flash_sale && <Badge className="text-[9px] px-1 py-0 bg-orange-500">Flash</Badge>}
+                    {product.donkomi && <Badge className="text-[9px] px-1 py-0 bg-green-500">Donkomi</Badge>}
+                  </div>
                 </div>
-              </div>
-              <div className="p-2">
-                <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
-                <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
-                {product.stock != null && <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>}
-                <div className="flex gap-1 mt-2">
-                  <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
-                    <Pencil className="h-3 w-3" /> Edit
-                  </Button>
-                  <Button size="sm" variant="destructive" className="h-7 w-7 p-0" onClick={() => {
-                    if (confirm('Delete this product?')) deleteMutation.mutate(product.id);
-                  }}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                <div className="p-2">
+                  <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
+                  <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
+                  {product.stock != null && <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>}
+                  {/* Quick section-tag toggles */}
+                  <div className="flex gap-1 mt-1.5 flex-wrap">
+                    {[
+                      { key: 'featured', label: '⭐', title: 'Featured' },
+                      { key: 'flash_sale', label: '⚡', title: 'Flash Sale' },
+                      { key: 'donkomi', label: '🔥', title: 'Donkomi' },
+                    ].map(({ key, label, title }) => (
+                      <button
+                        key={key}
+                        title={`Toggle ${title}`}
+                        onClick={() => base44.entities.Product.update(product.id, { [key]: !product[key] }).then(() => {
+                          queryClient.invalidateQueries({ queryKey: ['products-admin'] });
+                          queryClient.invalidateQueries({ queryKey: ['products'] });
+                          toast.success(`${title} ${!product[key] ? 'enabled' : 'disabled'}`);
+                        })}
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold transition-colors ${product[key] ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-gray-100 border-gray-300 text-gray-400'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-1 mt-1.5">
+                    <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
+                      <Pencil className="h-3 w-3" /> Edit
+                    </Button>
+                    <Button size="sm" variant="destructive" className="h-7 w-7 p-0" onClick={() => {
+                      if (confirm('Delete this product?')) deleteMutation.mutate(product.id);
+                    }}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
       {!isLoading && products.length === 0 && (

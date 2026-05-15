@@ -194,15 +194,6 @@ export default function Categories() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1 text-xs text-gray-400 mb-4">
-        <Link to={createPageUrl('Home')} className="flex items-center gap-1 hover:text-gray-700">
-          <Home className="h-3 w-3" /> Home
-        </Link>
-        <span>/</span>
-        <span className="text-gray-700 font-semibold">Categories</span>
-      </div>
-
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Shop by Category</h1>
         {isAdmin && (

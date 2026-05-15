@@ -207,16 +207,7 @@ export default function About() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="container mx-auto px-4 py-16 text-center">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">{g('about_cta_title')}</h2>
-          <p className="text-gray-500 mb-6 max-w-md mx-auto">{g('about_cta_subtitle')}</p>
-          <Link to={createPageUrl('Shop')}>
-            <Button size="lg" className="bg-[#2E86C1] hover:bg-[#2578ae] font-bold">Start Shopping</Button>
-          </Link>
-        </motion.div>
-      </section>
+
     </div>
   );
 }

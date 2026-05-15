@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Star, Trash2, CheckCircle2, XCircle, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Switch } from "@/components/ui/switch";
+import { Star, Trash2, CheckCircle2, XCircle, ToggleLeft, ToggleRight, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AdminReviews() {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [autoApprove, setAutoApprove] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -40,6 +42,17 @@ export default function AdminReviews() {
     }
   });
 
+  const approveAllMutation = useMutation({
+    mutationFn: async () => {
+      const pendingReviews = reviews.filter(r => !r.approved);
+      await Promise.all(pendingReviews.map(r => base44.entities.Review.update(r.id, { approved: true })));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminReviews'] });
+      toast.success('All pending reviews approved!');
+    }
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Review.delete(id),
     onSuccess: () => {
@@ -56,6 +69,17 @@ export default function AdminReviews() {
     }
   });
 
+  // Auto-approve new reviews when toggle is on
+  useEffect(() => {
+    if (!autoApprove || !isAdmin) return;
+    const pending = reviews.filter(r => !r.approved);
+    if (pending.length > 0) {
+      Promise.all(pending.map(r => base44.entities.Review.update(r.id, { approved: true }))).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['adminReviews'] });
+      });
+    }
+  }, [autoApprove, reviews, isAdmin]);
+
   if (!isAdmin && user) return (
     <div className="container mx-auto px-4 py-12 text-center">
       <h2 className="text-xl font-bold text-gray-800">Access Denied</h2>
@@ -69,7 +93,30 @@ export default function AdminReviews() {
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-8">
-      <h1 className="text-2xl font-bold text-gray-800">Admin – Reviews & Ratings</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-gray-800">Admin – Reviews & Ratings</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-3 py-1.5">
+            <Switch
+              checked={autoApprove}
+              onCheckedChange={setAutoApprove}
+              id="auto-approve"
+            />
+            <label htmlFor="auto-approve" className="text-sm font-medium text-blue-800 cursor-pointer">
+              Auto-Approve New Reviews
+            </label>
+          </div>
+          {pending.length > 0 && (
+            <Button
+              onClick={() => approveAllMutation.mutate()}
+              disabled={approveAllMutation.isPending}
+              className="bg-green-600 hover:bg-green-700 gap-2"
+            >
+              <CheckCheck className="h-4 w-4" /> Approve All ({pending.length})
+            </Button>
+          )}
+        </div>
+      </div>
 
       {/* Per-product review toggle */}
       <div>

@@ -8,8 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Upload, Loader2, Save, PlayCircle, Video } from 'lucide-react';
 import { toast } from "sonner";
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '../utils';
+
 
 export default function AdminPageContent() {
   const [user, setUser] = useState(null);
@@ -99,17 +98,14 @@ export default function AdminPageContent() {
   };
 
   const handleSaveSteps = async () => {
-    try {
-      const stepsSetting = settings.find(s => s.key === 'howto_steps');
-      if (stepsSetting?.id) {
-        await base44.entities.AppSetting.update(stepsSetting.id, { value: JSON.stringify(steps) });
-      } else {
-        await base44.entities.AppSetting.create({ key: 'howto_steps', value: JSON.stringify(steps) });
-      }
-      toast.success('Steps saved successfully!');
-    } catch (error) {
-      toast.error('Failed to save steps');
+    const stepsSetting = settings.find(s => s.key === 'howto_steps');
+    if (stepsSetting?.id) {
+      await base44.entities.AppSetting.update(stepsSetting.id, { value: JSON.stringify(steps) });
+    } else {
+      await base44.entities.AppSetting.create({ key: 'howto_steps', value: JSON.stringify(steps) });
     }
+    refetchSettings();
+    toast.success('Steps saved! Changes are now live.');
   };
 
   if (!user) {
@@ -125,14 +121,6 @@ export default function AdminPageContent() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <div className="mb-6">
-        <Link to={createPageUrl('HowToUse')}>
-          <Button variant="outline" className="gap-2">
-            ← Back to How To Use Page
-          </Button>
-        </Link>
-      </div>
-
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Edit "How to Use" Page Content</h1>
 
       {/* Video Upload Section */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,7 @@ export default function AdminMessages() {
   });
 
   // Group messages by user_email into conversations
-  const conversations = React.useMemo(() => {
+  const conversations = useMemo(() => {
     const grouped = {};
     allMessages.forEach(msg => {
       if (!grouped[msg.user_email]) {
@@ -90,6 +90,18 @@ export default function AdminMessages() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminChatMessages'] });
       toast.success('Message deleted');
+    }
+  });
+
+  const deleteConversationMutation = useMutation({
+    mutationFn: async (email) => {
+      const msgs = allMessages.filter(m => m.user_email === email);
+      await Promise.all(msgs.map(m => base44.entities.ChatMessage.delete(m.id)));
+    },
+    onSuccess: () => {
+      setSelectedConversation(null);
+      queryClient.invalidateQueries({ queryKey: ['adminChatMessages'] });
+      toast.success('Conversation deleted');
     }
   });
 
@@ -257,14 +269,29 @@ export default function AdminMessages() {
             ) : (
               <>
                 {/* Header */}
-                <div className="p-4 border-b bg-gray-50 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
-                    <User className="h-5 w-5 text-blue-800" />
+                <div className="p-4 border-b bg-gray-50 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
+                      <User className="h-5 w-5 text-blue-800" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">{selectedConversation}</p>
+                      <p className="text-xs text-gray-500">{selectedMessages.length} messages</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-800 text-sm">{selectedConversation}</p>
-                    <p className="text-xs text-gray-500">{selectedMessages.length} messages</p>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="gap-1"
+                    onClick={() => {
+                      if (confirm('Delete entire conversation with this user?')) {
+                        deleteConversationMutation.mutate(selectedConversation);
+                      }
+                    }}
+                    disabled={deleteConversationMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete Conversation
+                  </Button>
                 </div>
 
                 {/* Messages */}

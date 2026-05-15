@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
-const ADMIN_PASSWORD = '0244129908fmm';
+const ADMIN_PASSWORD = '0599676419fmm';
 const OWNER_EMAIL = 'fmmclassico@gmail.com';
 
 export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }) {
@@ -16,7 +16,6 @@ export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }
     e.preventDefault();
     setLoading(true);
 
-    // If the logged in user is the owner email, let them in immediately
     if (userEmail === OWNER_EMAIL) {
       toast.success('Welcome back! Admin access granted.');
       setPassword('');
@@ -25,7 +24,6 @@ export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }
       return;
     }
 
-    // For all other emails, check the password
     if (password !== ADMIN_PASSWORD) {
       toast.error('Invalid password. Please try again.');
       setLoading(false);

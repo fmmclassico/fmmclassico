@@ -97,7 +97,18 @@
     "delivery_address"
   ],
   "rls": {
-    "create": {},
+    "create": {
+      "$or": [
+        {
+          "data.customer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
     "read": {
       "$or": [
         {

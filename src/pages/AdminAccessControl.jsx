@@ -1,19 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Users, 
-  Plus, 
-  Trash2, 
-  Shield, 
-  ShieldOff, 
-  Loader2, 
-  CheckCircle, 
+import {
+  Shield,
+  ShieldOff,
+  Loader2,
+  CheckCircle,
   AlertCircle,
   Mail,
   Settings
@@ -23,9 +20,19 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 
 const RESEND_API_KEY = 're_h3nmhgLi_H26Z9XqeoaqLnrTq2bxZ6nzr';
-const OWNER_EMAIL = 'fmmclassico@gmail.com';
+const MASTER_ADMIN_EMAIL = 'fmmclassico@gmail.com';
 
-async function sendEmailWithResend(to, subject, body) {
+const ALLOWED_EMAILS = [
+  'fmmclassico@gmail.com',
+  'fmmcompanylimited@gmail.com',
+  'mensahfedramartha@gmail.com',
+  'marthamensahfedra@gmail.com',
+  'lovelyfedra@gmail.com'
+];
+
+const DEFAULT_ADMIN_PASSWORD = '0599676419fmm';
+
+async function sendEmailWithResend(to, subject, htmlBody) {
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -34,14 +41,9 @@ async function sendEmailWithResend(to, subject, body) {
     },
     body: JSON.stringify({
       from: 'onboarding@resend.dev',
-      to: to,
-      subject: subject,
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
-          <h2>FMM CLASSICO Admin</h2>
-          <p>${body}</p>
-        </div>
-      `
+      to,
+      subject,
+      html: htmlBody
     })
   });
   if (!response.ok) throw new Error('Failed to send email');
@@ -49,6 +51,8 @@ async function sendEmailWithResend(to, subject, body) {
 
 export default function AdminAccessControl() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [isGranting, setIsGranting] = useState(null);
   const [isRevoking, setIsRevoking] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -58,51 +62,35 @@ export default function AdminAccessControl() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [verificationStep, setVerificationStep] = useState(null);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [generatedCode, setGeneratedCode] = useState('');
-  const [sentCodeEmail, setSentCodeEmail] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
   const queryClient = useQueryClient();
 
-  const MASTER_ADMIN_EMAIL = 'fmmclassico@gmail.com';
-  const VERIFICATION_EMAILS = ['fmmclassico@gmail.com', 'mensahfedramartha@gmail.com'];
-
-  const ALLOWED_EMAILS = [
-    'fmmclassico@gmail.com',
-    'fmmcompanylimited@gmail.com',
-    'mensahfedramartha@gmail.com',
-    'marthamensahfedra@gmail.com',
-    'lovelyfedra@gmail.com'
-  ];
-
-  const DEFAULT_ADMIN_PASSWORD = '0244129908fmm';
-
   useEffect(() => {
-    const checkMasterAdmin = async () => {
+    const loadUser = async () => {
       try {
         const isAuth = await base44.auth.isAuthenticated();
         if (!isAuth) {
-          toast.error('Please login');
+          setAccessDenied(true);
+          setLoading(false);
           return;
         }
         const userData = await base44.auth.me();
-        if (userData.role !== 'admin') {
-          toast.error('Admin access required');
-          return;
-        }
         if (userData.email !== MASTER_ADMIN_EMAIL) {
-          toast.error('Only fmmclassico@gmail.com can access this page');
+          setAccessDenied(true);
+          setLoading(false);
           return;
         }
         setUser(userData);
+        setLoading(false);
       } catch (error) {
-        toast.error('Error verifying access. Please refresh the page.');
+        setAccessDenied(true);
+        setLoading(false);
       }
     };
-    checkMasterAdmin();
+    loadUser();
   }, []);
 
-  const { data: allUsers = [], isLoading } = useQuery({
+  const { data: allUsers = [] } = useQuery({
     queryKey: ['allUsers'],
     queryFn: () => base44.entities.User.list(),
     enabled: !!user,
@@ -115,9 +103,6 @@ export default function AdminAccessControl() {
   });
 
   const currentAdminPassword = adminPasswordData?.[0]?.password_hash || DEFAULT_ADMIN_PASSWORD;
-
-  const adminUsers = allUsers.filter(u => ALLOWED_EMAILS.includes(u.email) && u.role === 'admin');
-  const regularUsers = allUsers.filter(u => ALLOWED_EMAILS.includes(u.email) && u.role === 'user');
 
   const handleGrantClick = (userEmail) => {
     if (userEmail === MASTER_ADMIN_EMAIL) {
@@ -159,51 +144,13 @@ export default function AdminAccessControl() {
     }
   };
 
-  const handleChangePasswordClick = () => {
-    setShowChangePassword(true);
-    setVerificationStep('password');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setVerificationCode('');
-    setGeneratedCode('');
-  };
-
-  const sendVerificationCode = async () => {
-    if (!currentPassword || currentPassword !== currentAdminPassword) {
+  const handleChangePassword = async () => {
+    if (!currentPassword) {
+      toast.error('Please enter the current password');
+      return;
+    }
+    if (currentPassword !== currentAdminPassword) {
       toast.error('Current password is incorrect');
-      return;
-    }
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedCode(code);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-
-    try {
-      // Send email using Resend to owner email only
-      await sendEmailWithResend(
-        OWNER_EMAIL,
-        'FMM CLASSICO — Admin Password Change Code',
-        `Your verification code to change the admin password is:<br/><br/>
-        <span style="font-size: 48px; font-weight: bold; color: #4F46E5; letter-spacing: 10px;">${code}</span>
-        <br/><br/>This code expires in <strong>10 minutes</strong>.`
-      );
-
-      setSentCodeEmail(OWNER_EMAIL);
-      setVerificationStep('code');
-      toast.success(`✅ Verification code sent to ${OWNER_EMAIL}`);
-    } catch (error) {
-      toast.error('Failed to send verification code. Please try again.');
-    }
-  };
-
-  const verifyCodeAndChangePassword = async () => {
-    if (!verificationCode || verificationCode.length !== 6) {
-      toast.error('Please enter the 6-digit verification code');
-      return;
-    }
-    if (verificationCode !== generatedCode) {
-      toast.error('Invalid or expired verification code');
       return;
     }
     if (!newPassword || newPassword.length < 6) {
@@ -215,6 +162,7 @@ export default function AdminAccessControl() {
       return;
     }
 
+    setChangingPassword(true);
     try {
       const existingPassword = adminPasswordData?.[0];
       if (existingPassword) {
@@ -230,13 +178,31 @@ export default function AdminAccessControl() {
           last_changed: new Date().toISOString()
         });
       }
-      toast.success('✅ Admin password changed successfully!');
+
+      await sendEmailWithResend(
+        MASTER_ADMIN_EMAIL,
+        'FMM CLASSICO — Admin Password Changed',
+        `
+          <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+            <h2>FMM CLASSICO Admin</h2>
+            <p>Your admin password has been successfully changed.</p>
+            <p style="color: grey; font-size: 12px;">
+              If you did not do this, please contact support immediately.
+            </p>
+          </div>
+        `
+      );
+
+      toast.success('✅ Password changed successfully! A confirmation email has been sent.');
       setShowChangePassword(false);
-      setVerificationStep(null);
-      setGeneratedCode('');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
       queryClient.invalidateQueries({ queryKey: ['adminPassword'] });
     } catch (error) {
       toast.error('Failed to change password: ' + error.message);
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -258,12 +224,27 @@ export default function AdminAccessControl() {
     }
   };
 
-  if (!user) {
+  if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Card className="p-8 text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-800" />
-          <p className="text-gray-600">Verifying access...</p>
+          <p className="text-gray-600">Loading...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <Card className="p-8 text-center">
+          <AlertCircle className="h-8 w-8 mx-auto mb-4 text-red-500" />
+          <p className="text-red-600 font-bold">Access Denied</p>
+          <p className="text-gray-500 text-sm mt-2">Only fmmclassico@gmail.com can access this page.</p>
+          <Link to={createPageUrl('Home')}>
+            <Button className="mt-4" variant="outline">← Back to Home</Button>
+          </Link>
         </Card>
       </div>
     );
@@ -298,16 +279,14 @@ export default function AdminAccessControl() {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleChangePasswordClick}
+            onClick={() => setShowChangePassword(true)}
             className="text-blue-800 border-blue-800 hover:bg-blue-50"
           >
             <Settings className="h-4 w-4 mr-2" />
             Change Admin Password
           </Button>
         </div>
-        <p className="text-sm text-gray-600 mb-4">
-          Only these {ALLOWED_EMAILS.length} emails can be granted admin access.
-        </p>
+
         <div className="space-y-2">
           {ALLOWED_EMAILS.map((email) => {
             const userInfo = allUsers.find(u => u.email === email);
@@ -358,8 +337,8 @@ export default function AdminAccessControl() {
                         className="bg-red-600 hover:bg-red-700"
                       >
                         {isRevoking === userInfo?.id
-                          ? <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Removing...</>
-                          : <><ShieldOff className="h-3 w-3 mr-2" /> Revoke</>}
+                          ? <><Loader2 className="h-3 w-3 animate-spin mr-2" />Removing...</>
+                          : <><ShieldOff className="h-3 w-3 mr-2" />Revoke</>}
                       </Button>
                     ) : (
                       <Button
@@ -370,8 +349,8 @@ export default function AdminAccessControl() {
                         className="bg-blue-800 hover:bg-blue-900"
                       >
                         {isGranting === email
-                          ? <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Granting...</>
-                          : <><Shield className="h-3 w-3 mr-2" /> Grant</>}
+                          ? <><Loader2 className="h-3 w-3 animate-spin mr-2" />Granting...</>
+                          : <><Shield className="h-3 w-3 mr-2" />Grant</>}
                       </Button>
                     )}
                   </div>
@@ -389,13 +368,12 @@ export default function AdminAccessControl() {
             <p className="font-semibold mb-1">Important Notes:</p>
             <ul className="list-disc list-inside space-y-1 text-xs">
               <li>Only <strong>fmmclassico@gmail.com</strong> can access this page</li>
-              <li>Only the {ALLOWED_EMAILS.length} authorized emails listed above can be granted admin access</li>
+              <li>Only the {ALLOWED_EMAILS.length} authorized emails above can be granted admin access</li>
             </ul>
           </div>
         </div>
       </div>
 
-      {/* Password Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="max-w-md w-full p-6">
@@ -416,96 +394,63 @@ export default function AdminAccessControl() {
               <Button variant="outline" onClick={() => { setShowPasswordModal(false); setPendingEmail(null); setAdminPassword(''); }}>
                 Cancel
               </Button>
-              <Button onClick={verifyPasswordAndGrant} disabled={isGranting === pendingEmail} className="bg-blue-800 hover:bg-blue-900">
-                {isGranting === pendingEmail
-                  ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Granting...</>
-                  : 'Grant Access'}
+              <Button onClick={verifyPasswordAndGrant} className="bg-blue-800 hover:bg-blue-900">
+                Grant Access
               </Button>
             </div>
           </Card>
         </div>
       )}
 
-      {/* Change Password Modal */}
       {showChangePassword && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="max-w-lg w-full p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-2">Change Admin Password</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Verification code will be sent to: <strong>{OWNER_EMAIL}</strong>
+              A confirmation email will be sent to <strong>{MASTER_ADMIN_EMAIL}</strong> after the change.
             </p>
-
-            {verificationStep === 'password' && (
-              <div className="space-y-4">
-                <div>
-                  <Label>Current Password</Label>
-                  <Input
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Enter current password"
-                    className="mt-1"
-                  />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => { setShowChangePassword(false); setVerificationStep(null); setCurrentPassword(''); }}>
-                    Cancel
-                  </Button>
-                  <Button onClick={sendVerificationCode} className="bg-blue-800 hover:bg-blue-900">
-                    Send Verification Code
-                  </Button>
-                </div>
+            <div className="space-y-4">
+              <div>
+                <Label>Current Password</Label>
+                <Input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="mt-1"
+                />
               </div>
-            )}
-
-            {verificationStep === 'code' && (
-              <div className="space-y-4">
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm text-green-800">
-                    ✅ Verification code sent to <strong>{sentCodeEmail}</strong>
-                  </p>
-                </div>
-                <div>
-                  <Label>Verification Code</Label>
-                  <Input
-                    type="text"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="Enter 6-digit code"
-                    className="mt-1 text-center text-xl tracking-widest font-bold"
-                    maxLength={6}
-                  />
-                </div>
-                <div>
-                  <Label>New Password</Label>
-                  <Input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Confirm New Password</Label>
-                  <Input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                    className="mt-1"
-                  />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => { setShowChangePassword(false); setVerificationStep(null); }}>
-                    Cancel
-                  </Button>
-                  <Button onClick={verifyCodeAndChangePassword} className="bg-green-600 hover:bg-green-700">
-                    Change Password
-                  </Button>
-                </div>
+              <div>
+                <Label>New Password</Label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  className="mt-1"
+                />
               </div>
-            )}
+              <div>
+                <Label>Confirm New Password</Label>
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => { setShowChangePassword(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }}>
+                  Cancel
+                </Button>
+                <Button onClick={handleChangePassword} disabled={changingPassword} className="bg-green-600 hover:bg-green-700">
+                  {changingPassword
+                    ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Changing...</>
+                    : 'Change Password'}
+                </Button>
+              </div>
+            </div>
           </Card>
         </div>
       )}

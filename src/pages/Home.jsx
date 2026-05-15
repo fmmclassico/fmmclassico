@@ -154,18 +154,27 @@ export default function Home() {
     }
   });
 
+  // Hidden product IDs per section (set by admin in Home Editor)
+  const getHiddenIds = (secId) => {
+    const raw = appSettings.find(s => s.key === `home_hidden_${secId}`)?.value;
+    try { return JSON.parse(raw || '[]'); } catch { return []; }
+  };
+  const hiddenFlash = getHiddenIds('flash');
+  const hiddenFeatured = getHiddenIds('featured');
+  const hiddenDonkomi = getHiddenIds('donkomi');
+
   // Product buckets
   const phoneAccessoryCategories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers'];
   // Flash sale: prefer products tagged flash_sale=true, fallback to discounted
-  const flashTagged = products.filter(p => p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
-  const flashSaleProducts = flashTagged.length >= 2 ? flashTagged : products.filter(p => p.original_price && p.original_price > p.price).slice(0, 6);
-  const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : products.filter(p => p.featured).slice(0, 6);
+  const flashTagged = products.filter(p => p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()) && !hiddenFlash.includes(p.id));
+  const flashSaleProducts = flashTagged.length >= 2 ? flashTagged : products.filter(p => p.original_price && p.original_price > p.price && !hiddenFlash.includes(p.id)).slice(0, 6);
+  const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : products.filter(p => p.featured && !hiddenFlash.includes(p.id)).slice(0, 6);
   const flashSaleEndTime = flashTagged.length > 0 ? flashTagged[0].flash_sale_end : null;
   const newArrivals = [...products].filter(p => p.category !== 'home_appliances').sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 6);
-  const classicoDeals = products.filter(p => p.featured).slice(0, 6);
+  const classicoDeals = products.filter(p => p.featured && !hiddenFeatured.includes(p.id)).slice(0, 6);
   // Donkomi: prefer donkomi-tagged, fallback to cheapest
-  const donkomiTagged = products.filter(p => p.donkomi);
-  const donkomiDeals = donkomiTagged.length >= 2 ? donkomiTagged.slice(0, 6) : [...products].filter(p => p.price > 0 && p.category !== 'home_appliances').sort((a, b) => a.price - b.price).slice(0, 6);
+  const donkomiTagged = products.filter(p => p.donkomi && !hiddenDonkomi.includes(p.id));
+  const donkomiDeals = donkomiTagged.length >= 2 ? donkomiTagged.slice(0, 6) : [...products].filter(p => p.price > 0 && p.category !== 'home_appliances' && !hiddenDonkomi.includes(p.id)).sort((a, b) => a.price - b.price).slice(0, 6);
   // Top selling = highest reviews_count products
   const topSelling = [...products].filter(p => p.reviews_count > 0).sort((a, b) => (b.reviews_count || 0) - (a.reviews_count || 0)).slice(0, 6);
   const topSellingFallback = topSelling.length >= 2 ? topSelling : [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 6);
@@ -299,7 +308,7 @@ export default function Home() {
                     <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                   </div>
                 ))
-              : (flashItems.length > 0 ? flashItems : products.slice(0, 5)).map(product => (
+              : (flashItems.length > 0 ? flashItems : products.filter(p => !hiddenFlash.includes(p.id)).slice(0, 5)).map(product => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
                     className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
@@ -345,7 +354,7 @@ export default function Home() {
                     <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                   </div>
                 ))
-              : (donkomiDeals.length > 0 ? donkomiDeals : products.slice(0, 5)).map(product => (
+              : (donkomiDeals.length > 0 ? donkomiDeals : products.filter(p => !hiddenDonkomi.includes(p.id)).slice(0, 5)).map(product => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
                     className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">

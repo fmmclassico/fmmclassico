@@ -346,6 +346,9 @@ export default function Categories() {
           );
         })}
       </div>
+
+      {/* Bottom spacer — clears the fixed bottom nav bar */}
+      <div className="h-24" />
     </div>
   );
 }

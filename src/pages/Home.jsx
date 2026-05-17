@@ -120,8 +120,6 @@ export default function Home() {
   const showFlashTimer = flashConfig.show_timer !== false;
   const flashTimerEndTime = flashConfig.end_time || null;
 
-
-
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
@@ -165,22 +163,19 @@ export default function Home() {
 
   // Product buckets
   const phoneAccessoryCategories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers'];
-  // Flash sale: prefer products tagged flash_sale=true, fallback to discounted
   const flashTagged = products.filter(p => p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()) && !hiddenFlash.includes(p.id));
   const flashSaleProducts = flashTagged.length >= 2 ? flashTagged : products.filter(p => p.original_price && p.original_price > p.price && !hiddenFlash.includes(p.id)).slice(0, 6);
   const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : products.filter(p => p.featured && !hiddenFlash.includes(p.id)).slice(0, 6);
   const flashSaleEndTime = flashTagged.length > 0 ? flashTagged[0].flash_sale_end : null;
   const newArrivals = [...products].filter(p => p.category !== 'home_appliances').sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 6);
   const classicoDeals = products.filter(p => p.featured && !hiddenFeatured.includes(p.id)).slice(0, 6);
-  // Donkomi: prefer donkomi-tagged, fallback to cheapest
   const donkomiTagged = products.filter(p => p.donkomi && !hiddenDonkomi.includes(p.id));
   const donkomiDeals = donkomiTagged.length >= 2 ? donkomiTagged.slice(0, 6) : [...products].filter(p => p.price > 0 && p.category !== 'home_appliances' && !hiddenDonkomi.includes(p.id)).sort((a, b) => a.price - b.price).slice(0, 6);
-  // Top selling = highest reviews_count products
   const topSelling = [...products].filter(p => p.reviews_count > 0).sort((a, b) => (b.reviews_count || 0) - (a.reviews_count || 0)).slice(0, 6);
   const topSellingFallback = topSelling.length >= 2 ? topSelling : [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 6);
 
   return (
-    <div className="pb-6 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
+    <div className="bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
 
       {/* Hero Slider */}
       <HeroBanner />
@@ -233,7 +228,7 @@ export default function Home() {
         })()}
       </div>
 
-      {/* ── PROMO CARDS SCROLL (same design as category cards) ── */}
+      {/* ── PROMO CARDS SCROLL ── */}
       {(() => {
         const PROMO_KEYS = ['promo_card_1','promo_card_2','promo_card_3','promo_card_4','promo_card_5','promo_card_6'];
         const allCards = PROMO_KEYS.map(k => {
@@ -376,45 +371,45 @@ export default function Home() {
 
       {/* ── SHOP BY BRAND ── */}
       {showBrandSection && (
-      <div className="mt-5 mx-2 md:mx-4">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <Gem className="h-5 w-5 text-purple-600" />
-              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Shop by Brand</h2>
+        <div className="mt-5 mx-2 md:mx-4">
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Gem className="h-5 w-5 text-purple-600" />
+                <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Shop by Brand</h2>
+              </div>
+              <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+                See All <ChevronRight className="h-3 w-3" />
+              </Link>
             </div>
-            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
-              See All <ChevronRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-4 gap-3 p-4">
-            {[
-              { name: 'Apple', fallback: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
-              { name: 'Samsung', fallback: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },
-              { name: 'Tecno', fallback: 'https://upload.wikimedia.org/wikipedia/commons/a/a8/TECNO_Mobile_Logo.svg' },
-              { name: 'Hisense', fallback: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Hisense_logo.svg' },
-              { name: 'TCL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/1/16/TCL_Logo.svg' },
-              { name: 'Oraimo', fallback: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },
-              { name: 'Sony', fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
-              { name: 'JBL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
-            ].map(brand => {
-              const uploadedLogo = appSettings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
-              const logoSrc = uploadedLogo || brand.fallback;
-              return (
-                <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}
-                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
-                  <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
-                    {logoSrc
-                      ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { e.target.style.display='none'; }} />
-                      : <span className="text-[10px] font-black text-gray-400">{brand.name[0]}</span>}
-                  </div>
-                  <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
-                </Link>
-              );
-            })}
+            <div className="grid grid-cols-4 gap-3 p-4">
+              {[
+                { name: 'Apple', fallback: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
+                { name: 'Samsung', fallback: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },
+                { name: 'Tecno', fallback: 'https://upload.wikimedia.org/wikipedia/commons/a/a8/TECNO_Mobile_Logo.svg' },
+                { name: 'Hisense', fallback: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Hisense_logo.svg' },
+                { name: 'TCL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/1/16/TCL_Logo.svg' },
+                { name: 'Oraimo', fallback: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },
+                { name: 'Sony', fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
+                { name: 'JBL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
+              ].map(brand => {
+                const uploadedLogo = appSettings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
+                const logoSrc = uploadedLogo || brand.fallback;
+                return (
+                  <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}
+                    className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
+                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
+                      {logoSrc
+                        ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { e.target.style.display='none'; }} />
+                        : <span className="text-[10px] font-black text-gray-400">{brand.name[0]}</span>}
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* ── NEW ARRIVALS ── */}
@@ -500,8 +495,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Bottom spacer for nav */}
-      <div className="h-6" />
+      {/* Bottom spacer — must be tall enough to clear the fixed bottom nav bar */}
+      <div className="h-24" />
+
     </div>
   );
 }

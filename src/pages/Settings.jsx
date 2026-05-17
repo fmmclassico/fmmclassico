@@ -87,7 +87,7 @@ export default function Settings() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#1B3A6B]" />
+        <Loader2 className="h-8 w-8 animate-spin mx-auto" style={{ color: '#4583B8' }} />
       </div>
     );
   }
@@ -106,7 +106,7 @@ export default function Settings() {
         animate={{ opacity: 1, y: 0 }}
       >
         <Card className="mb-6 shadow-md overflow-hidden">
-          <div className="bg-gradient-to-r from-[#1B3A6B] to-[#2E86C1] p-6">
+          <div className="p-6" style={{ background: 'linear-gradient(to right, #2d6a9f, #4583B8)' }}>
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
                 <User className="h-8 w-8 text-white" />
@@ -129,7 +129,7 @@ export default function Settings() {
         <Card className="mb-6 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-[#1B3A6B]" />
+              <User className="h-5 w-5" style={{ color: '#4583B8' }} />
               Personal Information
             </CardTitle>
           </CardHeader>
@@ -184,7 +184,7 @@ export default function Settings() {
         <Card className="mb-6 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-[#1B3A6B]" />
+              <MapPin className="h-5 w-5" style={{ color: '#4583B8' }} />
               Delivery Address
             </CardTitle>
           </CardHeader>
@@ -222,7 +222,7 @@ export default function Settings() {
         <Card className="mb-6 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-[#1B3A6B]" />
+              <Bell className="h-5 w-5" style={{ color: '#4583B8' }} />
               Notifications
             </CardTitle>
           </CardHeader>
@@ -259,9 +259,10 @@ export default function Settings() {
         transition={{ delay: 0.4 }}
         className="flex flex-col gap-3"
       >
-        <Button 
+        <Button
           onClick={handleSave}
-          className="w-full bg-[#1B3A6B] hover:bg-[#162f58] font-bold py-6"
+          className="w-full font-bold py-6 text-white border-0"
+          style={{ backgroundColor: '#4583B8' }}
           disabled={isSaving}
         >
           {isSaving ? (
@@ -276,8 +277,8 @@ export default function Settings() {
             </>
           )}
         </Button>
-        
-        <Button 
+
+        <Button
           variant="outline"
           onClick={handleLogout}
           className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
@@ -296,7 +297,7 @@ export default function Settings() {
             {showDangerZone ? 'Hide danger zone' : 'Account options'}
           </button>
           {showDangerZone && (
-            <Button 
+            <Button
               variant="outline"
               onClick={handleDeleteAccount}
               className="w-full text-red-800 hover:text-white hover:bg-red-700 border-red-400 mt-1"
@@ -307,6 +308,9 @@ export default function Settings() {
           )}
         </div>
       </motion.div>
+
+      {/* Bottom spacer for nav */}
+      <div className="h-24" />
     </div>
   );
 }

@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Upload, X, Pencil, Plus, Trash2, ImagePlus,
   Loader2, Check, Eye, EyeOff, RotateCcw, Video,
-  Bold, AlignLeft, AlignCenter, AlignRight, Wand2, Sparkles
+  Bold, AlignLeft, AlignCenter, AlignRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -128,150 +128,78 @@ async function uploadFile(file) {
 }
 
 /**
- * Deep-clean HTML pasted from Claude.ai, Google Docs, or any webpage.
- *
- * Strategy:
- *   1. Strip HTML comments (<!--StartFragment--> etc.)
- *   2. Parse into a real DOM tree using DOMParser
- *   3. Walk every node and keep ONLY meaningful content tags:
- *        h1-h6, p, ul, ol, li, strong, em, b, i, u, br
- *      All wrapper/layout tags (div, section, article, span, header,
- *      footer, nav, aside, form, table, etc.) are "unwrapped" — their
- *      children are kept but the wrapper element itself is removed.
- *      Unknown / script / style tags are removed entirely along with
- *      their children.
- *   4. Remove ALL attributes from every surviving element
- *      (no class, id, style, data-*, aria-*, tabindex, dir, etc.)
- *   5. Collapse consecutive empty <p> tags and trim.
- *
- * Result: only semantic HTML with zero attributes — safe to store and render.
+ * Deep-clean HTML to prevent code from showing in descriptions.
+ * Keeps only safe semantic tags with NO attributes.
  */
 function sanitizeHtml(html) {
   if (!html) return '';
 
-  // ── 1. Strip HTML comments ──────────────────────────────────────────
+  // Strip HTML comments
   let cleaned = html.replace(/<!--[\s\S]*?-->/g, '');
 
-  // ── 2. Parse ────────────────────────────────────────────────────────
+  // Parse into DOM
   const doc = new DOMParser().parseFromString(cleaned, 'text/html');
 
-  // Tags whose children we keep but the tag itself we remove (unwrap)
+  // Tags to unwrap (keep children, discard wrapper)
   const UNWRAP_TAGS = new Set([
-    'div','section','article','aside','main','header','footer','nav',
-    'span','figure','figcaption','blockquote','pre','code',
-    'table','thead','tbody','tr','th','td','colgroup','col',
-    'form','fieldset','label','a','abbr','cite','time','mark',
-    'address','details','summary','dialog','template',
-    'html','body','head',
+    'div', 'section', 'article', 'aside', 'main', 'header', 'footer', 'nav',
+    'span', 'figure', 'figcaption', 'blockquote', 'pre', 'code',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td', 'colgroup', 'col',
+    'form', 'fieldset', 'label', 'a', 'abbr', 'cite', 'time', 'mark',
+    'address', 'details', 'summary', 'dialog', 'template',
+    'html', 'body', 'head',
   ]);
 
-  // Tags we remove completely including all their children
+  // Tags to remove completely
   const DROP_TAGS = new Set([
-    'script','style','noscript','iframe','object','embed',
-    'link','meta','title','base','canvas','svg','math',
-    'button','input','select','textarea','option','optgroup',
+    'script', 'style', 'noscript', 'iframe', 'object', 'embed',
+    'link', 'meta', 'title', 'base', 'canvas', 'svg', 'math',
+    'button', 'input', 'select', 'textarea', 'option', 'optgroup',
   ]);
 
-  // Tags we keep as-is (but strip all attributes)
+  // Tags to keep (but strip all attributes)
   const KEEP_TAGS = new Set([
-    'h1','h2','h3','h4','h5','h6',
-    'p','ul','ol','li',
-    'strong','em','b','i','u','br',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'p', 'ul', 'ol', 'li',
+    'strong', 'em', 'b', 'i', 'u', 'br',
   ]);
 
-  // Recursively process a node, returning an array of clean nodes
   function processNode(node) {
-    // Text node — keep as-is
     if (node.nodeType === Node.TEXT_NODE) {
       return [node.cloneNode()];
     }
 
-    // Not an element — drop
     if (node.nodeType !== Node.ELEMENT_NODE) return [];
 
     const tag = node.tagName.toLowerCase();
 
-    // Drop entirely
     if (DROP_TAGS.has(tag)) return [];
 
-    // Process children recursively
     const cleanChildren = Array.from(node.childNodes).flatMap(processNode);
 
     if (KEEP_TAGS.has(tag)) {
-      // Keep the element but strip ALL attributes
       const el = document.createElement(tag);
       cleanChildren.forEach(c => el.appendChild(c));
       return [el];
     }
 
-    // Unwrap: return children directly, discarding the wrapper element
     return cleanChildren;
   }
 
   const resultNodes = Array.from(doc.body.childNodes).flatMap(processNode);
 
-  // ── 3. Assemble result HTML ─────────────────────────────────────────
   const container = document.createElement('div');
   resultNodes.forEach(n => container.appendChild(n));
   let result = container.innerHTML;
 
-  // ── 4. Post-process: collapse runs of blank lines / empty paras ─────
+  // Collapse excessive whitespace
   result = result
-    .replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>')   // max 2 consecutive <br>
-    .replace(/(<p>\s*<\/p>\s*){2,}/gi, '<p></p>')    // max 1 empty <p>
-    .replace(/(<p>\s*<br\s*\/?>\s*<\/p>\s*){2,}/gi, '') // remove <p><br></p> runs
+    .replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>')
+    .replace(/(<p>\s*<\/p>\s*){2,}/gi, '<p></p>')
+    .replace(/(<p>\s*<br\s*\/?>\s*<\/p>\s*){2,}/gi, '')
     .trim();
 
   return result;
-}
-
-/**
- * Call the Anthropic API.
- * When running inside Claude.ai artifacts, NO API key is needed —
- * the platform injects auth automatically. Including a key header would
- * actually cause a CORS / auth conflict, so we omit it entirely.
- */
-async function callClaude({ system, userMessage, maxTokens = 1000, useWebSearch = false }) {
-  const body = {
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: maxTokens,
-    messages: [{ role: 'user', content: userMessage }],
-  };
-  if (system) body.system = system;
-
-  if (useWebSearch) {
-    body.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
-  }
-
-  const headers = {
-    'Content-Type': 'application/json',
-    'anthropic-version': '2023-06-01',
-  };
-  if (useWebSearch) {
-    headers['anthropic-beta'] = 'web-search-2025-03-05';
-  }
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `API error ${res.status}`);
-  }
-
-  const data = await res.json();
-
-  // Collect all text blocks (handles mixed tool_use + text responses)
-  const text = (data.content || [])
-    .filter(b => b.type === 'text')
-    .map(b => b.text || '')
-    .join('')
-    .trim();
-
-  return text;
 }
 
 // ── Rich Text Editor ──────────────────────────────────────────────────────────
@@ -280,7 +208,6 @@ function RichTextEditor({ value, onChange }) {
   const isUserTyping = useRef(false);
   const lastExternalValue = useRef(value);
 
-  // Initialise content once on mount
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.innerHTML = sanitizeHtml(value || '');
@@ -289,8 +216,6 @@ function RichTextEditor({ value, onChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync when an external value change arrives (e.g. AI writes a description)
-  // but NOT while the user is actively typing
   useEffect(() => {
     if (
       editorRef.current &&
@@ -319,9 +244,6 @@ function RichTextEditor({ value, onChange }) {
     handleInput._timer = setTimeout(() => { isUserTyping.current = false; }, 300);
   };
 
-  // Deep-clean paste: strip all wrapper divs/sections/spans/comments,
-  // keeping only semantic tags (h1-h6, p, ul, ol, li, strong, em, b, i, u, br)
-  // with zero attributes. Handles Claude.ai, Google Docs, web copy-paste etc.
   const handlePaste = (e) => {
     e.preventDefault();
     const html = e.clipboardData.getData('text/html');
@@ -329,7 +251,6 @@ function RichTextEditor({ value, onChange }) {
 
     if (html) {
       const clean = sanitizeHtml(html);
-      // If sanitization produced something meaningful use it, otherwise fall back to plain text
       if (clean && clean.replace(/<[^>]*>/g, '').trim().length > 0) {
         document.execCommand('insertHTML', false, clean);
       } else {
@@ -346,7 +267,6 @@ function RichTextEditor({ value, onChange }) {
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
-      {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
         <button type="button" title="Bold" onClick={() => exec('bold')}
           className="p-1.5 rounded hover:bg-gray-200 transition-colors">
@@ -388,7 +308,6 @@ function RichTextEditor({ value, onChange }) {
         <button type="button" title="Clear Formatting" onClick={() => exec('removeFormat')}
           className="p-1.5 rounded hover:bg-gray-200 transition-colors text-xs text-gray-500">Clear</button>
       </div>
-      {/* Editable area */}
       <div
         ref={editorRef}
         contentEditable
@@ -449,227 +368,6 @@ function VideoPreview({ url }) {
   );
 }
 
-// ── AI Panel ──────────────────────────────────────────────────────────────────
-function AiPanel({ form, setForm }) {
-  const [aiDescLoading, setAiDescLoading] = useState(false);
-  const [aiFullLoading, setAiFullLoading] = useState(false);
-  const [aiTypeLoading, setAiTypeLoading] = useState(false);
-  const [aiBrandLoading, setAiBrandLoading] = useState(false);
-
-  const effectiveBrand = form.brand === 'Other' ? form.customBrand : form.brand;
-  const allBrands = [...new Set(Object.values(GROUP_BRANDS).flat().filter(b => b !== 'Other'))];
-
-  // Resolve a detected brand string → { brand, customBrand }
-  const resolveBrand = (detected) => {
-    const trimmed = (detected || '').trim();
-    const knownMatch = allBrands.find(b => b.toLowerCase() === trimmed.toLowerCase());
-    if (knownMatch) return { brand: knownMatch, customBrand: '' };
-    if (trimmed) return { brand: 'Other', customBrand: trimmed };
-    return {};
-  };
-
-  // ── 1. Generate Description only ─────────────────────────────────────────
-  const handleAiDescription = async () => {
-    if (!form.name) { toast.error('Enter a product name first'); return; }
-    setAiDescLoading(true);
-    try {
-      const raw = await callClaude({
-        system: `You are a professional product copywriter for an electronics and accessories store in Ghana.
-Write compelling, accurate product descriptions in clean HTML using ONLY these tags: <h2>, <p>, <ul>, <li>, <strong>, <br>.
-Do NOT use <html>, <body>, <head>, <style>, <h1>, or ANY attributes on any tag (no class, id, data-*, style etc.).
-Structure: 1-2 paragraph overview, Key Features as <ul><li> list, Specifications as <ul><li> list if known.
-Return ONLY the HTML content — no preamble, no explanation, no markdown fences, no code blocks.`,
-        userMessage: `Write a full HTML product description for:
-Product: ${form.name}
-Brand: ${effectiveBrand || 'Unknown'}
-Category: ${form.category || 'Electronics'}
-Product Type: ${form.subcategory || ''}
-
-Make it professional and appealing for online shoppers in Ghana. Use real specs and features.`,
-        maxTokens: 1000,
-        useWebSearch: true,
-      });
-
-      setForm(f => ({ ...f, description: sanitizeHtml(raw) }));
-      toast.success('✨ AI description generated!');
-    } catch (err) {
-      toast.error(`AI description failed: ${err.message}`);
-    } finally {
-      setAiDescLoading(false);
-    }
-  };
-
-  // ── 2. Auto-fill ALL fields ───────────────────────────────────────────────
-  const handleAiFullDetect = async () => {
-    if (!form.name) { toast.error('Enter a product name first'); return; }
-    setAiFullLoading(true);
-    try {
-      const raw = await callClaude({
-        system: `You are a product classification and content expert for an electronics store in Ghana.
-Return ONLY a valid JSON object with exactly these keys:
-{
-  "brand": "detected brand name or empty string",
-  "main_group": "one of: phones | phone_accessories | electronics | home_appliances_group",
-  "category": "one of: phones | phone_cases | chargers | earphones | cables | power_banks | screen_protectors | holders | speakers | smart_watches | electronic_appliances | home_appliances",
-  "subcategory": "specific product type",
-  "description": "full HTML using ONLY <h2><p><ul><li><strong><br> — NO attributes on any tag whatsoever"
-}
-CRITICAL RULES:
-- Return ONLY raw JSON. No markdown, no backticks, no explanation.
-- In the description HTML, do NOT add class, id, style, data-*, or any other attribute to any tag.`,
-        userMessage: `Product name: "${form.name}"
-Known brands: ${allBrands.join(', ')}
-
-Detect all fields and write a clean HTML description with actual specs.`,
-        maxTokens: 1500,
-        useWebSearch: true,
-      });
-
-      // Strip accidental markdown fences then extract the JSON object
-      let jsonString = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-      const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('No JSON found in AI response');
-      const parsed = JSON.parse(jsonMatch[0]);
-
-      const updates = {};
-      if (parsed.brand) Object.assign(updates, resolveBrand(parsed.brand));
-      if (parsed.main_group) updates.main_group = parsed.main_group;
-      if (parsed.category) updates.category = parsed.category;
-      if (parsed.subcategory) updates.subcategory = parsed.subcategory;
-      if (parsed.description) updates.description = sanitizeHtml(parsed.description);
-
-      setForm(f => ({ ...f, ...updates }));
-      toast.success('✨ AI filled in all product details!');
-    } catch (err) {
-      toast.error(`AI auto-fill failed: ${err.message}`);
-    } finally {
-      setAiFullLoading(false);
-    }
-  };
-
-  // ── 3. Detect Product Type only ───────────────────────────────────────────
-  const handleAiDetectType = async () => {
-    if (!form.name) { toast.error('Enter product name first'); return; }
-    setAiTypeLoading(true);
-    try {
-      const options = ((BRAND_SUBCATEGORIES[form.category] || {})[effectiveBrand] || []);
-      const optionsList = options.length ? options.join('\n- ') : 'Other';
-      const detected = await callClaude({
-        system: `You are a product classification expert.
-Reply with ONLY the exact product type from the provided list.
-No explanation, no punctuation, nothing else.
-If none match, reply: Other`,
-        userMessage: `Product: "${form.name}"
-Brand: "${effectiveBrand || ''}"
-Category: "${form.category || ''}"
-
-Available product types:
-- ${optionsList}
-
-Which type matches best?`,
-        maxTokens: 50,
-      });
-      const trimmed = detected.trim();
-      const match = options.find(o => o.toLowerCase() === trimmed.toLowerCase()) || trimmed;
-      setForm(f => ({ ...f, subcategory: match }));
-      toast.success(`AI detected type: ${match}`);
-    } catch (err) {
-      toast.error(`AI type detection failed: ${err.message}`);
-    } finally {
-      setAiTypeLoading(false);
-    }
-  };
-
-  // ── 4. Detect Brand only ──────────────────────────────────────────────────
-  const handleAiDetectBrand = async () => {
-    if (!form.name) { toast.error('Enter product name first'); return; }
-    setAiBrandLoading(true);
-    try {
-      const detected = await callClaude({
-        system: `You are a product expert. Given a product name, identify the brand.
-If it matches one from the provided list (case-insensitive), return that exact name from the list.
-If it is a different brand not in the list, return the brand name as-is.
-Reply with ONLY the brand name — no explanation, no punctuation, no quotes.`,
-        userMessage: `Product name: "${form.name}"
-Known brands: ${allBrands.join(', ')}
-What is the brand?`,
-        maxTokens: 30,
-      });
-      const resolved = resolveBrand(detected);
-      setForm(f => ({ ...f, ...resolved }));
-      const displayName = resolved.brand === 'Other' ? resolved.customBrand : resolved.brand;
-      toast.success(`AI detected brand: ${displayName}`);
-    } catch (err) {
-      toast.error(`AI brand detection failed: ${err.message}`);
-    } finally {
-      setAiBrandLoading(false);
-    }
-  };
-
-  return (
-    <div className="md:col-span-2 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="h-4 w-4 text-purple-600" />
-        <span className="font-semibold text-sm text-purple-800">AI Assistant</span>
-        <span className="text-xs text-purple-500">— Enter product name above, then use any button</span>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {/* Auto-fill Everything */}
-        <button
-          type="button"
-          onClick={handleAiFullDetect}
-          disabled={aiFullLoading || !form.name}
-          className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
-        >
-          {aiFullLoading
-            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            : <Wand2 className="h-3.5 w-3.5" />}
-          {aiFullLoading ? 'Searching & Detecting…' : '✨ Auto-fill Everything'}
-        </button>
-
-        {/* Generate Description */}
-        <button
-          type="button"
-          onClick={handleAiDescription}
-          disabled={aiDescLoading || !form.name}
-          className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
-        >
-          {aiDescLoading
-            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            : <Sparkles className="h-3.5 w-3.5" />}
-          {aiDescLoading ? 'Writing…' : 'Generate Description'}
-        </button>
-
-        {/* Detect Brand */}
-        <button
-          type="button"
-          onClick={handleAiDetectBrand}
-          disabled={aiBrandLoading || !form.name}
-          className="flex items-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
-        >
-          {aiBrandLoading
-            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            : <Wand2 className="h-3.5 w-3.5" />}
-          {aiBrandLoading ? 'Detecting…' : 'Detect Brand'}
-        </button>
-
-        {/* Detect Product Type */}
-        <button
-          type="button"
-          onClick={handleAiDetectType}
-          disabled={aiTypeLoading || !form.name}
-          className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
-        >
-          {aiTypeLoading
-            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            : <Wand2 className="h-3.5 w-3.5" />}
-          {aiTypeLoading ? 'Detecting…' : 'Detect Product Type'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AdminProducts() {
   const [user, setUser] = React.useState(null);
@@ -697,7 +395,7 @@ export default function AdminProducts() {
     base44.auth.me().then(u => {
       setUser(u);
       setIsAdmin(u?.role === 'admin');
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   const { data: allProducts = [], isLoading } = useQuery({
@@ -713,7 +411,6 @@ export default function AdminProducts() {
   // ── Save / Update mutation ────────────────────────────────────────────────
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      // Resolve brand: if "Other" use customBrand value, else use brand
       const finalBrand =
         data.brand === 'Other' && data.customBrand?.trim()
           ? data.customBrand.trim()
@@ -721,15 +418,12 @@ export default function AdminProducts() {
             ? ''
             : data.brand;
 
-      // Strip UI-only fields before saving
       const { main_group, customBrand, ...rest } = data;
 
       const payload = {
         ...rest,
         brand: finalBrand,
-        // Sanitize description before saving so no stray attributes persist
         description: sanitizeHtml(data.description || ''),
-        // Numeric fields
         price: parseFloat(data.price) || 0,
         original_price:
           data.original_price !== '' && data.original_price != null
@@ -747,7 +441,6 @@ export default function AdminProducts() {
           data.reviews_count !== '' && data.reviews_count != null
             ? parseInt(data.reviews_count, 10)
             : undefined,
-        // Booleans
         featured: Boolean(data.featured),
         flash_sale: Boolean(data.flash_sale),
         donkomi: Boolean(data.donkomi),
@@ -774,52 +467,88 @@ export default function AdminProducts() {
     },
   });
 
-  // ── CRUD helpers ──────────────────────────────────────────────────────────
+  // ── CRUD helpers (FIXED) ──────────────────────────────────────────────────
   const softDelete = async (id) => {
-    await base44.entities.Product.update(id, { deleted: true, hidden: true });
-    invalidate();
-    toast.success('Product moved to Trash');
+    try {
+      await base44.entities.Product.update(id, { deleted: true, hidden: true });
+      invalidate();
+      toast.success('Product moved to Trash');
+    } catch (err) {
+      toast.error(`Failed to move to trash: ${err.message}`);
+      console.error('Soft delete error:', err);
+    }
   };
 
   const restore = async (id) => {
-    await base44.entities.Product.update(id, { deleted: false, hidden: false });
-    invalidate();
-    toast.success('Product restored');
+    try {
+      await base44.entities.Product.update(id, { deleted: false, hidden: false });
+      invalidate();
+      toast.success('Product restored');
+    } catch (err) {
+      toast.error(`Failed to restore: ${err.message}`);
+      console.error('Restore error:', err);
+    }
   };
 
   const permanentDelete = async (id) => {
     if (!confirm('Permanently delete? This cannot be undone.')) return;
-    await base44.entities.Product.delete(id);
-    invalidate();
-    toast.success('Permanently deleted');
+    try {
+      await base44.entities.Product.delete(id);
+      invalidate();
+      toast.success('Permanently deleted');
+    } catch (err) {
+      toast.error(`Failed to delete: ${err.message}`);
+      console.error('Permanent delete error:', err);
+    }
   };
 
   const toggleVisibility = async (product) => {
-    const next = !product.hidden;
-    await base44.entities.Product.update(product.id, { hidden: next });
-    invalidate();
-    toast.success(next ? 'Product hidden from users' : 'Product now visible to users');
+    try {
+      const next = !product.hidden;
+      await base44.entities.Product.update(product.id, { hidden: next });
+      invalidate();
+      toast.success(next ? 'Product hidden from users' : 'Product now visible to users');
+    } catch (err) {
+      toast.error(`Failed to toggle visibility: ${err.message}`);
+      console.error('Toggle visibility error:', err);
+    }
   };
 
   const handleBulkDelete = async () => {
     if (!selectedIds.length) return;
     if (!confirm(`Move ${selectedIds.length} product(s) to trash?`)) return;
     setBulkDeleting(true);
-    await Promise.all(selectedIds.map(id =>
-      base44.entities.Product.update(id, { deleted: true, hidden: true })
-    ));
-    invalidate(); setSelectedIds([]); setBulkDeleting(false);
-    toast.success(`${selectedIds.length} product(s) moved to trash`);
+    try {
+      await Promise.all(selectedIds.map(id =>
+        base44.entities.Product.update(id, { deleted: true, hidden: true })
+      ));
+      invalidate();
+      setSelectedIds([]);
+      toast.success(`${selectedIds.length} product(s) moved to trash`);
+    } catch (err) {
+      toast.error(`Bulk delete failed: ${err.message}`);
+      console.error('Bulk delete error:', err);
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   const handleBulkRestore = async () => {
     if (!selectedIds.length) return;
     setBulkDeleting(true);
-    await Promise.all(selectedIds.map(id =>
-      base44.entities.Product.update(id, { deleted: false, hidden: false })
-    ));
-    invalidate(); setSelectedIds([]); setBulkDeleting(false);
-    toast.success(`${selectedIds.length} product(s) restored`);
+    try {
+      await Promise.all(selectedIds.map(id =>
+        base44.entities.Product.update(id, { deleted: false, hidden: false })
+      ));
+      invalidate();
+      setSelectedIds([]);
+      toast.success(`${selectedIds.length} product(s) restored`);
+    } catch (err) {
+      toast.error(`Bulk restore failed: ${err.message}`);
+      console.error('Bulk restore error:', err);
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   // ── Upload handlers ───────────────────────────────────────────────────────
@@ -831,8 +560,14 @@ export default function AdminProducts() {
       const url = await uploadFile(file);
       setForm(f => ({ ...f, image_url: url }));
       toast.success('Main image uploaded!');
-    } catch { toast.error('Image upload failed'); }
-    finally { setUploadingMain(false); e.target.value = ''; }
+    } catch (err) {
+      toast.error('Image upload failed');
+      console.error('Upload error:', err);
+    }
+    finally {
+      setUploadingMain(false);
+      e.target.value = '';
+    }
   };
 
   const handleUploadExtra = async (e) => {
@@ -843,8 +578,14 @@ export default function AdminProducts() {
       const urls = await Promise.all(files.map(f => uploadFile(f)));
       setForm(f => ({ ...f, image_urls: [...(f.image_urls || []), ...urls].slice(0, 5) }));
       toast.success(`${urls.length} image(s) uploaded!`);
-    } catch { toast.error('Extra image upload failed'); }
-    finally { setUploadingExtra(false); e.target.value = ''; }
+    } catch (err) {
+      toast.error('Extra image upload failed');
+      console.error('Upload error:', err);
+    }
+    finally {
+      setUploadingExtra(false);
+      e.target.value = '';
+    }
   };
 
   const handleUploadVideo = async (e) => {
@@ -855,8 +596,14 @@ export default function AdminProducts() {
       const url = await uploadFile(file);
       setForm(f => ({ ...f, video_url: url }));
       toast.success('Video uploaded!');
-    } catch { toast.error('Video upload failed'); }
-    finally { setUploadingVideo(false); e.target.value = ''; }
+    } catch (err) {
+      toast.error('Video upload failed');
+      console.error('Upload error:', err);
+    }
+    finally {
+      setUploadingVideo(false);
+      e.target.value = '';
+    }
   };
 
   // ── Edit / New ────────────────────────────────────────────────────────────
@@ -1042,26 +789,25 @@ export default function AdminProducts() {
                     <input type="file" accept="image/*" multiple className="hidden" onChange={handleUploadExtra} disabled={uploadingExtra} />
                   </label>
                 )}
-                {/* Video slot */}
                 <label className="cursor-pointer w-16 h-16 rounded-lg border-2 border-dashed border-purple-300 flex flex-col items-center justify-center hover:border-purple-500 transition-colors gap-0.5 relative">
                   {uploadingVideo
                     ? <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
                     : form.video_url
                       ? <>
-                          <Video className="h-5 w-5 text-purple-500" />
-                          <span className="text-[9px] text-purple-600 font-semibold">Replace</span>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.preventDefault(); setForm(f => ({ ...f, video_url: '' })); }}
-                            className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </>
+                        <Video className="h-5 w-5 text-purple-500" />
+                        <span className="text-[9px] text-purple-600 font-semibold">Replace</span>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); setForm(f => ({ ...f, video_url: '' })); }}
+                          className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </>
                       : <>
-                          <Video className="h-4 w-4 text-purple-400" />
-                          <span className="text-[9px] text-purple-400">Video</span>
-                        </>}
+                        <Video className="h-4 w-4 text-purple-400" />
+                        <span className="text-[9px] text-purple-400">Video</span>
+                      </>}
                   <input type="file" accept="video/*" className="hidden" onChange={handleUploadVideo} disabled={uploadingVideo} />
                 </label>
               </div>
@@ -1082,9 +828,6 @@ export default function AdminProducts() {
                 placeholder="e.g. P9 Wireless Bluetooth Headset"
               />
             </div>
-
-            {/* AI Panel */}
-            <AiPanel form={form} setForm={setForm} />
 
             {/* Step 1 — Main Category */}
             <div>
@@ -1165,7 +908,7 @@ export default function AdminProducts() {
                 <SelectContent>
                   {(
                     (BRAND_SUBCATEGORIES[form.category] || {})[
-                      form.brand === 'Other' ? form.customBrand : form.brand
+                    form.brand === 'Other' ? form.customBrand : form.brand
                     ] || []
                   ).map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -1236,7 +979,6 @@ export default function AdminProducts() {
                 value={form.description}
                 onChange={v => setForm(f => ({ ...f, description: v }))}
               />
-              {/* Preview rendered description */}
               {form.description && (
                 <details className="mt-2">
                   <summary className="text-xs text-blue-600 cursor-pointer select-none">
@@ -1326,10 +1068,10 @@ export default function AdminProducts() {
           {displayed.map(product => {
             const isSelected = selectedIds.includes(product.id);
             const activeTags = [
-              product.featured  && { key: 'featured',  label: 'Featured', color: 'bg-purple-500' },
-              product.flash_sale && { key: 'flash_sale', label: 'Flash',    color: 'bg-orange-500' },
-              product.donkomi   && { key: 'donkomi',   label: 'Donkomi',  color: 'bg-green-500'  },
-              product.hidden    && { key: 'hidden',    label: 'Hidden',   color: 'bg-gray-500'   },
+              product.featured && { key: 'featured', label: 'Featured', color: 'bg-purple-500' },
+              product.flash_sale && { key: 'flash_sale', label: 'Flash', color: 'bg-orange-500' },
+              product.donkomi && { key: 'donkomi', label: 'Donkomi', color: 'bg-green-500' },
+              product.hidden && { key: 'hidden', label: 'Hidden', color: 'bg-gray-500' },
             ].filter(Boolean);
 
             return (
@@ -1337,7 +1079,6 @@ export default function AdminProducts() {
                 key={product.id}
                 className={`overflow-hidden shadow-sm hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-blue-500' : ''} ${product.hidden ? 'opacity-60' : ''}`}
               >
-                {/* Thumbnail */}
                 <div className="aspect-square bg-gray-50 relative overflow-hidden">
                   {product.image_url
                     ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
@@ -1367,7 +1108,6 @@ export default function AdminProducts() {
                   )}
                 </div>
 
-                {/* Info */}
                 <div className="p-2">
                   <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">
                     {product.name}
@@ -1377,33 +1117,34 @@ export default function AdminProducts() {
                     <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>
                   )}
 
-                  {/* Render HTML description safely (sanitized when saved) */}
                   {product.description && (
                     <div
-                      className="text-[10px] text-gray-500 mt-1 line-clamp-2 leading-tight"
-                      dangerouslySetInnerHTML={{ __html: product.description }}
+                      className="text-[10px] text-gray-500 mt-1 line-clamp-2 leading-tight prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.description) }}
                     />
                   )}
 
                   {activeTab === 'active' && (
                     <>
-                      {/* Quick-toggle badges */}
                       <div className="flex gap-1 mt-1.5 flex-wrap">
                         {[
-                          { key: 'featured',   label: '⭐', title: 'Featured'   },
+                          { key: 'featured', label: '⭐', title: 'Featured' },
                           { key: 'flash_sale', label: '⚡', title: 'Flash Sale' },
-                          { key: 'donkomi',    label: '🔥', title: 'Donkomi'    },
+                          { key: 'donkomi', label: '🔥', title: 'Donkomi' },
                         ].map(({ key, label, title }) => (
                           <button
                             key={key}
                             title={`Toggle ${title}`}
-                            onClick={() =>
-                              base44.entities.Product.update(product.id, { [key]: !product[key] }).then(() => {
-                                queryClient.invalidateQueries({ queryKey: ['products-admin'] });
-                                queryClient.invalidateQueries({ queryKey: ['products'] });
+                            onClick={async () => {
+                              try {
+                                await base44.entities.Product.update(product.id, { [key]: !product[key] });
+                                invalidate();
                                 toast.success(`${title} ${!product[key] ? 'enabled' : 'disabled'}`);
-                              })
-                            }
+                              } catch (err) {
+                                toast.error(`Failed to toggle ${title}`);
+                                console.error('Toggle error:', err);
+                              }
+                            }}
                             className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold transition-colors ${product[key] ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-gray-100 border-gray-300 text-gray-400'}`}
                           >
                             {label}
@@ -1411,7 +1152,6 @@ export default function AdminProducts() {
                         ))}
                       </div>
 
-                      {/* Action row */}
                       <div className="flex gap-1 mt-1.5">
                         <Button
                           size="sm"

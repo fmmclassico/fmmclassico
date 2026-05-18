@@ -33,53 +33,82 @@ const HEADER_KEYWORDS = [
 ];
 
 function renderDescription(text) {
-  // Strip any markdown bold/italic markers so they don't show as raw symbols
+  /**
+   * clean() removes ALL markdown syntax characters so they never appear
+   * as raw symbols in the rendered output:
+   *   **bold**  →  bold
+   *   __bold__  →  bold
+   *   *italic*  →  italic
+   *   _italic_  →  italic
+   *   `code`    →  code
+   *   ##heading →  heading
+   *   ~~strike~ →  strike
+   *   [text](url) → text
+   */
   const clean = (str) =>
     str
-      .replace(/\*\*(.*?)\*\*/g, '$1')   // **bold** → bold
-      .replace(/__(.*?)__/g, '$1')        // __bold__ → bold
-      .replace(/\*(.*?)\*/g, '$1')        // *italic* → italic
-      .replace(/_(.*?)_/g, '$1')          // _italic_ → italic
-      .replace(/`(.*?)`/g, '$1');         // `code` → code
+      .replace(/\*\*(.*?)\*\*/gs, '$1')      // **bold**
+      .replace(/__(.*?)__/gs, '$1')           // __bold__
+      .replace(/\*(.*?)\*/gs, '$1')           // *italic*
+      .replace(/_(.*?)_/gs, '$1')             // _italic_
+      .replace(/`(.*?)`/gs, '$1')             // `code`
+      .replace(/~~(.*?)~~/gs, '$1')           // ~~strikethrough~~
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // [text](url)
+      .replace(/^#{1,6}\s*/gm, '')            // ## headings
+      .replace(/^\s*>\s*/gm, '')              // > blockquotes
+      .trim();
 
   return text.split('\n').map((line, i) => {
+    // Work on the raw line first for structure detection,
+    // then apply clean() to the text content we actually render.
     const trimmed = line.trim();
     if (!trimmed) return null;
 
-    // Bullet point  (*, -, •)
-    if (/^[\*\-•]/.test(trimmed)) {
-      return (
-        <div key={i} className="flex items-start gap-2 ml-1">
-          <span className="text-[#2E86C1] font-bold mt-0.5 flex-shrink-0">•</span>
-          <span className="leading-relaxed">{clean(trimmed.replace(/^[\*\-•]\s*/, ''))}</span>
-        </div>
-      );
-    }
-
-    // Section header  (e.g. "Key Features:", "Specifications")
-    const lower = trimmed.toLowerCase();
-    const isHeader = HEADER_KEYWORDS.some(h => lower.startsWith(h));
-    if (isHeader) {
+    // ── Heading lines that start with # ──────────────────────────────
+    if (/^#{1,6}\s+/.test(trimmed)) {
       return (
         <p key={i} className="font-black text-gray-800 text-sm pt-3 pb-1 border-t border-gray-100 uppercase tracking-wide">
-          {clean(trimmed.replace(/:$/, ''))}
+          {clean(trimmed)}
         </p>
       );
     }
 
-    // Spec row  "Label: value"  — only when label is short (≤30 chars) and
-    // does NOT contain markdown symbols or look like a sentence
-    const colonIdx = trimmed.indexOf(':');
+    // ── Bullet point  (*, -, •, +) ───────────────────────────────────
+    // Must start with the symbol then a space so "* bold *" isn't confused
+    if (/^[\*\-•+]\s+/.test(trimmed)) {
+      return (
+        <div key={i} className="flex items-start gap-2 ml-1">
+          <span className="text-[#2E86C1] font-bold mt-0.5 flex-shrink-0">•</span>
+          <span className="leading-relaxed">{clean(trimmed.replace(/^[\*\-•+]\s+/, ''))}</span>
+        </div>
+      );
+    }
+
+    // ── Section header keywords ───────────────────────────────────────
+    const lower = clean(trimmed).toLowerCase();
+    const isHeader = HEADER_KEYWORDS.some(h => lower.startsWith(h));
+    if (isHeader) {
+      return (
+        <p key={i} className="font-black text-gray-800 text-sm pt-3 pb-1 border-t border-gray-100 uppercase tracking-wide">
+          {clean(trimmed).replace(/:$/, '')}
+        </p>
+      );
+    }
+
+    // ── Spec row  "Label: value" ──────────────────────────────────────
+    // Only match when the label portion (before colon) is plain text,
+    // short (≤4 words), and the line isn't a full sentence.
+    const cleanedLine = clean(trimmed);
+    const colonIdx = cleanedLine.indexOf(':');
     if (
       colonIdx > 0 &&
-      colonIdx <= 30 &&
-      trimmed.slice(colonIdx + 1).trim().length > 0 &&
-      !/[*_`#]/.test(trimmed.slice(0, colonIdx)) &&         // no markdown in label
-      !/\s{2,}/.test(trimmed.slice(0, colonIdx)) &&          // no multiple spaces
-      trimmed.slice(0, colonIdx).split(' ').length <= 4       // label is ≤4 words
+      colonIdx <= 35 &&
+      cleanedLine.slice(colonIdx + 1).trim().length > 0 &&
+      cleanedLine.slice(0, colonIdx).split(' ').length <= 4 &&
+      !/[.!?]$/.test(cleanedLine.slice(0, colonIdx))   // label shouldn't end like a sentence
     ) {
-      const label = clean(trimmed.slice(0, colonIdx));
-      const value = clean(trimmed.slice(colonIdx + 1).trim());
+      const label = cleanedLine.slice(0, colonIdx).trim();
+      const value = cleanedLine.slice(colonIdx + 1).trim();
       return (
         <div key={i} className="flex gap-2 leading-relaxed text-sm">
           <span className="font-semibold text-gray-700 flex-shrink-0 min-w-[100px]">{label}:</span>
@@ -91,7 +120,7 @@ function renderDescription(text) {
     // Regular paragraph
     return (
       <p key={i} className="leading-relaxed text-gray-600">
-        {clean(trimmed)}
+        {cleanedLine}
       </p>
     );
   }).filter(Boolean);

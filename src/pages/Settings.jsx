@@ -257,7 +257,7 @@ export default function Settings() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-3 pb-6"
       >
         <Button
           onClick={handleSave}
@@ -309,8 +309,6 @@ export default function Settings() {
         </div>
       </motion.div>
 
-      {/* Bottom spacer for nav */}
-      <div className="h-24" />
     </div>
   );
 }

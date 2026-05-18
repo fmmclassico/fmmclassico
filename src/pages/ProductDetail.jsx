@@ -53,7 +53,6 @@ export default function ProductDetail() {
 
   const product = products.find(p => p.id === productId);
 
-  // Build image gallery: up to 4 images + 1 video slot
   const allImages = product ? [
     product.image_url,
     ...(product.image_urls || [])
@@ -64,7 +63,6 @@ export default function ProductDetail() {
   }
 
   const videoUrl = product?.video_url || null;
-  // gallery = images + video (if exists) = up to 5 items
   const galleryItems = videoUrl
     ? [...allImages, { type: 'video', url: videoUrl }]
     : allImages.map(u => ({ type: 'image', url: u }));
@@ -78,7 +76,6 @@ export default function ProductDetail() {
         base44.auth.redirectToLogin(window.location.href);
         return;
       }
-      // Optimistic update: instantly update cart and stock in UI
       queryClient.setQueryData(['cartItems', user.email], (old = []) => {
         const existing = old.find(i => i.product_id === product.id);
         if (existing) return old.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + quantity } : i);
@@ -90,7 +87,6 @@ export default function ProductDetail() {
         );
       }
       toast.success('Added to cart!');
-      // Persist in background
       const existingItems = await base44.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
       if (existingItems.length > 0) {
         await base44.entities.CartItem.update(existingItems[0].id, { quantity: existingItems[0].quantity + quantity });
@@ -111,18 +107,10 @@ export default function ProductDetail() {
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
 
-  const nextImage = () => {
-    setSelectedImageIndex((prev) => (prev + 1) % allImages.length);
-  };
+  const nextImage = () => setSelectedImageIndex((prev) => (prev + 1) % allImages.length);
+  const prevImage = () => setSelectedImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
 
-  const prevImage = () => {
-    setSelectedImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
-  };
-
-  const handleTouchStart = (e) => {
-    setTouchStart(e.touches[0].clientX);
-  };
-
+  const handleTouchStart = (e) => setTouchStart(e.touches[0].clientX);
   const handleTouchEnd = (e) => {
     if (touchStart === null) return;
     const diff = touchStart - e.changedTouches[0].clientX;
@@ -132,7 +120,6 @@ export default function ProductDetail() {
     setTouchStart(null);
   };
 
-  // Auto-scroll product images every 10 seconds
   useEffect(() => {
     if (allImages.length <= 1) return;
     const interval = setInterval(() => {
@@ -140,6 +127,56 @@ export default function ProductDetail() {
     }, 10000);
     return () => clearInterval(interval);
   }, [allImages.length]);
+
+  // ── Description formatter ──────────────────────────────────────────
+  const renderDescription = (text) => {
+    const HEADER_KEYWORDS = [
+      'key features', 'specifications', 'package includes',
+      'package contents', "what's in the box", 'in the box',
+      'features', 'specs', 'what is in the box', 'package content',
+    ];
+
+    return text.split('\n').map((line, i) => {
+      const trimmed = line.trim();
+      if (!trimmed) return null;
+
+      // Bullet point
+      if (/^[\*\-•]/.test(trimmed)) {
+        return (
+          <div key={i} className="flex items-start gap-2 ml-1">
+            <span className="text-[#2E86C1] font-bold mt-0.5 flex-shrink-0">•</span>
+            <span className="leading-relaxed">{trimmed.replace(/^[\*\-•]\s*/, '')}</span>
+          </div>
+        );
+      }
+
+      // Section header
+      const isHeader = HEADER_KEYWORDS.some(h => trimmed.toLowerCase().startsWith(h));
+      if (isHeader) {
+        return (
+          <p key={i} className="font-black text-gray-800 text-sm pt-3 pb-1 border-t border-gray-100 uppercase tracking-wide">
+            {trimmed}
+          </p>
+        );
+      }
+
+      // Spec row: "Label: value"
+      if (/^[^:]{1,30}:\s*.+$/.test(trimmed)) {
+        const colonIdx = trimmed.indexOf(':');
+        const label = trimmed.slice(0, colonIdx);
+        const value = trimmed.slice(colonIdx + 1).trim();
+        return (
+          <div key={i} className="flex gap-2 leading-relaxed text-sm">
+            <span className="font-semibold text-gray-700 flex-shrink-0 min-w-[100px]">{label}:</span>
+            <span className="text-gray-600">{value}</span>
+          </div>
+        );
+      }
+
+      // Regular paragraph
+      return <p key={i} className="leading-relaxed text-gray-600">{trimmed}</p>;
+    }).filter(Boolean);
+  };
 
   if (isLoading) {
     return (
@@ -170,16 +207,14 @@ export default function ProductDetail() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-
-
       <div className="grid md:grid-cols-2 gap-8">
+
         {/* Product Image Gallery */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="space-y-4"
         >
-          {/* Main display with swipe */}
           <div
             className="relative w-full max-w-[280px] sm:max-w-md mx-auto aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-lg cursor-grab active:cursor-grabbing"
             onTouchStart={handleTouchStart}
@@ -217,7 +252,6 @@ export default function ProductDetail() {
               </Badge>
             )}
 
-            {/* Dot indicators */}
             {galleryItems.length > 1 && (
               <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
                 {galleryItems.map((_, idx) => (
@@ -229,7 +263,6 @@ export default function ProductDetail() {
             )}
           </div>
 
-          {/* Thumbnail Gallery — 4 images + video */}
           <div className="grid grid-cols-5 gap-2 max-w-[280px] sm:max-w-md mx-auto">
             {galleryItems.map((item, idx) => (
               <button
@@ -286,13 +319,16 @@ export default function ProductDetail() {
             )}
           </div>
 
+          {/* ── DESCRIPTION ── */}
           {product.description && (
             <details className="group border border-gray-200 rounded-xl overflow-hidden">
               <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer font-semibold text-gray-700 select-none list-none">
                 <span>Product Details</span>
-                <span className="text-[#2E86C1] group-open:rotate-180 transition-transform">▼</span>
+                <span className="text-[#2E86C1] group-open:rotate-180 transition-transform inline-block">▼</span>
               </summary>
-              <div className="px-4 py-3 text-gray-600 leading-relaxed text-sm">{product.description}</div>
+              <div className="px-4 py-4 space-y-2 text-sm">
+                {renderDescription(product.description)}
+              </div>
             </details>
           )}
 
@@ -336,8 +372,7 @@ export default function ProductDetail() {
             </Button>
           </div>
 
-          {/* Features */}
-          <div className="grid grid-cols-1 gap-3 pt-4 border-t relative" id="product-features">
+          <div className="grid grid-cols-1 gap-3 pt-4 border-t">
             <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg">
               <Shield className="h-6 w-6 text-[#2E86C1] mb-2" />
               <span className="text-xs font-medium text-gray-600">Genuine Product</span>
@@ -346,7 +381,6 @@ export default function ProductDetail() {
         </motion.div>
       </div>
 
-      {/* Review Section */}
       <ReviewSection product={product} user={user} />
     </div>
   );

@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Upload, X, Pencil, Plus, Trash2, ImagePlus,
   Loader2, Check, Eye, EyeOff, RotateCcw, Video,
-  Bold, AlignLeft, AlignCenter, AlignRight, Wand2
+  Bold, AlignLeft, AlignCenter, AlignRight, Wand2, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -111,7 +111,7 @@ const BRAND_SUBCATEGORIES = {
 
 const EMPTY_FORM = {
   name: '', description: '', price: '', original_price: '',
-  main_group: '', category: '', brand: '', subcategory: '',
+  main_group: '', category: '', brand: '', customBrand: '', subcategory: '',
   stock: '', featured: false, flash_sale: false,
   donkomi: false, review_enabled: true, rating: '', reviews_count: '',
   image_url: '', image_urls: [], video_url: '', flash_sale_end: '',
@@ -123,17 +123,46 @@ async function uploadFile(file) {
   return file_url;
 }
 
+// ── Claude API helper ─────────────────────────────────────────────────────────
+async function callClaude({ system, userMessage, maxTokens = 1000 }) {
+  const body = {
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: maxTokens,
+    messages: [{ role: 'user', content: userMessage }],
+  };
+  if (system) body.system = system;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  // Gather all text blocks
+  return (data.content || []).map(b => b.text || '').join('').trim();
+}
+
 // ── Rich Text Editor ──────────────────────────────────────────────────────────
 function RichTextEditor({ value, onChange }) {
   const editorRef = useRef(null);
   const isInitialized = useRef(false);
 
+  // Initialize content once
   useEffect(() => {
     if (editorRef.current && !isInitialized.current) {
       editorRef.current.innerHTML = value || '';
       isInitialized.current = true;
     }
   }, []);
+
+  // Sync when value is programmatically set (e.g. after AI generates description)
+  useEffect(() => {
+    if (editorRef.current && isInitialized.current) {
+      // Only update if content actually differs to avoid cursor jumping
+      if (editorRef.current.innerHTML !== value) {
+        editorRef.current.innerHTML = value || '';
+      }
+    }
+  }, [value]);
 
   const exec = (cmd, val = null) => {
     editorRef.current?.focus();
@@ -142,6 +171,19 @@ function RichTextEditor({ value, onChange }) {
   };
 
   const handleInput = () => onChange(editorRef.current?.innerHTML || '');
+
+  // FIX: Preserve rich formatting on paste
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const html = e.clipboardData.getData('text/html');
+    const text = e.clipboardData.getData('text/plain');
+    if (html) {
+      document.execCommand('insertHTML', false, html);
+    } else {
+      document.execCommand('insertText', false, text);
+    }
+    onChange(editorRef.current?.innerHTML || '');
+  };
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
@@ -173,6 +215,8 @@ function RichTextEditor({ value, onChange }) {
         <div className="w-px h-5 bg-gray-300 mx-1" />
         <button type="button" title="Bullet List" onClick={() => exec('insertUnorderedList')}
           className="p-1.5 rounded hover:bg-gray-200 transition-colors text-sm font-bold">• List</button>
+        <button type="button" title="Numbered List" onClick={() => exec('insertOrderedList')}
+          className="p-1.5 rounded hover:bg-gray-200 transition-colors text-sm font-bold">1. List</button>
         <button type="button" title="Clear Formatting" onClick={() => exec('removeFormat')}
           className="p-1.5 rounded hover:bg-gray-200 transition-colors text-xs text-gray-500">Clear</button>
       </div>
@@ -182,7 +226,8 @@ function RichTextEditor({ value, onChange }) {
         contentEditable
         suppressContentEditableWarning
         onInput={handleInput}
-        className="min-h-[120px] px-3 py-2 text-sm text-gray-700 focus:outline-none"
+        onPaste={handlePaste}
+        className="min-h-[150px] px-3 py-2 text-sm text-gray-700 focus:outline-none"
         style={{ lineHeight: '1.6' }}
       />
     </div>
@@ -192,49 +237,245 @@ function RichTextEditor({ value, onChange }) {
 // ── Video Preview ─────────────────────────────────────────────────────────────
 function VideoPreview({ url }) {
   if (!url) return null;
-
-  // YouTube
   const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
   if (ytMatch) {
     return (
       <div className="mt-2 rounded-xl overflow-hidden aspect-video bg-black">
-        <iframe
-          src={`https://www.youtube.com/embed/${ytMatch[1]}`}
-          className="w-full h-full"
-          allowFullScreen
-          title="Product Video"
-        />
+        <iframe src={`https://www.youtube.com/embed/${ytMatch[1]}`} className="w-full h-full" allowFullScreen title="Product Video" />
       </div>
     );
   }
-
-  // Direct video file
-  if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i) || url.includes('blob:') || url.startsWith('https://') && !url.includes('youtube') && !url.includes('vimeo')) {
+  if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i) || url.includes('blob:') || (url.startsWith('https://') && !url.includes('youtube') && !url.includes('vimeo'))) {
     return (
       <div className="mt-2 rounded-xl overflow-hidden aspect-video bg-black">
         <video src={url} controls className="w-full h-full" />
       </div>
     );
   }
-
-  // Vimeo
   const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
   if (vimeoMatch) {
     return (
       <div className="mt-2 rounded-xl overflow-hidden aspect-video bg-black">
-        <iframe
-          src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
-          className="w-full h-full"
-          allowFullScreen
-          title="Product Video"
-        />
+        <iframe src={`https://player.vimeo.com/video/${vimeoMatch[1]}`} className="w-full h-full" allowFullScreen title="Product Video" />
       </div>
     );
   }
-
   return <p className="text-xs text-orange-500 mt-1">⚠ Could not preview this URL. It will still be saved.</p>;
 }
 
+// ── AI Panel ──────────────────────────────────────────────────────────────────
+function AiPanel({ form, setForm }) {
+  const [aiDescLoading, setAiDescLoading] = useState(false);
+  const [aiFullLoading, setAiFullLoading] = useState(false);
+  const [aiTypeLoading, setAiTypeLoading] = useState(false);
+  const [aiBrandLoading, setAiBrandLoading] = useState(false);
+
+  const effectiveBrand = form.brand === 'Other' ? form.customBrand : form.brand;
+
+  // ── 1. AI Generate Description only ──────────────────────────────────────
+  const handleAiDescription = async () => {
+    if (!form.name) { toast.error('Enter a product name first'); return; }
+    setAiDescLoading(true);
+    try {
+      const html = await callClaude({
+        system: `You are a professional product copywriter for an electronics and accessories store in Ghana.
+Write compelling, accurate product descriptions in clean HTML using only: <h2>, <p>, <ul>, <li>, <strong>, <br>.
+Do NOT use <html>, <body>, <head>, <style>, or any attributes. Keep it clean and ready to render directly.
+Structure: 1-2 paragraph overview, Key Features as <ul><li> list, Specifications as <ul><li> list if known.`,
+        userMessage: `Write a full product description for:
+Product: ${form.name}
+Brand: ${effectiveBrand || 'Unknown'}
+Category: ${form.category || 'Electronics'}
+Product Type: ${form.subcategory || ''}
+
+Make it professional, accurate and appealing for online shoppers. Use HTML formatting.`,
+        maxTokens: 800,
+      });
+      setForm(f => ({ ...f, description: html }));
+      toast.success('✨ AI description generated!');
+    } catch {
+      toast.error('AI description failed');
+    } finally {
+      setAiDescLoading(false);
+    }
+  };
+
+  // ── 2. AI Auto-fill ALL fields (name required) ────────────────────────────
+  const handleAiFullDetect = async () => {
+    if (!form.name) { toast.error('Enter a product name first'); return; }
+    setAiFullLoading(true);
+    try {
+      const allBrands = [...new Set(Object.values(GROUP_BRANDS).flat())];
+      const result = await callClaude({
+        system: `You are a product classification and content expert for an electronics store in Ghana.
+Given a product name, return ONLY a valid JSON object with these exact keys:
+{
+  "brand": "detected brand name or empty string",
+  "main_group": "one of: phones | phone_accessories | electronics | home_appliances_group",
+  "category": "one of: phones | phone_cases | chargers | earphones | cables | power_banks | screen_protectors | holders | speakers | smart_watches | electronic_appliances | home_appliances",
+  "subcategory": "specific product type e.g. Bluetooth Headphones, Smart TV 43\\"",
+  "description": "full HTML product description using <h2><p><ul><li><strong> tags only"
+}
+Return ONLY the JSON. No markdown, no explanation, no backticks.`,
+        userMessage: `Product name: "${form.name}"
+Known brands list: ${allBrands.join(', ')}
+
+Detect all fields and write a full HTML description.`,
+        maxTokens: 1200,
+      });
+
+      let parsed;
+      try {
+        parsed = JSON.parse(result.replace(/```json|```/g, '').trim());
+      } catch {
+        toast.error('AI returned invalid data, try again');
+        return;
+      }
+
+      const updates = {};
+      if (parsed.brand) {
+        const knownBrands = allBrands.map(b => b.toLowerCase());
+        if (knownBrands.includes(parsed.brand.toLowerCase())) {
+          // Find correct casing
+          updates.brand = allBrands.find(b => b.toLowerCase() === parsed.brand.toLowerCase()) || parsed.brand;
+          updates.customBrand = '';
+        } else {
+          updates.brand = 'Other';
+          updates.customBrand = parsed.brand;
+        }
+      }
+      if (parsed.main_group) updates.main_group = parsed.main_group;
+      if (parsed.category) updates.category = parsed.category;
+      if (parsed.subcategory) updates.subcategory = parsed.subcategory;
+      if (parsed.description) updates.description = parsed.description;
+
+      setForm(f => ({ ...f, ...updates }));
+      toast.success('✨ AI filled in all product details!');
+    } catch {
+      toast.error('AI auto-fill failed');
+    } finally {
+      setAiFullLoading(false);
+    }
+  };
+
+  // ── 3. AI Detect Product Type only ───────────────────────────────────────
+  const handleAiDetectType = async () => {
+    if (!form.name) { toast.error('Enter product name first'); return; }
+    setAiTypeLoading(true);
+    try {
+      const options = ((BRAND_SUBCATEGORIES[form.category] || {})[effectiveBrand] || []);
+      const optionsList = options.length ? options.join('\n- ') : 'Other';
+      const detected = await callClaude({
+        system: `You are a product classification expert. Reply with ONLY the exact product type from the provided list. No explanation, no punctuation, nothing else. If none match, reply: Other`,
+        userMessage: `Product: "${form.name}"
+Brand: "${effectiveBrand || ''}"
+Category: "${form.category || ''}"
+
+Available product types:
+- ${optionsList}
+
+Which type matches best?`,
+        maxTokens: 50,
+      });
+      const match = options.find(o => o.toLowerCase() === detected.toLowerCase()) || detected;
+      setForm(f => ({ ...f, subcategory: match }));
+      toast.success(`AI detected type: ${match}`);
+    } catch {
+      toast.error('AI type detection failed');
+    } finally {
+      setAiTypeLoading(false);
+    }
+  };
+
+  // ── 4. AI Detect Brand ────────────────────────────────────────────────────
+  const handleAiDetectBrand = async () => {
+    if (!form.name) { toast.error('Enter product name first'); return; }
+    setAiBrandLoading(true);
+    try {
+      const allBrands = [...new Set(Object.values(GROUP_BRANDS).flat().filter(b => b !== 'Other'))];
+      const detected = await callClaude({
+        system: `You are a product expert. Given a product name, identify the brand.
+If it matches one from the provided list (case-insensitive), return that exact name from the list.
+If it's a different brand not in the list, return the brand name as-is.
+Reply with ONLY the brand name. Nothing else.`,
+        userMessage: `Product name: "${form.name}"
+Known brands: ${allBrands.join(', ')}
+What is the brand?`,
+        maxTokens: 30,
+      });
+      const trimmed = detected.trim();
+      const knownMatch = allBrands.find(b => b.toLowerCase() === trimmed.toLowerCase());
+      if (knownMatch) {
+        setForm(f => ({ ...f, brand: knownMatch, customBrand: '' }));
+        toast.success(`AI detected brand: ${knownMatch}`);
+      } else {
+        setForm(f => ({ ...f, brand: 'Other', customBrand: trimmed }));
+        toast.success(`AI detected brand: ${trimmed} (set as custom)`);
+      }
+    } catch {
+      toast.error('AI brand detection failed');
+    } finally {
+      setAiBrandLoading(false);
+    }
+  };
+
+  return (
+    <div className="md:col-span-2 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Sparkles className="h-4 w-4 text-purple-600" />
+        <span className="font-semibold text-sm text-purple-800">AI Assistant</span>
+        <span className="text-xs text-purple-500">— Enter product name above, then use any button</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {/* Auto-fill everything */}
+        <button
+          type="button"
+          onClick={handleAiFullDetect}
+          disabled={aiFullLoading || !form.name}
+          className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
+        >
+          {aiFullLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+          {aiFullLoading ? 'Detecting…' : '✨ Auto-fill Everything'}
+        </button>
+
+        {/* Description only */}
+        <button
+          type="button"
+          onClick={handleAiDescription}
+          disabled={aiDescLoading || !form.name}
+          className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
+        >
+          {aiDescLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+          {aiDescLoading ? 'Writing…' : 'Generate Description'}
+        </button>
+
+        {/* Brand only */}
+        <button
+          type="button"
+          onClick={handleAiDetectBrand}
+          disabled={aiBrandLoading || !form.name}
+          className="flex items-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
+        >
+          {aiBrandLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+          {aiBrandLoading ? 'Detecting…' : 'Detect Brand'}
+        </button>
+
+        {/* Product type only */}
+        <button
+          type="button"
+          onClick={handleAiDetectType}
+          disabled={aiTypeLoading || !form.name}
+          className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
+        >
+          {aiTypeLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+          {aiTypeLoading ? 'Detecting…' : 'Detect Product Type'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 export default function AdminProducts() {
   const [user, setUser] = React.useState(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
@@ -247,7 +488,6 @@ export default function AdminProducts() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState('active');
-  const [aiDetecting, setAiDetecting] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -277,9 +517,14 @@ export default function AdminProducts() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const { main_group, ...rest } = data;
+      const { main_group, customBrand, ...rest } = data;
+      // Use customBrand if brand is "Other" and customBrand is filled
+      const finalBrand = (data.brand === 'Other' && data.customBrand?.trim())
+        ? data.customBrand.trim()
+        : data.brand;
       const payload = {
         ...rest,
+        brand: finalBrand,
         price: parseFloat(data.price) || 0,
         original_price: data.original_price ? parseFloat(data.original_price) : undefined,
         stock: data.stock !== '' ? parseInt(data.stock) : undefined,
@@ -329,9 +574,7 @@ export default function AdminProducts() {
     if (!confirm(`Move ${selectedIds.length} product(s) to trash?`)) return;
     setBulkDeleting(true);
     await Promise.all(selectedIds.map(id => base44.entities.Product.update(id, { deleted: true, hidden: true })));
-    invalidate();
-    setSelectedIds([]);
-    setBulkDeleting(false);
+    invalidate(); setSelectedIds([]); setBulkDeleting(false);
     toast.success(`${selectedIds.length} product(s) moved to trash`);
   };
 
@@ -339,9 +582,7 @@ export default function AdminProducts() {
     if (!selectedIds.length) return;
     setBulkDeleting(true);
     await Promise.all(selectedIds.map(id => base44.entities.Product.update(id, { deleted: false, hidden: false })));
-    invalidate();
-    setSelectedIds([]);
-    setBulkDeleting(false);
+    invalidate(); setSelectedIds([]); setBulkDeleting(false);
     toast.success(`${selectedIds.length} product(s) restored`);
   };
 
@@ -381,42 +622,6 @@ export default function AdminProducts() {
     finally { setUploadingVideo(false); e.target.value = ''; }
   };
 
-  // ── AI Detect Product Type ─────────────────────────────────────────────────
-  const handleAiDetect = async () => {
-    if (!form.name || !form.brand || !form.category) {
-      toast.error('Please fill in product name, category and brand first');
-      return;
-    }
-    setAiDetecting(true);
-    try {
-      const options = ((BRAND_SUBCATEGORIES[form.category] || {})[form.brand] || []).join(', ');
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 100,
-          messages: [{
-            role: 'user',
-            content: `Given this product name: "${form.name}", brand: "${form.brand}", category: "${form.category}".
-Available product types: ${options || 'Other'}.
-Reply with ONLY the best matching product type from the list above, or "Other" if none match. No explanation.`
-          }]
-        })
-      });
-      const data = await response.json();
-      const detected = data.content?.[0]?.text?.trim();
-      if (detected) {
-        setForm(f => ({ ...f, subcategory: detected }));
-        toast.success(`AI detected: ${detected}`);
-      }
-    } catch {
-      toast.error('AI detection failed');
-    } finally {
-      setAiDetecting(false);
-    }
-  };
-
   const handleEdit = (product) => {
     setEditingProduct(product);
     const cat = product.category || '';
@@ -425,14 +630,21 @@ Reply with ONLY the best matching product type from the list above, or "Other" i
     else if (cat === 'electronic_appliances') main_group = 'electronics';
     else if (cat === 'home_appliances') main_group = 'home_appliances_group';
     else if (cat) main_group = 'phone_accessories';
+
+    // Check if saved brand is in known list or is custom
+    const knownBrands = Object.values(GROUP_BRANDS).flat();
+    const savedBrand = product.brand || '';
+    const isKnownBrand = knownBrands.includes(savedBrand);
+
     setForm({
       name: product.name || '',
       description: product.description || '',
       price: product.price ?? '',
       original_price: product.original_price ?? '',
       main_group,
-      category: product.category || '',
-      brand: product.brand || '',
+      category: cat,
+      brand: isKnownBrand ? savedBrand : (savedBrand ? 'Other' : ''),
+      customBrand: isKnownBrand ? '' : savedBrand,
       subcategory: product.subcategory || '',
       stock: product.stock ?? '',
       featured: product.featured || false,
@@ -590,16 +802,19 @@ Reply with ONLY the best matching product type from the list above, or "Other" i
               <p className="text-[10px] text-gray-400 mt-1">Slots: {(form.image_urls || []).length}/5 images · {form.video_url ? '1/1' : '0/1'} video</p>
             </div>
 
-            {/* Name */}
+            {/* Product Name */}
             <div className="md:col-span-2">
               <Label>Product Name *</Label>
-              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. iPhone 14 Pro Max" />
+              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. P9 Wireless Bluetooth Headset" />
             </div>
+
+            {/* ── AI PANEL ── */}
+            <AiPanel form={form} setForm={setForm} />
 
             {/* Step 1 */}
             <div>
               <Label>Step 1 — Main Category *</Label>
-              <Select value={form.main_group} onValueChange={v => setForm(f => ({ ...f, main_group: v, category: '', brand: '', subcategory: '' }))}>
+              <Select value={form.main_group} onValueChange={v => setForm(f => ({ ...f, main_group: v, category: '', brand: '', customBrand: '', subcategory: '' }))}>
                 <SelectTrigger><SelectValue placeholder="Select main category" /></SelectTrigger>
                 <SelectContent>
                   {MAIN_CATEGORY_GROUPS.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
@@ -610,7 +825,7 @@ Reply with ONLY the best matching product type from the list above, or "Other" i
             {/* Step 2 */}
             <div>
               <Label>Step 2 — Subcategory *</Label>
-              <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v, brand: '', subcategory: '' }))} disabled={!form.main_group}>
+              <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v, brand: '', customBrand: '', subcategory: '' }))} disabled={!form.main_group}>
                 <SelectTrigger><SelectValue placeholder={form.main_group ? 'Select subcategory' : 'Select main category first'} /></SelectTrigger>
                 <SelectContent>
                   {(GROUP_CATEGORIES[form.main_group] || []).map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
@@ -618,35 +833,36 @@ Reply with ONLY the best matching product type from the list above, or "Other" i
               </Select>
             </div>
 
-            {/* Step 3 */}
+            {/* Step 3 — Brand + Custom Brand input */}
             <div>
               <Label>Step 3 — Brand *</Label>
-              <Select value={form.brand} onValueChange={v => setForm(f => ({ ...f, brand: v, subcategory: '' }))} disabled={!form.category}>
+              <Select value={form.brand} onValueChange={v => setForm(f => ({ ...f, brand: v, customBrand: '', subcategory: '' }))} disabled={!form.category}>
                 <SelectTrigger><SelectValue placeholder={form.category ? 'Select brand' : 'Select subcategory first'} /></SelectTrigger>
                 <SelectContent>
                   {(GROUP_BRANDS[form.main_group] || []).map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {/* Custom brand input shown when "Other" is selected */}
+              {form.brand === 'Other' && (
+                <div className="mt-2">
+                  <Input
+                    value={form.customBrand || ''}
+                    onChange={e => setForm(f => ({ ...f, customBrand: e.target.value }))}
+                    placeholder="Type brand name e.g. Anker, Baseus, Xiaomi…"
+                    className="border-orange-300 focus:ring-orange-400"
+                  />
+                  <p className="text-xs text-orange-500 mt-0.5">Enter the brand name manually</p>
+                </div>
+              )}
             </div>
 
-            {/* Step 4 — AI detected */}
+            {/* Step 4 — Product Type */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <Label>Step 4 — Product Type</Label>
-                <button
-                  type="button"
-                  onClick={handleAiDetect}
-                  disabled={aiDetecting || !form.name || !form.brand || !form.category}
-                  className="flex items-center gap-1 text-xs font-semibold text-purple-600 hover:text-purple-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  {aiDetecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
-                  {aiDetecting ? 'Detecting…' : 'AI Detect'}
-                </button>
-              </div>
+              <Label>Step 4 — Product Type</Label>
               <Select value={form.subcategory} onValueChange={v => setForm(f => ({ ...f, subcategory: v }))} disabled={!form.brand}>
-                <SelectTrigger><SelectValue placeholder={form.brand ? 'Select or use AI Detect ↑' : 'Select brand first'} /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={form.brand ? 'Select product type' : 'Select brand first'} /></SelectTrigger>
                 <SelectContent>
-                  {((BRAND_SUBCATEGORIES[form.category] || {})[form.brand] || []).map(s => (
+                  {((BRAND_SUBCATEGORIES[form.category] || {})[form.brand === 'Other' ? form.customBrand : form.brand] || []).map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
                   <SelectItem value="Other">Other</SelectItem>
@@ -666,13 +882,13 @@ Reply with ONLY the best matching product type from the list above, or "Other" i
               <Input type="number" value={form.original_price} onChange={e => setForm(f => ({ ...f, original_price: e.target.value }))} placeholder="0.00" />
             </div>
 
-            {/* Stock — optional */}
+            {/* Stock */}
             <div>
               <Label>Stock Quantity <span className="text-gray-400 font-normal text-xs">(optional)</span></Label>
               <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="Leave blank if unlimited" />
             </div>
 
-            {/* Video URL with live preview */}
+            {/* Video URL */}
             <div className="md:col-span-2">
               <Label>Video URL <span className="text-gray-400 font-normal text-xs">(YouTube, Vimeo, or direct link)</span></Label>
               <Input
@@ -683,12 +899,14 @@ Reply with ONLY the best matching product type from the list above, or "Other" i
               <VideoPreview url={form.video_url} />
             </div>
 
-            {/* Description — Rich Text */}
+            {/* Description — Rich Text with paste fix */}
             <div className="md:col-span-2">
-              <Label className="font-semibold block mb-2">
-                Description
-                <span className="text-xs font-normal text-gray-400 ml-2">Use toolbar to format text</span>
-              </Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="font-semibold">
+                  Description
+                  <span className="text-xs font-normal text-gray-400 ml-2">Paste rich text or use toolbar — formatting is preserved</span>
+                </Label>
+              </div>
               <RichTextEditor
                 value={form.description}
                 onChange={v => setForm(f => ({ ...f, description: v }))}
@@ -755,7 +973,6 @@ Reply with ONLY the best matching product type from the list above, or "Other" i
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {displayed.map(product => {
             const isSelected = selectedIds.includes(product.id);
-            // Only active tags
             const activeTags = [
               product.featured && { key: 'featured', label: 'Featured', color: 'bg-purple-500' },
               product.flash_sale && { key: 'flash_sale', label: 'Flash', color: 'bg-orange-500' },
@@ -772,20 +989,16 @@ Reply with ONLY the best matching product type from the list above, or "Other" i
                   {product.image_url
                     ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
-
                   {product.hidden && (
                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                       <EyeOff className="h-6 w-6 text-white opacity-80" />
                     </div>
                   )}
-
                   <div className="absolute top-1.5 right-1.5">
                     <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(product.id)}
                       className="w-4 h-4 cursor-pointer accent-blue-600"
                       onClick={e => e.stopPropagation()} />
                   </div>
-
-                  {/* Only show active tags */}
                   {activeTags.length > 0 && (
                     <div className="absolute top-1 left-1 flex flex-col gap-1">
                       {activeTags.map(tag => (
@@ -820,7 +1033,6 @@ Reply with ONLY the best matching product type from the list above, or "Other" i
                           </button>
                         ))}
                       </div>
-
                       <div className="flex gap-1 mt-1.5">
                         <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
                           <Pencil className="h-3 w-3" /> Edit

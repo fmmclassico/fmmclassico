@@ -118,61 +118,103 @@ const EMPTY_FORM = {
   hidden: false, deleted: false,
 };
 
+// ── YOUR ANTHROPIC API KEY ────────────────────────────────────────────────────
+const ANTHROPIC_API_KEY = 'sk-ant-api03-REPLACE_WITH_YOUR_KEY';
+// NOTE: Replace the value above with your actual Anthropic API key.
+// Your key starts with "sk-ant-", not "sk-proj-" (that is an OpenAI key format).
+// Get your Anthropic key at: https://console.anthropic.com/
+
 async function uploadFile(file) {
   const { file_url } = await base44.integrations.Core.UploadFile({ file });
   return file_url;
 }
 
-// ── Claude API helper ─────────────────────────────────────────────────────────
-async function callClaude({ system, userMessage, maxTokens = 1000 }) {
+// ── Claude API helper (with web search tool enabled) ─────────────────────────
+async function callClaude({ system, userMessage, maxTokens = 1000, useWebSearch = false }) {
   const body = {
     model: 'claude-sonnet-4-20250514',
     max_tokens: maxTokens,
     messages: [{ role: 'user', content: userMessage }],
   };
   if (system) body.system = system;
+
+  // FIX 1: Enable web search tool when requested
+  if (useWebSearch) {
+    body.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
+  }
+
+  // FIX 2: Include the API key in the Authorization header
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      // FIX 3: Required header to enable web search beta feature
+      ...(useWebSearch ? { 'anthropic-beta': 'web-search-2025-03-05' } : {}),
+    },
     body: JSON.stringify(body),
   });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API error ${res.status}`);
+  }
+
   const data = await res.json();
-  // Gather all text blocks
-  return (data.content || []).map(b => b.text || '').join('').trim();
+
+  // FIX 4: Gather ALL text blocks (handles tool_use + text mixed responses)
+  const text = (data.content || [])
+    .filter(b => b.type === 'text')
+    .map(b => b.text || '')
+    .join('')
+    .trim();
+
+  return text;
 }
 
 // ── Rich Text Editor ──────────────────────────────────────────────────────────
 function RichTextEditor({ value, onChange }) {
   const editorRef = useRef(null);
-  const isInitialized = useRef(false);
+  const isUserTyping = useRef(false);
+  const lastExternalValue = useRef(value);
 
-  // Initialize content once
+  // Initialize content once on mount
   useEffect(() => {
-    if (editorRef.current && !isInitialized.current) {
+    if (editorRef.current) {
       editorRef.current.innerHTML = value || '';
-      isInitialized.current = true;
+      lastExternalValue.current = value;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync when value is programmatically set (e.g. after AI generates description)
+  // FIX 5: Only sync externally-changed value (e.g. after AI writes description)
+  // Don't overwrite while user is actively typing
   useEffect(() => {
-    if (editorRef.current && isInitialized.current) {
-      // Only update if content actually differs to avoid cursor jumping
-      if (editorRef.current.innerHTML !== value) {
-        editorRef.current.innerHTML = value || '';
-      }
+    if (editorRef.current && value !== lastExternalValue.current && !isUserTyping.current) {
+      editorRef.current.innerHTML = value || '';
+      lastExternalValue.current = value;
     }
   }, [value]);
 
   const exec = (cmd, val = null) => {
     editorRef.current?.focus();
     document.execCommand(cmd, false, val);
-    onChange(editorRef.current?.innerHTML || '');
+    const html = editorRef.current?.innerHTML || '';
+    lastExternalValue.current = html;
+    onChange(html);
   };
 
-  const handleInput = () => onChange(editorRef.current?.innerHTML || '');
+  const handleInput = () => {
+    isUserTyping.current = true;
+    const html = editorRef.current?.innerHTML || '';
+    lastExternalValue.current = html;
+    onChange(html);
+    // Reset typing flag shortly after
+    clearTimeout(handleInput._timer);
+    handleInput._timer = setTimeout(() => { isUserTyping.current = false; }, 300);
+  };
 
-  // FIX: Preserve rich formatting on paste
   const handlePaste = (e) => {
     e.preventDefault();
     const html = e.clipboardData.getData('text/html');
@@ -182,7 +224,9 @@ function RichTextEditor({ value, onChange }) {
     } else {
       document.execCommand('insertText', false, text);
     }
-    onChange(editorRef.current?.innerHTML || '');
+    const result = editorRef.current?.innerHTML || '';
+    lastExternalValue.current = result;
+    onChange(result);
   };
 
   return (
@@ -271,79 +315,82 @@ function AiPanel({ form, setForm }) {
   const [aiBrandLoading, setAiBrandLoading] = useState(false);
 
   const effectiveBrand = form.brand === 'Other' ? form.customBrand : form.brand;
+  const allBrands = [...new Set(Object.values(GROUP_BRANDS).flat().filter(b => b !== 'Other'))];
+
+  // Helper: resolve a detected brand string into { brand, customBrand }
+  const resolveBrand = (detected) => {
+    const trimmed = (detected || '').trim();
+    const knownMatch = allBrands.find(b => b.toLowerCase() === trimmed.toLowerCase());
+    if (knownMatch) return { brand: knownMatch, customBrand: '' };
+    if (trimmed) return { brand: 'Other', customBrand: trimmed };
+    return {};
+  };
 
   // ── 1. AI Generate Description only ──────────────────────────────────────
   const handleAiDescription = async () => {
     if (!form.name) { toast.error('Enter a product name first'); return; }
     setAiDescLoading(true);
     try {
+      // FIX 6: Use web search so AI can look up real product details
       const html = await callClaude({
         system: `You are a professional product copywriter for an electronics and accessories store in Ghana.
 Write compelling, accurate product descriptions in clean HTML using only: <h2>, <p>, <ul>, <li>, <strong>, <br>.
 Do NOT use <html>, <body>, <head>, <style>, or any attributes. Keep it clean and ready to render directly.
-Structure: 1-2 paragraph overview, Key Features as <ul><li> list, Specifications as <ul><li> list if known.`,
-        userMessage: `Write a full product description for:
+Structure: 1-2 paragraph overview, Key Features as <ul><li> list, Specifications as <ul><li> list if known.
+Return ONLY the HTML content — no preamble, no explanation, no markdown fences.`,
+        userMessage: `Search the web for accurate information about this product, then write a full HTML product description:
 Product: ${form.name}
 Brand: ${effectiveBrand || 'Unknown'}
 Category: ${form.category || 'Electronics'}
 Product Type: ${form.subcategory || ''}
 
-Make it professional, accurate and appealing for online shoppers. Use HTML formatting.`,
-        maxTokens: 800,
+Use real specs and features from web search results. Make it professional and appealing for online shoppers in Ghana.`,
+        maxTokens: 1000,
+        useWebSearch: true,
       });
       setForm(f => ({ ...f, description: html }));
       toast.success('✨ AI description generated!');
-    } catch {
-      toast.error('AI description failed');
+    } catch (err) {
+      toast.error(`AI description failed: ${err.message}`);
     } finally {
       setAiDescLoading(false);
     }
   };
 
-  // ── 2. AI Auto-fill ALL fields (name required) ────────────────────────────
+  // ── 2. AI Auto-fill ALL fields ────────────────────────────────────────────
   const handleAiFullDetect = async () => {
     if (!form.name) { toast.error('Enter a product name first'); return; }
     setAiFullLoading(true);
     try {
-      const allBrands = [...new Set(Object.values(GROUP_BRANDS).flat())];
+      // FIX 7: Use web search + strict JSON prompt
       const result = await callClaude({
         system: `You are a product classification and content expert for an electronics store in Ghana.
-Given a product name, return ONLY a valid JSON object with these exact keys:
+Search the web for the product if needed, then return ONLY a valid JSON object with these exact keys:
 {
   "brand": "detected brand name or empty string",
   "main_group": "one of: phones | phone_accessories | electronics | home_appliances_group",
   "category": "one of: phones | phone_cases | chargers | earphones | cables | power_banks | screen_protectors | holders | speakers | smart_watches | electronic_appliances | home_appliances",
-  "subcategory": "specific product type e.g. Bluetooth Headphones, Smart TV 43\\"",
-  "description": "full HTML product description using <h2><p><ul><li><strong> tags only"
+  "subcategory": "specific product type e.g. Bluetooth Headphones or Smart TV 43\\"",
+  "description": "full HTML product description using <h2><p><ul><li><strong> tags only — real specs from web search"
 }
-Return ONLY the JSON. No markdown, no explanation, no backticks.`,
+CRITICAL: Return ONLY the raw JSON object. No markdown, no backticks, no explanation, nothing else before or after the JSON.`,
         userMessage: `Product name: "${form.name}"
-Known brands list: ${allBrands.join(', ')}
+Known brands: ${allBrands.join(', ')}
 
-Detect all fields and write a full HTML description.`,
-        maxTokens: 1200,
+Search the web for this product, then detect all fields and write a real HTML description with actual specs.`,
+        maxTokens: 1500,
+        useWebSearch: true,
       });
 
-      let parsed;
-      try {
-        parsed = JSON.parse(result.replace(/```json|```/g, '').trim());
-      } catch {
-        toast.error('AI returned invalid data, try again');
-        return;
-      }
+      // FIX 8: Robust JSON extraction — strip any accidental markdown fences
+      let jsonString = result.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+      // Extract first JSON object if there's any extra text
+      const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('No JSON found in AI response');
+      const parsed = JSON.parse(jsonMatch[0]);
 
       const updates = {};
-      if (parsed.brand) {
-        const knownBrands = allBrands.map(b => b.toLowerCase());
-        if (knownBrands.includes(parsed.brand.toLowerCase())) {
-          // Find correct casing
-          updates.brand = allBrands.find(b => b.toLowerCase() === parsed.brand.toLowerCase()) || parsed.brand;
-          updates.customBrand = '';
-        } else {
-          updates.brand = 'Other';
-          updates.customBrand = parsed.brand;
-        }
-      }
+      if (parsed.brand) Object.assign(updates, resolveBrand(parsed.brand));
       if (parsed.main_group) updates.main_group = parsed.main_group;
       if (parsed.category) updates.category = parsed.category;
       if (parsed.subcategory) updates.subcategory = parsed.subcategory;
@@ -351,8 +398,8 @@ Detect all fields and write a full HTML description.`,
 
       setForm(f => ({ ...f, ...updates }));
       toast.success('✨ AI filled in all product details!');
-    } catch {
-      toast.error('AI auto-fill failed');
+    } catch (err) {
+      toast.error(`AI auto-fill failed: ${err.message}`);
     } finally {
       setAiFullLoading(false);
     }
@@ -377,11 +424,12 @@ Available product types:
 Which type matches best?`,
         maxTokens: 50,
       });
-      const match = options.find(o => o.toLowerCase() === detected.toLowerCase()) || detected;
+      const trimmed = detected.trim();
+      const match = options.find(o => o.toLowerCase() === trimmed.toLowerCase()) || trimmed;
       setForm(f => ({ ...f, subcategory: match }));
       toast.success(`AI detected type: ${match}`);
-    } catch {
-      toast.error('AI type detection failed');
+    } catch (err) {
+      toast.error(`AI type detection failed: ${err.message}`);
     } finally {
       setAiTypeLoading(false);
     }
@@ -392,28 +440,22 @@ Which type matches best?`,
     if (!form.name) { toast.error('Enter product name first'); return; }
     setAiBrandLoading(true);
     try {
-      const allBrands = [...new Set(Object.values(GROUP_BRANDS).flat().filter(b => b !== 'Other'))];
       const detected = await callClaude({
         system: `You are a product expert. Given a product name, identify the brand.
 If it matches one from the provided list (case-insensitive), return that exact name from the list.
 If it's a different brand not in the list, return the brand name as-is.
-Reply with ONLY the brand name. Nothing else.`,
+Reply with ONLY the brand name. Nothing else — no explanation, no punctuation, no quotes.`,
         userMessage: `Product name: "${form.name}"
 Known brands: ${allBrands.join(', ')}
 What is the brand?`,
         maxTokens: 30,
       });
-      const trimmed = detected.trim();
-      const knownMatch = allBrands.find(b => b.toLowerCase() === trimmed.toLowerCase());
-      if (knownMatch) {
-        setForm(f => ({ ...f, brand: knownMatch, customBrand: '' }));
-        toast.success(`AI detected brand: ${knownMatch}`);
-      } else {
-        setForm(f => ({ ...f, brand: 'Other', customBrand: trimmed }));
-        toast.success(`AI detected brand: ${trimmed} (set as custom)`);
-      }
-    } catch {
-      toast.error('AI brand detection failed');
+      const resolved = resolveBrand(detected);
+      setForm(f => ({ ...f, ...resolved }));
+      const displayName = resolved.brand === 'Other' ? resolved.customBrand : resolved.brand;
+      toast.success(`AI detected brand: ${displayName}`);
+    } catch (err) {
+      toast.error(`AI brand detection failed: ${err.message}`);
     } finally {
       setAiBrandLoading(false);
     }
@@ -427,7 +469,6 @@ What is the brand?`,
         <span className="text-xs text-purple-500">— Enter product name above, then use any button</span>
       </div>
       <div className="flex flex-wrap gap-2">
-        {/* Auto-fill everything */}
         <button
           type="button"
           onClick={handleAiFullDetect}
@@ -435,10 +476,9 @@ What is the brand?`,
           className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
         >
           {aiFullLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
-          {aiFullLoading ? 'Detecting…' : '✨ Auto-fill Everything'}
+          {aiFullLoading ? 'Searching & Detecting…' : '✨ Auto-fill Everything'}
         </button>
 
-        {/* Description only */}
         <button
           type="button"
           onClick={handleAiDescription}
@@ -446,10 +486,9 @@ What is the brand?`,
           className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
         >
           {aiDescLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          {aiDescLoading ? 'Writing…' : 'Generate Description'}
+          {aiDescLoading ? 'Searching & Writing…' : 'Generate Description'}
         </button>
 
-        {/* Brand only */}
         <button
           type="button"
           onClick={handleAiDetectBrand}
@@ -460,7 +499,6 @@ What is the brand?`,
           {aiBrandLoading ? 'Detecting…' : 'Detect Brand'}
         </button>
 
-        {/* Product type only */}
         <button
           type="button"
           onClick={handleAiDetectType}
@@ -515,23 +553,46 @@ export default function AdminProducts() {
   const trashedProducts = allProducts.filter(p => p.deleted);
   const displayed = activeTab === 'active' ? products : trashedProducts;
 
+  // FIX 9: saveMutation — correctly build the payload and surface errors
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const { main_group, customBrand, ...rest } = data;
-      // Use customBrand if brand is "Other" and customBrand is filled
+      // Resolve the brand: if "Other" use customBrand value
       const finalBrand = (data.brand === 'Other' && data.customBrand?.trim())
         ? data.customBrand.trim()
-        : data.brand;
+        : (data.brand === 'Other' ? '' : data.brand);
+
+      // Strip UI-only fields before saving
+      const { main_group, customBrand, ...rest } = data;
+
       const payload = {
         ...rest,
         brand: finalBrand,
+        // Ensure numeric fields are correct types
         price: parseFloat(data.price) || 0,
-        original_price: data.original_price ? parseFloat(data.original_price) : undefined,
-        stock: data.stock !== '' ? parseInt(data.stock) : undefined,
-        rating: data.rating ? parseFloat(data.rating) : undefined,
-        reviews_count: data.reviews_count ? parseInt(data.reviews_count) : undefined,
+        original_price: data.original_price !== '' && data.original_price != null
+          ? parseFloat(data.original_price)
+          : undefined,
+        stock: data.stock !== '' && data.stock != null
+          ? parseInt(data.stock, 10)
+          : undefined,
+        rating: data.rating !== '' && data.rating != null
+          ? parseFloat(data.rating)
+          : undefined,
+        reviews_count: data.reviews_count !== '' && data.reviews_count != null
+          ? parseInt(data.reviews_count, 10)
+          : undefined,
+        // Ensure booleans are real booleans
+        featured: Boolean(data.featured),
+        flash_sale: Boolean(data.flash_sale),
+        donkomi: Boolean(data.donkomi),
+        review_enabled: data.review_enabled !== false,
+        hidden: Boolean(data.hidden),
+        deleted: Boolean(data.deleted),
       };
-      if (editingProduct) return base44.entities.Product.update(editingProduct.id, payload);
+
+      if (editingProduct) {
+        return base44.entities.Product.update(editingProduct.id, payload);
+      }
       return base44.entities.Product.create(payload);
     },
     onSuccess: () => {
@@ -540,6 +601,11 @@ export default function AdminProducts() {
       setShowForm(false);
       setEditingProduct(null);
       setForm(EMPTY_FORM);
+    },
+    onError: (err) => {
+      // FIX 10: Show the actual error so you know what went wrong
+      toast.error(`Save failed: ${err?.message || 'Unknown error'}`);
+      console.error('Save error:', err);
     },
   });
 
@@ -631,7 +697,6 @@ export default function AdminProducts() {
     else if (cat === 'home_appliances') main_group = 'home_appliances_group';
     else if (cat) main_group = 'phone_accessories';
 
-    // Check if saved brand is in known list or is custom
     const knownBrands = Object.values(GROUP_BRANDS).flat();
     const savedBrand = product.brand || '';
     const isKnownBrand = knownBrands.includes(savedBrand);
@@ -833,7 +898,7 @@ export default function AdminProducts() {
               </Select>
             </div>
 
-            {/* Step 3 — Brand + Custom Brand input */}
+            {/* Step 3 — Brand */}
             <div>
               <Label>Step 3 — Brand *</Label>
               <Select value={form.brand} onValueChange={v => setForm(f => ({ ...f, brand: v, customBrand: '', subcategory: '' }))} disabled={!form.category}>
@@ -842,7 +907,6 @@ export default function AdminProducts() {
                   {(GROUP_BRANDS[form.main_group] || []).map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {/* Custom brand input shown when "Other" is selected */}
               {form.brand === 'Other' && (
                 <div className="mt-2">
                   <Input
@@ -899,7 +963,7 @@ export default function AdminProducts() {
               <VideoPreview url={form.video_url} />
             </div>
 
-            {/* Description — Rich Text with paste fix */}
+            {/* Description — Rich Text */}
             <div className="md:col-span-2">
               <div className="flex items-center justify-between mb-2">
                 <Label className="font-semibold">
@@ -911,6 +975,16 @@ export default function AdminProducts() {
                 value={form.description}
                 onChange={v => setForm(f => ({ ...f, description: v }))}
               />
+              {/* FIX 11: Preview panel so admin can see how description will render */}
+              {form.description && (
+                <details className="mt-2">
+                  <summary className="text-xs text-blue-600 cursor-pointer select-none">👁 Preview rendered description</summary>
+                  <div
+                    className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: form.description }}
+                  />
+                </details>
+              )}
             </div>
 
             {/* Tags */}
@@ -1012,6 +1086,14 @@ export default function AdminProducts() {
                   <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
                   <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
                   {product.stock != null && <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>}
+
+                  {/* FIX 12: Render HTML description properly in product card preview */}
+                  {product.description && (
+                    <div
+                      className="text-[10px] text-gray-500 mt-1 line-clamp-2 leading-tight"
+                      dangerouslySetInnerHTML={{ __html: product.description }}
+                    />
+                  )}
 
                   {activeTab === 'active' && (
                     <>

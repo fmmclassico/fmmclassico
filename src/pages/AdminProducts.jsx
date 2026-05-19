@@ -46,8 +46,8 @@ const GROUP_CATEGORIES = {
 const GROUP_BRANDS = {
   phones: ['Apple', 'Samsung', 'Tecno', 'Infinix', 'Itel', 'Other'],
   phone_accessories: ['Apple', 'Samsung', 'Oraimo', 'JBL', 'Sony', 'LG', 'Other'],
-  electronics: ['Samsung', 'Sony', 'LG', 'TCL', 'Hisense', 'Midea', 'Other'],
-  home_appliances_group: ['Samsung', 'LG', 'Hisense', 'TCL', 'Midea', 'Roch', 'Silver Crest', 'Nasco', 'Hoffman', 'Other'],
+  electronics: ['Samsung', 'Sony', 'LG', 'TCL', 'Hisense', 'Midea', 'Oraimo', 'Other'],
+  home_appliances_group: ['Samsung', 'Hisense', 'TCL', 'Roch', 'Silver Crest', 'Nasco', 'Hoffman', 'Oraimo', 'Other'],
 };
 
 const BRAND_SUBCATEGORIES = {
@@ -101,17 +101,17 @@ const BRAND_SUBCATEGORIES = {
     TCL: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Smart TV 65"', 'Android TV', '4K UHD TV'],
     Hisense: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Smart TV 65"', 'QLED TV'],
     Midea: ['Air Conditioner Split Unit', 'Air Purifier'],
+    Oraimo: ['Smart TV', 'Soundbar', 'Smart Speaker'],
   },
   home_appliances: {
     Samsung: ['Refrigerator', 'Washing Machine', 'Microwave', 'Air Conditioner'],
-    LG: ['Refrigerator', 'Washing Machine', 'Air Conditioner', 'Microwave'],
     Hisense: ['Refrigerator (Single Door)', 'Refrigerator (Double Door)', 'Chest Freezer', 'Washing Machine', 'Air Conditioner', 'Microwave'],
     TCL: ['Refrigerator', 'Washing Machine', 'Air Conditioner'],
-    Midea: ['Refrigerator', 'Washing Machine', 'Air Conditioner', 'Microwave', 'Rice Cooker', 'Blender'],
     Roch: ['Refrigerator (Single Door)', 'Refrigerator (Double Door)', 'Chest Freezer', 'Washing Machine', 'Blender', 'Rice Cooker', 'Electric Kettle', 'Microwave', 'Standing Fan', 'Air Conditioner'],
     'Silver Crest': ['Blender', 'Rice Cooker', 'Electric Kettle', 'Microwave', 'Toaster', 'Sandwich Maker', 'Food Processor', 'Juicer', 'Standing Fan'],
     Nasco: ['Refrigerator', 'Chest Freezer', 'Washing Machine', 'Blender', 'Rice Cooker', 'Electric Kettle', 'Standing Fan', 'Air Conditioner'],
     Hoffman: ['Refrigerator', 'Chest Freezer', 'Washing Machine', 'Air Conditioner', 'Standing Fan', 'Blender', 'Rice Cooker', 'Electric Kettle'],
+    Oraimo: ['Electric Kettle', 'Blender', 'Standing Fan', 'Rice Cooker'],
   },
 };
 
@@ -131,9 +131,9 @@ const getVideoEmbedUrl = (url) => {
     if (tiktokMatch) return `https://www.tiktok.com/embed/v2/${tiktokMatch[1]}`;
   }
   
-  // Pinterest (using oEmbed approach - may need backend proxy)
+  // Pinterest
   if (url.includes('pinterest.com') || url.includes('pin.it')) {
-    return url; // Pinterest videos need special handling
+    return url;
   }
   
   // Vimeo
@@ -187,9 +187,7 @@ export default function AdminProducts() {
     mutationFn: async (data) => {
       const { main_group, custom_brand, custom_subcategory, ...rest } = data;
       
-      // Use custom brand if provided, otherwise use selected brand
       const finalBrand = showCustomBrand && custom_brand ? custom_brand : data.brand;
-      // Use custom subcategory if provided, otherwise use selected subcategory
       const finalSubcategory = showCustomSubcategory && custom_subcategory ? custom_subcategory : data.subcategory;
       
       const payload = {
@@ -263,7 +261,7 @@ export default function AdminProducts() {
     setUploadingVideo(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setForm(f => ({ ...f, video_file_url: file_url, video_url: '' })); // Clear URL if file uploaded
+      setForm(f => ({ ...f, video_file_url: file_url, video_url: '' }));
       setUploadingVideo(false);
       toast.success('Video uploaded!');
     } catch (error) {
@@ -281,7 +279,6 @@ export default function AdminProducts() {
     else if (cat === 'home_appliances') main_group = 'home_appliances_group';
     else if (cat) main_group = 'phone_accessories';
     
-    // Check if brand or subcategory is custom (not in predefined lists)
     const availableBrands = GROUP_BRANDS[main_group] || [];
     const isCustomBrand = product.brand && !availableBrands.includes(product.brand);
     
@@ -447,7 +444,6 @@ export default function AdminProducts() {
                   </div>
                 ))}
                 
-                {/* Video thumbnail if uploaded or URL provided */}
                 {(form.video_file_url || form.video_url) && (
                   <div className="relative w-16 h-16 rounded-lg overflow-hidden border-2 border-blue-400 bg-blue-50 flex items-center justify-center">
                     <Video className="h-6 w-6 text-blue-600" />
@@ -460,7 +456,6 @@ export default function AdminProducts() {
                   </div>
                 )}
                 
-                {/* Add more images */}
                 {(form.image_urls || []).length < 4 && (
                   <label className="cursor-pointer w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-blue-400 transition-colors">
                     {uploadingExtra ? <Loader2 className="h-5 w-5 animate-spin text-gray-400" /> : <Plus className="h-5 w-5 text-gray-400" />}
@@ -468,7 +463,6 @@ export default function AdminProducts() {
                   </label>
                 )}
                 
-                {/* Add video */}
                 {!form.video_file_url && !form.video_url && (
                   <label className="cursor-pointer w-16 h-16 rounded-lg border-2 border-dashed border-blue-300 flex items-center justify-center hover:border-blue-500 transition-colors bg-blue-50">
                     {uploadingVideo ? <Loader2 className="h-5 w-5 animate-spin text-blue-400" /> : <Video className="h-5 w-5 text-blue-400" />}
@@ -477,7 +471,6 @@ export default function AdminProducts() {
                 )}
               </div>
               
-              {/* Video URL Input */}
               {!form.video_file_url && (
                 <div className="mt-2">
                   <Label className="text-xs text-gray-600">Or paste video URL (YouTube, TikTok, Vimeo, etc.)</Label>

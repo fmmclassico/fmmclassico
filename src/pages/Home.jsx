@@ -19,11 +19,11 @@ const CATEGORY_BRANDS = {
     { label: 'Itel', brand: 'Itel', category: 'phones' },
   ],
   phone_accessories: [
-    { label: 'Oraimo', brand: 'Oraimo', category: 'earphones' },
-    { label: 'Apple', brand: 'Apple', category: 'phone_cases' },
+    { label: 'Oraimo', brand: 'Oraimo', category: 'earphones', category: 'headsets',category: 'powerbanks', category: 'chargers',category: 'airpods & earbuds',category: 'smart_watches'  },
+    { label: 'Apple', brand: 'Apple', category: 'phone_cases', category: 'headsets', category: 'chargers',category: 'airpods & earbuds',category: 'charging_cables',category: 'smart_watches'  },
     { label: 'Samsung', brand: 'Samsung', category: 'phone_cases' },
-    { label: 'JBL', brand: 'JBL', category: 'speakers' },
-    { label: 'Sony', brand: 'Sony', category: 'earphones' },
+    { label: 'JBL', brand: 'JBL', category: 'speakers', category: 'earphones', category: 'headsets',},
+    { label: 'Sony', brand: 'Sony', category: 'earphones', category: 'earphones', category: 'headsets',category: 'earbuds' },
   ],
   electronics: [
     { label: 'Samsung', brand: 'Samsung' },
@@ -38,7 +38,6 @@ const CATEGORY_BRANDS = {
     { label: 'Hisense', brand: 'Hisense' },
     { label: 'Roch', brand: 'Roch' },
     { label: 'Silver Crest', brand: 'Silver Crest' },
-    { label: 'TCL', brand: 'TCL' },
     { label: 'Nasco', brand: 'Nasco' },
     { label: 'Hoffman', brand: 'Hoffman' },
     { label: 'Samsung', brand: 'Samsung' },
@@ -162,7 +161,7 @@ export default function Home() {
   const hiddenDonkomi = getHiddenIds('donkomi');
 
   // Product buckets
-  const phoneAccessoryCategories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers'];
+  const phoneAccessoryCategories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers','airpods & earbuds'];
   const flashTagged = products.filter(p => p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()) && !hiddenFlash.includes(p.id));
   const flashSaleProducts = flashTagged.length >= 2 ? flashTagged : products.filter(p => p.original_price && p.original_price > p.price && !hiddenFlash.includes(p.id)).slice(0, 6);
   const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : products.filter(p => p.featured && !hiddenFlash.includes(p.id)).slice(0, 6);
@@ -191,7 +190,6 @@ export default function Home() {
         <div className="grid grid-cols-4 gap-3">
           {HOME_CATEGORIES.map(cat => {
             const adminImg = appSettings.find(s => s.key === `cat_img_${cat.id}`)?.value;
-            const displayImg = adminImg || cat.image || products.find(cat.match)?.image_url;
             const isExpanded = expandedCat === cat.id;
             return (
               <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">

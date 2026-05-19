@@ -19,11 +19,11 @@ const CATEGORY_BRANDS = {
     { label: 'Itel', brand: 'Itel', category: 'phones' },
   ],
   phone_accessories: [
-    { label: 'Oraimo', brand: 'Oraimo', category: 'earphones' },
-    { label: 'Apple', brand: 'Apple', category: 'phone_cases' },
-    { label: 'Samsung', brand: 'Samsung', category: 'phone_cases' },
-    { label: 'JBL', brand: 'JBL', category: 'speakers' },
-    { label: 'Sony', brand: 'Sony', category: 'earphones' },
+    { label: 'Oraimo', brand: 'Oraimo', category: 'headsets', category: 'cables', category: 'chargers',category: 'airpods & earbuds',category: 'charging_cables',category: 'smart_watches'  },
+    { label: 'Apple', brand: 'Apple', category: 'phone_cases',  category: 'headsets', category: 'cables', category: 'chargers',category: 'airpods & earbuds',category: 'charging_cables',category: 'smart_watches'  },
+    { label: 'Samsung', brand: 'Samsung', category: 'phone_cases', category: 'headsets', category: 'cables', category: 'chargers',category: 'airpods & earbuds',category: 'charging_cables' },
+    { label: 'JBL', brand: 'JBL', category: 'speakers', category: 'headsets',category: 'airpods & earbuds' },
+
   ],
   electronics: [
     { label: 'Samsung', brand: 'Samsung' },

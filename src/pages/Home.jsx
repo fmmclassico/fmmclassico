@@ -214,7 +214,7 @@ export default function Home() {
   // ── Section filters (all already exclude is_hidden via `products`) ──────────
   // IMPORTANT: These conditions must exactly match the admin product form flags
 
-  // CLASSICO Deals (Flash Sale)
+  // CLASSICO Deals 
   // Condition: flash_sale flag is true AND flash_sale_end (if set) is still in future OR not set
   const flashItems = products
     .filter(p => {

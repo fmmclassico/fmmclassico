@@ -161,24 +161,23 @@ export default function Home() {
   const hiddenFeatured = getHiddenIds('featured');
   const hiddenDonkomi = getHiddenIds('donkomi');
 
-  // Product buckets - ONLY show products that are tagged for each section
   const phoneAccessoryCategories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers'];
-  
+
   // CLASSICO Deals (Flash Sale) - only products tagged with flash_sale=true
   const flashTagged = products.filter(p => p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()) && !hiddenFlash.includes(p.id));
   const flashItems = flashTagged.slice(0, 6);
   const flashSaleEndTime = flashTagged.length > 0 ? flashTagged[0].flash_sale_end : null;
-  
+
   // New Arrivals - only products tagged with new_arrivals=true
   const newArrivals = products.filter(p => p.new_arrivals).slice(0, 6);
-  
+
   // Featured/CLASSICO Deals alternative section
   const classicoDeals = products.filter(p => p.featured && !hiddenFeatured.includes(p.id)).slice(0, 6);
-  
+
   // Donkomi Deals - only products tagged with donkomi=true
   const donkomiTagged = products.filter(p => p.donkomi && !hiddenDonkomi.includes(p.id));
   const donkomiDeals = donkomiTagged.slice(0, 6);
-  
+
   // Top Selling - only products tagged with top_selling=true
   const topSelling = products.filter(p => p.top_selling).slice(0, 6);
 
@@ -222,7 +221,7 @@ export default function Home() {
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Shop {cat.label} by Brand</p>
               <div className="flex flex-wrap gap-2">
                 {cat.brands.map(b => (
-                  <Link key={b.brand + b.category} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(b.brand)}&category=${b.category}`)}
+                  <Link key={b.brand + (b.category || '')} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(b.brand)}${b.category ? `&category=${b.category}` : ''}`)}
                     className={`text-xs font-semibold border rounded-full px-3 py-1 transition-colors ${cat.chipColor}`}>
                     {b.label}
                   </Link>
@@ -299,7 +298,7 @@ export default function Home() {
                 <span className="bg-blue-100 text-[#2E86C1] text-[10px] font-bold px-2 py-0.5 rounded-full">Flash Sale</span>
                 <FlashSaleTimer endTime={flashTimerEndTime} isVisible={showFlashTimer} />
               </div>
-              <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              <Link to={createPageUrl('Shop?flash_sale=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
                 See All <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
@@ -347,7 +346,7 @@ export default function Home() {
                 <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Donkomi Deals</h2>
                 <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Best Prices</span>
               </div>
-              <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              <Link to={createPageUrl('Shop?donkomi=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
                 See All <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
@@ -433,7 +432,7 @@ export default function Home() {
                 <Star className="h-5 w-5 text-yellow-500 fill-yellow-400" />
                 <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">New Arrivals</h2>
               </div>
-              <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              <Link to={createPageUrl('Shop?new_arrivals=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
                 See All <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
@@ -477,7 +476,7 @@ export default function Home() {
                 <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Top Selling</h2>
                 <span className="bg-blue-100 text-[#2E86C1] text-[10px] font-bold px-2 py-0.5 rounded-full">🔥 Hot</span>
               </div>
-              <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              <Link to={createPageUrl('Shop?top_selling=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
                 See All <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
@@ -511,7 +510,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* Bottom spacer — must be tall enough to clear the fixed bottom nav bar */}
+      {/* Bottom spacer */}
       <div className="h-24" />
 
     </div>

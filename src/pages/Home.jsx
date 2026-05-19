@@ -401,7 +401,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── ⚡ CLASSICO DEAL ── */}
+      {/* ── 🔥 CLASSICO DEAL ── */}
       {flashItems.length > 0 && (
         <div className="mt-4 mx-2 md:mx-4">
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -432,7 +432,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── 🔥 DONKOMI DEALS ── */}
+      {/* ── ⚡DONKOMI DEALS ── */}
       {donkomiDeals.length > 0 && (
         <div className="mt-5 mx-2 md:mx-4">
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -501,7 +501,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── 🆕 NEW ARRIVALS ── */}
+      {/* ── NEW ARRIVALS ── */}
       {newArrivals.length > 0 && (
         <div className="mt-5 mx-2 md:mx-4">
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -527,7 +527,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── 🏆 TOP SELLING ── */}
+      {/* ── TOP SELLING ── */}
       {topSelling.length > 0 && (
         <div className="mt-5 mx-2 md:mx-4">
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">

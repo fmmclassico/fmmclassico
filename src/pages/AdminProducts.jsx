@@ -9,9 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Upload, X, Pencil, Plus, Trash2, ImagePlus,
-  Loader2, Check, Eye, EyeOff, RotateCcw, Video,
-  Bold, AlignLeft, AlignCenter, AlignRight
+  Upload, X, Pencil, Plus, ImagePlus,
+  Loader2, Check, Eye, EyeOff, Video,
+  AlignLeft, AlignCenter, AlignRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -116,7 +116,7 @@ const EMPTY_FORM = {
   stock: '', featured: false, flash_sale: false,
   donkomi: false, review_enabled: true, rating: '', reviews_count: '',
   image_url: '', image_urls: [], video_url: '', flash_sale_end: '',
-  hidden: false, deleted: false,
+  hidden: false,
 };
 
 // ── Upload helper ─────────────────────────────────────────────────────────────
@@ -125,62 +125,82 @@ async function uploadFile(file) {
   return file_url;
 }
 
-// ── Sanitize HTML for SAFE rendering ─────────────────────────────────────────
-// Only called at DISPLAY time, never at save time
+// ── HTML → plain readable text (strips ALL tags, keeps line breaks) ───────────
+// This is used ONLY for the small card preview snippet
+function htmlToPlainText(html) {
+  if (!html || typeof html !== 'string') return '';
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// ── Safe HTML sanitizer — used for full description rendering ─────────────────
+// Keeps formatting tags, strips dangerous ones. No attributes except safe ones.
 function sanitizeHtml(html) {
   if (!html || typeof html !== 'string') return '';
-  // If it's plain text with no tags at all, wrap in <p> tags properly
   if (!html.includes('<')) {
-    return html.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('');
+    // Plain text — preserve line breaks
+    return html.split('\n').filter(l => l.trim()).map(l => `<p style="margin:0 0 8px 0">${l}</p>`).join('');
   }
   try {
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const DROP_TAGS = new Set(['script','style','noscript','iframe','object','embed','link','meta','title','base','canvas','svg','math','button','input','select','textarea','option','optgroup']);
-    const KEEP_TAGS = new Set(['h1','h2','h3','h4','h5','h6','p','ul','ol','li','strong','em','b','i','u','br','font','span','div']);
+    const DROP = new Set(['script','style','noscript','iframe','object','embed','link','meta','title','base','canvas','svg','math','button','input','select','textarea','option','optgroup','form','head']);
+    const KEEP = new Set(['p','ul','ol','li','strong','em','b','i','u','br','h1','h2','h3','h4','h5','h6','span','div','font']);
+    const SAFE_ATTRS = { font: ['size','color'], span: ['style'], div: ['style'], p: ['style'] };
 
-    function processNode(node) {
+    function clean(node) {
       if (node.nodeType === Node.TEXT_NODE) return [node.cloneNode()];
       if (node.nodeType !== Node.ELEMENT_NODE) return [];
       const tag = node.tagName.toLowerCase();
-      if (DROP_TAGS.has(tag)) return [];
-      const cleanChildren = Array.from(node.childNodes).flatMap(processNode);
-      if (KEEP_TAGS.has(tag)) {
-        const el = document.createElement(tag);
-        if (tag === 'font' && node.getAttribute('size')) el.setAttribute('size', node.getAttribute('size'));
-        cleanChildren.forEach(c => el.appendChild(c));
-        return [el];
-      }
-      return cleanChildren;
+      if (DROP.has(tag)) return [];
+      const kids = Array.from(node.childNodes).flatMap(clean);
+      if (!KEEP.has(tag)) return kids; // unwrap unknown tags
+      const el = document.createElement(tag);
+      // Only copy whitelisted attributes
+      (SAFE_ATTRS[tag] || []).forEach(attr => {
+        if (node.hasAttribute(attr)) el.setAttribute(attr, node.getAttribute(attr));
+      });
+      kids.forEach(k => el.appendChild(k));
+      return [el];
     }
 
-    const resultNodes = Array.from(doc.body.childNodes).flatMap(processNode);
-    const container = document.createElement('div');
-    resultNodes.forEach(n => container.appendChild(n));
-    return container.innerHTML.trim();
+    const out = document.createElement('div');
+    Array.from(doc.body.childNodes).flatMap(clean).forEach(n => out.appendChild(n));
+    return out.innerHTML.trim();
   } catch {
-    // Fallback: strip all tags
-    return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return html.replace(/<script[\s\S]*?<\/script>/gi, '')
+               .replace(/<style[\s\S]*?<\/style>/gi, '');
   }
 }
 
 // ── Rich Text Editor ──────────────────────────────────────────────────────────
 function RichTextEditor({ value, onChange }) {
   const editorRef = useRef(null);
-  const isUserTyping = useRef(false);
-  const lastValue = useRef(value);
+  const isTyping = useRef(false);
+  const lastVal = useRef(value);
 
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.innerHTML = value || '';
-      lastValue.current = value;
+      lastVal.current = value;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (editorRef.current && value !== lastValue.current && !isUserTyping.current) {
+    if (editorRef.current && value !== lastVal.current && !isTyping.current) {
       editorRef.current.innerHTML = value || '';
-      lastValue.current = value;
+      lastVal.current = value;
     }
   }, [value]);
 
@@ -188,59 +208,69 @@ function RichTextEditor({ value, onChange }) {
     editorRef.current?.focus();
     document.execCommand(cmd, false, val);
     const html = editorRef.current?.innerHTML || '';
-    lastValue.current = html;
+    lastVal.current = html;
     onChange(html);
   };
 
   const handleInput = () => {
-    isUserTyping.current = true;
+    isTyping.current = true;
     const html = editorRef.current?.innerHTML || '';
-    lastValue.current = html;
+    lastVal.current = html;
     onChange(html);
     clearTimeout(handleInput._t);
-    handleInput._t = setTimeout(() => { isUserTyping.current = false; }, 400);
+    handleInput._t = setTimeout(() => { isTyping.current = false; }, 400);
   };
 
-  // KEY FIX: Always paste as plain text — prevents HTML code bleeding into description
+  // CRITICAL: Always paste as plain text only — this is what stops HTML codes appearing
   const handlePaste = (e) => {
     e.preventDefault();
-    const text = e.clipboardData.getData('text/plain');
-    document.execCommand('insertText', false, text);
+    const plain = e.clipboardData.getData('text/plain');
+    document.execCommand('insertText', false, plain);
     const result = editorRef.current?.innerHTML || '';
-    lastValue.current = result;
+    lastVal.current = result;
     onChange(result);
   };
 
+  const btnClass = "p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700 text-sm font-medium select-none";
+
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
-      <div className="flex flex-wrap items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-        <button type="button" onClick={() => exec('bold')} className="p-1.5 rounded hover:bg-gray-200 transition-colors font-bold text-sm">B</button>
-        <button type="button" onClick={() => exec('italic')} className="p-1.5 rounded hover:bg-gray-200 transition-colors italic font-serif text-sm">I</button>
-        <button type="button" onClick={() => exec('underline')} className="p-1.5 rounded hover:bg-gray-200 transition-colors underline text-sm">U</button>
+    <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('bold'); }} className={`${btnClass} font-bold`}>B</button>
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('italic'); }} className={`${btnClass} italic`}>I</button>
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('underline'); }} className={`${btnClass} underline`}>U</button>
         <div className="w-px h-5 bg-gray-300 mx-1" />
-        <button type="button" onClick={() => exec('justifyLeft')} className="p-1.5 rounded hover:bg-gray-200 transition-colors"><AlignLeft className="h-3.5 w-3.5" /></button>
-        <button type="button" onClick={() => exec('justifyCenter')} className="p-1.5 rounded hover:bg-gray-200 transition-colors"><AlignCenter className="h-3.5 w-3.5" /></button>
-        <button type="button" onClick={() => exec('justifyRight')} className="p-1.5 rounded hover:bg-gray-200 transition-colors"><AlignRight className="h-3.5 w-3.5" /></button>
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('justifyLeft'); }} className={btnClass}><AlignLeft className="h-3.5 w-3.5" /></button>
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('justifyCenter'); }} className={btnClass}><AlignCenter className="h-3.5 w-3.5" /></button>
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('justifyRight'); }} className={btnClass}><AlignRight className="h-3.5 w-3.5" /></button>
         <div className="w-px h-5 bg-gray-300 mx-1" />
-        <select onChange={e => exec('fontSize', e.target.value)} defaultValue="3" className="text-xs border border-gray-200 rounded px-1 py-0.5 bg-white">
+        <select
+          onMouseDown={e => e.stopPropagation()}
+          onChange={e => exec('fontSize', e.target.value)}
+          defaultValue="3"
+          className="text-xs border border-gray-200 rounded px-1 py-0.5 bg-white"
+        >
           <option value="1">Small</option>
           <option value="3">Normal</option>
           <option value="4">Large</option>
           <option value="5">X-Large</option>
         </select>
         <div className="w-px h-5 bg-gray-300 mx-1" />
-        <button type="button" onClick={() => exec('insertUnorderedList')} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-sm font-bold">• List</button>
-        <button type="button" onClick={() => exec('insertOrderedList')} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-sm font-bold">1. List</button>
-        <button type="button" onClick={() => exec('removeFormat')} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-xs text-gray-500">Clear</button>
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('insertUnorderedList'); }} className={btnClass}>• List</button>
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('insertOrderedList'); }} className={btnClass}>1. List</button>
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('removeFormat'); }} className="p-1.5 rounded hover:bg-gray-200 transition-colors text-xs text-gray-500">Clear</button>
       </div>
+      {/* Editor area */}
       <div
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
         onInput={handleInput}
         onPaste={handlePaste}
-        className="min-h-[200px] px-3 py-2 text-sm text-gray-700 focus:outline-none"
-        style={{ lineHeight: '1.7' }}
+        className="min-h-[220px] px-4 py-3 text-sm text-gray-700 focus:outline-none"
+        style={{ lineHeight: '1.75', wordBreak: 'break-word' }}
       />
     </div>
   );
@@ -249,23 +279,11 @@ function RichTextEditor({ value, onChange }) {
 // ── Video Preview ─────────────────────────────────────────────────────────────
 function VideoPreview({ url }) {
   if (!url) return null;
-  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
-  if (ytMatch) return (
-    <div className="mt-2 rounded-xl overflow-hidden aspect-video bg-black">
-      <iframe src={`https://www.youtube.com/embed/${ytMatch[1]}`} className="w-full h-full" allowFullScreen title="Product Video" />
-    </div>
-  );
-  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-  if (vimeoMatch) return (
-    <div className="mt-2 rounded-xl overflow-hidden aspect-video bg-black">
-      <iframe src={`https://player.vimeo.com/video/${vimeoMatch[1]}`} className="w-full h-full" allowFullScreen title="Product Video" />
-    </div>
-  );
-  if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i) || url.includes('blob:')) return (
-    <div className="mt-2 rounded-xl overflow-hidden aspect-video bg-black">
-      <video src={url} controls className="w-full h-full" />
-    </div>
-  );
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+  if (yt) return <div className="mt-2 rounded-xl overflow-hidden aspect-video bg-black"><iframe src={`https://www.youtube.com/embed/${yt[1]}`} className="w-full h-full" allowFullScreen title="Product Video" /></div>;
+  const vm = url.match(/vimeo\.com\/(\d+)/);
+  if (vm) return <div className="mt-2 rounded-xl overflow-hidden aspect-video bg-black"><iframe src={`https://player.vimeo.com/video/${vm[1]}`} className="w-full h-full" allowFullScreen title="Product Video" /></div>;
+  if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i) || url.includes('blob:')) return <div className="mt-2 rounded-xl overflow-hidden aspect-video bg-black"><video src={url} controls className="w-full h-full" /></div>;
   return <p className="text-xs text-orange-500 mt-1">⚠ Could not preview this URL. It will still be saved.</p>;
 }
 
@@ -281,11 +299,9 @@ export default function AdminProducts() {
   const [uploadingExtra, setUploadingExtra] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState('active');
 
-  // KEY FIX: Local product state for INSTANT optimistic UI updates
-  // We keep our own copy so we can update it immediately without waiting for refetch
+  // Local product list for INSTANT optimistic UI — no waiting for server
   const [localProducts, setLocalProducts] = useState(null);
 
   const queryClient = useQueryClient();
@@ -295,7 +311,7 @@ export default function AdminProducts() {
       setUser(u);
       setIsAdmin(u?.role === 'admin');
       setAuthChecked(true);
-    }).catch(() => { setAuthChecked(true); });
+    }).catch(() => setAuthChecked(true));
   }, []);
 
   const { data: fetchedProducts = [], isLoading } = useQuery({
@@ -306,47 +322,36 @@ export default function AdminProducts() {
     refetchOnWindowFocus: false,
   });
 
-  // Sync server data to local state (but don't override if we have local changes in flight)
   useEffect(() => {
     setLocalProducts(fetchedProducts);
   }, [fetchedProducts]);
 
-  // Use local state for display — falls back to fetched if local not set yet
   const allProducts = localProducts ?? fetchedProducts;
-  const products = allProducts.filter(p => !p.deleted);
-  const trashedProducts = allProducts.filter(p => p.deleted);
-  const displayed = activeTab === 'active' ? products : trashedProducts;
+  // Active = not hidden; Hidden = hidden:true
+  const activeProducts = allProducts.filter(p => !p.hidden);
+  const hiddenProducts = allProducts.filter(p => p.hidden);
+  const displayed = activeTab === 'active' ? activeProducts : hiddenProducts;
 
-  // ── Optimistic update helper ───────────────────────────────────────────────
-  // Updates local state IMMEDIATELY, then syncs to server in background
-  const optimisticUpdate = (id, changes) => {
+  // ── Optimistic helpers ────────────────────────────────────────────────────
+  const optimisticUpdate = (id, changes) =>
     setLocalProducts(prev => (prev ?? []).map(p => p.id === id ? { ...p, ...changes } : p));
-  };
 
-  const optimisticRemove = (id) => {
-    setLocalProducts(prev => (prev ?? []).filter(p => p.id !== id));
-  };
-
-  const refetchFromServer = () => {
+  const refetch = () => {
     queryClient.invalidateQueries({ queryKey: ['products-admin'] });
     queryClient.invalidateQueries({ queryKey: ['products'] });
   };
 
-  // ── Save / Update mutation ────────────────────────────────────────────────
+  // ── Save mutation ─────────────────────────────────────────────────────────
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       const finalBrand =
         data.brand === 'Other' && data.customBrand?.trim() ? data.customBrand.trim()
-        : data.brand === 'Other' ? ''
-        : data.brand;
-
+        : data.brand === 'Other' ? '' : data.brand;
       const { main_group, customBrand, ...rest } = data;
-
       const payload = {
         ...rest,
         brand: finalBrand,
-        // SAVE description raw HTML as-is — sanitize only at display time
-        description: data.description || '',
+        description: data.description || '',   // save raw editor HTML as-is
         price: parseFloat(data.price) || 0,
         original_price: data.original_price !== '' && data.original_price != null ? parseFloat(data.original_price) : undefined,
         stock: data.stock !== '' && data.stock != null ? parseInt(data.stock, 10) : undefined,
@@ -357,193 +362,79 @@ export default function AdminProducts() {
         donkomi: Boolean(data.donkomi),
         review_enabled: data.review_enabled !== false,
         hidden: Boolean(data.hidden),
-        deleted: Boolean(data.deleted),
       };
-
       if (editingProduct) return base44.entities.Product.update(editingProduct.id, payload);
       return base44.entities.Product.create(payload);
     },
-    onSuccess: (result) => {
-      refetchFromServer();
+    onSuccess: () => {
+      refetch();
       toast.success(editingProduct ? 'Product updated!' : 'Product created!');
       setShowForm(false);
       setEditingProduct(null);
       setForm(EMPTY_FORM);
     },
-    onError: (err) => {
-      toast.error(`Save failed: ${err?.message || 'Unknown error'}`);
-      console.error('Save error:', err);
-    },
+    onError: (err) => toast.error(`Save failed: ${err?.message || 'Unknown error'}`),
   });
 
-  // ── TRASH (soft delete) ───────────────────────────────────────────────────
-  const softDelete = async (id) => {
-    // Optimistic: immediately move to trash in UI
-    optimisticUpdate(id, { deleted: true, hidden: true });
-    toast.success('Product moved to Trash');
-    try {
-      await base44.entities.Product.update(id, { deleted: true, hidden: true });
-      refetchFromServer();
-    } catch (err) {
-      // Rollback on failure
-      optimisticUpdate(id, { deleted: false, hidden: false });
-      toast.error(`Failed to move to trash: ${err?.message || 'Unknown error'}`);
-      console.error('Soft delete error:', err);
-    }
-  };
-
-  // ── RESTORE ───────────────────────────────────────────────────────────────
-  const restore = async (id) => {
-    optimisticUpdate(id, { deleted: false, hidden: false });
-    toast.success('Product restored');
-    try {
-      await base44.entities.Product.update(id, { deleted: false, hidden: false });
-      refetchFromServer();
-    } catch (err) {
-      optimisticUpdate(id, { deleted: true, hidden: true });
-      toast.error(`Failed to restore: ${err?.message || 'Unknown error'}`);
-      console.error('Restore error:', err);
-    }
-  };
-
-  // ── PERMANENT DELETE ──────────────────────────────────────────────────────
-  const permanentDelete = async (id) => {
-    if (!window.confirm('Permanently delete this product? This cannot be undone.')) return;
-    // Optimistic: remove from UI immediately
-    optimisticRemove(id);
-    toast.success('Product permanently deleted');
-    try {
-      await base44.entities.Product.delete(id);
-      refetchFromServer();
-    } catch (err) {
-      // Rollback — refetch to restore
-      refetchFromServer();
-      toast.error(`Failed to delete: ${err?.message || 'Unknown error'}`);
-      console.error('Permanent delete error:', err);
-    }
-  };
-
-  // ── VISIBILITY TOGGLE ─────────────────────────────────────────────────────
+  // ── Visibility toggle — ONLY action besides edit ──────────────────────────
   const toggleVisibility = async (product) => {
     const next = !product.hidden;
-    // Optimistic: flip immediately in UI
     optimisticUpdate(product.id, { hidden: next });
-    toast.success(next ? 'Product hidden from users' : 'Product now visible to users');
+    toast.success(next ? '🙈 Product hidden from users' : '👁 Product now visible to users');
     try {
       await base44.entities.Product.update(product.id, { hidden: next });
-      refetchFromServer();
+      refetch();
     } catch (err) {
-      // Rollback
-      optimisticUpdate(product.id, { hidden: product.hidden });
-      toast.error(`Failed to toggle visibility: ${err?.message || 'Unknown error'}`);
-      console.error('Toggle visibility error:', err);
+      optimisticUpdate(product.id, { hidden: product.hidden }); // rollback
+      toast.error('Failed to update visibility');
     }
   };
 
-  // ── TAG TOGGLE (featured / flash_sale / donkomi) ──────────────────────────
+  // ── Tag toggle ────────────────────────────────────────────────────────────
   const handleTagToggle = async (product, key) => {
-    const newValue = !product[key];
-    const changes = { [key]: newValue };
-    // Enforce mutual exclusivity
-    if (key === 'donkomi' && newValue) { changes.flash_sale = false; changes.featured = false; }
-    if (key === 'flash_sale' && newValue) { changes.donkomi = false; }
-    if (key === 'featured' && newValue) { changes.donkomi = false; }
-
-    // Optimistic update
+    const newVal = !product[key];
+    const changes = { [key]: newVal };
+    if (key === 'donkomi' && newVal) { changes.flash_sale = false; changes.featured = false; }
+    if (key === 'flash_sale' && newVal) { changes.donkomi = false; }
+    if (key === 'featured' && newVal) { changes.donkomi = false; }
     optimisticUpdate(product.id, changes);
     const label = key === 'flash_sale' ? 'Flash Sale' : key === 'featured' ? 'Featured' : 'Donkomi';
-    toast.success(`${label} ${newValue ? 'enabled' : 'disabled'}`);
+    toast.success(`${label} ${newVal ? 'enabled' : 'disabled'}`);
     try {
       await base44.entities.Product.update(product.id, changes);
-      refetchFromServer();
+      refetch();
     } catch (err) {
-      // Rollback
       optimisticUpdate(product.id, { [key]: product[key] });
       toast.error(`Failed to toggle ${label}`);
-      console.error('Tag toggle error:', err);
-    }
-  };
-
-  // ── BULK DELETE ───────────────────────────────────────────────────────────
-  const handleBulkDelete = async () => {
-    if (!selectedIds.length) return;
-    if (!window.confirm(`Move ${selectedIds.length} product(s) to trash?`)) return;
-    setBulkDeleting(true);
-    // Optimistic
-    selectedIds.forEach(id => optimisticUpdate(id, { deleted: true, hidden: true }));
-    const ids = [...selectedIds];
-    setSelectedIds([]);
-    toast.success(`${ids.length} product(s) moved to trash`);
-    try {
-      await Promise.all(ids.map(id => base44.entities.Product.update(id, { deleted: true, hidden: true })));
-      refetchFromServer();
-    } catch (err) {
-      refetchFromServer();
-      toast.error(`Bulk delete failed: ${err?.message || 'Unknown error'}`);
-      console.error('Bulk delete error:', err);
-    } finally {
-      setBulkDeleting(false);
-    }
-  };
-
-  // ── BULK RESTORE ──────────────────────────────────────────────────────────
-  const handleBulkRestore = async () => {
-    if (!selectedIds.length) return;
-    setBulkDeleting(true);
-    selectedIds.forEach(id => optimisticUpdate(id, { deleted: false, hidden: false }));
-    const ids = [...selectedIds];
-    setSelectedIds([]);
-    toast.success(`${ids.length} product(s) restored`);
-    try {
-      await Promise.all(ids.map(id => base44.entities.Product.update(id, { deleted: false, hidden: false })));
-      refetchFromServer();
-    } catch (err) {
-      refetchFromServer();
-      toast.error(`Bulk restore failed: ${err?.message || 'Unknown error'}`);
-      console.error('Bulk restore error:', err);
-    } finally {
-      setBulkDeleting(false);
     }
   };
 
   // ── Upload handlers ───────────────────────────────────────────────────────
   const handleUploadMain = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = e.target.files?.[0]; if (!file) return;
     setUploadingMain(true);
-    try {
-      const url = await uploadFile(file);
-      setForm(f => ({ ...f, image_url: url }));
-      toast.success('Main image uploaded!');
-    } catch (err) {
-      toast.error('Image upload failed');
-    } finally { setUploadingMain(false); e.target.value = ''; }
+    try { const url = await uploadFile(file); setForm(f => ({ ...f, image_url: url })); toast.success('Image uploaded!'); }
+    catch { toast.error('Image upload failed'); }
+    finally { setUploadingMain(false); e.target.value = ''; }
   };
 
   const handleUploadExtra = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
+    const files = Array.from(e.target.files || []); if (!files.length) return;
     setUploadingExtra(true);
     try {
       const urls = await Promise.all(files.map(f => uploadFile(f)));
       setForm(f => ({ ...f, image_urls: [...(f.image_urls || []), ...urls].slice(0, 5) }));
       toast.success(`${urls.length} image(s) uploaded!`);
-    } catch (err) {
-      toast.error('Extra image upload failed');
-    } finally { setUploadingExtra(false); e.target.value = ''; }
+    } catch { toast.error('Extra image upload failed'); }
+    finally { setUploadingExtra(false); e.target.value = ''; }
   };
 
   const handleUploadVideo = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = e.target.files?.[0]; if (!file) return;
     setUploadingVideo(true);
-    try {
-      const url = await uploadFile(file);
-      setForm(f => ({ ...f, video_url: url }));
-      toast.success('Video uploaded!');
-    } catch (err) {
-      toast.error('Video upload failed');
-    } finally { setUploadingVideo(false); e.target.value = ''; }
+    try { const url = await uploadFile(file); setForm(f => ({ ...f, video_url: url })); toast.success('Video uploaded!'); }
+    catch { toast.error('Video upload failed'); }
+    finally { setUploadingVideo(false); e.target.value = ''; }
   };
 
   // ── Edit / New ────────────────────────────────────────────────────────────
@@ -555,11 +446,9 @@ export default function AdminProducts() {
     else if (cat === 'electronic_appliances') main_group = 'electronics';
     else if (cat === 'home_appliances') main_group = 'home_appliances_group';
     else if (cat) main_group = 'phone_accessories';
-
     const knownBrands = Object.values(GROUP_BRANDS).flat();
     const savedBrand = product.brand || '';
-    const isKnownBrand = knownBrands.includes(savedBrand);
-
+    const isKnown = knownBrands.includes(savedBrand);
     setForm({
       name: product.name || '',
       description: product.description || '',
@@ -567,8 +456,8 @@ export default function AdminProducts() {
       original_price: product.original_price ?? '',
       main_group,
       category: cat,
-      brand: isKnownBrand ? savedBrand : (savedBrand ? 'Other' : ''),
-      customBrand: isKnownBrand ? '' : savedBrand,
+      brand: isKnown ? savedBrand : (savedBrand ? 'Other' : ''),
+      customBrand: isKnown ? '' : savedBrand,
       subcategory: product.subcategory || '',
       stock: product.stock ?? '',
       featured: product.featured || false,
@@ -582,7 +471,6 @@ export default function AdminProducts() {
       video_url: product.video_url || '',
       flash_sale_end: product.flash_sale_end || '',
       hidden: product.hidden || false,
-      deleted: product.deleted || false,
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -595,11 +483,10 @@ export default function AdminProducts() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const toggleSelect = (id) =>
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const closeForm = () => { setShowForm(false); setEditingProduct(null); setForm(EMPTY_FORM); };
 
-  const toggleSelectAll = () =>
-    setSelectedIds(selectedIds.length === displayed.length ? [] : displayed.map(p => p.id));
+  const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleSelectAll = () => setSelectedIds(selectedIds.length === displayed.length ? [] : displayed.map(p => p.id));
 
   // ── Guards ────────────────────────────────────────────────────────────────
   if (!authChecked) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
@@ -617,23 +504,23 @@ export default function AdminProducts() {
         </Button>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs: Active / Hidden */}
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => { setActiveTab('active'); setSelectedIds([]); }}
           className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'active' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
         >
-          Active ({products.length})
+          Active ({activeProducts.length})
         </button>
         <button
-          onClick={() => { setActiveTab('trash'); setSelectedIds([]); }}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 ${activeTab === 'trash' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          onClick={() => { setActiveTab('hidden'); setSelectedIds([]); }}
+          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 ${activeTab === 'hidden' ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
         >
-          <Trash2 className="h-3.5 w-3.5" /> Trash ({trashedProducts.length})
+          <EyeOff className="h-3.5 w-3.5" /> Hidden ({hiddenProducts.length})
         </button>
       </div>
 
-      {/* Bulk actions bar */}
+      {/* Select all bar */}
       {displayed.length > 0 && (
         <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200 flex-wrap">
           <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
@@ -646,21 +533,7 @@ export default function AdminProducts() {
             {selectedIds.length === displayed.length && displayed.length > 0 ? 'Deselect All' : 'Select All'}
           </label>
           {selectedIds.length > 0 && (
-            <>
-              <span className="text-sm text-gray-500">{selectedIds.length} selected</span>
-              {activeTab === 'active' ? (
-                <Button size="sm" variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleting} className="gap-1.5">
-                  {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                  Move to Trash
-                </Button>
-              ) : (
-                <Button size="sm" onClick={handleBulkRestore} disabled={bulkDeleting}
-                  className="gap-1.5 bg-green-600 hover:bg-green-700 text-white">
-                  {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                  Restore Selected
-                </Button>
-              )}
-            </>
+            <span className="text-sm text-gray-500">{selectedIds.length} selected</span>
           )}
         </div>
       )}
@@ -668,16 +541,16 @@ export default function AdminProducts() {
       {/* ── FORM ── */}
       {showForm && (
         <Card className="p-5 mb-8 border-2 border-blue-200 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-5">
             <h2 className="font-bold text-lg text-gray-800">
-              {editingProduct ? 'Edit Product' : 'New Product'}
+              {editingProduct ? '✏️ Edit Product' : '➕ New Product'}
             </h2>
-            <button onClick={() => { setShowForm(false); setEditingProduct(null); setForm(EMPTY_FORM); }}>
+            <button onClick={closeForm} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
               <X className="h-5 w-5 text-gray-400" />
             </button>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-5">
 
             {/* Main Image */}
             <div className="md:col-span-2">
@@ -697,6 +570,10 @@ export default function AdminProducts() {
                     <input type="file" accept="image/*" className="hidden" onChange={handleUploadMain} disabled={uploadingMain} />
                   </label>
                   {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Image uploaded</p>}
+                  {form.image_url && (
+                    <button type="button" onClick={() => setForm(f => ({ ...f, image_url: '' }))}
+                      className="text-xs text-red-500 hover:underline">Remove image</button>
+                  )}
                 </div>
               </div>
             </div>
@@ -722,29 +599,23 @@ export default function AdminProducts() {
                     <input type="file" accept="image/*" multiple className="hidden" onChange={handleUploadExtra} disabled={uploadingExtra} />
                   </label>
                 )}
+                {/* Video slot */}
                 <label className="cursor-pointer w-16 h-16 rounded-lg border-2 border-dashed border-purple-300 flex flex-col items-center justify-center hover:border-purple-500 transition-colors gap-0.5 relative">
                   {uploadingVideo ? <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
                     : form.video_url ? (
                       <>
                         <Video className="h-5 w-5 text-purple-500" />
                         <span className="text-[9px] text-purple-600 font-semibold">Replace</span>
-                        <button type="button"
-                          onClick={(e) => { e.preventDefault(); setForm(f => ({ ...f, video_url: '' })); }}
-                          className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1">
-                          <X className="h-3 w-3" />
-                        </button>
+                        <button type="button" onClick={e => { e.preventDefault(); setForm(f => ({ ...f, video_url: '' })); }}
+                          className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1"><X className="h-3 w-3" /></button>
                       </>
                     ) : (
-                      <>
-                        <Video className="h-4 w-4 text-purple-400" />
-                        <span className="text-[9px] text-purple-400">Video</span>
-                      </>
+                      <><Video className="h-4 w-4 text-purple-400" /><span className="text-[9px] text-purple-400">Video</span></>
                     )}
                   <input type="file" accept="video/*" className="hidden" onChange={handleUploadVideo} disabled={uploadingVideo} />
                 </label>
               </div>
-              {form.video_url && !uploadingVideo && <p className="text-xs text-purple-600 font-medium mt-1">✓ Video uploaded</p>}
-              <p className="text-[10px] text-gray-400 mt-1">Slots: {(form.image_urls || []).length}/5 images · {form.video_url ? '1/1' : '0/1'} video</p>
+              <p className="text-[10px] text-gray-400">Slots: {(form.image_urls || []).length}/5 images · {form.video_url ? '1/1' : '0/1'} video</p>
             </div>
 
             {/* Product Name */}
@@ -787,7 +658,7 @@ export default function AdminProducts() {
               {form.brand === 'Other' && (
                 <div className="mt-2">
                   <Input value={form.customBrand || ''} onChange={e => setForm(f => ({ ...f, customBrand: e.target.value }))}
-                    placeholder="Type brand name e.g. Anker, Baseus, Xiaomi…" className="border-orange-300" />
+                    placeholder="Type brand name e.g. Anker, Baseus…" className="border-orange-300" />
                   <p className="text-xs text-orange-500 mt-0.5">Enter the brand name manually</p>
                 </div>
               )}
@@ -802,7 +673,7 @@ export default function AdminProducts() {
                   {((BRAND_SUBCATEGORIES[form.category] || {})[form.brand === 'Other' ? form.customBrand : form.brand] || []).map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
-                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Other">Other / Custom</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -815,39 +686,37 @@ export default function AdminProducts() {
 
             {/* Original Price */}
             <div>
-              <Label>Original Price (₵) — for discount display</Label>
+              <Label>Original Price (₵) <span className="text-gray-400 text-xs font-normal">— for strikethrough discount</span></Label>
               <Input type="number" value={form.original_price} onChange={e => setForm(f => ({ ...f, original_price: e.target.value }))} placeholder="0.00" />
             </div>
 
             {/* Stock */}
             <div>
-              <Label>Stock Quantity <span className="text-gray-400 font-normal text-xs">(optional)</span></Label>
+              <Label>Stock Quantity <span className="text-gray-400 font-normal text-xs">(optional — blank = unlimited)</span></Label>
               <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="Leave blank if unlimited" />
             </div>
 
             {/* Video URL */}
             <div className="md:col-span-2">
-              <Label>Video URL <span className="text-gray-400 font-normal text-xs">(YouTube, Vimeo, or direct link)</span></Label>
+              <Label>Video URL <span className="text-gray-400 font-normal text-xs">(YouTube, Vimeo, or direct .mp4 link)</span></Label>
               <Input value={form.video_url || ''} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} placeholder="https://youtube.com/watch?v=..." />
               <VideoPreview url={form.video_url} />
             </div>
 
-            {/* Description */}
+            {/* Description — Rich Text */}
             <div className="md:col-span-2">
-              <Label className="font-semibold">
+              <Label className="font-semibold block mb-1">
                 Description
                 <span className="text-xs font-normal text-gray-400 ml-2">
-                  Type or paste plain text — use toolbar to format
+                  Type directly or paste plain text — use toolbar for formatting
                 </span>
               </Label>
-              <div className="mt-2">
-                <RichTextEditor value={form.description} onChange={v => setForm(f => ({ ...f, description: v }))} />
-              </div>
+              <RichTextEditor value={form.description} onChange={v => setForm(f => ({ ...f, description: v }))} />
               {form.description && (
                 <details className="mt-2">
-                  <summary className="text-xs text-blue-600 cursor-pointer select-none">👁 Preview rendered description</summary>
+                  <summary className="text-xs text-blue-600 cursor-pointer select-none">👁 Preview how description appears to customers</summary>
                   <div
-                    className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm"
+                    className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700 leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.description) }}
                   />
                 </details>
@@ -857,8 +726,8 @@ export default function AdminProducts() {
             {/* Tags */}
             <div className="md:col-span-2">
               <Label className="font-semibold block mb-1">Product Tags</Label>
-              <p className="text-xs text-amber-600 mb-2">
-                ⚠ <strong>Donkomi</strong> is separate — enabling it auto-disables Flash Sale &amp; Featured tags.
+              <p className="text-xs text-amber-600 mb-3 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                ⚠ <strong>Donkomi</strong> is a separate section — enabling it will auto-disable Flash Sale &amp; Featured to prevent cross-listing.
               </p>
               <div className="flex flex-wrap gap-3">
                 {[
@@ -866,48 +735,52 @@ export default function AdminProducts() {
                   { key: 'flash_sale', label: '⚡ Flash Sale (CLASSICO Deals)' },
                   { key: 'donkomi', label: '🔥 Donkomi' },
                   { key: 'review_enabled', label: '💬 Reviews Enabled' },
-                  { key: 'hidden', label: '🙈 Hidden from Users' },
+                  { key: 'hidden', label: '🙈 Hide from Users' },
                 ].map(({ key, label }) => (
-                  <label key={key} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50">
-                    <div
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors cursor-pointer ${form[key] ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
-                      onClick={() => setForm(f => {
-                        const newVal = !f[key];
-                        const updates = { [key]: newVal };
-                        if (key === 'donkomi' && newVal) { updates.flash_sale = false; updates.featured = false; }
-                        if (key === 'flash_sale' && newVal) { updates.donkomi = false; }
-                        if (key === 'featured' && newVal) { updates.donkomi = false; }
-                        return { ...f, ...updates };
-                      })}
-                    >
-                      {form[key] && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setForm(f => {
+                      const newVal = !f[key];
+                      const updates = { [key]: newVal };
+                      if (key === 'donkomi' && newVal) { updates.flash_sale = false; updates.featured = false; }
+                      if (key === 'flash_sale' && newVal) { updates.donkomi = false; }
+                      if (key === 'featured' && newVal) { updates.donkomi = false; }
+                      return { ...f, ...updates };
+                    })}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                      form[key]
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${form[key] ? 'border-white bg-white' : 'border-gray-400'}`}>
+                      {form[key] && <Check className="h-2.5 w-2.5 text-blue-600" strokeWidth={3} />}
                     </div>
-                    <span className="text-sm font-medium text-gray-700">{label}</span>
-                  </label>
+                    {label}
+                  </button>
                 ))}
               </div>
               {form.flash_sale && (
                 <div className="mt-3">
-                  <Label>Flash Sale End Date/Time (optional)</Label>
-                  <Input type="datetime-local" value={form.flash_sale_end || ''} onChange={e => setForm(f => ({ ...f, flash_sale_end: e.target.value }))} />
+                  <Label>Flash Sale End Date/Time <span className="text-gray-400 font-normal text-xs">(optional)</span></Label>
+                  <Input type="datetime-local" value={form.flash_sale_end || ''} onChange={e => setForm(f => ({ ...f, flash_sale_end: e.target.value }))} className="mt-1" />
                 </div>
               )}
             </div>
           </div>
 
           {/* Save / Cancel */}
-          <div className="flex gap-3 mt-6">
+          <div className="flex gap-3 mt-6 pt-4 border-t border-gray-100">
             <Button
               onClick={() => saveMutation.mutate(form)}
               disabled={saveMutation.isPending || !form.name || !form.price || !form.category}
-              className="bg-blue-600 hover:bg-blue-700 gap-2"
+              className="bg-blue-600 hover:bg-blue-700 gap-2 px-6"
             >
               {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               {editingProduct ? 'Save Changes' : 'Create Product'}
             </Button>
-            <Button variant="outline" onClick={() => { setShowForm(false); setEditingProduct(null); setForm(EMPTY_FORM); }}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={closeForm}>Cancel</Button>
           </div>
         </Card>
       )}
@@ -915,131 +788,105 @@ export default function AdminProducts() {
       {/* ── PRODUCTS GRID ── */}
       {isLoading && !localProducts ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {Array(8).fill(0).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
+          {Array(8).fill(0).map((_, i) => <Skeleton key={i} className="h-52 rounded-xl" />)}
         </div>
       ) : displayed.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
-          {activeTab === 'active' ? <p>No products yet. Click "Add Product" to get started.</p> : <p>Trash is empty.</p>}
+          {activeTab === 'active'
+            ? <p>No active products. Click "Add Product" to get started.</p>
+            : <p>No hidden products.</p>}
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {displayed.map(product => {
             const isSelected = selectedIds.includes(product.id);
-            const activeTags = [
+            const tags = [
               product.featured && { key: 'featured', label: 'Featured', color: 'bg-purple-500' },
               product.flash_sale && { key: 'flash_sale', label: 'Flash', color: 'bg-orange-500' },
               product.donkomi && { key: 'donkomi', label: 'Donkomi', color: 'bg-green-500' },
-              product.hidden && { key: 'hidden', label: 'Hidden', color: 'bg-gray-500' },
             ].filter(Boolean);
 
             return (
               <Card key={product.id}
-                className={`overflow-hidden shadow-sm hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-blue-500' : ''} ${product.hidden ? 'opacity-60' : ''}`}>
+                className={`overflow-hidden shadow-sm hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
 
-                {/* Image area */}
+                {/* Image */}
                 <div className="aspect-square bg-gray-50 relative overflow-hidden">
                   {product.image_url
                     ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
-                  {product.hidden && (
-                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                      <EyeOff className="h-6 w-6 text-white opacity-80" />
-                    </div>
-                  )}
+                  {/* Checkbox */}
                   <div className="absolute top-1.5 right-1.5">
                     <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(product.id)}
                       className="w-4 h-4 cursor-pointer accent-blue-600" onClick={e => e.stopPropagation()} />
                   </div>
-                  {activeTags.length > 0 && (
+                  {/* Tag badges */}
+                  {tags.length > 0 && (
                     <div className="absolute top-1 left-1 flex flex-col gap-1">
-                      {activeTags.map(tag => (
-                        <Badge key={tag.key} className={`text-[9px] px-1 py-0 ${tag.color} text-white`}>{tag.label}</Badge>
+                      {tags.map(tag => (
+                        <Badge key={tag.key} className={`text-[9px] px-1 py-0 ${tag.color} text-white border-0`}>{tag.label}</Badge>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* Card body */}
+                {/* Body */}
                 <div className="p-2">
                   <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
                   <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
+                  {product.original_price && (
+                    <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                  )}
                   {product.stock != null && <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>}
 
-                  {/* Description preview — rendered as HTML, never raw */}
+                  {/* Description snippet — plain text, no HTML codes ever */}
                   {product.description && (
-                    <div
-                      className="text-[10px] text-gray-500 mt-1 line-clamp-2 leading-tight"
-                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.description) }}
-                    />
+                    <p className="text-[10px] text-gray-500 mt-1 line-clamp-2 leading-tight">
+                      {htmlToPlainText(product.description)}
+                    </p>
                   )}
 
-                  {activeTab === 'active' && (
-                    <>
-                      {/* Tag toggles */}
-                      <div className="flex gap-1 mt-1.5 flex-wrap">
-                        {[
-                          { key: 'featured', label: '⭐', title: 'Featured' },
-                          { key: 'flash_sale', label: '⚡', title: 'Flash Sale' },
-                          { key: 'donkomi', label: '🔥', title: 'Donkomi' },
-                        ].map(({ key, label, title }) => (
-                          <button key={key} title={`Toggle ${title}`}
-                            onClick={() => handleTagToggle(product, key)}
-                            className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold transition-colors ${product[key] ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-gray-100 border-gray-300 text-gray-400'}`}>
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex gap-1 mt-1.5">
-                        {/* Edit */}
-                        <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
-                          <Pencil className="h-3 w-3" /> Edit
-                        </Button>
-
-                        {/* Visibility toggle
-                            hidden=false → product IS visible to users → show EyeOff (click to hide)
-                            hidden=true  → product IS hidden from users → show Eye (click to show) */}
-                        <button
-                          title={product.hidden ? 'Click to make visible to users' : 'Click to hide from users'}
-                          onClick={() => toggleVisibility(product)}
-                          className={`h-7 w-7 flex items-center justify-center rounded-md border transition-colors ${
-                            product.hidden
-                              ? 'bg-yellow-50 border-yellow-400 text-yellow-600 hover:bg-yellow-100'
-                              : 'bg-green-50 border-green-300 text-green-600 hover:bg-green-100'
-                          }`}
-                        >
-                          {product.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                        </button>
-
-                        {/* Trash / soft delete */}
-                        <button
-                          title="Move to Trash"
-                          onClick={() => softDelete(product.id)}
-                          className="h-7 w-7 flex items-center justify-center rounded-md border bg-red-50 border-red-300 text-red-500 hover:bg-red-100 transition-colors"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </>
-                  )}
-
-                  {activeTab === 'trash' && (
-                    <div className="flex gap-1 mt-1.5">
-                      {/* Restore */}
-                      <Button size="sm" className="flex-1 h-7 text-xs gap-1 bg-green-600 hover:bg-green-700 text-white" onClick={() => restore(product.id)}>
-                        <RotateCcw className="h-3 w-3" /> Restore
-                      </Button>
-                      {/* Permanent delete */}
-                      <button
-                        title="Delete permanently"
-                        onClick={() => permanentDelete(product.id)}
-                        className="h-7 w-7 flex items-center justify-center rounded-md border bg-red-50 border-red-300 text-red-500 hover:bg-red-100 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
+                  {/* Tag toggles */}
+                  <div className="flex gap-1 mt-1.5 flex-wrap">
+                    {[
+                      { key: 'featured', label: '⭐', title: 'Featured' },
+                      { key: 'flash_sale', label: '⚡', title: 'Flash Sale' },
+                      { key: 'donkomi', label: '🔥', title: 'Donkomi' },
+                    ].map(({ key, label, title }) => (
+                      <button key={key} title={`Toggle ${title}`}
+                        onClick={() => handleTagToggle(product, key)}
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold transition-all ${
+                          product[key] ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-gray-100 border-gray-300 text-gray-400 hover:border-gray-400'
+                        }`}>
+                        {label}
                       </button>
-                    </div>
-                  )}
+                    ))}
+                  </div>
+
+                  {/* Actions: Edit + Visibility only */}
+                  <div className="flex gap-1 mt-2">
+                    <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
+                      <Pencil className="h-3 w-3" /> Edit
+                    </Button>
+
+                    {/* Visibility toggle button
+                        GREEN + EyeOff = currently VISIBLE (click to hide)
+                        YELLOW + Eye   = currently HIDDEN (click to show) */}
+                    <button
+                      title={product.hidden ? 'Hidden — click to show to users' : 'Visible — click to hide from users'}
+                      onClick={() => toggleVisibility(product)}
+                      className={`h-7 px-2 flex items-center justify-center rounded-md border text-xs font-medium transition-all gap-1 ${
+                        product.hidden
+                          ? 'bg-yellow-50 border-yellow-400 text-yellow-700 hover:bg-yellow-100'
+                          : 'bg-green-50 border-green-400 text-green-700 hover:bg-green-100'
+                      }`}
+                    >
+                      {product.hidden
+                        ? <><Eye className="h-3.5 w-3.5" /><span className="text-[9px]">Show</span></>
+                        : <><EyeOff className="h-3.5 w-3.5" /><span className="text-[9px]">Hide</span></>
+                      }
+                    </button>
+                  </div>
                 </div>
               </Card>
             );

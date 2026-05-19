@@ -161,18 +161,26 @@ export default function Home() {
   const hiddenFeatured = getHiddenIds('featured');
   const hiddenDonkomi = getHiddenIds('donkomi');
 
-  // Product buckets
+  // Product buckets - ONLY show products that are tagged for each section
   const phoneAccessoryCategories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers'];
+  
+  // CLASSICO Deals (Flash Sale) - only products tagged with flash_sale=true
   const flashTagged = products.filter(p => p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()) && !hiddenFlash.includes(p.id));
-  const flashSaleProducts = flashTagged.length >= 2 ? flashTagged : products.filter(p => p.original_price && p.original_price > p.price && !hiddenFlash.includes(p.id)).slice(0, 6);
-  const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : products.filter(p => p.featured && !hiddenFlash.includes(p.id)).slice(0, 6);
+  const flashItems = flashTagged.slice(0, 6);
   const flashSaleEndTime = flashTagged.length > 0 ? flashTagged[0].flash_sale_end : null;
-  const newArrivals = [...products].filter(p => p.category !== 'home_appliances').sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 6);
+  
+  // New Arrivals - only products tagged with new_arrivals=true
+  const newArrivals = products.filter(p => p.new_arrivals).slice(0, 6);
+  
+  // Featured/CLASSICO Deals alternative section
   const classicoDeals = products.filter(p => p.featured && !hiddenFeatured.includes(p.id)).slice(0, 6);
+  
+  // Donkomi Deals - only products tagged with donkomi=true
   const donkomiTagged = products.filter(p => p.donkomi && !hiddenDonkomi.includes(p.id));
-  const donkomiDeals = donkomiTagged.length >= 2 ? donkomiTagged.slice(0, 6) : [...products].filter(p => p.price > 0 && p.category !== 'home_appliances' && !hiddenDonkomi.includes(p.id)).sort((a, b) => a.price - b.price).slice(0, 6);
-  const topSelling = [...products].filter(p => p.reviews_count > 0).sort((a, b) => (b.reviews_count || 0) - (a.reviews_count || 0)).slice(0, 6);
-  const topSellingFallback = topSelling.length >= 2 ? topSelling : [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 6);
+  const donkomiDeals = donkomiTagged.slice(0, 6);
+  
+  // Top Selling - only products tagged with top_selling=true
+  const topSelling = products.filter(p => p.top_selling).slice(0, 6);
 
   return (
     <div className="bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
@@ -281,93 +289,97 @@ export default function Home() {
       })()}
 
       {/* ── CLASSICO DEALS (Flash Sale) ── */}
-      <div className="mt-4 mx-2 md:mx-4">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Zap className="h-5 w-5 text-[#2E86C1] fill-[#2E86C1]" />
-              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">CLASSICO Deals</h2>
-              <span className="bg-blue-100 text-[#2E86C1] text-[10px] font-bold px-2 py-0.5 rounded-full">Flash Sale</span>
-              <FlashSaleTimer endTime={flashTimerEndTime} isVisible={showFlashTimer} />
+      {flashItems.length > 0 && (
+        <div className="mt-4 mx-2 md:mx-4">
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Zap className="h-5 w-5 text-[#2E86C1] fill-[#2E86C1]" />
+                <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">CLASSICO Deals</h2>
+                <span className="bg-blue-100 text-[#2E86C1] text-[10px] font-bold px-2 py-0.5 rounded-full">Flash Sale</span>
+                <FlashSaleTimer endTime={flashTimerEndTime} isVisible={showFlashTimer} />
+              </div>
+              <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+                See All <ChevronRight className="h-3 w-3" />
+              </Link>
             </div>
-            <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
-              See All <ChevronRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading
-              ? Array(5).fill(0).map((_, i) => (
-                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
-                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
-                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
-                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
-                  </div>
-                ))
-              : (flashItems.length > 0 ? flashItems : products.filter(p => !hiddenFlash.includes(p.id)).slice(0, 5)).map(product => (
-                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
-                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
-                      {product.image_url
-                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                      {product.original_price > product.price && (
-                       <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">
-                         -{Math.round((1 - product.price / product.original_price) * 100)}%
-                       </span>
-                      )}
+            <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+              {isLoading
+                ? Array(5).fill(0).map((_, i) => (
+                    <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                      <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                      <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                      <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                     </div>
-                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                    <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
-                    {product.original_price > product.price && (
-                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
-                    )}
-                  </Link>
-                ))}
+                  ))
+                : flashItems.map(product => (
+                    <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                      className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
+                      <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
+                        {product.image_url
+                          ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                        {product.original_price > product.price && (
+                         <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">
+                           -{Math.round((1 - product.price / product.original_price) * 100)}%
+                         </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                      <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
+                      {product.original_price > product.price && (
+                        <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                      )}
+                    </Link>
+                  ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── DONKOMI DEALS ── */}
-      <div className="mt-5 mx-2 md:mx-4">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <Tag className="h-5 w-5 text-green-600" />
-              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Donkomi Deals</h2>
-              <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Best Prices</span>
+      {donkomiDeals.length > 0 && (
+        <div className="mt-5 mx-2 md:mx-4">
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Tag className="h-5 w-5 text-green-600" />
+                <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Donkomi Deals</h2>
+                <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Best Prices</span>
+              </div>
+              <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+                See All <ChevronRight className="h-3 w-3" />
+              </Link>
             </div>
-            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
-              See All <ChevronRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading
-              ? Array(5).fill(0).map((_, i) => (
-                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
-                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
-                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
-                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
-                  </div>
-                ))
-              : (donkomiDeals.length > 0 ? donkomiDeals : products.filter(p => !hiddenDonkomi.includes(p.id)).slice(0, 5)).map(product => (
-                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
-                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
-                      {product.image_url
-                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                      <span className="absolute top-1 left-1 bg-green-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">🔥</span>
+            <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+              {isLoading
+                ? Array(5).fill(0).map((_, i) => (
+                    <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                      <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                      <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                      <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                     </div>
-                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                    <p className="text-xs font-black text-green-700">₵{product.price?.toLocaleString()}</p>
-                    {product.original_price > product.price && (
-                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
-                    )}
-                  </Link>
-                ))}
+                  ))
+                : donkomiDeals.map(product => (
+                    <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                      className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
+                      <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
+                        {product.image_url
+                          ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                        <span className="absolute top-1 left-1 bg-green-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">🔥</span>
+                      </div>
+                      <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                      <p className="text-xs font-black text-green-700">₵{product.price?.toLocaleString()}</p>
+                      {product.original_price > product.price && (
+                        <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                      )}
+                    </Link>
+                  ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── SHOP BY BRAND ── */}
       {showBrandSection && (
@@ -413,87 +425,91 @@ export default function Home() {
       )}
 
       {/* ── NEW ARRIVALS ── */}
-      <div className="mt-5 mx-2 md:mx-4">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-yellow-500 fill-yellow-400" />
-              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">New Arrivals</h2>
+      {newArrivals.length > 0 && (
+        <div className="mt-5 mx-2 md:mx-4">
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-400" />
+                <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">New Arrivals</h2>
+              </div>
+              <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+                See All <ChevronRight className="h-3 w-3" />
+              </Link>
             </div>
-            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
-              See All <ChevronRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading
-              ? Array(6).fill(0).map((_, i) => (
-                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
-                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
-                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
-                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
-                  </div>
-                ))
-              : (newArrivals.length > 0 ? newArrivals : products.slice(0, 6)).map(product => (
-                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
-                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
-                      {product.image_url
-                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                      <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[8px] font-black px-1 py-0.5 rounded-full">NEW</span>
+            <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+              {isLoading
+                ? Array(6).fill(0).map((_, i) => (
+                    <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                      <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                      <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                      <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                     </div>
-                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                    <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
-                    {product.original_price > product.price && (
-                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
-                    )}
-                  </Link>
-                ))}
+                  ))
+                : newArrivals.map(product => (
+                    <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                      className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
+                      <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
+                        {product.image_url
+                          ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                        <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[8px] font-black px-1 py-0.5 rounded-full">NEW</span>
+                      </div>
+                      <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                      <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
+                      {product.original_price > product.price && (
+                        <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                      )}
+                    </Link>
+                  ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── TOP SELLING ── */}
-      <div className="mt-5 mx-2 md:mx-4">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-[#2E86C1]" />
-              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Top Selling</h2>
-              <span className="bg-blue-100 text-[#2E86C1] text-[10px] font-bold px-2 py-0.5 rounded-full">🔥 Hot</span>
+      {topSelling.length > 0 && (
+        <div className="mt-5 mx-2 md:mx-4">
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-[#2E86C1]" />
+                <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Top Selling</h2>
+                <span className="bg-blue-100 text-[#2E86C1] text-[10px] font-bold px-2 py-0.5 rounded-full">🔥 Hot</span>
+              </div>
+              <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+                See All <ChevronRight className="h-3 w-3" />
+              </Link>
             </div>
-            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
-              See All <ChevronRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading
-              ? Array(5).fill(0).map((_, i) => (
-                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
-                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
-                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
-                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
-                  </div>
-                ))
-              : (topSellingFallback.length > 0 ? topSellingFallback : products.slice(0, 6)).map((product, idx) => (
-                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
-                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
-                      {product.image_url
-                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                      <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">#{idx + 1}</span>
+            <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+              {isLoading
+                ? Array(5).fill(0).map((_, i) => (
+                    <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                      <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                      <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                      <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                     </div>
-                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                    <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
-                    {product.reviews_count > 0 && (
-                      <p className="text-[10px] text-yellow-600 font-bold">⭐ {product.reviews_count} sold</p>
-                    )}
-                  </Link>
-                ))}
+                  ))
+                : topSelling.map((product, idx) => (
+                    <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                      className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
+                      <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
+                        {product.image_url
+                          ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                        <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">#{idx + 1}</span>
+                      </div>
+                      <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                      <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
+                      {product.reviews_count > 0 && (
+                        <p className="text-[10px] text-yellow-600 font-bold">⭐ {product.reviews_count} sold</p>
+                      )}
+                    </Link>
+                  ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Bottom spacer — must be tall enough to clear the fixed bottom nav bar */}
       <div className="h-24" />

@@ -200,7 +200,7 @@ export default function Home() {
     }
   });
 
-  // ── Hidden product IDs per section (set by admin in Home Editor) ─────────────
+  // Hidden product IDs per section (set by admin in Home Editor)
   const getHiddenIds = (secId) => {
     const raw = appSettings.find(s => s.key === `home_hidden_${secId}`)?.value;
     try { return JSON.parse(raw || '[]'); } catch { return []; }
@@ -208,64 +208,34 @@ export default function Home() {
   const hiddenFlash = getHiddenIds('flash');
   const hiddenFeatured = getHiddenIds('featured');
   const hiddenDonkomi = getHiddenIds('donkomi');
-  const hiddenNewArrivals = getHiddenIds('new_arrivals');
-  const hiddenTopSelling = getHiddenIds('top_selling');
 
   // ── Section filters (all already exclude is_hidden via `products`) ──────────
-  // IMPORTANT: These conditions must exactly match the admin product form flags
 
   // CLASSICO Deals (Flash Sale)
-  // Condition: flash_sale flag is true AND flash_sale_end (if set) is still in future OR not set
   const flashItems = products
-    .filter(p => {
-      if (!p.flash_sale) return false;
-      if (p.flash_sale_end && new Date(p.flash_sale_end) <= new Date()) return false;
-      if (hiddenFlash.includes(p.id)) return false;
-      return true;
-    })
+    .filter(p => p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()) && !hiddenFlash.includes(p.id))
     .slice(0, 6);
+  const flashSaleEndTime = flashItems.length > 0 ? flashItems[0].flash_sale_end : null;
 
   // ⭐ Featured
-  // Condition: featured flag is true
   const featuredItems = products
-    .filter(p => {
-      if (!p.featured) return false;
-      if (hiddenFeatured.includes(p.id)) return false;
-      return true;
-    })
+    .filter(p => p.featured && !hiddenFeatured.includes(p.id))
     .slice(0, 6);
 
   // 🔥 Donkomi Deals
-  // Condition: donkomi flag is true
   const donkomiDeals = products
-    .filter(p => {
-      if (!p.donkomi) return false;
-      if (hiddenDonkomi.includes(p.id)) return false;
-      return true;
-    })
+    .filter(p => p.donkomi && !hiddenDonkomi.includes(p.id))
     .slice(0, 6);
 
   // 🆕 New Arrivals
-  // Condition: new_arrivals flag is true
   const newArrivals = products
-    .filter(p => {
-      if (!p.new_arrivals) return false;
-      if (hiddenNewArrivals.includes(p.id)) return false;
-      return true;
-    })
+    .filter(p => p.new_arrivals)
     .slice(0, 6);
 
   // 🏆 Top Selling
-  // Condition: top_selling flag is true
   const topSelling = products
-    .filter(p => {
-      if (!p.top_selling) return false;
-      if (hiddenTopSelling.includes(p.id)) return false;
-      return true;
-    })
+    .filter(p => p.top_selling)
     .slice(0, 6);
-
-  const flashSaleEndTime = flashItems.length > 0 ? flashItems[0].flash_sale_end : null;
 
   return (
     <div className="bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>

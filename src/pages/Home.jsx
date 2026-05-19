@@ -401,7 +401,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── ⚡ CLASSICO DEALS (Flash Sale) ── */}
+      {/* ── ⚡ CLASSICO DEAL ── */}
       {flashItems.length > 0 && (
         <div className="mt-4 mx-2 md:mx-4">
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">

@@ -1,21 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Upload, X, Pencil, Plus, Trash2, ImagePlus,
-  Loader2, Check, Eye, EyeOff, RotateCcw, Video
+  Loader2, Check, Eye, EyeOff, RotateCcw, Video,
+  Bold, AlignLeft, AlignCenter, AlignRight, Wand2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// ── STRICT CATEGORY STRUCTURE ─────────────────────────────────────────────────
 const MAIN_CATEGORY_GROUPS = [
   { label: 'Phones', id: 'phones' },
   { label: 'Phone Accessories', id: 'phone_accessories' },
@@ -119,10 +118,121 @@ const EMPTY_FORM = {
   hidden: false, deleted: false,
 };
 
-// ── Uploader helper ────────────────────────────────────────────────────────────
 async function uploadFile(file) {
   const { file_url } = await base44.integrations.Core.UploadFile({ file });
   return file_url;
+}
+
+// ── Rich Text Editor ──────────────────────────────────────────────────────────
+function RichTextEditor({ value, onChange }) {
+  const editorRef = useRef(null);
+  const isInitialized = useRef(false);
+
+  useEffect(() => {
+    if (editorRef.current && !isInitialized.current) {
+      editorRef.current.innerHTML = value || '';
+      isInitialized.current = true;
+    }
+  }, []);
+
+  const exec = (cmd, val = null) => {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, val);
+    onChange(editorRef.current?.innerHTML || '');
+  };
+
+  const handleInput = () => onChange(editorRef.current?.innerHTML || '');
+
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+        <button type="button" title="Bold" onClick={() => exec('bold')}
+          className="p-1.5 rounded hover:bg-gray-200 transition-colors">
+          <Bold className="h-3.5 w-3.5" />
+        </button>
+        <button type="button" title="Italic" onClick={() => exec('italic')}
+          className="p-1.5 rounded hover:bg-gray-200 transition-colors font-serif italic text-sm font-bold">I</button>
+        <button type="button" title="Underline" onClick={() => exec('underline')}
+          className="p-1.5 rounded hover:bg-gray-200 transition-colors underline text-sm font-bold">U</button>
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <button type="button" title="Align Left" onClick={() => exec('justifyLeft')}
+          className="p-1.5 rounded hover:bg-gray-200 transition-colors"><AlignLeft className="h-3.5 w-3.5" /></button>
+        <button type="button" title="Align Center" onClick={() => exec('justifyCenter')}
+          className="p-1.5 rounded hover:bg-gray-200 transition-colors"><AlignCenter className="h-3.5 w-3.5" /></button>
+        <button type="button" title="Align Right" onClick={() => exec('justifyRight')}
+          className="p-1.5 rounded hover:bg-gray-200 transition-colors"><AlignRight className="h-3.5 w-3.5" /></button>
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <select onChange={e => exec('fontSize', e.target.value)} defaultValue="3"
+          className="text-xs border border-gray-200 rounded px-1 py-0.5 bg-white">
+          <option value="1">Small</option>
+          <option value="3">Normal</option>
+          <option value="4">Large</option>
+          <option value="5">X-Large</option>
+        </select>
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <button type="button" title="Bullet List" onClick={() => exec('insertUnorderedList')}
+          className="p-1.5 rounded hover:bg-gray-200 transition-colors text-sm font-bold">• List</button>
+        <button type="button" title="Clear Formatting" onClick={() => exec('removeFormat')}
+          className="p-1.5 rounded hover:bg-gray-200 transition-colors text-xs text-gray-500">Clear</button>
+      </div>
+      {/* Editable area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        className="min-h-[120px] px-3 py-2 text-sm text-gray-700 focus:outline-none"
+        style={{ lineHeight: '1.6' }}
+      />
+    </div>
+  );
+}
+
+// ── Video Preview ─────────────────────────────────────────────────────────────
+function VideoPreview({ url }) {
+  if (!url) return null;
+
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+  if (ytMatch) {
+    return (
+      <div className="mt-2 rounded-xl overflow-hidden aspect-video bg-black">
+        <iframe
+          src={`https://www.youtube.com/embed/${ytMatch[1]}`}
+          className="w-full h-full"
+          allowFullScreen
+          title="Product Video"
+        />
+      </div>
+    );
+  }
+
+  // Direct video file
+  if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i) || url.includes('blob:') || url.startsWith('https://') && !url.includes('youtube') && !url.includes('vimeo')) {
+    return (
+      <div className="mt-2 rounded-xl overflow-hidden aspect-video bg-black">
+        <video src={url} controls className="w-full h-full" />
+      </div>
+    );
+  }
+
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) {
+    return (
+      <div className="mt-2 rounded-xl overflow-hidden aspect-video bg-black">
+        <iframe
+          src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
+          className="w-full h-full"
+          allowFullScreen
+          title="Product Video"
+        />
+      </div>
+    );
+  }
+
+  return <p className="text-xs text-orange-500 mt-1">⚠ Could not preview this URL. It will still be saved.</p>;
 }
 
 export default function AdminProducts() {
@@ -131,18 +241,13 @@ export default function AdminProducts() {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
-
-  // Upload states
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
-
-  // Multi-select
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
-
-  // Tab: 'active' | 'trash'
   const [activeTab, setActiveTab] = useState('active');
+  const [aiDetecting, setAiDetecting] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -166,12 +271,10 @@ export default function AdminProducts() {
     enabled: isAdmin,
   });
 
-  // Split into active and trashed
   const products = allProducts.filter(p => !p.deleted);
   const trashedProducts = allProducts.filter(p => p.deleted);
   const displayed = activeTab === 'active' ? products : trashedProducts;
 
-  // ── Mutations ──────────────────────────────────────────────────────────────
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       const { main_group, ...rest } = data;
@@ -195,21 +298,18 @@ export default function AdminProducts() {
     },
   });
 
-  // Soft delete
   const softDelete = async (id) => {
     await base44.entities.Product.update(id, { deleted: true, hidden: true });
     invalidate();
     toast.success('Product moved to Trash');
   };
 
-  // Restore from trash
   const restore = async (id) => {
     await base44.entities.Product.update(id, { deleted: false, hidden: false });
     invalidate();
     toast.success('Product restored');
   };
 
-  // Permanent delete
   const permanentDelete = async (id) => {
     if (!confirm('Permanently delete? This cannot be undone.')) return;
     await base44.entities.Product.delete(id);
@@ -217,7 +317,6 @@ export default function AdminProducts() {
     toast.success('Permanently deleted');
   };
 
-  // Toggle visibility
   const toggleVisibility = async (product) => {
     const next = !product.hidden;
     await base44.entities.Product.update(product.id, { hidden: next });
@@ -225,7 +324,6 @@ export default function AdminProducts() {
     toast.success(next ? 'Product hidden from users' : 'Product now visible to users');
   };
 
-  // Bulk delete (soft)
   const handleBulkDelete = async () => {
     if (!selectedIds.length) return;
     if (!confirm(`Move ${selectedIds.length} product(s) to trash?`)) return;
@@ -237,7 +335,6 @@ export default function AdminProducts() {
     toast.success(`${selectedIds.length} product(s) moved to trash`);
   };
 
-  // Bulk restore
   const handleBulkRestore = async () => {
     if (!selectedIds.length) return;
     setBulkDeleting(true);
@@ -248,23 +345,16 @@ export default function AdminProducts() {
     toast.success(`${selectedIds.length} product(s) restored`);
   };
 
-  // ── Upload handlers ────────────────────────────────────────────────────────
   const handleUploadMain = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingMain(true);
     try {
       const url = await uploadFile(file);
-      // Immediately set image_url so it shows in the preview
       setForm(f => ({ ...f, image_url: url }));
       toast.success('Main image uploaded!');
-    } catch {
-      toast.error('Image upload failed');
-    } finally {
-      setUploadingMain(false);
-      // reset the input so the same file can be re-selected if needed
-      e.target.value = '';
-    }
+    } catch { toast.error('Image upload failed'); }
+    finally { setUploadingMain(false); e.target.value = ''; }
   };
 
   const handleUploadExtra = async (e) => {
@@ -275,12 +365,8 @@ export default function AdminProducts() {
       const urls = await Promise.all(files.map(f => uploadFile(f)));
       setForm(f => ({ ...f, image_urls: [...(f.image_urls || []), ...urls].slice(0, 5) }));
       toast.success(`${urls.length} image(s) uploaded!`);
-    } catch {
-      toast.error('Extra image upload failed');
-    } finally {
-      setUploadingExtra(false);
-      e.target.value = '';
-    }
+    } catch { toast.error('Extra image upload failed'); }
+    finally { setUploadingExtra(false); e.target.value = ''; }
   };
 
   const handleUploadVideo = async (e) => {
@@ -291,15 +377,46 @@ export default function AdminProducts() {
       const url = await uploadFile(file);
       setForm(f => ({ ...f, video_url: url }));
       toast.success('Video uploaded!');
+    } catch { toast.error('Video upload failed'); }
+    finally { setUploadingVideo(false); e.target.value = ''; }
+  };
+
+  // ── AI Detect Product Type ─────────────────────────────────────────────────
+  const handleAiDetect = async () => {
+    if (!form.name || !form.brand || !form.category) {
+      toast.error('Please fill in product name, category and brand first');
+      return;
+    }
+    setAiDetecting(true);
+    try {
+      const options = ((BRAND_SUBCATEGORIES[form.category] || {})[form.brand] || []).join(', ');
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 100,
+          messages: [{
+            role: 'user',
+            content: `Given this product name: "${form.name}", brand: "${form.brand}", category: "${form.category}".
+Available product types: ${options || 'Other'}.
+Reply with ONLY the best matching product type from the list above, or "Other" if none match. No explanation.`
+          }]
+        })
+      });
+      const data = await response.json();
+      const detected = data.content?.[0]?.text?.trim();
+      if (detected) {
+        setForm(f => ({ ...f, subcategory: detected }));
+        toast.success(`AI detected: ${detected}`);
+      }
     } catch {
-      toast.error('Video upload failed');
+      toast.error('AI detection failed');
     } finally {
-      setUploadingVideo(false);
-      e.target.value = '';
+      setAiDetecting(false);
     }
   };
 
-  // ── Edit / New ─────────────────────────────────────────────────────────────
   const handleEdit = (product) => {
     setEditingProduct(product);
     const cat = product.category || '';
@@ -342,20 +459,17 @@ export default function AdminProducts() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ── Select helpers ─────────────────────────────────────────────────────────
   const toggleSelect = (id) =>
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   const toggleSelectAll = () =>
     setSelectedIds(selectedIds.length === displayed.length ? [] : displayed.map(p => p.id));
 
-  // ── Guards ─────────────────────────────────────────────────────────────────
   if (!isAdmin && user) return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
   if (!user) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl">
-      {/* Header */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-gray-800">Manage Products</h1>
         <Button onClick={handleNew} className="gap-2 bg-blue-600 hover:bg-blue-700">
@@ -363,7 +477,6 @@ export default function AdminProducts() {
         </Button>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => { setActiveTab('active'); setSelectedIds([]); }}
@@ -379,7 +492,6 @@ export default function AdminProducts() {
         </button>
       </div>
 
-      {/* Bulk Actions Bar */}
       {displayed.length > 0 && (
         <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200 flex-wrap">
           <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
@@ -410,7 +522,7 @@ export default function AdminProducts() {
         </div>
       )}
 
-      {/* ── FORM ─────────────────────────────────────────────────────────── */}
+      {/* ── FORM ── */}
       {showForm && (
         <Card className="p-5 mb-8 border-2 border-blue-200 shadow-lg">
           <div className="flex items-center justify-between mb-4">
@@ -419,7 +531,8 @@ export default function AdminProducts() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            {/* ── Main Image Upload ─────────────────────────────────────── */}
+
+            {/* Main Image */}
             <div className="md:col-span-2">
               <Label className="font-semibold mb-2 block">Main Product Image</Label>
               <div className="flex items-start gap-4">
@@ -431,101 +544,50 @@ export default function AdminProducts() {
                 <div className="flex-1 space-y-2">
                   <label className="cursor-pointer">
                     <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors w-fit">
-                      {uploadingMain
-                        ? <Loader2 className="h-4 w-4 animate-spin" />
-                        : <Upload className="h-4 w-4" />}
-                      {uploadingMain ? 'Uploading…' : form.image_url ? 'Replace Image' : 'Upload Image from Computer'}
+                      {uploadingMain ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {uploadingMain ? 'Uploading…' : form.image_url ? 'Replace Image' : 'Upload Image'}
                     </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleUploadMain}
-                      disabled={uploadingMain}
-                    />
+                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadMain} disabled={uploadingMain} />
                   </label>
                   {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Image uploaded</p>}
                 </div>
               </div>
             </div>
 
-            {/* ── Extra Images (up to 5) + Video upload ────────────────── */}
+            {/* Extra Images + Video */}
             <div className="md:col-span-2">
               <Label className="font-semibold mb-2 block">Extra Images (up to 5) &amp; Product Video</Label>
               <div className="flex flex-wrap gap-2 mb-2">
-                {/* Existing extra images */}
                 {(form.image_urls || []).map((url, i) => (
                   <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
                     <img src={url} alt={`extra-${i}`} className="w-full h-full object-cover" />
-                    <button
-                      type="button"
+                    <button type="button"
                       onClick={() => setForm(f => ({ ...f, image_urls: f.image_urls.filter((_, j) => j !== i) }))}
-                      className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1"
-                    >
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1">
                       <X className="h-3 w-3" />
                     </button>
                   </div>
                 ))}
-
-                {/* Add extra images — show slot if under 5 */}
                 {(form.image_urls || []).length < 5 && (
                   <label className="cursor-pointer w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center hover:border-blue-400 transition-colors gap-0.5">
-                    {uploadingExtra
-                      ? <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                      : <>
-                          <Plus className="h-4 w-4 text-gray-400" />
-                          <span className="text-[9px] text-gray-400 text-center leading-tight">Image</span>
-                        </>}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={handleUploadExtra}
-                      disabled={uploadingExtra}
-                    />
+                    {uploadingExtra ? <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                      : <><Plus className="h-4 w-4 text-gray-400" /><span className="text-[9px] text-gray-400">Image</span></>}
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleUploadExtra} disabled={uploadingExtra} />
                   </label>
                 )}
-
-                {/* Video upload slot */}
                 <label className="cursor-pointer w-16 h-16 rounded-lg border-2 border-dashed border-purple-300 flex flex-col items-center justify-center hover:border-purple-500 transition-colors gap-0.5 relative">
-                  {uploadingVideo
-                    ? <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
+                  {uploadingVideo ? <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
                     : form.video_url
-                      ? <>
-                          <Video className="h-5 w-5 text-purple-500" />
-                          <span className="text-[9px] text-purple-600 font-semibold leading-tight text-center">Replace</span>
-                          {/* Remove video button */}
-                          <button
-                            type="button"
-                            onClick={(e) => { e.preventDefault(); setForm(f => ({ ...f, video_url: '' })); }}
-                            className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
+                      ? <><Video className="h-5 w-5 text-purple-500" /><span className="text-[9px] text-purple-600 font-semibold">Replace</span>
+                          <button type="button" onClick={(e) => { e.preventDefault(); setForm(f => ({ ...f, video_url: '' })); }}
+                            className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1"><X className="h-3 w-3" /></button>
                         </>
-                      : <>
-                          <Video className="h-4 w-4 text-purple-400" />
-                          <span className="text-[9px] text-purple-400 text-center leading-tight">Video</span>
-                        </>}
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={handleUploadVideo}
-                    disabled={uploadingVideo}
-                  />
+                      : <><Video className="h-4 w-4 text-purple-400" /><span className="text-[9px] text-purple-400">Video</span></>}
+                  <input type="file" accept="video/*" className="hidden" onChange={handleUploadVideo} disabled={uploadingVideo} />
                 </label>
               </div>
-
-              {/* Video uploaded indicator */}
-              {form.video_url && !uploadingVideo && (
-                <p className="text-xs text-purple-600 font-medium mt-1">✓ Video uploaded</p>
-              )}
-
-              <p className="text-[10px] text-gray-400 mt-1">
-                Slots: {(form.image_urls || []).length}/5 images · {form.video_url ? '1/1' : '0/1'} video
-              </p>
+              {form.video_url && !uploadingVideo && <p className="text-xs text-purple-600 font-medium mt-1">✓ Video uploaded</p>}
+              <p className="text-[10px] text-gray-400 mt-1">Slots: {(form.image_urls || []).length}/5 images · {form.video_url ? '1/1' : '0/1'} video</p>
             </div>
 
             {/* Name */}
@@ -567,11 +629,22 @@ export default function AdminProducts() {
               </Select>
             </div>
 
-            {/* Step 4 */}
+            {/* Step 4 — AI detected */}
             <div>
-              <Label>Step 4 — Product Type</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Step 4 — Product Type</Label>
+                <button
+                  type="button"
+                  onClick={handleAiDetect}
+                  disabled={aiDetecting || !form.name || !form.brand || !form.category}
+                  className="flex items-center gap-1 text-xs font-semibold text-purple-600 hover:text-purple-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {aiDetecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+                  {aiDetecting ? 'Detecting…' : 'AI Detect'}
+                </button>
+              </div>
               <Select value={form.subcategory} onValueChange={v => setForm(f => ({ ...f, subcategory: v }))} disabled={!form.brand}>
-                <SelectTrigger><SelectValue placeholder={form.brand ? 'Select product type' : 'Select brand first'} /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={form.brand ? 'Select or use AI Detect ↑' : 'Select brand first'} /></SelectTrigger>
                 <SelectContent>
                   {((BRAND_SUBCATEGORIES[form.category] || {})[form.brand] || []).map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -581,36 +654,48 @@ export default function AdminProducts() {
               </Select>
             </div>
 
+            {/* Price */}
             <div>
               <Label>Price (₵) *</Label>
               <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
             </div>
+
+            {/* Original Price */}
             <div>
               <Label>Original Price (₵) — for discount display</Label>
               <Input type="number" value={form.original_price} onChange={e => setForm(f => ({ ...f, original_price: e.target.value }))} placeholder="0.00" />
             </div>
+
+            {/* Stock — optional */}
             <div>
-              <Label>Stock Quantity</Label>
-              <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="e.g. 20" />
+              <Label>Stock Quantity <span className="text-gray-400 font-normal text-xs">(optional)</span></Label>
+              <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="Leave blank if unlimited" />
             </div>
 
-            {/* Video URL fallback (if no file upload preferred) */}
-            <div>
-              <Label>Video URL (optional, if not uploading)</Label>
+            {/* Video URL with live preview */}
+            <div className="md:col-span-2">
+              <Label>Video URL <span className="text-gray-400 font-normal text-xs">(YouTube, Vimeo, or direct link)</span></Label>
               <Input
                 value={form.video_url || ''}
                 onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))}
-                placeholder="https://youtube.com/..."
-                disabled={!!form.video_url && !form.video_url.startsWith('http')}
+                placeholder="https://youtube.com/watch?v=... or https://..."
+              />
+              <VideoPreview url={form.video_url} />
+            </div>
+
+            {/* Description — Rich Text */}
+            <div className="md:col-span-2">
+              <Label className="font-semibold block mb-2">
+                Description
+                <span className="text-xs font-normal text-gray-400 ml-2">Use toolbar to format text</span>
+              </Label>
+              <RichTextEditor
+                value={form.description}
+                onChange={v => setForm(f => ({ ...f, description: v }))}
               />
             </div>
 
-            <div className="md:col-span-2">
-              <Label>Description</Label>
-              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Product description..." />
-            </div>
-
-            {/* Flags */}
+            {/* Tags */}
             <div className="md:col-span-2">
               <Label className="font-semibold block mb-2">Product Tags</Label>
               <div className="flex flex-wrap gap-3">
@@ -657,21 +742,27 @@ export default function AdminProducts() {
         </Card>
       )}
 
-      {/* ── PRODUCTS GRID ─────────────────────────────────────────────────── */}
+      {/* ── PRODUCTS GRID ── */}
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {Array(8).fill(0).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
         </div>
       ) : displayed.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
-          {activeTab === 'active'
-            ? <p>No products yet. Click "Add Product" to get started.</p>
-            : <p>Trash is empty.</p>}
+          {activeTab === 'active' ? <p>No products yet. Click "Add Product" to get started.</p> : <p>Trash is empty.</p>}
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {displayed.map(product => {
             const isSelected = selectedIds.includes(product.id);
+            // Only active tags
+            const activeTags = [
+              product.featured && { key: 'featured', label: 'Featured', color: 'bg-purple-500' },
+              product.flash_sale && { key: 'flash_sale', label: 'Flash', color: 'bg-orange-500' },
+              product.donkomi && { key: 'donkomi', label: 'Donkomi', color: 'bg-green-500' },
+              product.hidden && { key: 'hidden', label: 'Hidden', color: 'bg-gray-500' },
+            ].filter(Boolean);
+
             return (
               <Card
                 key={product.id}
@@ -682,30 +773,26 @@ export default function AdminProducts() {
                     ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
 
-                  {/* Hidden overlay */}
                   {product.hidden && (
                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                       <EyeOff className="h-6 w-6 text-white opacity-80" />
                     </div>
                   )}
 
-                  {/* Selection checkbox */}
                   <div className="absolute top-1.5 right-1.5">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleSelect(product.id)}
+                    <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(product.id)}
                       className="w-4 h-4 cursor-pointer accent-blue-600"
-                      onClick={e => e.stopPropagation()}
-                    />
+                      onClick={e => e.stopPropagation()} />
                   </div>
 
-                  <div className="absolute top-1 left-1 flex flex-col gap-1">
-                    {product.featured && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
-                    {product.flash_sale && <Badge className="text-[9px] px-1 py-0 bg-orange-500">Flash</Badge>}
-                    {product.donkomi && <Badge className="text-[9px] px-1 py-0 bg-green-500">Donkomi</Badge>}
-                    {product.hidden && <Badge className="text-[9px] px-1 py-0 bg-gray-500">Hidden</Badge>}
-                  </div>
+                  {/* Only show active tags */}
+                  {activeTags.length > 0 && (
+                    <div className="absolute top-1 left-1 flex flex-col gap-1">
+                      {activeTags.map(tag => (
+                        <Badge key={tag.key} className={`text-[9px] px-1 py-0 ${tag.color} text-white`}>{tag.label}</Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-2">
@@ -715,16 +802,13 @@ export default function AdminProducts() {
 
                   {activeTab === 'active' && (
                     <>
-                      {/* Quick tag toggles */}
                       <div className="flex gap-1 mt-1.5 flex-wrap">
                         {[
                           { key: 'featured', label: '⭐', title: 'Featured' },
                           { key: 'flash_sale', label: '⚡', title: 'Flash Sale' },
                           { key: 'donkomi', label: '🔥', title: 'Donkomi' },
                         ].map(({ key, label, title }) => (
-                          <button
-                            key={key}
-                            title={`Toggle ${title}`}
+                          <button key={key} title={`Toggle ${title}`}
                             onClick={() => base44.entities.Product.update(product.id, { [key]: !product[key] }).then(() => {
                               queryClient.invalidateQueries({ queryKey: ['products-admin'] });
                               queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -737,48 +821,30 @@ export default function AdminProducts() {
                         ))}
                       </div>
 
-                      {/* Action row */}
                       <div className="flex gap-1 mt-1.5">
                         <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
                           <Pencil className="h-3 w-3" /> Edit
                         </Button>
-
-                        {/* Visibility toggle */}
-                        <button
-                          title={product.hidden ? 'Show to users' : 'Hide from users'}
+                        <button title={product.hidden ? 'Show to users' : 'Hide from users'}
                           onClick={() => toggleVisibility(product)}
-                          className={`h-7 w-7 flex items-center justify-center rounded-md border text-xs transition-colors ${product.hidden ? 'bg-yellow-50 border-yellow-300 text-yellow-600 hover:bg-yellow-100' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}
-                        >
+                          className={`h-7 w-7 flex items-center justify-center rounded-md border text-xs transition-colors ${product.hidden ? 'bg-yellow-50 border-yellow-300 text-yellow-600 hover:bg-yellow-100' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}>
                           {product.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                         </button>
-
-                        {/* Soft delete */}
-                        <button
-                          title="Move to Trash"
-                          onClick={() => softDelete(product.id)}
-                          className="h-7 w-7 flex items-center justify-center rounded-md border bg-red-50 border-red-200 text-red-500 hover:bg-red-100 transition-colors"
-                        >
+                        <button title="Move to Trash" onClick={() => softDelete(product.id)}
+                          className="h-7 w-7 flex items-center justify-center rounded-md border bg-red-50 border-red-200 text-red-500 hover:bg-red-100 transition-colors">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </>
                   )}
 
-                  {/* Trash tab actions */}
                   {activeTab === 'trash' && (
                     <div className="flex gap-1 mt-1.5">
-                      <Button
-                        size="sm"
-                        className="flex-1 h-7 text-xs gap-1 bg-green-600 hover:bg-green-700 text-white"
-                        onClick={() => restore(product.id)}
-                      >
+                      <Button size="sm" className="flex-1 h-7 text-xs gap-1 bg-green-600 hover:bg-green-700 text-white" onClick={() => restore(product.id)}>
                         <RotateCcw className="h-3 w-3" /> Restore
                       </Button>
-                      <button
-                        title="Delete permanently"
-                        onClick={() => permanentDelete(product.id)}
-                        className="h-7 w-7 flex items-center justify-center rounded-md border bg-red-50 border-red-200 text-red-500 hover:bg-red-100 transition-colors"
-                      >
+                      <button title="Delete permanently" onClick={() => permanentDelete(product.id)}
+                        className="h-7 w-7 flex items-center justify-center rounded-md border bg-red-50 border-red-200 text-red-500 hover:bg-red-100 transition-colors">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>

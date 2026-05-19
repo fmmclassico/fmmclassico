@@ -9,15 +9,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload, X, Pencil, Plus, Trash2, ImagePlus, Loader2, Check } from 'lucide-react';
-// Image upload only — no URL input fields for images
+import { Upload, X, Pencil, Plus, Eye, EyeOff, ImagePlus, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ── STRICT CATEGORY STRUCTURE ─────────────────────────────────────────────────
-// Main category groups → their db category values → allowed brands → subcategories
-// A product uploaded here is ONLY stored under the selected category and will
-// NEVER appear in another category even if the same brand exists there.
-
 const MAIN_CATEGORY_GROUPS = [
   { label: 'Phones', id: 'phones' },
   { label: 'Phone Accessories', id: 'phone_accessories' },
@@ -25,7 +20,6 @@ const MAIN_CATEGORY_GROUPS = [
   { label: 'Home Appliances', id: 'home_appliances_group' },
 ];
 
-// db category values per main group
 const GROUP_CATEGORIES = {
   phones: [
     { value: 'phones', label: 'Phones' },
@@ -49,7 +43,6 @@ const GROUP_CATEGORIES = {
   ],
 };
 
-// Brands allowed per main group (strictly isolated)
 const GROUP_BRANDS = {
   phones: ['Apple', 'Samsung', 'Tecno', 'Infinix', 'Itel', 'Other'],
   phone_accessories: ['Apple', 'Samsung', 'Oraimo', 'JBL', 'Sony', 'LG', 'Other'],
@@ -57,7 +50,6 @@ const GROUP_BRANDS = {
   home_appliances_group: ['Samsung', 'LG', 'Hisense', 'TCL', 'Midea', 'Roch', 'Silver Crest', 'Nasco', 'Hoffman', 'Other'],
 };
 
-// Subcategories per brand+category — only relevant items for that exact slot
 const BRAND_SUBCATEGORIES = {
   phones: {
     Apple: ['iPhone SE', 'iPhone 11', 'iPhone 12 Series', 'iPhone 13 Series', 'iPhone 14 Series', 'iPhone 15 Series'],
@@ -123,12 +115,138 @@ const BRAND_SUBCATEGORIES = {
   },
 };
 
+// All available product tags/sections for homepage
+const PRODUCT_TAGS = [
+  { key: 'classico_deals', label: '⚡ CLASSICO Deals' },
+  { key: 'donkomi_deals', label: '🔥 Donkomi Deals' },
+  { key: 'new_arrivals', label: '✨ New Arrivals' },
+  { key: 'top_selling', label: '🏆 Top Selling' },
+  { key: 'featured', label: '⭐ Featured' },
+];
+
 const EMPTY_FORM = {
-  name: '', description: '', price: '', original_price: '',
-  main_group: '', category: '', brand: '', subcategory: '',
-  stock: '', featured: false, flash_sale: false,
-  donkomi: false, review_enabled: true, rating: '', reviews_count: '',
-  image_url: '', image_urls: [], video_url: '',
+  name: '',
+  description: '',
+  price: '',
+  original_price: '',
+  main_group: '',
+  category: '',
+  brand: '',
+  brand_custom: '',
+  subcategory: '',
+  subcategory_custom: '',
+  stock: '',
+  video_url: '',
+  image_url: '',
+  image_urls: [],
+  review_enabled: true,
+  rating: '',
+  reviews_count: '',
+  tags: {
+    classico_deals: false,
+    donkomi_deals: false,
+    new_arrivals: false,
+    top_selling: false,
+    featured: false,
+  },
+  visible: true,
+};
+
+// Helper function to extract video ID and generate embed URL
+const getVideoEmbedUrl = (url) => {
+  if (!url) return null;
+
+  // YouTube
+  const youtubeRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const youtubeMatch = url.match(youtubeRegex);
+  if (youtubeMatch) {
+    return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+  }
+
+  // TikTok
+  const tiktokRegex = /(?:tiktok\.com\/@[\w.]+\/video\/|vm\.tiktok\.com\/)(\d+)/;
+  const tiktokMatch = url.match(tiktokRegex);
+  if (tiktokMatch) {
+    return `https://www.tiktok.com/embed/v2/${tiktokMatch[1]}`;
+  }
+
+  // Pinterest
+  const pinterestRegex = /(?:pinterest\.com\/pin\/|pinterest\.com\/[\w.-]+\/pins\/)(\d+)/;
+  const pinterestMatch = url.match(pinterestRegex);
+  if (pinterestMatch) {
+    return `https://assets.pinterest.com/api/v3/url_metadata/?url=${encodeURIComponent(url)}`;
+  }
+
+  // Vimeo
+  const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
+  const vimeoMatch = url.match(vimeoRegex);
+  if (vimeoMatch) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+
+  // Instagram
+  const instagramRegex = /(?:instagram\.com\/(?:p|reel)\/|instagr\.am\/)([a-zA-Z0-9_-]+)/;
+  const instagramMatch = url.match(instagramRegex);
+  if (instagramMatch) {
+    return `https://www.instagram.com/p/${instagramMatch[1]}/embed`;
+  }
+
+  // If it's already an embed URL or direct video URL
+  if (url.includes('embed') || url.includes('player')) {
+    return url;
+  }
+
+  return null;
+};
+
+// Video preview component
+const VideoPreview = ({ url }) => {
+  if (!url) return null;
+
+  const embedUrl = getVideoEmbedUrl(url);
+
+  if (!embedUrl) {
+    return <p className="text-xs text-red-500">Unable to embed this video URL</p>;
+  }
+
+  // For TikTok, we'll show a special message since direct embedding is complex
+  if (url.includes('tiktok.com')) {
+    return (
+      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <p className="text-xs text-gray-600 mb-2">TikTok Video (opens in new window)</p>
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-xs hover:underline">
+          {url}
+        </a>
+      </div>
+    );
+  }
+
+  // For Pinterest
+  if (url.includes('pinterest.com')) {
+    return (
+      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <p className="text-xs text-gray-600 mb-2">Pinterest Content (opens in new window)</p>
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-xs hover:underline">
+          {url}
+        </a>
+      </div>
+    );
+  }
+
+  // For YouTube, Vimeo, Instagram
+  return (
+    <div className="bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
+      <iframe
+        width="100%"
+        height="300"
+        src={embedUrl}
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        className="rounded-lg"
+      />
+    </div>
+  );
 };
 
 export default function AdminProducts() {
@@ -139,8 +257,6 @@ export default function AdminProducts() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [bulkDeleting, setBulkDeleting] = useState(false);
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
@@ -158,15 +274,27 @@ export default function AdminProducts() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const { main_group, ...rest } = data; // don't store main_group in db
+      const { main_group, brand_custom, subcategory_custom, ...rest } = data;
+
+      // Use custom brand if "Other" is selected and custom value is provided
+      const finalBrand = data.brand === 'Other' && data.brand_custom ? data.brand_custom : data.brand;
+
+      // Use custom subcategory if provided
+      const finalSubcategory = data.subcategory_custom || data.subcategory;
+
       const payload = {
         ...rest,
+        brand: finalBrand,
+        subcategory: finalSubcategory,
         price: parseFloat(data.price) || 0,
         original_price: data.original_price ? parseFloat(data.original_price) : undefined,
         stock: data.stock !== '' ? parseInt(data.stock) : undefined,
         rating: data.rating ? parseFloat(data.rating) : undefined,
         reviews_count: data.reviews_count ? parseInt(data.reviews_count) : undefined,
+        tags: data.tags,
+        visible: data.visible,
       };
+
       if (editingProduct) {
         return base44.entities.Product.update(editingProduct.id, payload);
       }
@@ -184,14 +312,15 @@ export default function AdminProducts() {
     }
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Product.delete(id),
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ['products'] });
-      queryClient.removeQueries({ queryKey: ['products-admin'] });
+  const visibilityMutation = useMutation({
+    mutationFn: (data) => {
+      const { id, visible } = data;
+      return base44.entities.Product.update(id, { visible });
+    },
+    onSuccess: (_, { visible, productName }) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['products-admin'] });
-      toast.success('Product deleted');
+      toast.success(visible ? 'Product is now visible' : 'Product is now hidden');
     }
   });
 
@@ -199,24 +328,35 @@ export default function AdminProducts() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingMain(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm(f => ({ ...f, image_url: file_url }));
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setForm(f => ({ ...f, image_url: file_url }));
+      toast.success('Main image uploaded!');
+    } catch (error) {
+      toast.error('Failed to upload image');
+    }
     setUploadingMain(false);
-    toast.success('Main image uploaded!');
   };
 
   const handleUploadExtra = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     setUploadingExtra(true);
-    const urls = await Promise.all(files.map(f => base44.integrations.Core.UploadFile({ file: f }).then(r => r.file_url)));
-    setForm(f => ({ ...f, image_urls: [...(f.image_urls || []), ...urls].slice(0, 4) }));
+    try {
+      const urls = await Promise.all(
+        files.map(f => base44.integrations.Core.UploadFile({ file: f }).then(r => r.file_url))
+      );
+      setForm(f => ({ ...f, image_urls: [...(f.image_urls || []), ...urls].slice(0, 4) }));
+      toast.success(`${urls.length} image(s) uploaded!`);
+    } catch (error) {
+      toast.error('Failed to upload images');
+    }
     setUploadingExtra(false);
-    toast.success(`${urls.length} image(s) uploaded!`);
   };
 
   const handleEdit = (product) => {
     setEditingProduct(product);
+
     // Determine main_group from category
     const cat = product.category || '';
     let main_group = '';
@@ -224,6 +364,11 @@ export default function AdminProducts() {
     else if (cat === 'electronic_appliances') main_group = 'electronics';
     else if (cat === 'home_appliances') main_group = 'home_appliances_group';
     else if (cat) main_group = 'phone_accessories';
+
+    // Check if brand is custom (not in standard list)
+    const brandOptions = GROUP_BRANDS[main_group] || [];
+    const isBrandCustom = product.brand && !brandOptions.includes(product.brand);
+
     setForm({
       name: product.name || '',
       description: product.description || '',
@@ -231,19 +376,25 @@ export default function AdminProducts() {
       original_price: product.original_price ?? '',
       main_group,
       category: product.category || '',
-      brand: product.brand || '',
+      brand: isBrandCustom ? 'Other' : (product.brand || ''),
+      brand_custom: isBrandCustom ? product.brand : '',
       subcategory: product.subcategory || '',
+      subcategory_custom: '',
       stock: product.stock ?? '',
-      featured: product.featured || false,
-      flash_sale: product.flash_sale || false,
-      donkomi: product.donkomi || false,
+      video_url: product.video_url || '',
+      image_url: product.image_url || '',
+      image_urls: product.image_urls || [],
       review_enabled: product.review_enabled !== false,
       rating: product.rating ?? '',
       reviews_count: product.reviews_count ?? '',
-      image_url: product.image_url || '',
-      image_urls: product.image_urls || [],
-      video_url: product.video_url || '',
-      flash_sale_end: product.flash_sale_end || '',
+      tags: product.tags || {
+        classico_deals: false,
+        donkomi_deals: false,
+        new_arrivals: false,
+        top_selling: false,
+        featured: false,
+      },
+      visible: product.visible !== false,
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -256,28 +407,14 @@ export default function AdminProducts() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const toggleSelect = (id) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.length === products.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(products.map(p => p.id));
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (!selectedIds.length) return;
-    if (!confirm(`Delete ${selectedIds.length} product(s)? This cannot be undone.`)) return;
-    setBulkDeleting(true);
-    await Promise.all(selectedIds.map(id => base44.entities.Product.delete(id)));
-    queryClient.invalidateQueries({ queryKey: ['products'] });
-    queryClient.invalidateQueries({ queryKey: ['products-admin'] });
-    setSelectedIds([]);
-    setBulkDeleting(false);
-    toast.success(`${selectedIds.length} product(s) deleted`);
+  const toggleTagSelection = (tagKey) => {
+    setForm(f => ({
+      ...f,
+      tags: {
+        ...f.tags,
+        [tagKey]: !f.tags[tagKey],
+      },
+    }));
   };
 
   if (!isAdmin && user) {
@@ -295,36 +432,6 @@ export default function AdminProducts() {
           <Plus className="h-4 w-4" /> Add Product
         </Button>
       </div>
-
-      {/* Bulk Actions Bar */}
-      {products.length > 0 && (
-        <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200 flex-wrap">
-          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
-            <input
-              type="checkbox"
-              checked={selectedIds.length === products.length && products.length > 0}
-              onChange={toggleSelectAll}
-              className="w-4 h-4"
-            />
-            {selectedIds.length === products.length ? 'Deselect All' : 'Select All'}
-          </label>
-          {selectedIds.length > 0 && (
-            <>
-              <span className="text-sm text-gray-500">{selectedIds.length} selected</span>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={handleBulkDelete}
-                disabled={bulkDeleting}
-                className="gap-1.5"
-              >
-                {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                Delete Selected
-              </Button>
-            </>
-          )}
-        </div>
-      )}
 
       {/* Form */}
       {showForm && (
@@ -345,15 +452,15 @@ export default function AdminProducts() {
                     : <ImagePlus className="h-8 w-8 text-gray-300" />}
                 </div>
                 <div className="flex-1 space-y-2">
-                   <label className="cursor-pointer">
-                     <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors w-fit">
-                       {uploadingMain ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                       {uploadingMain ? 'Uploading...' : form.image_url ? 'Replace Image' : 'Upload Image from Computer'}
-                     </div>
-                     <input type="file" accept="image/*" className="hidden" onChange={handleUploadMain} disabled={uploadingMain} />
-                   </label>
-                   {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Image uploaded</p>}
-                 </div>
+                  <label className="cursor-pointer">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors w-fit">
+                      {uploadingMain ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {uploadingMain ? 'Uploading...' : form.image_url ? 'Replace Image' : 'Upload Image'}
+                    </div>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadMain} disabled={uploadingMain} />
+                  </label>
+                  {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Image uploaded</p>}
+                </div>
               </div>
             </div>
 
@@ -389,7 +496,7 @@ export default function AdminProducts() {
             {/* ── STEP 1: Main Category Group ── */}
             <div>
               <Label>Step 1 — Main Category *</Label>
-              <Select value={form.main_group} onValueChange={v => setForm(f => ({ ...f, main_group: v, category: '', brand: '', subcategory: '' }))}>
+              <Select value={form.main_group} onValueChange={v => setForm(f => ({ ...f, main_group: v, category: '', brand: '', brand_custom: '', subcategory: '', subcategory_custom: '' }))}>
                 <SelectTrigger><SelectValue placeholder="Select main category" /></SelectTrigger>
                 <SelectContent>
                   {MAIN_CATEGORY_GROUPS.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
@@ -397,12 +504,12 @@ export default function AdminProducts() {
               </Select>
             </div>
 
-            {/* ── STEP 2: Subcategory (only visible for phone_accessories group) ── */}
+            {/* ── STEP 2: Category ── */}
             <div>
               <Label>Step 2 — Subcategory *</Label>
               <Select
                 value={form.category}
-                onValueChange={v => setForm(f => ({ ...f, category: v, brand: '', subcategory: '' }))}
+                onValueChange={v => setForm(f => ({ ...f, category: v, brand: '', brand_custom: '', subcategory: '', subcategory_custom: '' }))}
                 disabled={!form.main_group}
               >
                 <SelectTrigger><SelectValue placeholder={form.main_group ? 'Select subcategory' : 'Select main category first'} /></SelectTrigger>
@@ -412,12 +519,12 @@ export default function AdminProducts() {
               </Select>
             </div>
 
-            {/* ── STEP 3: Brand (filtered to this category group) ── */}
+            {/* ── STEP 3: Brand (with custom input) ── */}
             <div>
               <Label>Step 3 — Brand *</Label>
               <Select
                 value={form.brand}
-                onValueChange={v => setForm(f => ({ ...f, brand: v, subcategory: '' }))}
+                onValueChange={v => setForm(f => ({ ...f, brand: v, brand_custom: '', subcategory: '', subcategory_custom: '' }))}
                 disabled={!form.category}
               >
                 <SelectTrigger><SelectValue placeholder={form.category ? 'Select brand' : 'Select subcategory first'} /></SelectTrigger>
@@ -425,14 +532,28 @@ export default function AdminProducts() {
                   {(GROUP_BRANDS[form.main_group] || []).map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {form.brand === 'Other' && (
+                <Input
+                  className="mt-2"
+                  placeholder="Enter custom brand name"
+                  value={form.brand_custom}
+                  onChange={e => setForm(f => ({ ...f, brand_custom: e.target.value }))}
+                />
+              )}
             </div>
 
-            {/* ── STEP 4: Product Subcategory/Type ── */}
+            {/* ── STEP 4: Product Type/Subcategory (with custom input) ── */}
             <div>
               <Label>Step 4 — Product Type</Label>
               <Select
                 value={form.subcategory}
-                onValueChange={v => setForm(f => ({ ...f, subcategory: v }))}
+                onValueChange={v => {
+                  if (v === '__custom__') {
+                    setForm(f => ({ ...f, subcategory: '', subcategory_custom: '' }));
+                  } else {
+                    setForm(f => ({ ...f, subcategory: v, subcategory_custom: '' }));
+                  }
+                }}
                 disabled={!form.brand}
               >
                 <SelectTrigger><SelectValue placeholder={form.brand ? 'Select product type' : 'Select brand first'} /></SelectTrigger>
@@ -440,65 +561,107 @@ export default function AdminProducts() {
                   {((BRAND_SUBCATEGORIES[form.category] || {})[form.brand] || []).map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
-                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="__custom__">+ Add Custom Type</SelectItem>
                 </SelectContent>
               </Select>
+              {form.subcategory === '' && form.brand && (
+                <Input
+                  className="mt-2"
+                  placeholder="Enter custom product type"
+                  value={form.subcategory_custom}
+                  onChange={e => setForm(f => ({ ...f, subcategory_custom: e.target.value }))}
+                />
+              )}
             </div>
+
+            {/* Price */}
             <div>
               <Label>Price (₵) *</Label>
-              <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
+              <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" step="0.01" />
             </div>
+
+            {/* Original Price - Optional */}
             <div>
-              <Label>Original Price (₵) — for discount display</Label>
-              <Input type="number" value={form.original_price} onChange={e => setForm(f => ({ ...f, original_price: e.target.value }))} placeholder="0.00" />
+              <Label>Original Price (₵) — for discount display (Optional)</Label>
+              <Input type="number" value={form.original_price} onChange={e => setForm(f => ({ ...f, original_price: e.target.value }))} placeholder="Leave empty if no discount" step="0.01" />
             </div>
+
+            {/* Stock - Optional */}
             <div>
-              <Label>Stock Quantity</Label>
-              <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="e.g. 20" />
+              <Label>Stock Quantity (Optional)</Label>
+              <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="Leave empty if no stock tracking" />
             </div>
-            <div>
-              <Label>Video URL (optional)</Label>
-              <Input value={form.video_url || ''} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} placeholder="https://youtube.com/..." />
+
+            {/* Video URL */}
+            <div className="md:col-span-2">
+              <Label>Video URL (Optional) - YouTube, TikTok, Instagram, Vimeo, or Pinterest</Label>
+              <Input
+                value={form.video_url || ''}
+                onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))}
+                placeholder="https://youtube.com/watch?v=... or any video platform URL"
+              />
+              {form.video_url && (
+                <div className="mt-3">
+                  <p className="text-xs font-semibold text-gray-700 mb-2">Video Preview:</p>
+                  <VideoPreview url={form.video_url} />
+                </div>
+              )}
             </div>
+
+            {/* Description */}
             <div className="md:col-span-2">
               <Label>Description</Label>
               <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Product description..." />
             </div>
 
-            {/* Flags */}
+            {/* Product Tags */}
             <div className="md:col-span-2">
-              <Label className="font-semibold block mb-2">Product Tags</Label>
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { key: 'featured', label: '⭐ Featured' },
-                  { key: 'flash_sale', label: '⚡ Flash Sale (CLASSICO Deals)' },
-                  { key: 'donkomi', label: '🔥 Donkomi' },
-                  { key: 'review_enabled', label: '💬 Reviews Enabled' },
-                ].map(({ key, label }) => (
-                  <label key={key} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50">
+              <Label className="font-semibold block mb-3">Product Tags (Select which sections to display in)</Label>
+              <div className="flex flex-wrap gap-2">
+                {PRODUCT_TAGS.map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                     <div
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form[key] ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
-                      onClick={() => setForm(f => ({ ...f, [key]: !f[key] }))}
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form.tags[key] ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
+                      onClick={() => toggleTagSelection(key)}
                     >
-                      {form[key] && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                      {form.tags[key] && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                     </div>
                     <span className="text-sm font-medium text-gray-700">{label}</span>
                   </label>
                 ))}
               </div>
-              {form.flash_sale && (
-                <div className="mt-3">
-                  <Label>Flash Sale End Date/Time (optional)</Label>
-                  <Input type="datetime-local" value={form.flash_sale_end || ''} onChange={e => setForm(f => ({ ...f, flash_sale_end: e.target.value }))} />
+            </div>
+
+            {/* Review Settings */}
+            <div className="md:col-span-2">
+              <label className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 w-fit">
+                <div
+                  className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form.review_enabled ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
+                  onClick={() => setForm(f => ({ ...f, review_enabled: !f.review_enabled }))}
+                >
+                  {form.review_enabled && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                 </div>
-              )}
+                <span className="text-sm font-medium text-gray-700">💬 Enable Reviews</span>
+              </label>
+            </div>
+
+            {/* Rating (optional) */}
+            <div>
+              <Label>Rating (Optional)</Label>
+              <Input type="number" step="0.1" min="0" max="5" value={form.rating} onChange={e => setForm(f => ({ ...f, rating: e.target.value }))} placeholder="e.g. 4.5" />
+            </div>
+
+            {/* Reviews Count (optional) */}
+            <div>
+              <Label>Number of Reviews (Optional)</Label>
+              <Input type="number" value={form.reviews_count} onChange={e => setForm(f => ({ ...f, reviews_count: e.target.value }))} placeholder="e.g. 45" />
             </div>
           </div>
 
           <div className="flex gap-3 mt-6">
             <Button
               onClick={() => saveMutation.mutate(form)}
-              disabled={saveMutation.isPending || !form.name || !form.price || !form.category}
+              disabled={saveMutation.isPending || !form.name || !form.price || !form.category || !form.brand || (!form.subcategory && !form.subcategory_custom)}
               className="bg-blue-600 hover:bg-blue-700 gap-2"
             >
               {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
@@ -518,71 +681,63 @@ export default function AdminProducts() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {products.map(product => {
-            const isSelected = selectedIds.includes(product.id);
-            return (
-              <Card key={product.id} className={`overflow-hidden shadow-sm hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
-                <div className="aspect-square bg-gray-50 relative overflow-hidden">
-                  {product.image_url
-                    ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
-                  {/* Selection checkbox */}
-                  <div className="absolute top-1.5 right-1.5">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleSelect(product.id)}
-                      className="w-4 h-4 cursor-pointer accent-blue-600"
-                      onClick={e => e.stopPropagation()}
-                    />
-                  </div>
-                  <div className="absolute top-1 left-1 flex flex-col gap-1">
-                    {product.featured && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
-                    {product.flash_sale && <Badge className="text-[9px] px-1 py-0 bg-orange-500">Flash</Badge>}
-                    {product.donkomi && <Badge className="text-[9px] px-1 py-0 bg-green-500">Donkomi</Badge>}
-                  </div>
+          {products.map(product => (
+            <Card key={product.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <div className="aspect-square bg-gray-50 relative overflow-hidden">
+                {product.image_url
+                  ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
+
+                {/* Visibility Toggle */}
+                <div className="absolute top-1.5 right-1.5">
+                  <button
+                    onClick={() => visibilityMutation.mutate({ id: product.id, visible: !product.visible, productName: product.name })}
+                    disabled={visibilityMutation.isPending}
+                    title={product.visible ? 'Click to hide product' : 'Click to show product'}
+                    className={`p-2 rounded-lg transition-colors ${
+                      product.visible
+                        ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                    }`}
+                  >
+                    {product.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  </button>
                 </div>
-                <div className="p-2">
-                  <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
-                  <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
-                  {product.stock != null && <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>}
-                  {/* Quick section-tag toggles */}
-                  <div className="flex gap-1 mt-1.5 flex-wrap">
-                    {[
-                      { key: 'featured', label: '⭐', title: 'Featured' },
-                      { key: 'flash_sale', label: '⚡', title: 'Flash Sale' },
-                      { key: 'donkomi', label: '🔥', title: 'Donkomi' },
-                    ].map(({ key, label, title }) => (
-                      <button
-                        key={key}
-                        title={`Toggle ${title}`}
-                        onClick={() => base44.entities.Product.update(product.id, { [key]: !product[key] }).then(() => {
-                          queryClient.invalidateQueries({ queryKey: ['products-admin'] });
-                          queryClient.invalidateQueries({ queryKey: ['products'] });
-                          toast.success(`${title} ${!product[key] ? 'enabled' : 'disabled'}`);
-                        })}
-                        className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold transition-colors ${product[key] ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-gray-100 border-gray-300 text-gray-400'}`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-1 mt-1.5">
-                    <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
-                      <Pencil className="h-3 w-3" /> Edit
-                    </Button>
-                    <Button size="sm" variant="destructive" className="h-7 w-7 p-0" onClick={() => {
-                      if (confirm('Delete this product?')) deleteMutation.mutate(product.id);
-                    }}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
+
+                {/* Product Tags Badges */}
+                <div className="absolute top-1 left-1 flex flex-col gap-1">
+                  {product.tags?.classico_deals && <Badge className="text-[9px] px-1 py-0 bg-blue-500">Deals</Badge>}
+                  {product.tags?.donkomi_deals && <Badge className="text-[9px] px-1 py-0 bg-red-500">Donkomi</Badge>}
+                  {product.tags?.new_arrivals && <Badge className="text-[9px] px-1 py-0 bg-yellow-500">New</Badge>}
+                  {product.tags?.top_selling && <Badge className="text-[9px] px-1 py-0 bg-green-500">Top</Badge>}
+                  {product.tags?.featured && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
                 </div>
-              </Card>
-            );
-          })}
+              </div>
+
+              <div className="p-2">
+                <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
+
+                <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
+
+                {product.original_price && product.original_price > 0 && (
+                  <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                )}
+
+                {product.stock != null && product.stock > 0 && (
+                  <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>
+                )}
+
+                <div className="flex gap-1 mt-1.5">
+                  <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
+                    <Pencil className="h-3 w-3" /> Edit
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
       )}
+
       {!isLoading && products.length === 0 && (
         <div className="text-center py-16 text-gray-400">
           <p>No products yet. Click "Add Product" to get started.</p>

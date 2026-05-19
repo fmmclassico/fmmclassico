@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload, X, Pencil, Plus, Trash2, ImagePlus, Loader2, Check, Video } from 'lucide-react';
+import { Upload, X, Pencil, Plus, ImagePlus, Loader2, Check, Video, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ── STRICT CATEGORY STRUCTURE ─────────────────────────────────────────────────
@@ -21,9 +21,7 @@ const MAIN_CATEGORY_GROUPS = [
 ];
 
 const GROUP_CATEGORIES = {
-  phones: [
-    { value: 'phones', label: 'Phones' },
-  ],
+  phones: [{ value: 'phones', label: 'Phones' }],
   phone_accessories: [
     { value: 'phone_cases', label: 'Phone Cases' },
     { value: 'chargers', label: 'Chargers' },
@@ -35,12 +33,8 @@ const GROUP_CATEGORIES = {
     { value: 'speakers', label: 'Speakers' },
     { value: 'smart_watches', label: 'Smart Watches' },
   ],
-  electronics: [
-    { value: 'electronic_appliances', label: 'Electronic Appliances' },
-  ],
-  home_appliances_group: [
-    { value: 'home_appliances', label: 'Home Appliances' },
-  ],
+  electronics: [{ value: 'electronic_appliances', label: 'Electronic Appliances' }],
+  home_appliances_group: [{ value: 'home_appliances', label: 'Home Appliances' }],
 };
 
 const GROUP_BRANDS = {
@@ -115,36 +109,6 @@ const BRAND_SUBCATEGORIES = {
   },
 };
 
-// Helper function to extract video ID and generate embed URL
-const getVideoEmbedUrl = (url) => {
-  if (!url) return null;
-  
-  // YouTube
-  if (url.includes('youtube.com') || url.includes('youtu.be')) {
-    const youtubeMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-    if (youtubeMatch) return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
-  }
-  
-  // TikTok
-  if (url.includes('tiktok.com')) {
-    const tiktokMatch = url.match(/\/video\/(\d+)/);
-    if (tiktokMatch) return `https://www.tiktok.com/embed/v2/${tiktokMatch[1]}`;
-  }
-  
-  // Pinterest
-  if (url.includes('pinterest.com') || url.includes('pin.it')) {
-    return url;
-  }
-  
-  // Vimeo
-  if (url.includes('vimeo.com')) {
-    const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
-  }
-  
-  return url;
-};
-
 const EMPTY_FORM = {
   name: '', description: '', price: '', original_price: '',
   main_group: '', category: '', brand: '', subcategory: '',
@@ -152,7 +116,7 @@ const EMPTY_FORM = {
   donkomi: false, new_arrivals: false, top_selling: false,
   review_enabled: true, rating: '', reviews_count: '',
   image_url: '', image_urls: [], video_url: '', video_file_url: '',
-  custom_brand: '', custom_subcategory: '',
+  custom_brand: '', custom_subcategory: '', is_hidden: false,
 };
 
 export default function AdminProducts() {
@@ -164,10 +128,9 @@ export default function AdminProducts() {
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [showCustomBrand, setShowCustomBrand] = useState(false);
   const [showCustomSubcategory, setShowCustomSubcategory] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
@@ -186,10 +149,8 @@ export default function AdminProducts() {
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       const { main_group, custom_brand, custom_subcategory, ...rest } = data;
-      
       const finalBrand = showCustomBrand && custom_brand ? custom_brand : data.brand;
       const finalSubcategory = showCustomSubcategory && custom_subcategory ? custom_subcategory : data.subcategory;
-      
       const payload = {
         ...rest,
         brand: finalBrand,
@@ -199,11 +160,9 @@ export default function AdminProducts() {
         stock: data.stock !== '' ? parseInt(data.stock) : undefined,
         rating: data.rating ? parseFloat(data.rating) : undefined,
         reviews_count: data.reviews_count ? parseInt(data.reviews_count) : undefined,
+        is_hidden: data.is_hidden || false,
       };
-      
-      if (editingProduct) {
-        return base44.entities.Product.update(editingProduct.id, payload);
-      }
+      if (editingProduct) return base44.entities.Product.update(editingProduct.id, payload);
       return base44.entities.Product.create(payload);
     },
     onSuccess: () => {
@@ -217,19 +176,23 @@ export default function AdminProducts() {
       setForm(EMPTY_FORM);
       setShowCustomBrand(false);
       setShowCustomSubcategory(false);
-    }
+    },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Product.delete(id),
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ['products'] });
-      queryClient.removeQueries({ queryKey: ['products-admin'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+  // ── Toggle hide/show for a single product ─────────────────────────────────
+  const handleToggleVisibility = async (product) => {
+    setTogglingId(product.id);
+    try {
+      await base44.entities.Product.update(product.id, { is_hidden: !product.is_hidden });
       queryClient.invalidateQueries({ queryKey: ['products-admin'] });
-      toast.success('Product deleted');
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success(product.is_hidden ? 'Product is now visible to customers.' : 'Product hidden from customers.');
+    } catch {
+      toast.error('Failed to update visibility.');
+    } finally {
+      setTogglingId(null);
     }
-  });
+  };
 
   const handleUploadMain = async (e) => {
     const file = e.target.files?.[0];
@@ -254,19 +217,16 @@ export default function AdminProducts() {
   const handleUploadVideo = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('video/')) {
-      toast.error('Please upload a video file');
-      return;
-    }
+    if (!file.type.startsWith('video/')) { toast.error('Please upload a video file'); return; }
     setUploadingVideo(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       setForm(f => ({ ...f, video_file_url: file_url, video_url: '' }));
-      setUploadingVideo(false);
       toast.success('Video uploaded!');
-    } catch (error) {
-      setUploadingVideo(false);
+    } catch {
       toast.error('Video upload failed');
+    } finally {
+      setUploadingVideo(false);
     }
   };
 
@@ -278,16 +238,14 @@ export default function AdminProducts() {
     else if (cat === 'electronic_appliances') main_group = 'electronics';
     else if (cat === 'home_appliances') main_group = 'home_appliances_group';
     else if (cat) main_group = 'phone_accessories';
-    
+
     const availableBrands = GROUP_BRANDS[main_group] || [];
     const isCustomBrand = product.brand && !availableBrands.includes(product.brand);
-    
     const availableSubcategories = ((BRAND_SUBCATEGORIES[cat] || {})[product.brand] || []);
     const isCustomSubcategory = product.subcategory && !availableSubcategories.includes(product.subcategory) && product.subcategory !== 'Other';
-    
+
     setShowCustomBrand(isCustomBrand);
     setShowCustomSubcategory(isCustomSubcategory);
-    
     setForm({
       name: product.name || '',
       description: product.description || '',
@@ -313,6 +271,7 @@ export default function AdminProducts() {
       video_url: product.video_url || '',
       video_file_url: product.video_file_url || '',
       flash_sale_end: product.flash_sale_end || '',
+      is_hidden: product.is_hidden || false,
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -327,36 +286,8 @@ export default function AdminProducts() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const toggleSelect = (id) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.length === products.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(products.map(p => p.id));
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (!selectedIds.length) return;
-    if (!confirm(`Delete ${selectedIds.length} product(s)? This cannot be undone.`)) return;
-    setBulkDeleting(true);
-    await Promise.all(selectedIds.map(id => base44.entities.Product.delete(id)));
-    queryClient.invalidateQueries({ queryKey: ['products'] });
-    queryClient.invalidateQueries({ queryKey: ['products-admin'] });
-    setSelectedIds([]);
-    setBulkDeleting(false);
-    toast.success(`${selectedIds.length} product(s) deleted`);
-  };
-
-  if (!isAdmin && user) {
-    return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
-  }
-  if (!user) {
-    return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
-  }
+  if (!isAdmin && user) return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
+  if (!user) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl">
@@ -367,37 +298,7 @@ export default function AdminProducts() {
         </Button>
       </div>
 
-      {/* Bulk Actions Bar */}
-      {products.length > 0 && (
-        <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200 flex-wrap">
-          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
-            <input
-              type="checkbox"
-              checked={selectedIds.length === products.length && products.length > 0}
-              onChange={toggleSelectAll}
-              className="w-4 h-4"
-            />
-            {selectedIds.length === products.length ? 'Deselect All' : 'Select All'}
-          </label>
-          {selectedIds.length > 0 && (
-            <>
-              <span className="text-sm text-gray-500">{selectedIds.length} selected</span>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={handleBulkDelete}
-                disabled={bulkDeleting}
-                className="gap-1.5"
-              >
-                {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                Delete Selected
-              </Button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Form */}
+      {/* ── FORM ──────────────────────────────────────────────────────────────── */}
       {showForm && (
         <Card className="p-5 mb-8 border-2 border-blue-200 shadow-lg">
           <div className="flex items-center justify-between mb-4">
@@ -406,7 +307,7 @@ export default function AdminProducts() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            {/* Main Image Upload */}
+            {/* Main Image */}
             <div className="md:col-span-2">
               <Label className="font-semibold mb-2 block">Main Product Image</Label>
               <div className="flex items-start gap-4">
@@ -416,15 +317,15 @@ export default function AdminProducts() {
                     : <ImagePlus className="h-8 w-8 text-gray-300" />}
                 </div>
                 <div className="flex-1 space-y-2">
-                   <label className="cursor-pointer">
-                     <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors w-fit">
-                       {uploadingMain ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                       {uploadingMain ? 'Uploading...' : form.image_url ? 'Replace Image' : 'Upload Image from Computer'}
-                     </div>
-                     <input type="file" accept="image/*" className="hidden" onChange={handleUploadMain} disabled={uploadingMain} />
-                   </label>
-                   {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Image uploaded</p>}
-                 </div>
+                  <label className="cursor-pointer">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors w-fit">
+                      {uploadingMain ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {uploadingMain ? 'Uploading...' : form.image_url ? 'Replace Image' : 'Upload Image from Computer'}
+                    </div>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadMain} disabled={uploadingMain} />
+                  </label>
+                  {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Image uploaded</p>}
+                </div>
               </div>
             </div>
 
@@ -435,34 +336,27 @@ export default function AdminProducts() {
                 {(form.image_urls || []).map((url, i) => (
                   <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
                     <img src={url} alt="" className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => setForm(f => ({ ...f, image_urls: f.image_urls.filter((_, j) => j !== i) }))}
-                      className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1"
-                    >
+                    <button onClick={() => setForm(f => ({ ...f, image_urls: f.image_urls.filter((_, j) => j !== i) }))}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1">
                       <X className="h-3 w-3" />
                     </button>
                   </div>
                 ))}
-                
                 {(form.video_file_url || form.video_url) && (
                   <div className="relative w-16 h-16 rounded-lg overflow-hidden border-2 border-blue-400 bg-blue-50 flex items-center justify-center">
                     <Video className="h-6 w-6 text-blue-600" />
-                    <button
-                      onClick={() => setForm(f => ({ ...f, video_file_url: '', video_url: '' }))}
-                      className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1"
-                    >
+                    <button onClick={() => setForm(f => ({ ...f, video_file_url: '', video_url: '' }))}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1">
                       <X className="h-3 w-3" />
                     </button>
                   </div>
                 )}
-                
                 {(form.image_urls || []).length < 4 && (
                   <label className="cursor-pointer w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-blue-400 transition-colors">
                     {uploadingExtra ? <Loader2 className="h-5 w-5 animate-spin text-gray-400" /> : <Plus className="h-5 w-5 text-gray-400" />}
                     <input type="file" accept="image/*" multiple className="hidden" onChange={handleUploadExtra} disabled={uploadingExtra} />
                   </label>
                 )}
-                
                 {!form.video_file_url && !form.video_url && (
                   <label className="cursor-pointer w-16 h-16 rounded-lg border-2 border-dashed border-blue-300 flex items-center justify-center hover:border-blue-500 transition-colors bg-blue-50">
                     {uploadingVideo ? <Loader2 className="h-5 w-5 animate-spin text-blue-400" /> : <Video className="h-5 w-5 text-blue-400" />}
@@ -470,16 +364,11 @@ export default function AdminProducts() {
                   </label>
                 )}
               </div>
-              
               {!form.video_file_url && (
                 <div className="mt-2">
                   <Label className="text-xs text-gray-600">Or paste video URL (YouTube, TikTok, Vimeo, etc.)</Label>
-                  <Input 
-                    value={form.video_url || ''} 
-                    onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} 
-                    placeholder="https://youtube.com/watch?v=..." 
-                    className="text-sm"
-                  />
+                  <Input value={form.video_url || ''} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))}
+                    placeholder="https://youtube.com/watch?v=..." className="text-sm" />
                 </div>
               )}
             </div>
@@ -489,13 +378,12 @@ export default function AdminProducts() {
               <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. iPhone 14 Pro Max" />
             </div>
 
-            {/* ── STEP 1: Main Category Group ── */}
+            {/* Step 1 */}
             <div>
               <Label>Step 1 — Main Category *</Label>
               <Select value={form.main_group} onValueChange={v => {
                 setForm(f => ({ ...f, main_group: v, category: '', brand: '', subcategory: '', custom_brand: '', custom_subcategory: '' }));
-                setShowCustomBrand(false);
-                setShowCustomSubcategory(false);
+                setShowCustomBrand(false); setShowCustomSubcategory(false);
               }}>
                 <SelectTrigger><SelectValue placeholder="Select main category" /></SelectTrigger>
                 <SelectContent>
@@ -504,18 +392,13 @@ export default function AdminProducts() {
               </Select>
             </div>
 
-            {/* ── STEP 2: Subcategory ── */}
+            {/* Step 2 */}
             <div>
               <Label>Step 2 — Subcategory *</Label>
-              <Select
-                value={form.category}
-                onValueChange={v => {
-                  setForm(f => ({ ...f, category: v, brand: '', subcategory: '', custom_brand: '', custom_subcategory: '' }));
-                  setShowCustomBrand(false);
-                  setShowCustomSubcategory(false);
-                }}
-                disabled={!form.main_group}
-              >
+              <Select value={form.category} onValueChange={v => {
+                setForm(f => ({ ...f, category: v, brand: '', subcategory: '', custom_brand: '', custom_subcategory: '' }));
+                setShowCustomBrand(false); setShowCustomSubcategory(false);
+              }} disabled={!form.main_group}>
                 <SelectTrigger><SelectValue placeholder={form.main_group ? 'Select subcategory' : 'Select main category first'} /></SelectTrigger>
                 <SelectContent>
                   {(GROUP_CATEGORIES[form.main_group] || []).map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
@@ -523,120 +406,68 @@ export default function AdminProducts() {
               </Select>
             </div>
 
-            {/* ── STEP 3: Brand ── */}
+            {/* Step 3 */}
             <div>
               <Label>Step 3 — Brand *</Label>
               {!showCustomBrand ? (
-                <div className="space-y-2">
-                  <Select
-                    value={form.brand}
-                    onValueChange={v => {
-                      if (v === 'Other') {
-                        setShowCustomBrand(true);
-                        setForm(f => ({ ...f, brand: 'Other', custom_brand: '' }));
-                      } else {
-                        setForm(f => ({ ...f, brand: v, subcategory: '', custom_subcategory: '' }));
-                        setShowCustomSubcategory(false);
-                      }
-                    }}
-                    disabled={!form.category}
-                  >
-                    <SelectTrigger><SelectValue placeholder={form.category ? 'Select brand' : 'Select subcategory first'} /></SelectTrigger>
-                    <SelectContent>
-                      {(GROUP_BRANDS[form.main_group] || []).map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={form.brand} onValueChange={v => {
+                  if (v === 'Other') { setShowCustomBrand(true); setForm(f => ({ ...f, brand: 'Other', custom_brand: '' })); }
+                  else { setForm(f => ({ ...f, brand: v, subcategory: '', custom_subcategory: '' })); setShowCustomSubcategory(false); }
+                }} disabled={!form.category}>
+                  <SelectTrigger><SelectValue placeholder={form.category ? 'Select brand' : 'Select subcategory first'} /></SelectTrigger>
+                  <SelectContent>
+                    {(GROUP_BRANDS[form.main_group] || []).map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               ) : (
                 <div className="space-y-2">
-                  <Input 
-                    value={form.custom_brand} 
-                    onChange={e => setForm(f => ({ ...f, custom_brand: e.target.value }))}
-                    placeholder="Enter custom brand name"
-                  />
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => {
-                      setShowCustomBrand(false);
-                      setForm(f => ({ ...f, brand: '', custom_brand: '' }));
-                    }}
-                    className="text-xs"
-                  >
-                    Choose from list
-                  </Button>
+                  <Input value={form.custom_brand} onChange={e => setForm(f => ({ ...f, custom_brand: e.target.value }))} placeholder="Enter custom brand name" />
+                  <Button size="sm" variant="outline" onClick={() => { setShowCustomBrand(false); setForm(f => ({ ...f, brand: '', custom_brand: '' })); }} className="text-xs">Choose from list</Button>
                 </div>
               )}
             </div>
 
-            {/* ── STEP 4: Product Type ── */}
+            {/* Step 4 */}
             <div>
               <Label>Step 4 — Product Type</Label>
               {!showCustomSubcategory ? (
-                <div className="space-y-2">
-                  <Select
-                    value={form.subcategory}
-                    onValueChange={v => {
-                      if (v === 'Other') {
-                        setShowCustomSubcategory(true);
-                        setForm(f => ({ ...f, subcategory: 'Other', custom_subcategory: '' }));
-                      } else {
-                        setForm(f => ({ ...f, subcategory: v }));
-                      }
-                    }}
-                    disabled={!form.brand || form.brand === 'Other'}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={
-                        form.brand === 'Other' || showCustomBrand ? 'Enter custom type below' :
-                        form.brand ? 'Select product type' : 'Select brand first'
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {((BRAND_SUBCATEGORIES[form.category] || {})[form.brand] || []).map(s => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
-                      <SelectItem value="Other">Other (Custom)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={form.subcategory} onValueChange={v => {
+                  if (v === 'Other') { setShowCustomSubcategory(true); setForm(f => ({ ...f, subcategory: 'Other', custom_subcategory: '' })); }
+                  else { setForm(f => ({ ...f, subcategory: v })); }
+                }} disabled={!form.brand || form.brand === 'Other'}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={form.brand === 'Other' || showCustomBrand ? 'Enter custom type below' : form.brand ? 'Select product type' : 'Select brand first'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {((BRAND_SUBCATEGORIES[form.category] || {})[form.brand] || []).map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                    <SelectItem value="Other">Other (Custom)</SelectItem>
+                  </SelectContent>
+                </Select>
               ) : (
                 <div className="space-y-2">
-                  <Input 
-                    value={form.custom_subcategory} 
-                    onChange={e => setForm(f => ({ ...f, custom_subcategory: e.target.value }))}
-                    placeholder="Enter custom product type"
-                  />
+                  <Input value={form.custom_subcategory} onChange={e => setForm(f => ({ ...f, custom_subcategory: e.target.value }))} placeholder="Enter custom product type" />
                   {!showCustomBrand && (
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => {
-                        setShowCustomSubcategory(false);
-                        setForm(f => ({ ...f, subcategory: '', custom_subcategory: '' }));
-                      }}
-                      className="text-xs"
-                    >
-                      Choose from list
-                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setShowCustomSubcategory(false); setForm(f => ({ ...f, subcategory: '', custom_subcategory: '' })); }} className="text-xs">Choose from list</Button>
                   )}
                 </div>
               )}
             </div>
-            
+
             <div>
               <Label>Price (₵) *</Label>
               <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
             </div>
             <div>
-              <Label>Original Price (₵) — optional (for discount display)</Label>
+              <Label>Original Price (₵) — optional</Label>
               <Input type="number" value={form.original_price} onChange={e => setForm(f => ({ ...f, original_price: e.target.value }))} placeholder="Leave empty if no discount" />
             </div>
             <div>
               <Label>Stock Quantity — optional</Label>
               <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="Leave empty for unlimited" />
             </div>
-            
+
             <div className="md:col-span-2">
               <Label>Description</Label>
               <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Product description..." />
@@ -655,16 +486,10 @@ export default function AdminProducts() {
                   { key: 'top_selling', label: '🏆 Top Selling', description: 'Best sellers section' },
                   { key: 'review_enabled', label: '💬 Reviews Enabled', description: 'Allow customer reviews' },
                 ].map(({ key, label, description }) => (
-                  <label 
-                    key={key} 
-                    className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 flex-col items-start"
-                    title={description}
-                  >
+                  <label key={key} className="flex flex-col items-start cursor-pointer px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50" title={description}>
                     <div className="flex items-center gap-2">
-                      <div
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form[key] ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
-                        onClick={() => setForm(f => ({ ...f, [key]: !f[key] }))}
-                      >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form[key] ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
+                        onClick={() => setForm(f => ({ ...f, [key]: !f[key] }))}>
                         {form[key] && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                       </div>
                       <span className="text-sm font-medium text-gray-700">{label}</span>
@@ -680,6 +505,28 @@ export default function AdminProducts() {
                 </div>
               )}
             </div>
+
+            {/* ── VISIBILITY TOGGLE IN FORM ──────────────────────────────────── */}
+            <div className="md:col-span-2">
+              <Label className="font-semibold block mb-2">Product Visibility</Label>
+              <button
+                type="button"
+                onClick={() => setForm(f => ({ ...f, is_hidden: !f.is_hidden }))}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm font-semibold transition-all w-full max-w-xs ${
+                  form.is_hidden
+                    ? 'bg-gray-100 border-gray-400 text-gray-600'
+                    : 'bg-green-50 border-green-500 text-green-700'
+                }`}
+              >
+                {form.is_hidden
+                  ? <><EyeOff className="h-4 w-4" /> Hidden from customers</>
+                  : <><Eye className="h-4 w-4" /> Visible to customers</>
+                }
+                <span className="ml-auto text-[10px] font-normal text-gray-400">
+                  {form.is_hidden ? 'Click to make visible' : 'Click to hide'}
+                </span>
+              </button>
+            </div>
           </div>
 
           <div className="flex gap-3 mt-6">
@@ -691,12 +538,9 @@ export default function AdminProducts() {
               {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               {editingProduct ? 'Save Changes' : 'Create Product'}
             </Button>
-            <Button variant="outline" onClick={() => { 
-              setShowForm(false); 
-              setEditingProduct(null); 
-              setForm(EMPTY_FORM);
-              setShowCustomBrand(false);
-              setShowCustomSubcategory(false);
+            <Button variant="outline" onClick={() => {
+              setShowForm(false); setEditingProduct(null); setForm(EMPTY_FORM);
+              setShowCustomBrand(false); setShowCustomSubcategory(false);
             }}>
               Cancel
             </Button>
@@ -704,88 +548,110 @@ export default function AdminProducts() {
         </Card>
       )}
 
-      {/* Products List */}
+      {/* ── PRODUCTS GRID ─────────────────────────────────────────────────────── */}
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {Array(8).fill(0).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {products.map(product => {
-            const isSelected = selectedIds.includes(product.id);
-            return (
-              <Card key={product.id} className={`overflow-hidden shadow-sm hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
-                <div className="aspect-square bg-gray-50 relative overflow-hidden">
-                  {product.image_url
-                    ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
-                  <div className="absolute top-1.5 right-1.5">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleSelect(product.id)}
-                      className="w-4 h-4 cursor-pointer accent-blue-600"
-                      onClick={e => e.stopPropagation()}
-                    />
+          {products.map(product => (
+            <Card
+              key={product.id}
+              className={`overflow-hidden shadow-sm hover:shadow-md transition-all ${product.is_hidden ? 'opacity-50 grayscale' : ''}`}
+            >
+              <div className="aspect-square bg-gray-50 relative overflow-hidden">
+                {product.image_url
+                  ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
+
+                {/* ── HIDDEN OVERLAY ── */}
+                {product.is_hidden && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                    <span className="bg-gray-900/80 text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                      <EyeOff className="h-3 w-3" /> Hidden
+                    </span>
                   </div>
-                  <div className="absolute top-1 left-1 flex flex-col gap-1">
-                    {product.featured && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
-                    {product.flash_sale && <Badge className="text-[9px] px-1 py-0 bg-orange-500">CLASSICO</Badge>}
-                    {product.donkomi && <Badge className="text-[9px] px-1 py-0 bg-green-500">Donkomi</Badge>}
-                    {product.new_arrivals && <Badge className="text-[9px] px-1 py-0 bg-blue-500">New</Badge>}
-                    {product.top_selling && <Badge className="text-[9px] px-1 py-0 bg-yellow-600">Top</Badge>}
-                  </div>
-                  {(product.video_url || product.video_file_url) && (
-                    <div className="absolute bottom-1 right-1">
-                      <Video className="h-4 w-4 text-white drop-shadow-lg" />
-                    </div>
-                  )}
+                )}
+
+                <div className="absolute top-1 left-1 flex flex-col gap-1">
+                  {product.featured && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
+                  {product.flash_sale && <Badge className="text-[9px] px-1 py-0 bg-orange-500">CLASSICO</Badge>}
+                  {product.donkomi && <Badge className="text-[9px] px-1 py-0 bg-green-500">Donkomi</Badge>}
+                  {product.new_arrivals && <Badge className="text-[9px] px-1 py-0 bg-blue-500">New</Badge>}
+                  {product.top_selling && <Badge className="text-[9px] px-1 py-0 bg-yellow-600">Top</Badge>}
                 </div>
-                <div className="p-2">
-                  <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
-                  <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
-                  {product.original_price && (
-                    <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
-                  )}
-                  {product.stock != null && <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>}
-                  <div className="flex gap-1 mt-1.5 flex-wrap">
-                    {[
-                      { key: 'featured', label: '⭐', title: 'Featured' },
-                      { key: 'flash_sale', label: '⚡', title: 'CLASSICO Deals' },
-                      { key: 'donkomi', label: '🔥', title: 'Donkomi' },
-                      { key: 'new_arrivals', label: '🆕', title: 'New Arrivals' },
-                      { key: 'top_selling', label: '🏆', title: 'Top Selling' },
-                    ].map(({ key, label, title }) => (
-                      <button
-                        key={key}
-                        title={`Toggle ${title}`}
-                        onClick={() => base44.entities.Product.update(product.id, { [key]: !product[key] }).then(() => {
-                          queryClient.invalidateQueries({ queryKey: ['products-admin'] });
-                          queryClient.invalidateQueries({ queryKey: ['products'] });
-                          toast.success(`${title} ${!product[key] ? 'enabled' : 'disabled'}`);
-                        })}
-                        className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold transition-colors ${product[key] ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-gray-100 border-gray-300 text-gray-400'}`}
-                      >
-                        {label}
-                      </button>
-                    ))}
+
+                {(product.video_url || product.video_file_url) && (
+                  <div className="absolute bottom-1 right-1">
+                    <Video className="h-4 w-4 text-white drop-shadow-lg" />
                   </div>
-                  <div className="flex gap-1 mt-1.5">
-                    <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
-                      <Pencil className="h-3 w-3" /> Edit
-                    </Button>
-                    <Button size="sm" variant="destructive" className="h-7 w-7 p-0" onClick={() => {
-                      if (confirm('Delete this product?')) deleteMutation.mutate(product.id);
-                    }}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
+                )}
+              </div>
+
+              <div className="p-2">
+                <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
+                <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
+                {product.original_price && (
+                  <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                )}
+                {product.stock != null && <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>}
+
+                {/* Section tag quick-toggles */}
+                <div className="flex gap-1 mt-1.5 flex-wrap">
+                  {[
+                    { key: 'featured', label: '⭐', title: 'Featured' },
+                    { key: 'flash_sale', label: '⚡', title: 'CLASSICO Deals' },
+                    { key: 'donkomi', label: '🔥', title: 'Donkomi' },
+                    { key: 'new_arrivals', label: '🆕', title: 'New Arrivals' },
+                    { key: 'top_selling', label: '🏆', title: 'Top Selling' },
+                  ].map(({ key, label, title }) => (
+                    <button
+                      key={key}
+                      title={`Toggle ${title}`}
+                      onClick={() => base44.entities.Product.update(product.id, { [key]: !product[key] }).then(() => {
+                        queryClient.invalidateQueries({ queryKey: ['products-admin'] });
+                        queryClient.invalidateQueries({ queryKey: ['products'] });
+                        toast.success(`${title} ${!product[key] ? 'enabled' : 'disabled'}`);
+                      })}
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold transition-colors ${product[key] ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-gray-100 border-gray-300 text-gray-400'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
-              </Card>
-            );
-          })}
+
+                {/* ── EDIT + HIDE/SHOW (no delete) ── */}
+                <div className="flex gap-1 mt-1.5">
+                  <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
+                    <Pencil className="h-3 w-3" /> Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    title={product.is_hidden ? 'Make Visible to Customers' : 'Hide from Customers'}
+                    className={`h-7 px-2 text-xs gap-1 font-semibold transition-all border-2 ${
+                      product.is_hidden
+                        ? 'border-green-400 text-green-600 hover:bg-green-50'
+                        : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+                    }`}
+                    onClick={() => handleToggleVisibility(product)}
+                    disabled={togglingId === product.id}
+                  >
+                    {togglingId === product.id
+                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                      : product.is_hidden
+                        ? <><Eye className="h-3 w-3" /><span>Show</span></>
+                        : <><EyeOff className="h-3 w-3" /><span>Hide</span></>
+                    }
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
       )}
+
       {!isLoading && products.length === 0 && (
         <div className="text-center py-16 text-gray-400">
           <p>No products yet. Click "Add Product" to get started.</p>

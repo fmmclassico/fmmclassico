@@ -225,15 +225,7 @@ export default function Home() {
     })
     .slice(0, 6);
 
-  // ⭐ Featured
-  // Condition: featured flag is true
-  const featuredItems = products
-    .filter(p => {
-      if (!p.featured) return false;
-      if (hiddenFeatured.includes(p.id)) return false;
-      return true;
-    })
-    .slice(0, 6);
+
 
   // 🔥 Donkomi Deals
   // Condition: donkomi flag is true
@@ -245,7 +237,7 @@ export default function Home() {
     })
     .slice(0, 6);
 
-  // 🆕 New Arrivals
+  //  New Arrivals
   // Condition: new_arrivals flag is true
   const newArrivals = products
     .filter(p => {
@@ -255,7 +247,7 @@ export default function Home() {
     })
     .slice(0, 6);
 
-  // 🏆 Top Selling
+  //  Top Selling
   // Condition: top_selling flag is true
   const topSelling = products
     .filter(p => {

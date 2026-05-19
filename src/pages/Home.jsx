@@ -19,11 +19,11 @@ const CATEGORY_BRANDS = {
     { label: 'Itel', brand: 'Itel', category: 'phones' },
   ],
   phone_accessories: [
-    { label: 'Oraimo', brand: 'Oraimo', category: 'headsets', category: 'cables', category: 'chargers',category: 'airpods & earbuds',category: 'charging_cables',category: 'smart_watches'  },
-    { label: 'Apple', brand: 'Apple', category: 'phone_cases',  category: 'headsets', category: 'cables', category: 'chargers',category: 'airpods & earbuds',category: 'charging_cables',category: 'smart_watches'  },
-    { label: 'Samsung', brand: 'Samsung', category: 'phone_cases', category: 'headsets', category: 'cables', category: 'chargers',category: 'airpods & earbuds',category: 'charging_cables' },
-    { label: 'JBL', brand: 'JBL', category: 'speakers', category: 'headsets',category: 'airpods & earbuds' },
-
+    { label: 'Oraimo', brand: 'Oraimo', category: 'earphones' },
+    { label: 'Apple', brand: 'Apple', category: 'phone_cases' },
+    { label: 'Samsung', brand: 'Samsung', category: 'phone_cases' },
+    { label: 'JBL', brand: 'JBL', category: 'speakers' },
+    { label: 'Sony', brand: 'Sony', category: 'earphones' },
   ],
   electronics: [
     { label: 'Samsung', brand: 'Samsung' },
@@ -214,7 +214,7 @@ export default function Home() {
   // ── Section filters (all already exclude is_hidden via `products`) ──────────
   // IMPORTANT: These conditions must exactly match the admin product form flags
 
-  // CLASSICO Deals 
+  // CLASSICO Deals (Flash Sale)
   // Condition: flash_sale flag is true AND flash_sale_end (if set) is still in future OR not set
   const flashItems = products
     .filter(p => {
@@ -225,7 +225,15 @@ export default function Home() {
     })
     .slice(0, 6);
 
-
+  // ⭐ Featured
+  // Condition: featured flag is true
+  const featuredItems = products
+    .filter(p => {
+      if (!p.featured) return false;
+      if (hiddenFeatured.includes(p.id)) return false;
+      return true;
+    })
+    .slice(0, 6);
 
   // 🔥 Donkomi Deals
   // Condition: donkomi flag is true
@@ -237,7 +245,7 @@ export default function Home() {
     })
     .slice(0, 6);
 
-  //  New Arrivals
+  // 🆕 New Arrivals
   // Condition: new_arrivals flag is true
   const newArrivals = products
     .filter(p => {
@@ -247,7 +255,7 @@ export default function Home() {
     })
     .slice(0, 6);
 
-  //  Top Selling
+  // 🏆 Top Selling
   // Condition: top_selling flag is true
   const topSelling = products
     .filter(p => {
@@ -393,7 +401,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── 🔥 CLASSICO DEAL ── */}
+      {/* ── ⚡ CLASSICO DEALS (Flash Sale) ── */}
       {flashItems.length > 0 && (
         <div className="mt-4 mx-2 md:mx-4">
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -424,7 +432,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── ⚡DONKOMI DEALS ── */}
+      {/* ── 🔥 DONKOMI DEALS ── */}
       {donkomiDeals.length > 0 && (
         <div className="mt-5 mx-2 md:mx-4">
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -493,7 +501,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── NEW ARRIVALS ── */}
+      {/* ── 🆕 NEW ARRIVALS ── */}
       {newArrivals.length > 0 && (
         <div className="mt-5 mx-2 md:mx-4">
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -519,7 +527,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── TOP SELLING ── */}
+      {/* ── 🏆 TOP SELLING ── */}
       {topSelling.length > 0 && (
         <div className="mt-5 mx-2 md:mx-4">
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">

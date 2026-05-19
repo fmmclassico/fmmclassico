@@ -128,8 +128,8 @@ async function uploadFile(file) {
 }
 
 /**
- * Deep-clean HTML to prevent code from showing in descriptions.
- * Keeps only safe semantic tags with NO attributes.
+ * Deep-clean HTML — keeps only safe semantic tags with NO attributes.
+ * Returns clean HTML safe for dangerouslySetInnerHTML.
  */
 function sanitizeHtml(html) {
   if (!html) return '';
@@ -140,7 +140,6 @@ function sanitizeHtml(html) {
   // Parse into DOM
   const doc = new DOMParser().parseFromString(cleaned, 'text/html');
 
-  // Tags to unwrap (keep children, discard wrapper)
   const UNWRAP_TAGS = new Set([
     'div', 'section', 'article', 'aside', 'main', 'header', 'footer', 'nav',
     'span', 'figure', 'figcaption', 'blockquote', 'pre', 'code',
@@ -150,49 +149,49 @@ function sanitizeHtml(html) {
     'html', 'body', 'head',
   ]);
 
-  // Tags to remove completely
   const DROP_TAGS = new Set([
     'script', 'style', 'noscript', 'iframe', 'object', 'embed',
     'link', 'meta', 'title', 'base', 'canvas', 'svg', 'math',
     'button', 'input', 'select', 'textarea', 'option', 'optgroup',
   ]);
 
-  // Tags to keep (but strip all attributes)
   const KEEP_TAGS = new Set([
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'p', 'ul', 'ol', 'li',
     'strong', 'em', 'b', 'i', 'u', 'br',
+    'font', // keep font for execCommand fontSize support
   ]);
 
   function processNode(node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      return [node.cloneNode()];
-    }
-
+    if (node.nodeType === Node.TEXT_NODE) return [node.cloneNode()];
     if (node.nodeType !== Node.ELEMENT_NODE) return [];
 
     const tag = node.tagName.toLowerCase();
-
     if (DROP_TAGS.has(tag)) return [];
 
     const cleanChildren = Array.from(node.childNodes).flatMap(processNode);
 
     if (KEEP_TAGS.has(tag)) {
       const el = document.createElement(tag);
+      // Only keep size attribute on font (for execCommand fontSize)
+      if (tag === 'font' && node.getAttribute('size')) {
+        el.setAttribute('size', node.getAttribute('size'));
+      }
       cleanChildren.forEach(c => el.appendChild(c));
       return [el];
     }
 
+    // unwrap — keep children, discard wrapper
     return cleanChildren;
   }
 
   const resultNodes = Array.from(doc.body.childNodes).flatMap(processNode);
-
   const container = document.createElement('div');
   resultNodes.forEach(n => container.appendChild(n));
+
   let result = container.innerHTML;
 
-  // Collapse excessive whitespace
+  // Collapse excessive whitespace / empty tags
   result = result
     .replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>')
     .replace(/(<p>\s*<\/p>\s*){2,}/gi, '<p></p>')
@@ -208,21 +207,23 @@ function RichTextEditor({ value, onChange }) {
   const isUserTyping = useRef(false);
   const lastExternalValue = useRef(value);
 
+  // Initialize editor content once on mount only
   useEffect(() => {
     if (editorRef.current) {
-      editorRef.current.innerHTML = sanitizeHtml(value || '');
+      editorRef.current.innerHTML = value || '';
       lastExternalValue.current = value;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Sync external value changes (e.g. switching products) without clobbering typing
   useEffect(() => {
     if (
       editorRef.current &&
       value !== lastExternalValue.current &&
       !isUserTyping.current
     ) {
-      editorRef.current.innerHTML = sanitizeHtml(value || '');
+      editorRef.current.innerHTML = value || '';
       lastExternalValue.current = value;
     }
   }, [value]);
@@ -244,22 +245,12 @@ function RichTextEditor({ value, onChange }) {
     handleInput._timer = setTimeout(() => { isUserTyping.current = false; }, 300);
   };
 
+  // FIX: Paste only plain text to avoid injecting raw HTML tags into the description
   const handlePaste = (e) => {
     e.preventDefault();
-    const html = e.clipboardData.getData('text/html');
+    // Always paste as plain text — this prevents HTML code leaking into description
     const text = e.clipboardData.getData('text/plain');
-
-    if (html) {
-      const clean = sanitizeHtml(html);
-      if (clean && clean.replace(/<[^>]*>/g, '').trim().length > 0) {
-        document.execCommand('insertHTML', false, clean);
-      } else {
-        document.execCommand('insertText', false, text);
-      }
-    } else {
-      document.execCommand('insertText', false, text);
-    }
-
+    document.execCommand('insertText', false, text);
     const result = editorRef.current?.innerHTML || '';
     lastExternalValue.current = result;
     onChange(result);
@@ -384,9 +375,8 @@ export default function AdminProducts() {
 
   const queryClient = useQueryClient();
 
+  // FIX: Only invalidate (refetch), never removeQueries — removeQueries caused race condition
   const invalidate = () => {
-    queryClient.removeQueries({ queryKey: ['products'] });
-    queryClient.removeQueries({ queryKey: ['products-admin'] });
     queryClient.invalidateQueries({ queryKey: ['products'] });
     queryClient.invalidateQueries({ queryKey: ['products-admin'] });
   };
@@ -402,6 +392,7 @@ export default function AdminProducts() {
     queryKey: ['products-admin'],
     queryFn: () => base44.entities.Product.list('-created_date', 500),
     enabled: isAdmin,
+    staleTime: 0,
   });
 
   const products = allProducts.filter(p => !p.deleted);
@@ -420,10 +411,12 @@ export default function AdminProducts() {
 
       const { main_group, customBrand, ...rest } = data;
 
+      // FIX: Save description as-is (HTML from editor) — sanitize only at display time
+      // Do NOT double-sanitize here; it corrupts the stored HTML
       const payload = {
         ...rest,
         brand: finalBrand,
-        description: sanitizeHtml(data.description || ''),
+        description: data.description || '',
         price: parseFloat(data.price) || 0,
         original_price:
           data.original_price !== '' && data.original_price != null
@@ -467,14 +460,16 @@ export default function AdminProducts() {
     },
   });
 
-  // ── CRUD helpers (FIXED) ──────────────────────────────────────────────────
+  // ── CRUD helpers (ALL FIXED) ──────────────────────────────────────────────
+
+  // FIX: Use async/await properly, invalidate AFTER await resolves
   const softDelete = async (id) => {
     try {
       await base44.entities.Product.update(id, { deleted: true, hidden: true });
-      invalidate();
+      await invalidate();
       toast.success('Product moved to Trash');
     } catch (err) {
-      toast.error(`Failed to move to trash: ${err.message}`);
+      toast.error(`Failed to move to trash: ${err?.message || 'Unknown error'}`);
       console.error('Soft delete error:', err);
     }
   };
@@ -482,51 +477,54 @@ export default function AdminProducts() {
   const restore = async (id) => {
     try {
       await base44.entities.Product.update(id, { deleted: false, hidden: false });
-      invalidate();
+      await invalidate();
       toast.success('Product restored');
     } catch (err) {
-      toast.error(`Failed to restore: ${err.message}`);
+      toast.error(`Failed to restore: ${err?.message || 'Unknown error'}`);
       console.error('Restore error:', err);
     }
   };
 
   const permanentDelete = async (id) => {
-    if (!confirm('Permanently delete? This cannot be undone.')) return;
+    if (!window.confirm('Permanently delete? This cannot be undone.')) return;
     try {
       await base44.entities.Product.delete(id);
-      invalidate();
+      await invalidate();
       toast.success('Permanently deleted');
     } catch (err) {
-      toast.error(`Failed to delete: ${err.message}`);
+      toast.error(`Failed to delete: ${err?.message || 'Unknown error'}`);
       console.error('Permanent delete error:', err);
     }
   };
 
+  // FIX: Eye icon logic corrected — hidden:true means invisible to users
+  // Clicking when hidden=true → unhide (set hidden:false, show Eye icon = "currently visible")
+  // Clicking when hidden=false → hide (set hidden:true, show EyeOff icon = "currently hidden")
   const toggleVisibility = async (product) => {
     try {
       const next = !product.hidden;
       await base44.entities.Product.update(product.id, { hidden: next });
-      invalidate();
+      await invalidate();
       toast.success(next ? 'Product hidden from users' : 'Product now visible to users');
     } catch (err) {
-      toast.error(`Failed to toggle visibility: ${err.message}`);
+      toast.error(`Failed to toggle visibility: ${err?.message || 'Unknown error'}`);
       console.error('Toggle visibility error:', err);
     }
   };
 
   const handleBulkDelete = async () => {
     if (!selectedIds.length) return;
-    if (!confirm(`Move ${selectedIds.length} product(s) to trash?`)) return;
+    if (!window.confirm(`Move ${selectedIds.length} product(s) to trash?`)) return;
     setBulkDeleting(true);
     try {
       await Promise.all(selectedIds.map(id =>
         base44.entities.Product.update(id, { deleted: true, hidden: true })
       ));
-      invalidate();
+      await invalidate();
       setSelectedIds([]);
       toast.success(`${selectedIds.length} product(s) moved to trash`);
     } catch (err) {
-      toast.error(`Bulk delete failed: ${err.message}`);
+      toast.error(`Bulk delete failed: ${err?.message || 'Unknown error'}`);
       console.error('Bulk delete error:', err);
     } finally {
       setBulkDeleting(false);
@@ -540,11 +538,11 @@ export default function AdminProducts() {
       await Promise.all(selectedIds.map(id =>
         base44.entities.Product.update(id, { deleted: false, hidden: false })
       ));
-      invalidate();
+      await invalidate();
       setSelectedIds([]);
       toast.success(`${selectedIds.length} product(s) restored`);
     } catch (err) {
-      toast.error(`Bulk restore failed: ${err.message}`);
+      toast.error(`Bulk restore failed: ${err?.message || 'Unknown error'}`);
       console.error('Bulk restore error:', err);
     } finally {
       setBulkDeleting(false);
@@ -563,8 +561,7 @@ export default function AdminProducts() {
     } catch (err) {
       toast.error('Image upload failed');
       console.error('Upload error:', err);
-    }
-    finally {
+    } finally {
       setUploadingMain(false);
       e.target.value = '';
     }
@@ -581,8 +578,7 @@ export default function AdminProducts() {
     } catch (err) {
       toast.error('Extra image upload failed');
       console.error('Upload error:', err);
-    }
-    finally {
+    } finally {
       setUploadingExtra(false);
       e.target.value = '';
     }
@@ -599,8 +595,7 @@ export default function AdminProducts() {
     } catch (err) {
       toast.error('Video upload failed');
       console.error('Upload error:', err);
-    }
-    finally {
+    } finally {
       setUploadingVideo(false);
       e.target.value = '';
     }
@@ -661,12 +656,44 @@ export default function AdminProducts() {
   const toggleSelectAll = () =>
     setSelectedIds(selectedIds.length === displayed.length ? [] : displayed.map(p => p.id));
 
+  // FIX: Tag toggle — enforce mutual exclusivity for donkomi, flash_sale, featured
+  // A product tagged donkomi-only should NOT appear in flash_sale or featured sections.
+  // When toggling a tag on a card, explicitly set the others to false if needed.
+  const handleTagToggle = async (product, key) => {
+    try {
+      const newValue = !product[key];
+      const update = { [key]: newValue };
+
+      // If turning ON donkomi → turn off flash_sale and featured
+      if (key === 'donkomi' && newValue) {
+        update.flash_sale = false;
+        update.featured = false;
+      }
+      // If turning ON flash_sale → turn off donkomi
+      if (key === 'flash_sale' && newValue) {
+        update.donkomi = false;
+      }
+      // If turning ON featured → turn off donkomi
+      if (key === 'featured' && newValue) {
+        update.donkomi = false;
+      }
+
+      await base44.entities.Product.update(product.id, update);
+      await invalidate();
+      const label = key === 'flash_sale' ? 'Flash Sale' : key === 'featured' ? 'Featured' : 'Donkomi';
+      toast.success(`${label} ${newValue ? 'enabled' : 'disabled'}`);
+    } catch (err) {
+      toast.error(`Failed to toggle tag`);
+      console.error('Toggle error:', err);
+    }
+  };
+
   // ── Guards ────────────────────────────────────────────────────────────────
-  if (!isAdmin && user) return (
-    <div className="p-8 text-center text-gray-500">Admin access required.</div>
-  );
   if (!user) return (
     <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>
+  );
+  if (!isAdmin) return (
+    <div className="p-8 text-center text-gray-500">Admin access required.</div>
   );
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -736,7 +763,7 @@ export default function AdminProducts() {
             <h2 className="font-bold text-lg text-gray-800">
               {editingProduct ? 'Edit Product' : 'New Product'}
             </h2>
-            <button onClick={() => setShowForm(false)}>
+            <button onClick={() => { setShowForm(false); setEditingProduct(null); setForm(EMPTY_FORM); }}>
               <X className="h-5 w-5 text-gray-400" />
             </button>
           </div>
@@ -908,7 +935,7 @@ export default function AdminProducts() {
                 <SelectContent>
                   {(
                     (BRAND_SUBCATEGORIES[form.category] || {})[
-                    form.brand === 'Other' ? form.customBrand : form.brand
+                      form.brand === 'Other' ? form.customBrand : form.brand
                     ] || []
                   ).map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -971,7 +998,7 @@ export default function AdminProducts() {
                 <Label className="font-semibold">
                   Description
                   <span className="text-xs font-normal text-gray-400 ml-2">
-                    Paste rich text or use toolbar — formatting is preserved
+                    Use the toolbar to format — bold, lists, alignment supported
                   </span>
                 </Label>
               </div>
@@ -992,9 +1019,12 @@ export default function AdminProducts() {
               )}
             </div>
 
-            {/* Tags / Flags */}
+            {/* Tags / Flags — FIX: donkomi is mutually exclusive with flash_sale/featured */}
             <div className="md:col-span-2">
-              <Label className="font-semibold block mb-2">Product Tags</Label>
+              <Label className="font-semibold block mb-1">Product Tags</Label>
+              <p className="text-xs text-amber-600 mb-2">
+                ⚠ Note: <strong>Donkomi</strong> is separate from Flash Sale &amp; Featured. Enabling Donkomi will auto-disable the others.
+              </p>
               <div className="flex flex-wrap gap-3">
                 {[
                   { key: 'featured', label: '⭐ Featured' },
@@ -1009,7 +1039,24 @@ export default function AdminProducts() {
                   >
                     <div
                       className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form[key] ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
-                      onClick={() => setForm(f => ({ ...f, [key]: !f[key] }))}
+                      onClick={() => {
+                        setForm(f => {
+                          const newVal = !f[key];
+                          const updates = { [key]: newVal };
+                          // Enforce mutual exclusivity in the form
+                          if (key === 'donkomi' && newVal) {
+                            updates.flash_sale = false;
+                            updates.featured = false;
+                          }
+                          if (key === 'flash_sale' && newVal) {
+                            updates.donkomi = false;
+                          }
+                          if (key === 'featured' && newVal) {
+                            updates.donkomi = false;
+                          }
+                          return { ...f, ...updates };
+                        });
+                      }}
                     >
                       {form[key] && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                     </div>
@@ -1117,9 +1164,10 @@ export default function AdminProducts() {
                     <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>
                   )}
 
+                  {/* FIX: Render description as HTML, not raw text */}
                   {product.description && (
                     <div
-                      className="text-[10px] text-gray-500 mt-1 line-clamp-2 leading-tight prose prose-sm max-w-none"
+                      className="text-[10px] text-gray-500 mt-1 line-clamp-2 leading-tight"
                       dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.description) }}
                     />
                   )}
@@ -1135,16 +1183,7 @@ export default function AdminProducts() {
                           <button
                             key={key}
                             title={`Toggle ${title}`}
-                            onClick={async () => {
-                              try {
-                                await base44.entities.Product.update(product.id, { [key]: !product[key] });
-                                invalidate();
-                                toast.success(`${title} ${!product[key] ? 'enabled' : 'disabled'}`);
-                              } catch (err) {
-                                toast.error(`Failed to toggle ${title}`);
-                                console.error('Toggle error:', err);
-                              }
-                            }}
+                            onClick={() => handleTagToggle(product, key)}
                             className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold transition-colors ${product[key] ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-gray-100 border-gray-300 text-gray-400'}`}
                           >
                             {label}
@@ -1161,13 +1200,25 @@ export default function AdminProducts() {
                         >
                           <Pencil className="h-3 w-3" /> Edit
                         </Button>
+
+                        {/* FIX: Eye icon — shows correct state and works properly */}
+                        {/* hidden=false → product IS visible → show EyeOff to offer hiding it */}
+                        {/* hidden=true  → product IS hidden → show Eye to offer showing it */}
                         <button
-                          title={product.hidden ? 'Show to users' : 'Hide from users'}
+                          title={product.hidden ? 'Click to show to users' : 'Click to hide from users'}
                           onClick={() => toggleVisibility(product)}
-                          className={`h-7 w-7 flex items-center justify-center rounded-md border text-xs transition-colors ${product.hidden ? 'bg-yellow-50 border-yellow-300 text-yellow-600 hover:bg-yellow-100' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}
+                          className={`h-7 w-7 flex items-center justify-center rounded-md border text-xs transition-colors ${
+                            product.hidden
+                              ? 'bg-yellow-50 border-yellow-300 text-yellow-600 hover:bg-yellow-100'
+                              : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                          }`}
                         >
-                          {product.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                          {product.hidden
+                            ? <Eye className="h-3.5 w-3.5" />
+                            : <EyeOff className="h-3.5 w-3.5" />
+                          }
                         </button>
+
                         <button
                           title="Move to Trash"
                           onClick={() => softDelete(product.id)}

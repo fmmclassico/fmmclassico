@@ -521,26 +521,31 @@ export default function AdminProducts() {
               )}
             </div>
 
-            {/* ── VISIBILITY TOGGLE IN FORM ──────────────────────────────────── */}
+            {/* ── VISIBILITY TOGGLE IN FORM — matches Interface Visibility card style ── */}
             <div className="md:col-span-2">
-              <Label className="font-semibold block mb-2">Product Visibility</Label>
-              <button
-                type="button"
-                onClick={() => setForm(f => ({ ...f, is_hidden: !f.is_hidden }))}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm font-semibold transition-all w-full max-w-xs ${
-                  form.is_hidden
-                    ? 'bg-gray-100 border-gray-400 text-gray-600'
-                    : 'bg-green-50 border-green-500 text-green-700'
-                }`}
-              >
-                {form.is_hidden
-                  ? <><EyeOff className="h-4 w-4" /> Hidden from customers</>
-                  : <><Eye className="h-4 w-4" /> Visible to customers</>
-                }
-                <span className="ml-auto text-[10px] font-normal text-gray-400">
-                  {form.is_hidden ? 'Click to make visible' : 'Click to hide'}
-                </span>
-              </button>
+              <Label className="font-semibold block mb-2">Homepage Visibility</Label>
+              <div className="p-4 bg-gray-50 rounded-lg flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">Show on Homepage</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {form.is_hidden
+                      ? 'This product is hidden — customers cannot see it'
+                      : 'This product is visible to customers on the homepage'}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="lg"
+                  variant={form.is_hidden ? 'outline' : 'default'}
+                  onClick={() => setForm(f => ({ ...f, is_hidden: !f.is_hidden }))}
+                  className="gap-1.5 min-w-32"
+                >
+                  {form.is_hidden
+                    ? <><EyeOff className="h-4 w-4" /> Hidden</>
+                    : <><Eye className="h-4 w-4" /> Visible</>
+                  }
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -636,19 +641,21 @@ export default function AdminProducts() {
                   ))}
                 </div>
 
-                {/* ── EDIT + HIDE/SHOW (no delete) ── */}
+                {/* ── Edit + Visibility toggle row ── */}
                 <div className="flex gap-1 mt-1.5">
                   <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
                     <Pencil className="h-3 w-3" /> Edit
                   </Button>
+
+                  {/* Visibility button — matches Interface Visibility card pattern */}
                   <Button
                     size="sm"
-                    variant="outline"
-                    title={product.is_hidden ? 'Make Visible to Customers' : 'Hide from Customers'}
-                    className={`h-7 px-2 text-xs gap-1 font-semibold transition-all border-2 ${
+                    variant={product.is_hidden ? 'outline' : 'default'}
+                    title={product.is_hidden ? 'Make visible on homepage' : 'Hide from homepage'}
+                    className={`h-7 px-2 text-xs gap-1 font-semibold min-w-[60px] transition-all ${
                       product.is_hidden
-                        ? 'border-green-400 text-green-600 hover:bg-green-50'
-                        : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+                        ? 'border-gray-400 text-gray-500 hover:bg-gray-50'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
                     }`}
                     onClick={() => handleToggleVisibility(product)}
                     disabled={togglingId === product.id}
@@ -656,8 +663,8 @@ export default function AdminProducts() {
                     {togglingId === product.id
                       ? <Loader2 className="h-3 w-3 animate-spin" />
                       : product.is_hidden
-                        ? <><Eye className="h-3 w-3" /><span>Show</span></>
-                        : <><EyeOff className="h-3 w-3" /><span>Hide</span></>
+                        ? <><EyeOff className="h-3 w-3" /><span>Hidden</span></>
+                        : <><Eye className="h-3 w-3" /><span>Visible</span></>
                     }
                   </Button>
                 </div>

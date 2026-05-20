@@ -166,6 +166,7 @@ export default function AdminProducts() {
       return base44.entities.Product.create(payload);
     },
     onSuccess: () => {
+      // Aggressively clear ALL product-related caches so Home.jsx re-fetches fresh data
       queryClient.removeQueries({ queryKey: ['products'] });
       queryClient.removeQueries({ queryKey: ['products-admin'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -183,10 +184,24 @@ export default function AdminProducts() {
   const handleToggleVisibility = async (product) => {
     setTogglingId(product.id);
     try {
-      await base44.entities.Product.update(product.id, { is_hidden: !product.is_hidden });
+      const newHiddenState = !product.is_hidden;
+      await base44.entities.Product.update(product.id, { is_hidden: newHiddenState });
+
+      // Update the admin cache immediately (optimistic UI)
+      queryClient.setQueryData(['products-admin'], (old = []) =>
+        old.map(p => p.id === product.id ? { ...p, is_hidden: newHiddenState } : p)
+      );
+
+      // Also update the homepage products cache so Home.jsx immediately reflects the change
+      queryClient.setQueryData(['products'], (old = []) =>
+        old.map(p => p.id === product.id ? { ...p, is_hidden: newHiddenState } : p)
+      );
+
+      // Then invalidate both to ensure fresh data from server
       queryClient.invalidateQueries({ queryKey: ['products-admin'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast.success(product.is_hidden ? 'Product is now visible to customers.' : 'Product hidden from customers.');
+
+      toast.success(newHiddenState ? 'Product hidden from customers.' : 'Product is now visible to customers.');
     } catch {
       toast.error('Failed to update visibility.');
     } finally {

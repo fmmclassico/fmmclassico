@@ -137,7 +137,7 @@ export default function Home() {
     queryFn: () => base44.entities.Product.list('-created_date', 100),
   });
 
-  // Filter out hidden products ONCE
+  // Filter out hidden products
   const products = allProducts.filter(p => !p.is_hidden);
 
   const addToCartMutation = useMutation({
@@ -174,34 +174,48 @@ export default function Home() {
   const hiddenNewArrivals = getHiddenIds('new_arrivals');
   const hiddenTopSelling = getHiddenIds('top_selling');
 
-  // ── STRICT TAG-BASED PRODUCT BUCKETS ──
-  // Each section ONLY shows products explicitly tagged for that section.
-  // NO fallbacks — p.field === true guards against undefined/null from old records.
+  // ── STRICT BOOLEAN FILTERING ──
+  // ONLY products with === true for that tag appear in that section
+  // If a product doesn't have the tag explicitly set to TRUE, it doesn't appear
 
-  // CLASSICO Deals: only flash_sale tagged, not expired
-  const classicoDeals = products.filter(p =>
-    p.flash_sale === true &&
-    (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()) &&
-    !hiddenFlash.includes(p.id)
-  );
+  // CLASSICO Deals: ONLY products with flash_sale === true AND not expired
+  const classicoDeals = products.filter(p => {
+    // ✅ STRICT: Must be exactly true
+    if (p.flash_sale !== true) return false;
+    // Check expiration
+    if (p.flash_sale_end && new Date(p.flash_sale_end) <= new Date()) return false;
+    // Check hidden list
+    if (hiddenFlash.includes(p.id)) return false;
+    return true;
+  });
 
-  // Donkomi Deals: only donkomi tagged
-  const donkomiDeals = products.filter(p =>
-    p.donkomi === true &&
-    !hiddenDonkomi.includes(p.id)
-  );
+  // Donkomi Deals: ONLY products with donkomi === true
+  const donkomiDeals = products.filter(p => {
+    if (p.donkomi !== true) return false;
+    if (hiddenDonkomi.includes(p.id)) return false;
+    return true;
+  });
 
-  // New Arrivals: only new_arrivals tagged — same pattern as donkomi
-  const newArrivals = products.filter(p =>
-    p.new_arrivals === true &&
-    !hiddenNewArrivals.includes(p.id)
-  );
+  // New Arrivals: ONLY products with new_arrivals === true
+  const newArrivals = products.filter(p => {
+    if (p.new_arrivals !== true) return false;
+    if (hiddenNewArrivals.includes(p.id)) return false;
+    return true;
+  });
 
-  // Top Selling: only top_selling tagged — same pattern as donkomi
-  const topSelling = products.filter(p =>
-    p.top_selling === true &&
-    !hiddenTopSelling.includes(p.id)
-  );
+  // Top Selling: ONLY products with top_selling === true
+  const topSelling = products.filter(p => {
+    if (p.top_selling !== true) return false;
+    if (hiddenTopSelling.includes(p.id)) return false;
+    return true;
+  });
+
+  // Featured: ONLY products with featured === true (used by admin quick toggle)
+  const featuredProducts = products.filter(p => {
+    if (p.featured !== true) return false;
+    if (hiddenFeatured.includes(p.id)) return false;
+    return true;
+  });
 
   // Loading skeleton
   const SkeletonRow = () => (
@@ -413,7 +427,6 @@ export default function Home() {
                 'Apple', 'Samsung', 'Tecno', 'Hisense',
                 'TCL', 'Oraimo', 'Sony', 'JBL',
               ].map(brandName => {
-                // Only use admin-uploaded logo — no hardcoded URLs
                 const uploadedLogo = appSettings.find(s => s.key === `brand_logo_${brandName.toLowerCase().replace(/ /g,'_')}`)?.value;
                 return (
                   <Link key={brandName} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brandName)}`)}

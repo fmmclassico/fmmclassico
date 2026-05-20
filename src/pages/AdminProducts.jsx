@@ -322,6 +322,8 @@ export default function AdminProducts() {
     queryKey: ['products-admin'],
     queryFn: () => base44.entities.Product.list('-created_date', 200),
     enabled: isAdmin,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const saveMutation = useMutation({
@@ -913,8 +915,10 @@ export default function AdminProducts() {
                         onClick={() => {
                           const newVal = !(product[key] === true);
                           base44.entities.Product.update(product.id, { [key]: newVal }).then(() => {
-                            queryClient.invalidateQueries({ queryKey: ['products-admin'] });
+                            queryClient.removeQueries({ queryKey: ['products'] });
+                            queryClient.removeQueries({ queryKey: ['products-admin'] });
                             queryClient.invalidateQueries({ queryKey: ['products'] });
+                            queryClient.invalidateQueries({ queryKey: ['products-admin'] });
                             toast.success(`${title} ${newVal ? 'enabled' : 'disabled'}`);
                           });
                         }}

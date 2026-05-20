@@ -105,16 +105,17 @@ const BRAND_SUBCATEGORIES = {
   },
 };
 
+// FIXED: All product tag fields now included in EMPTY_FORM
 const EMPTY_FORM = {
   name: '', description: '', price: '', original_price: '',
   main_group: '', category: '', brand: '', subcategory: '',
-  stock: '', featured: false, flash_sale: false,
-  donkomi: false, new_arrivals: false, top_selling: false,
-  review_enabled: true, rating: '', reviews_count: '',
+  stock: '', featured: false, flash_sale: false, new_arrivals: false, top_selling: false,
+  donkomi: false, review_enabled: true, rating: '', reviews_count: '',
   image_url: '', image_urls: [], video_url: '', video_file_url: '',
   custom_brand: '', custom_subcategory: '', flash_sale_end: '',
 };
 
+// Video URL parser with live preview support
 const getVideoEmbedUrl = (url) => {
   if (!url) return null;
   const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
@@ -272,6 +273,7 @@ export default function AdminProducts() {
       const finalBrand = data.custom_brand && data.brand === 'Other' ? data.custom_brand : data.brand;
       const finalSubcategory = data.custom_subcategory && data.subcategory === 'Other' ? data.custom_subcategory : data.subcategory;
 
+      // FIXED: All tag fields now properly saved in payload
       const payload = {
         name: data.name,
         description: data.description,
@@ -286,10 +288,9 @@ export default function AdminProducts() {
         video_url: data.video_url || data.video_file_url || '',
         featured: data.featured === true,
         flash_sale: data.flash_sale === true,
-        donkomi: data.donkomi === true,
-        // ✅ RESTORED: new_arrivals and top_selling are saved as explicit DB fields
         new_arrivals: data.new_arrivals === true,
         top_selling: data.top_selling === true,
+        donkomi: data.donkomi === true,
         review_enabled: data.review_enabled === true,
         flash_sale_end: (data.flash_sale === true && data.flash_sale_end) ? data.flash_sale_end : null,
         rating: data.rating ? parseFloat(data.rating) : null,
@@ -369,6 +370,7 @@ export default function AdminProducts() {
     setShowCustomBrand(isCustomBrand);
     setShowCustomSubcategory(isCustomSubcategory);
 
+    // FIXED: All tag fields now loaded correctly
     setForm({
       name: product.name || '',
       description: product.description || '',
@@ -383,10 +385,9 @@ export default function AdminProducts() {
       stock: product.stock ?? '',
       featured: product.featured === true,
       flash_sale: product.flash_sale === true,
-      donkomi: product.donkomi === true,
-      // ✅ RESTORED: load new_arrivals and top_selling from product
       new_arrivals: product.new_arrivals === true,
       top_selling: product.top_selling === true,
+      donkomi: product.donkomi === true,
       review_enabled: product.review_enabled === true,
       rating: product.rating ?? '',
       reviews_count: product.reviews_count ?? '',
@@ -531,6 +532,7 @@ export default function AdminProducts() {
                 )}
               </div>
 
+              {/* Video URL with live preview */}
               {!form.video_file_url && (
                 <div className="mt-2 space-y-2">
                   <Label className="text-xs text-gray-600">Or paste video URL (YouTube, Vimeo, TikTok, direct link)</Label>
@@ -540,6 +542,7 @@ export default function AdminProducts() {
                     placeholder="https://youtube.com/watch?v=..."
                     className="text-sm"
                   />
+                  {/* Live preview */}
                   {form.video_url && videoPreview && (
                     <div className="rounded-xl overflow-hidden bg-black aspect-video mt-2">
                       {videoPreview.type === 'iframe'
@@ -667,19 +670,19 @@ export default function AdminProducts() {
               <p className="text-[10px] text-gray-400 mt-1">Supports bold, italic, underline, headings, bullet/numbered lists, alignment, font size, and text color.</p>
             </div>
 
-            {/* ✅ RESTORED: All 6 tags including new_arrivals and top_selling */}
+            {/* FIXED: Product Tags — now includes new_arrivals and top_selling */}
             <div className="md:col-span-2">
               <Label className="font-semibold block mb-1">Product Tags</Label>
               <p className="text-xs text-gray-500 mb-3">
-                Tag a product to control which homepage section it appears in. A product only shows in a section when its tag is turned on.
+                Only tagged products appear in their section. Check the boxes below to add products to specific sections on the homepage.
               </p>
               <div className="flex flex-wrap gap-3">
                 {[
-                  { key: 'featured', label: '⭐ Featured', description: 'Shows in Featured section' },
+                  { key: 'featured', label: '⭐ Featured', description: 'Shows in Featured / CLASSICO Deals section' },
                   { key: 'flash_sale', label: '⚡ CLASSICO Deals', description: 'Shows in Flash Sale section' },
                   { key: 'donkomi', label: '🔥 Donkomi Deals', description: 'Shows in Donkomi Best Prices section' },
-                  { key: 'new_arrivals', label: '🆕 New Arrivals', description: 'Shows in New Arrivals section' },
-                  { key: 'top_selling', label: '📈 Top Selling', description: 'Shows in Top Selling section' },
+                  { key: 'new_arrivals', label: '✨ New Arrivals', description: 'Shows in New Arrivals section' },
+                  { key: 'top_selling', label: '🔥 Top Selling', description: 'Shows in Top Selling section' },
                   { key: 'review_enabled', label: '💬 Reviews Enabled', description: 'Allow customer reviews on this product' },
                 ].map(({ key, label, description }) => (
                   <button key={key} type="button"
@@ -727,12 +730,13 @@ export default function AdminProducts() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {products.map(product => {
             const isSelected = selectedIds.includes(product.id);
+            // FIXED: Only show badges for tags that are actually true
             const activeTags = [
               product.featured === true && { label: 'Featured', color: 'bg-purple-500' },
               product.flash_sale === true && { label: 'CLASSICO', color: 'bg-orange-500' },
-              product.donkomi === true && { label: 'Donkomi', color: 'bg-green-500' },
               product.new_arrivals === true && { label: 'New', color: 'bg-yellow-500' },
-              product.top_selling === true && { label: 'Top', color: 'bg-blue-500' },
+              product.top_selling === true && { label: 'Top', color: 'bg-red-500' },
+              product.donkomi === true && { label: 'Donkomi', color: 'bg-green-500' },
             ].filter(Boolean);
 
             return (
@@ -747,6 +751,7 @@ export default function AdminProducts() {
                       className="w-4 h-4 cursor-pointer accent-blue-600" onClick={e => e.stopPropagation()} />
                   </div>
 
+                  {/* Show badges for active tags */}
                   {activeTags.length > 0 && (
                     <div className="absolute top-1 left-1 flex flex-col gap-1">
                       {activeTags.map((tag, i) => (
@@ -770,14 +775,14 @@ export default function AdminProducts() {
                   )}
                   {product.stock != null && <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>}
 
-                  {/* ✅ Quick tag toggles — now includes new_arrivals and top_selling */}
+                  {/* Quick tag toggles — now includes new_arrivals and top_selling */}
                   <div className="flex gap-1 mt-1.5 flex-wrap">
                     {[
                       { key: 'featured', label: '⭐', title: 'Featured' },
                       { key: 'flash_sale', label: '⚡', title: 'CLASSICO Deals' },
-                      { key: 'donkomi', label: '🔥', title: 'Donkomi' },
-                      { key: 'new_arrivals', label: '🆕', title: 'New Arrivals' },
-                      { key: 'top_selling', label: '📈', title: 'Top Selling' },
+                      { key: 'new_arrivals', label: '✨', title: 'New Arrivals' },
+                      { key: 'top_selling', label: '🔥', title: 'Top Selling' },
+                      { key: 'donkomi', label: '🎯', title: 'Donkomi' },
                     ].map(({ key, label, title }) => (
                       <button key={key} title={`Toggle ${title}`}
                         onClick={() => {

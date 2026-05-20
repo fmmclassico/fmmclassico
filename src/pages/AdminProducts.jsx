@@ -803,22 +803,25 @@ export default function AdminProducts() {
                   { key: 'top_selling', label: '🏆 Top Selling', description: 'Best sellers section' },
                   { key: 'review_enabled', label: '💬 Reviews Enabled', description: 'Allow customer reviews' },
                 ].map(({ key, label, description }) => (
-                  <label 
-                    key={key} 
-                    className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 flex-col items-start"
+                  <button
+                    key={key}
+                    type="button"
                     title={description}
+                    onClick={() => setForm(f => ({ ...f, [key]: !f[key] }))}
+                    className={`flex flex-col items-start gap-1 px-3 py-2 rounded-lg border-2 transition-all text-left ${
+                      form[key]
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                    }`}
                   >
                     <div className="flex items-center gap-2">
-                      <div
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form[key] ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
-                        onClick={() => setForm(f => ({ ...f, [key]: !f[key] }))}
-                      >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${form[key] ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                         {form[key] && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                       </div>
-                      <span className="text-sm font-medium text-gray-700">{label}</span>
+                      <span className={`text-sm font-semibold ${form[key] ? 'text-blue-700' : 'text-gray-700'}`}>{label}</span>
                     </div>
                     <span className="text-[10px] text-gray-400 ml-7">{description}</span>
-                  </label>
+                  </button>
                 ))}
               </div>
               {form.flash_sale && (
@@ -907,12 +910,15 @@ export default function AdminProducts() {
                       <button
                         key={key}
                         title={`Toggle ${title}`}
-                        onClick={() => base44.entities.Product.update(product.id, { [key]: !product[key] }).then(() => {
-                          queryClient.invalidateQueries({ queryKey: ['products-admin'] });
-                          queryClient.invalidateQueries({ queryKey: ['products'] });
-                          toast.success(`${title} ${!product[key] ? 'enabled' : 'disabled'}`);
-                        })}
-                        className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold transition-colors ${product[key] ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-gray-100 border-gray-300 text-gray-400'}`}
+                        onClick={() => {
+                          const newVal = !(product[key] === true);
+                          base44.entities.Product.update(product.id, { [key]: newVal }).then(() => {
+                            queryClient.invalidateQueries({ queryKey: ['products-admin'] });
+                            queryClient.invalidateQueries({ queryKey: ['products'] });
+                            toast.success(`${title} ${newVal ? 'enabled' : 'disabled'}`);
+                          });
+                        }}
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold transition-colors ${product[key] === true ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-gray-100 border-gray-300 text-gray-400'}`}
                       >
                         {label}
                       </button>

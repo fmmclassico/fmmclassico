@@ -171,29 +171,37 @@ export default function Home() {
   const hiddenFlash = getHiddenIds('flash');
   const hiddenFeatured = getHiddenIds('featured');
   const hiddenDonkomi = getHiddenIds('donkomi');
+  const hiddenNewArrivals = getHiddenIds('new_arrivals');
+  const hiddenTopSelling = getHiddenIds('top_selling');
 
   // ── STRICT TAG-BASED PRODUCT BUCKETS ──
   // Each section ONLY shows products explicitly tagged for that section.
-  // NO fallbacks. If a tag has no products, section shows empty state.
+  // NO fallbacks — p.field === true guards against undefined/null from old records.
 
   // CLASSICO Deals: only flash_sale tagged, not expired
   const classicoDeals = products.filter(p =>
-    p.flash_sale &&
+    p.flash_sale === true &&
     (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()) &&
     !hiddenFlash.includes(p.id)
   );
 
   // Donkomi Deals: only donkomi tagged
   const donkomiDeals = products.filter(p =>
-    p.donkomi &&
+    p.donkomi === true &&
     !hiddenDonkomi.includes(p.id)
   );
 
-  // New Arrivals: only new_arrivals tagged
-  const newArrivals = products.filter(p => p.new_arrivals);
+  // New Arrivals: only new_arrivals tagged — same pattern as donkomi
+  const newArrivals = products.filter(p =>
+    p.new_arrivals === true &&
+    !hiddenNewArrivals.includes(p.id)
+  );
 
-  // Top Selling: only top_selling tagged
-  const topSelling = products.filter(p => p.top_selling);
+  // Top Selling: only top_selling tagged — same pattern as donkomi
+  const topSelling = products.filter(p =>
+    p.top_selling === true &&
+    !hiddenTopSelling.includes(p.id)
+  );
 
   // Loading skeleton
   const SkeletonRow = () => (

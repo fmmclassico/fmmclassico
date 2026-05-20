@@ -446,70 +446,68 @@ export default function Home() {
       )}
 
       {/* ── NEW ARRIVALS ── */}
-       <div className="mt-5 mx-2 md:mx-4">
+      <div className="mt-5 mx-2 md:mx-4">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <Tag className="h-5 w-5 text-green-600" />
-              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">NEW ARRIVALS</h2>
-              <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full"></span>
+              <Star className="h-5 w-5 text-yellow-500 fill-yellow-400" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">New Arrivals</h2>
             </div>
             <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
               See All <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
           <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading ? <SkeletonRow /> : new_arrivals.length > 0 ? new_arrivals.map(product => (
+            {isLoading ? <SkeletonRow /> : newArrivals.length > 0 ? newArrivals.map(product => (
               <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
+                className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
                 <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                   {product.image_url
                     ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                  <span className="absolute top-1 left-1 bg-green-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full"></span>
+                  <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[8px] font-black px-1 py-0.5 rounded-full">NEW</span>
                 </div>
                 <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                <p className="text-xs font-black text-green-700">₵{product.price?.toLocaleString()}</p>
+                <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
                 {product.original_price > product.price && (
                   <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
                 )}
               </Link>
-            )) : <EmptySection label="NEW ARRIVALS" />}
+            )) : <EmptySection label="New Arrivals" />}
           </div>
         </div>
       </div>
 
-
       {/* ── TOP SELLING ── */}
-      <div className="mt-5 mx-2 md:mx-4">
+      <div className="mt-5 mx-2 md:mx-4 mb-6">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <Tag className="h-5 w-5 text-green-600" />
-              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">TOP SELLING</h2>
-              <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full"></span>
+              <TrendingUp className="h-5 w-5 text-[#2E86C1]" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Top Selling</h2>
+              <span className="bg-blue-100 text-[#2E86C1] text-[10px] font-bold px-2 py-0.5 rounded-full">🔥 Hot</span>
             </div>
             <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
               See All <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
           <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading ? <SkeletonRow /> : top_selling.length > 0 ? top_selling.map(product => (
+            {isLoading ? <SkeletonRow /> : topSelling.length > 0 ? topSelling.map((product, idx) => (
               <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
+                className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
                 <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                   {product.image_url
                     ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                  <span className="absolute top-1 left-1 bg-green-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full"></span>
+                  <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">#{idx + 1}</span>
                 </div>
                 <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                <p className="text-xs font-black text-green-700">₵{product.price?.toLocaleString()}</p>
-                {product.original_price > product.price && (
-                  <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
+                {product.reviews_count > 0 && (
+                  <p className="text-[10px] text-yellow-600 font-bold">⭐ {product.reviews_count} sold</p>
                 )}
               </Link>
-            )) : <EmptySection label="TOP SELLING" />}
+            )) : <EmptySection label="Top Selling" />}
           </div>
         </div>
       </div>

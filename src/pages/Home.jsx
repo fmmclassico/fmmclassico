@@ -174,13 +174,12 @@ export default function Home() {
   const hiddenNewArrivals = getHiddenIds('new_arrivals');
   const hiddenTopSelling = getHiddenIds('top_selling');
 
-  // ── STRICT BOOLEAN FILTERING ──
-  // ONLY products with === true for that tag appear in that section
-  // If a product doesn't have the tag explicitly set to TRUE, it doesn't appear
+  // ── PRODUCT FILTERING ──
+  // Products are filtered by checking if their tag field === true (strict equality)
+  // Only show products where the tag is explicitly set to true
 
-  // CLASSICO Deals: ONLY products with flash_sale === true AND not expired
+  // CLASSICO Deals: Products with flash_sale === true AND not expired
   const classicoDeals = products.filter(p => {
-    // ✅ STRICT: Must be exactly true
     if (p.flash_sale !== true) return false;
     // Check expiration
     if (p.flash_sale_end && new Date(p.flash_sale_end) <= new Date()) return false;
@@ -189,28 +188,28 @@ export default function Home() {
     return true;
   });
 
-  // Donkomi Deals: ONLY products with donkomi === true
+  // Donkomi Deals: Products with donkomi === true
   const donkomiDeals = products.filter(p => {
     if (p.donkomi !== true) return false;
     if (hiddenDonkomi.includes(p.id)) return false;
     return true;
   });
 
-  // New Arrivals: ONLY products with new_arrivals === true
+  // New Arrivals: Products with new_arrivals === true
   const newArrivals = products.filter(p => {
     if (p.new_arrivals !== true) return false;
     if (hiddenNewArrivals.includes(p.id)) return false;
     return true;
   });
 
-  // Top Selling: ONLY products with top_selling === true
+  // Top Selling: Products with top_selling === true
   const topSelling = products.filter(p => {
     if (p.top_selling !== true) return false;
     if (hiddenTopSelling.includes(p.id)) return false;
     return true;
   });
 
-  // Featured: ONLY products with featured === true (used by admin quick toggle)
+  // Featured: Products with featured === true
   const featuredProducts = products.filter(p => {
     if (p.featured !== true) return false;
     if (hiddenFeatured.includes(p.id)) return false;
@@ -479,7 +478,7 @@ export default function Home() {
       </div>
 
       {/* ── TOP SELLING ── */}
-      <div className="mt-5 mx-2 md:mx-4 mb-6">
+      <div className="mt-5 mx-2 md:mx-4 mb-4">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
             <div className="flex items-center gap-2">

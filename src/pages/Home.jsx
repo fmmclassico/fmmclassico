@@ -124,10 +124,13 @@ export default function Home() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: allProducts = [], isLoading } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list('-created_date', 100),
   });
+
+  // ── KEY FIX: Filter out hidden products ONCE here, use `products` everywhere below ──
+  const products = allProducts.filter(p => !p.is_hidden);
 
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {
@@ -161,8 +164,7 @@ export default function Home() {
   const hiddenFeatured = getHiddenIds('featured');
   const hiddenDonkomi = getHiddenIds('donkomi');
 
-  // Product buckets
-  const phoneAccessoryCategories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers'];
+  // ── Product buckets — all use `products` (hidden already filtered out) ──
   const flashTagged = products.filter(p => p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()) && !hiddenFlash.includes(p.id));
   const flashSaleProducts = flashTagged.length >= 2 ? flashTagged : products.filter(p => p.original_price && p.original_price > p.price && !hiddenFlash.includes(p.id)).slice(0, 6);
   const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : products.filter(p => p.featured && !hiddenFlash.includes(p.id)).slice(0, 6);
@@ -191,6 +193,7 @@ export default function Home() {
         <div className="grid grid-cols-4 gap-3">
           {HOME_CATEGORIES.map(cat => {
             const adminImg = appSettings.find(s => s.key === `cat_img_${cat.id}`)?.value;
+            // Use visible (non-hidden) products for category images
             const displayImg = adminImg || cat.image || products.find(cat.match)?.image_url;
             const isExpanded = expandedCat === cat.id;
             return (

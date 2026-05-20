@@ -105,17 +105,16 @@ const BRAND_SUBCATEGORIES = {
   },
 };
 
-// FIX 1: Added 'featured' to save payload — it was missing before
 const EMPTY_FORM = {
   name: '', description: '', price: '', original_price: '',
   main_group: '', category: '', brand: '', subcategory: '',
   stock: '', featured: false, flash_sale: false,
-  donkomi: false, review_enabled: true, rating: '', reviews_count: '',
+  donkomi: false, new_arrivals: false, top_selling: false,
+  review_enabled: true, rating: '', reviews_count: '',
   image_url: '', image_urls: [], video_url: '', video_file_url: '',
   custom_brand: '', custom_subcategory: '', flash_sale_end: '',
 };
 
-// FIX 2: getVideoEmbedUrl — now actually used for live preview
 const getVideoEmbedUrl = (url) => {
   if (!url) return null;
   const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
@@ -128,7 +127,7 @@ const getVideoEmbedUrl = (url) => {
   return { type: 'video', src: url };
 };
 
-// Rich Text Editor — unchanged
+// Rich Text Editor
 function RichTextEditor({ value, onChange }) {
   const editorRef = useRef(null);
   const isUpdating = useRef(false);
@@ -273,10 +272,6 @@ export default function AdminProducts() {
       const finalBrand = data.custom_brand && data.brand === 'Other' ? data.custom_brand : data.brand;
       const finalSubcategory = data.custom_subcategory && data.subcategory === 'Other' ? data.custom_subcategory : data.subcategory;
 
-      // FIX 1: 'featured' is now included in the payload (was missing before)
-      // FIX 3: 'new_arrivals' and 'top_selling' REMOVED from payload —
-      //         Home.jsx computes these automatically. Saving them as DB fields
-      //         did nothing on the homepage and caused confusion.
       const payload = {
         name: data.name,
         description: data.description,
@@ -289,10 +284,12 @@ export default function AdminProducts() {
         image_url: data.image_url,
         image_urls: data.image_urls || [],
         video_url: data.video_url || data.video_file_url || '',
-        // FIX 1: featured now saved correctly
         featured: data.featured === true,
         flash_sale: data.flash_sale === true,
         donkomi: data.donkomi === true,
+        // ✅ RESTORED: new_arrivals and top_selling are saved as explicit DB fields
+        new_arrivals: data.new_arrivals === true,
+        top_selling: data.top_selling === true,
         review_enabled: data.review_enabled === true,
         flash_sale_end: (data.flash_sale === true && data.flash_sale_end) ? data.flash_sale_end : null,
         rating: data.rating ? parseFloat(data.rating) : null,
@@ -384,10 +381,12 @@ export default function AdminProducts() {
       subcategory: isCustomSubcategory ? 'Other' : (product.subcategory || ''),
       custom_subcategory: isCustomSubcategory ? product.subcategory : '',
       stock: product.stock ?? '',
-      // FIX 1: featured now loaded correctly
       featured: product.featured === true,
       flash_sale: product.flash_sale === true,
       donkomi: product.donkomi === true,
+      // ✅ RESTORED: load new_arrivals and top_selling from product
+      new_arrivals: product.new_arrivals === true,
+      top_selling: product.top_selling === true,
       review_enabled: product.review_enabled === true,
       rating: product.rating ?? '',
       reviews_count: product.reviews_count ?? '',
@@ -430,7 +429,6 @@ export default function AdminProducts() {
   if (!isAdmin && user) return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
   if (!user) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
 
-  // FIX 2: Live video preview component
   const videoPreview = getVideoEmbedUrl(form.video_url);
 
   return (
@@ -533,7 +531,6 @@ export default function AdminProducts() {
                 )}
               </div>
 
-              {/* FIX 2: Video URL with live preview */}
               {!form.video_file_url && (
                 <div className="mt-2 space-y-2">
                   <Label className="text-xs text-gray-600">Or paste video URL (YouTube, Vimeo, TikTok, direct link)</Label>
@@ -543,7 +540,6 @@ export default function AdminProducts() {
                     placeholder="https://youtube.com/watch?v=..."
                     className="text-sm"
                   />
-                  {/* Live preview */}
                   {form.video_url && videoPreview && (
                     <div className="rounded-xl overflow-hidden bg-black aspect-video mt-2">
                       {videoPreview.type === 'iframe'
@@ -671,18 +667,19 @@ export default function AdminProducts() {
               <p className="text-[10px] text-gray-400 mt-1">Supports bold, italic, underline, headings, bullet/numbered lists, alignment, font size, and text color.</p>
             </div>
 
-            {/* FIX 3: Tags — removed 'new_arrivals' and 'top_selling' since Home.jsx
-                computes these automatically. Added note explaining how each section works. */}
+            {/* ✅ RESTORED: All 6 tags including new_arrivals and top_selling */}
             <div className="md:col-span-2">
               <Label className="font-semibold block mb-1">Product Tags</Label>
               <p className="text-xs text-gray-500 mb-3">
-                Only tagged products appear in their section. <strong>New Arrivals</strong> and <strong>Top Selling</strong> are auto-calculated by the homepage (newest date = New Arrivals, most reviews = Top Selling).
+                Tag a product to control which homepage section it appears in. A product only shows in a section when its tag is turned on.
               </p>
               <div className="flex flex-wrap gap-3">
                 {[
-                  { key: 'featured', label: '⭐ Featured', description: 'Shows in Featured / CLASSICO Deals section' },
+                  { key: 'featured', label: '⭐ Featured', description: 'Shows in Featured section' },
                   { key: 'flash_sale', label: '⚡ CLASSICO Deals', description: 'Shows in Flash Sale section' },
                   { key: 'donkomi', label: '🔥 Donkomi Deals', description: 'Shows in Donkomi Best Prices section' },
+                  { key: 'new_arrivals', label: '🆕 New Arrivals', description: 'Shows in New Arrivals section' },
+                  { key: 'top_selling', label: '📈 Top Selling', description: 'Shows in Top Selling section' },
                   { key: 'review_enabled', label: '💬 Reviews Enabled', description: 'Allow customer reviews on this product' },
                 ].map(({ key, label, description }) => (
                   <button key={key} type="button"
@@ -704,15 +701,6 @@ export default function AdminProducts() {
                   <Input type="datetime-local" value={form.flash_sale_end || ''} onChange={e => setForm(f => ({ ...f, flash_sale_end: e.target.value }))} />
                 </div>
               )}
-
-              {/* FIX 3: Info box explaining auto-sections */}
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs text-blue-700 font-semibold mb-1">ℹ️ Auto-calculated sections:</p>
-                <ul className="text-xs text-blue-600 space-y-0.5 list-disc list-inside">
-                  <li><strong>New Arrivals</strong> — automatically shows the 6 most recently added products</li>
-                  <li><strong>Top Selling</strong> — automatically shows products with the highest review/sold count</li>
-                </ul>
-              </div>
             </div>
           </div>
 
@@ -739,11 +727,12 @@ export default function AdminProducts() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {products.map(product => {
             const isSelected = selectedIds.includes(product.id);
-            // FIX 4: Only render badges for tags that are actually true
             const activeTags = [
               product.featured === true && { label: 'Featured', color: 'bg-purple-500' },
               product.flash_sale === true && { label: 'CLASSICO', color: 'bg-orange-500' },
               product.donkomi === true && { label: 'Donkomi', color: 'bg-green-500' },
+              product.new_arrivals === true && { label: 'New', color: 'bg-yellow-500' },
+              product.top_selling === true && { label: 'Top', color: 'bg-blue-500' },
             ].filter(Boolean);
 
             return (
@@ -758,7 +747,6 @@ export default function AdminProducts() {
                       className="w-4 h-4 cursor-pointer accent-blue-600" onClick={e => e.stopPropagation()} />
                   </div>
 
-                  {/* FIX 4: Only show badges for active tags */}
                   {activeTags.length > 0 && (
                     <div className="absolute top-1 left-1 flex flex-col gap-1">
                       {activeTags.map((tag, i) => (
@@ -782,12 +770,14 @@ export default function AdminProducts() {
                   )}
                   {product.stock != null && <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>}
 
-                  {/* Quick tag toggles — only for the 3 real DB tags */}
+                  {/* ✅ Quick tag toggles — now includes new_arrivals and top_selling */}
                   <div className="flex gap-1 mt-1.5 flex-wrap">
                     {[
                       { key: 'featured', label: '⭐', title: 'Featured' },
                       { key: 'flash_sale', label: '⚡', title: 'CLASSICO Deals' },
                       { key: 'donkomi', label: '🔥', title: 'Donkomi' },
+                      { key: 'new_arrivals', label: '🆕', title: 'New Arrivals' },
+                      { key: 'top_selling', label: '📈', title: 'Top Selling' },
                     ].map(({ key, label, title }) => (
                       <button key={key} title={`Toggle ${title}`}
                         onClick={() => {

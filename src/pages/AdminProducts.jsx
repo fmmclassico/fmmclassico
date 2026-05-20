@@ -302,6 +302,9 @@ export default function AdminProducts() {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const formRef = React.useRef(form);
+  // Keep formRef always in sync so save button never captures stale state
+  React.useEffect(() => { formRef.current = form; }, [form]);
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
@@ -327,22 +330,46 @@ export default function AdminProducts() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      const { main_group, custom_brand, custom_subcategory, ...rest } = data;
+    mutationFn: async () => {
+      // Always read from formRef — never stale, even if React batched state updates
+      const data = formRef.current;
       
-      const finalBrand = showCustomBrand && custom_brand ? custom_brand : data.brand;
-      const finalSubcategory = showCustomSubcategory && custom_subcategory ? custom_subcategory : data.subcategory;
-      
+      const finalBrand = data.custom_brand && data.brand === 'Other' ? data.custom_brand : data.brand;
+      const finalSubcategory = data.custom_subcategory && data.subcategory === 'Other' ? data.custom_subcategory : data.subcategory;
+
+      // Explicitly list every field — never rely on ...spread which can drop fields
       const payload = {
-        ...rest,
+        name: data.name,
+        description: data.description,
+        category: data.category,
         brand: finalBrand,
         subcategory: finalSubcategory,
         price: parseFloat(data.price) || 0,
-        original_price: data.original_price ? parseFloat(data.original_price) : undefined,
-        stock: data.stock !== '' ? parseInt(data.stock) : undefined,
-        rating: data.rating ? parseFloat(data.rating) : undefined,
-        reviews_count: data.reviews_count ? parseInt(data.reviews_count) : undefined,
+        original_price: data.original_price ? parseFloat(data.original_price) : null,
+        stock: data.stock !== '' && data.stock != null ? parseInt(data.stock) : null,
+        image_url: data.image_url,
+        image_urls: data.image_urls || [],
+        video_url: data.video_url || '',
+        video_file_url: data.video_file_url || '',
+        // ── boolean tag fields — ALL explicitly set ──
+        featured: data.featured === true,
+        flash_sale: data.flash_sale === true,
+        donkomi: data.donkomi === true,
+        new_arrivals: data.new_arrivals === true,
+        top_selling: data.top_selling === true,
+        review_enabled: data.review_enabled !== false,
+        flash_sale_end: data.flash_sale_end || null,
+        rating: data.rating ? parseFloat(data.rating) : null,
+        reviews_count: data.reviews_count ? parseInt(data.reviews_count) : null,
       };
+
+      console.log('[SAVE] payload booleans:', {
+        featured: payload.featured,
+        flash_sale: payload.flash_sale,
+        donkomi: payload.donkomi,
+        new_arrivals: payload.new_arrivals,
+        top_selling: payload.top_selling,
+      });
       
       if (editingProduct) {
         return base44.entities.Product.update(editingProduct.id, payload);
@@ -837,7 +864,7 @@ export default function AdminProducts() {
 
           <div className="flex gap-3 mt-6">
             <Button
-              onClick={() => saveMutation.mutate(form)}
+              onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending || !form.name || !form.price || !form.category}
               className="bg-blue-600 hover:bg-blue-700 gap-2"
             >

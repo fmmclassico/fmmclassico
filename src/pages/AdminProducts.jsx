@@ -139,7 +139,7 @@ const EMPTY_FORM = {
   donkomi: false, new_arrivals: false, top_selling: false,
   review_enabled: true, rating: '', reviews_count: '',
   image_url: '', image_urls: [], video_url: '', video_file_url: '',
-  custom_brand: '', custom_subcategory: '',
+  custom_brand: '', custom_subcategory: '', flash_sale_end: '',
 };
 
 // ── RICH TEXT TOOLBAR COMPONENT ──────────────────────────────────────────────
@@ -147,7 +147,6 @@ function RichTextEditor({ value, onChange }) {
   const editorRef = useRef(null);
   const isUpdating = useRef(false);
 
-  // Sync incoming value to editor only when it differs (avoids cursor jump)
   useEffect(() => {
     if (!editorRef.current) return;
     if (isUpdating.current) return;
@@ -303,7 +302,6 @@ export default function AdminProducts() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const formRef = React.useRef(form);
-  // Keep formRef always in sync so save button never captures stale state
   React.useEffect(() => { formRef.current = form; }, [form]);
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
@@ -331,13 +329,13 @@ export default function AdminProducts() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      // Always read from formRef — never stale, even if React batched state updates
       const data = formRef.current;
       
       const finalBrand = data.custom_brand && data.brand === 'Other' ? data.custom_brand : data.brand;
       const finalSubcategory = data.custom_subcategory && data.subcategory === 'Other' ? data.custom_subcategory : data.subcategory;
 
-      // Explicitly list every field — never rely on ...spread which can drop fields
+      // ✅ STRICT: Only set boolean fields when explicitly TRUE
+      // Everything else is FALSE
       const payload = {
         name: data.name,
         description: data.description,
@@ -351,24 +349,26 @@ export default function AdminProducts() {
         image_urls: data.image_urls || [],
         video_url: data.video_url || '',
         video_file_url: data.video_file_url || '',
-        // ── boolean tag fields — ALL explicitly set ──
-        featured: data.featured === true,
-        flash_sale: data.flash_sale === true,
-        donkomi: data.donkomi === true,
-        new_arrivals: data.new_arrivals === true,
-        top_selling: data.top_selling === true,
-        review_enabled: data.review_enabled !== false,
-        flash_sale_end: data.flash_sale_end || null,
+        // ── STRICT BOOLEAN HANDLING ──
+        // Only TRUE if user clicked the tag, otherwise FALSE
+        featured: data.featured === true ? true : false,
+        flash_sale: data.flash_sale === true ? true : false,
+        donkomi: data.donkomi === true ? true : false,
+        new_arrivals: data.new_arrivals === true ? true : false,
+        top_selling: data.top_selling === true ? true : false,
+        review_enabled: data.review_enabled === true ? true : false,
+        flash_sale_end: (data.flash_sale === true && data.flash_sale_end) ? data.flash_sale_end : null,
         rating: data.rating ? parseFloat(data.rating) : null,
         reviews_count: data.reviews_count ? parseInt(data.reviews_count) : null,
       };
 
-      console.log('[SAVE] payload booleans:', {
+      console.log('[SAVE] Sending payload with booleans:', {
         featured: payload.featured,
         flash_sale: payload.flash_sale,
         donkomi: payload.donkomi,
         new_arrivals: payload.new_arrivals,
         top_selling: payload.top_selling,
+        review_enabled: payload.review_enabled,
       });
       
       if (editingProduct) {
@@ -470,12 +470,13 @@ export default function AdminProducts() {
       subcategory: isCustomSubcategory ? 'Other' : (product.subcategory || ''),
       custom_subcategory: isCustomSubcategory ? product.subcategory : '',
       stock: product.stock ?? '',
-      featured: product.featured || false,
-      flash_sale: product.flash_sale || false,
-      donkomi: product.donkomi || false,
-      new_arrivals: product.new_arrivals || false,
-      top_selling: product.top_selling || false,
-      review_enabled: product.review_enabled !== false,
+      // ✅ STRICT: Load only what's explicitly TRUE
+      featured: product.featured === true,
+      flash_sale: product.flash_sale === true,
+      donkomi: product.donkomi === true,
+      new_arrivals: product.new_arrivals === true,
+      top_selling: product.top_selling === true,
+      review_enabled: product.review_enabled === true,
       rating: product.rating ?? '',
       reviews_count: product.reviews_count ?? '',
       image_url: product.image_url || '',
@@ -821,11 +822,11 @@ export default function AdminProducts() {
             <div className="md:col-span-2">
               <Label className="font-semibold block mb-1">Product Tags</Label>
               <p className="text-xs text-gray-500 mb-3">
-                A product appears <strong>ONLY</strong> in its selected section(s) on the homepage. Untagged products won't show in any section.
+                Click tags to add product to sections. <strong>Only tagged products appear in their section.</strong> Untagged products won't show anywhere.
               </p>
               <div className="flex flex-wrap gap-3">
                 {[
-                  { key: 'featured', label: '⭐ Featured', description: 'Main featured section' },
+                  { key: 'featured', label: '⭐ Featured', description: 'Featured section' },
                   { key: 'flash_sale', label: '⚡ CLASSICO Deals', description: 'Flash sale section' },
                   { key: 'donkomi', label: '🔥 Donkomi Deals', description: 'Donkomi section' },
                   { key: 'new_arrivals', label: '🆕 New Arrivals', description: 'New products section' },

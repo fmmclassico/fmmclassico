@@ -105,17 +105,23 @@ const BRAND_SUBCATEGORIES = {
   },
 };
 
-// FIXED: All product tag fields now included in EMPTY_FORM
+// ✅ FIXED: Added missing new_arrivals and top_selling to EMPTY_FORM
 const EMPTY_FORM = {
   name: '', description: '', price: '', original_price: '',
   main_group: '', category: '', brand: '', subcategory: '',
-  stock: '', featured: false, flash_sale: false, new_arrivals: false, top_selling: false,
-  donkomi: false, review_enabled: true, rating: '', reviews_count: '',
+  stock: '',
+  // ✅ ALL TAG FIELDS MUST BE HERE
+  featured: false,
+  flash_sale: false,
+  donkomi: false,
+  new_arrivals: false,
+  top_selling: false,
+  review_enabled: true,
+  rating: '', reviews_count: '',
   image_url: '', image_urls: [], video_url: '', video_file_url: '',
   custom_brand: '', custom_subcategory: '', flash_sale_end: '',
 };
 
-// Video URL parser with live preview support
 const getVideoEmbedUrl = (url) => {
   if (!url) return null;
   const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
@@ -128,7 +134,6 @@ const getVideoEmbedUrl = (url) => {
   return { type: 'video', src: url };
 };
 
-// Rich Text Editor
 function RichTextEditor({ value, onChange }) {
   const editorRef = useRef(null);
   const isUpdating = useRef(false);
@@ -273,7 +278,7 @@ export default function AdminProducts() {
       const finalBrand = data.custom_brand && data.brand === 'Other' ? data.custom_brand : data.brand;
       const finalSubcategory = data.custom_subcategory && data.subcategory === 'Other' ? data.custom_subcategory : data.subcategory;
 
-      // FIXED: All tag fields now properly saved in payload
+      // ✅ FIXED: ALL tag fields now in payload with strict === true checks
       const payload = {
         name: data.name,
         description: data.description,
@@ -286,16 +291,26 @@ export default function AdminProducts() {
         image_url: data.image_url,
         image_urls: data.image_urls || [],
         video_url: data.video_url || data.video_file_url || '',
-        featured: data.featured === true,
-        flash_sale: data.flash_sale === true,
-        new_arrivals: data.new_arrivals === true,
-        top_selling: data.top_selling === true,
-        donkomi: data.donkomi === true,
-        review_enabled: data.review_enabled === true,
+        // ✅ ALL TAGS WITH STRICT BOOLEAN CONVERSION
+        featured: data.featured === true ? true : false,
+        flash_sale: data.flash_sale === true ? true : false,
+        donkomi: data.donkomi === true ? true : false,
+        new_arrivals: data.new_arrivals === true ? true : false,
+        top_selling: data.top_selling === true ? true : false,
+        review_enabled: data.review_enabled === true ? true : false,
         flash_sale_end: (data.flash_sale === true && data.flash_sale_end) ? data.flash_sale_end : null,
         rating: data.rating ? parseFloat(data.rating) : null,
         reviews_count: data.reviews_count ? parseInt(data.reviews_count) : null,
       };
+
+      console.log('[SAVE] Payload tags:', {
+        featured: payload.featured,
+        flash_sale: payload.flash_sale,
+        donkomi: payload.donkomi,
+        new_arrivals: payload.new_arrivals,
+        top_selling: payload.top_selling,
+        review_enabled: payload.review_enabled,
+      });
 
       if (editingProduct) return base44.entities.Product.update(editingProduct.id, payload);
       return base44.entities.Product.create(payload);
@@ -370,7 +385,7 @@ export default function AdminProducts() {
     setShowCustomBrand(isCustomBrand);
     setShowCustomSubcategory(isCustomSubcategory);
 
-    // FIXED: All tag fields now loaded correctly
+    // ✅ FIXED: ALL tag fields loaded, including new_arrivals and top_selling
     setForm({
       name: product.name || '',
       description: product.description || '',
@@ -385,9 +400,9 @@ export default function AdminProducts() {
       stock: product.stock ?? '',
       featured: product.featured === true,
       flash_sale: product.flash_sale === true,
+      donkomi: product.donkomi === true,
       new_arrivals: product.new_arrivals === true,
       top_selling: product.top_selling === true,
-      donkomi: product.donkomi === true,
       review_enabled: product.review_enabled === true,
       rating: product.rating ?? '',
       reviews_count: product.reviews_count ?? '',
@@ -542,7 +557,6 @@ export default function AdminProducts() {
                     placeholder="https://youtube.com/watch?v=..."
                     className="text-sm"
                   />
-                  {/* Live preview */}
                   {form.video_url && videoPreview && (
                     <div className="rounded-xl overflow-hidden bg-black aspect-video mt-2">
                       {videoPreview.type === 'iframe'
@@ -670,20 +684,20 @@ export default function AdminProducts() {
               <p className="text-[10px] text-gray-400 mt-1">Supports bold, italic, underline, headings, bullet/numbered lists, alignment, font size, and text color.</p>
             </div>
 
-            {/* FIXED: Product Tags — now includes new_arrivals and top_selling */}
+            {/* ✅ PRODUCT TAGS - NOW INCLUDES ALL TAGS */}
             <div className="md:col-span-2">
               <Label className="font-semibold block mb-1">Product Tags</Label>
               <p className="text-xs text-gray-500 mb-3">
-                Only tagged products appear in their section. Check the boxes below to add products to specific sections on the homepage.
+                Click tags below to add products to specific sections. Only tagged products appear in their section.
               </p>
               <div className="flex flex-wrap gap-3">
                 {[
-                  { key: 'featured', label: '⭐ Featured', description: 'Shows in Featured / CLASSICO Deals section' },
+                  { key: 'featured', label: '⭐ Featured', description: 'Shows in Featured section' },
                   { key: 'flash_sale', label: '⚡ CLASSICO Deals', description: 'Shows in Flash Sale section' },
-                  { key: 'donkomi', label: '🔥 Donkomi Deals', description: 'Shows in Donkomi Best Prices section' },
+                  { key: 'donkomi', label: '🔥 Donkomi Deals', description: 'Shows in Donkomi Best Prices' },
                   { key: 'new_arrivals', label: '✨ New Arrivals', description: 'Shows in New Arrivals section' },
-                  { key: 'top_selling', label: '🔥 Top Selling', description: 'Shows in Top Selling section' },
-                  { key: 'review_enabled', label: '💬 Reviews Enabled', description: 'Allow customer reviews on this product' },
+                  { key: 'top_selling', label: '🏆 Top Selling', description: 'Shows in Top Selling section' },
+                  { key: 'review_enabled', label: '💬 Reviews Enabled', description: 'Allow customer reviews' },
                 ].map(({ key, label, description }) => (
                   <button key={key} type="button"
                     onClick={() => setForm(f => ({ ...f, [key]: !f[key] }))}
@@ -730,7 +744,6 @@ export default function AdminProducts() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {products.map(product => {
             const isSelected = selectedIds.includes(product.id);
-            // FIXED: Only show badges for tags that are actually true
             const activeTags = [
               product.featured === true && { label: 'Featured', color: 'bg-purple-500' },
               product.flash_sale === true && { label: 'CLASSICO', color: 'bg-orange-500' },
@@ -751,7 +764,6 @@ export default function AdminProducts() {
                       className="w-4 h-4 cursor-pointer accent-blue-600" onClick={e => e.stopPropagation()} />
                   </div>
 
-                  {/* Show badges for active tags */}
                   {activeTags.length > 0 && (
                     <div className="absolute top-1 left-1 flex flex-col gap-1">
                       {activeTags.map((tag, i) => (
@@ -775,14 +787,14 @@ export default function AdminProducts() {
                   )}
                   {product.stock != null && <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>}
 
-                  {/* Quick tag toggles — now includes new_arrivals and top_selling */}
+                  {/* Quick tag toggles — NOW includes all tags */}
                   <div className="flex gap-1 mt-1.5 flex-wrap">
                     {[
                       { key: 'featured', label: '⭐', title: 'Featured' },
                       { key: 'flash_sale', label: '⚡', title: 'CLASSICO Deals' },
                       { key: 'new_arrivals', label: '✨', title: 'New Arrivals' },
-                      { key: 'top_selling', label: '🔥', title: 'Top Selling' },
-                      { key: 'donkomi', label: '🎯', title: 'Donkomi' },
+                      { key: 'top_selling', label: '🏆', title: 'Top Selling' },
+                      { key: 'donkomi', label: '🔥', title: 'Donkomi' },
                     ].map(({ key, label, title }) => (
                       <button key={key} title={`Toggle ${title}`}
                         onClick={() => {

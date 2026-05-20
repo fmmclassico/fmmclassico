@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload, X, Pencil, Plus, Trash2, ImagePlus, Loader2, Check, Video } from 'lucide-react';
+import { Upload, X, Pencil, Plus, Trash2, ImagePlus, Loader2, Check, Video, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ── STRICT CATEGORY STRUCTURE ─────────────────────────────────────────────────
@@ -115,33 +114,21 @@ const BRAND_SUBCATEGORIES = {
   },
 };
 
-// Helper function to extract video ID and generate embed URL
 const getVideoEmbedUrl = (url) => {
   if (!url) return null;
-  
-  // YouTube
   if (url.includes('youtube.com') || url.includes('youtu.be')) {
     const youtubeMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
     if (youtubeMatch) return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
   }
-  
-  // TikTok
   if (url.includes('tiktok.com')) {
     const tiktokMatch = url.match(/\/video\/(\d+)/);
     if (tiktokMatch) return `https://www.tiktok.com/embed/v2/${tiktokMatch[1]}`;
   }
-  
-  // Pinterest
-  if (url.includes('pinterest.com') || url.includes('pin.it')) {
-    return url;
-  }
-  
-  // Vimeo
+  if (url.includes('pinterest.com') || url.includes('pin.it')) return url;
   if (url.includes('vimeo.com')) {
     const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
     if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
   }
-  
   return url;
 };
 
@@ -154,6 +141,160 @@ const EMPTY_FORM = {
   image_url: '', image_urls: [], video_url: '', video_file_url: '',
   custom_brand: '', custom_subcategory: '',
 };
+
+// ── RICH TEXT TOOLBAR COMPONENT ──────────────────────────────────────────────
+function RichTextEditor({ value, onChange }) {
+  const editorRef = useRef(null);
+  const isUpdating = useRef(false);
+
+  // Sync incoming value to editor only when it differs (avoids cursor jump)
+  useEffect(() => {
+    if (!editorRef.current) return;
+    if (isUpdating.current) return;
+    if (editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value || '';
+    }
+  }, [value]);
+
+  const exec = (command, val = null) => {
+    editorRef.current?.focus();
+    document.execCommand(command, false, val);
+    syncContent();
+  };
+
+  const syncContent = () => {
+    if (!editorRef.current) return;
+    isUpdating.current = true;
+    onChange(editorRef.current.innerHTML);
+    setTimeout(() => { isUpdating.current = false; }, 0);
+  };
+
+  const ToolBtn = ({ icon: Icon, command, title, value: val }) => (
+    <button
+      type="button"
+      title={title}
+      onMouseDown={e => { e.preventDefault(); exec(command, val); }}
+      className="p-1.5 rounded hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-colors"
+    >
+      <Icon className="h-3.5 w-3.5" />
+    </button>
+  );
+
+  const HeadingBtn = ({ label, tag }) => (
+    <button
+      type="button"
+      title={`Heading ${tag}`}
+      onMouseDown={e => { e.preventDefault(); exec('formatBlock', tag); }}
+      className="px-2 py-1 rounded hover:bg-gray-200 text-gray-600 hover:text-gray-900 text-xs font-bold transition-colors"
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+        <ToolBtn icon={Bold} command="bold" title="Bold (Ctrl+B)" />
+        <ToolBtn icon={Italic} command="italic" title="Italic (Ctrl+I)" />
+        <ToolBtn icon={Underline} command="underline" title="Underline (Ctrl+U)" />
+
+        <div className="w-px h-4 bg-gray-300 mx-1" />
+
+        <HeadingBtn label="H1" tag="h1" />
+        <HeadingBtn label="H2" tag="h2" />
+        <HeadingBtn label="H3" tag="h3" />
+        <button
+          type="button"
+          title="Normal text"
+          onMouseDown={e => { e.preventDefault(); exec('formatBlock', 'p'); }}
+          className="px-2 py-1 rounded hover:bg-gray-200 text-gray-600 hover:text-gray-900 text-xs transition-colors"
+        >
+          ¶
+        </button>
+
+        <div className="w-px h-4 bg-gray-300 mx-1" />
+
+        <ToolBtn icon={List} command="insertUnorderedList" title="Bullet List" />
+        <ToolBtn icon={ListOrdered} command="insertOrderedList" title="Numbered List" />
+
+        <div className="w-px h-4 bg-gray-300 mx-1" />
+
+        <ToolBtn icon={AlignLeft} command="justifyLeft" title="Align Left" />
+        <ToolBtn icon={AlignCenter} command="justifyCenter" title="Align Center" />
+        <ToolBtn icon={AlignRight} command="justifyRight" title="Align Right" />
+
+        <div className="w-px h-4 bg-gray-300 mx-1" />
+
+        {/* Font size */}
+        <select
+          title="Font Size"
+          className="text-xs border border-gray-200 rounded px-1 py-0.5 bg-white text-gray-600"
+          defaultValue=""
+          onChange={e => { exec('fontSize', e.target.value); e.target.value = ''; }}
+        >
+          <option value="" disabled>Size</option>
+          <option value="1">XS</option>
+          <option value="2">S</option>
+          <option value="3">M</option>
+          <option value="4">L</option>
+          <option value="5">XL</option>
+          <option value="6">XXL</option>
+        </select>
+
+        {/* Text color */}
+        <label title="Text Color" className="cursor-pointer p-1.5 rounded hover:bg-gray-200 flex items-center gap-0.5">
+          <span className="text-xs font-bold text-gray-600">A</span>
+          <input
+            type="color"
+            className="w-0 h-0 opacity-0 absolute"
+            onChange={e => exec('foreColor', e.target.value)}
+          />
+        </label>
+
+        <div className="ml-auto">
+          <button
+            type="button"
+            title="Clear formatting"
+            onMouseDown={e => { e.preventDefault(); exec('removeFormat'); }}
+            className="px-2 py-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 text-xs transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      {/* Editable area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={syncContent}
+        onBlur={syncContent}
+        className="min-h-[120px] p-3 text-sm text-gray-800 focus:outline-none"
+        style={{
+          lineHeight: '1.6',
+        }}
+        data-placeholder="Product description... Use the toolbar above for bold, italic, underline, headings, lists and more."
+      />
+
+      <style>{`
+        [contenteditable]:empty:before {
+          content: attr(data-placeholder);
+          color: #9ca3af;
+          pointer-events: none;
+        }
+        [contenteditable] h1 { font-size: 1.4em; font-weight: 800; margin: 4px 0; }
+        [contenteditable] h2 { font-size: 1.2em; font-weight: 700; margin: 3px 0; }
+        [contenteditable] h3 { font-size: 1.05em; font-weight: 600; margin: 2px 0; }
+        [contenteditable] ul { list-style: disc; padding-left: 1.5em; margin: 4px 0; }
+        [contenteditable] ol { list-style: decimal; padding-left: 1.5em; margin: 4px 0; }
+        [contenteditable] li { margin: 2px 0; }
+        [contenteditable] b, [contenteditable] strong { font-weight: 700; }
+      `}</style>
+    </div>
+  );
+}
 
 export default function AdminProducts() {
   const [user, setUser] = useState(null);
@@ -636,16 +777,23 @@ export default function AdminProducts() {
               <Label>Stock Quantity — optional</Label>
               <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="Leave empty for unlimited" />
             </div>
-            
+
+            {/* ── RICH TEXT DESCRIPTION ── */}
             <div className="md:col-span-2">
-              <Label>Description</Label>
-              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Product description..." />
+              <Label className="font-semibold mb-2 block">Description</Label>
+              <RichTextEditor
+                value={form.description}
+                onChange={val => setForm(f => ({ ...f, description: val }))}
+              />
+              <p className="text-[10px] text-gray-400 mt-1">Supports bold, italic, underline, headings, bullet/numbered lists, alignment, font size, and text color.</p>
             </div>
 
             {/* Product Tags */}
             <div className="md:col-span-2">
-              <Label className="font-semibold block mb-2">Product Tags (Select where this product will appear)</Label>
-              <p className="text-xs text-gray-500 mb-3">Product will ONLY show in the selected sections on the homepage</p>
+              <Label className="font-semibold block mb-1">Product Tags</Label>
+              <p className="text-xs text-gray-500 mb-3">
+                A product appears <strong>ONLY</strong> in its selected section(s) on the homepage. Untagged products won't show in any section.
+              </p>
               <div className="flex flex-wrap gap-3">
                 {[
                   { key: 'featured', label: '⭐ Featured', description: 'Main featured section' },

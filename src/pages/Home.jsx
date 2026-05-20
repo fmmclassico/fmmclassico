@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronRight, Zap, Star, Tag, Home as HomeIcon, Smartphone, Headphones, Tv, ShoppingBag, Gem, TrendingUp } from 'lucide-react';
+import { ChevronRight, Zap, Star, Tag, Home as HomeIcon, Smartphone, Headphones, Tv, ShoppingBag, Gem, TrendingUp, Battery, Cable, Wifi, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import HeroBanner from '../components/home/HeroBanner';
 import FlashSaleCountdown from '../components/home/FlashSaleCountdown';
@@ -93,16 +93,6 @@ const HOME_CATEGORIES = [
   },
 ];
 
-// ── EMPTY STATE COMPONENT ──
-function EmptySection({ label }) {
-  return (
-    <div className="flex-shrink-0 w-full flex flex-col items-center justify-center py-8 text-gray-400 text-xs font-medium gap-1">
-      <ShoppingBag className="h-8 w-8 opacity-30" />
-      <span>No {label} yet</span>
-    </div>
-  );
-}
-
 export default function Home() {
   const [user, setUser] = useState(null);
   const [expandedCat, setExpandedCat] = useState(null);
@@ -120,6 +110,8 @@ export default function Home() {
     if (!raw) return null;
     try { const d = JSON.parse(raw); return d?.active && d?.image_url ? d : null; } catch { return null; }
   };
+  const notice1 = getPromoNotice('promo_notice_1');
+  const notice2 = getPromoNotice('promo_notice_2');
 
   const showBrandSection = appSettings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
 
@@ -128,17 +120,16 @@ export default function Home() {
   const showFlashTimer = flashConfig.show_timer !== false;
   const flashTimerEndTime = flashConfig.end_time || null;
 
+
+
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const { data: allProducts = [], isLoading } = useQuery({
+  const { data: products = [], isLoading } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list('-created_date', 100),
   });
-
-  // Filter out hidden products
-  const products = allProducts.filter(p => !p.is_hidden);
 
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {
@@ -171,67 +162,25 @@ export default function Home() {
   const hiddenFlash = getHiddenIds('flash');
   const hiddenFeatured = getHiddenIds('featured');
   const hiddenDonkomi = getHiddenIds('donkomi');
-  const hiddenNewArrivals = getHiddenIds('new_arrivals');
-  const hiddenTopSelling = getHiddenIds('top_selling');
 
-  // ── STRICT BOOLEAN FILTERING ──
-  // ONLY products with === true for that tag appear in that section
-  // If a product doesn't have the tag explicitly set to TRUE, it doesn't appear
-
-  // CLASSICO Deals: ONLY products with flash_sale === true AND not expired
-  const classicoDeals = products.filter(p => {
-    // ✅ STRICT: Must be exactly true
-    if (p.flash_sale !== true) return false;
-    // Check expiration
-    if (p.flash_sale_end && new Date(p.flash_sale_end) <= new Date()) return false;
-    // Check hidden list
-    if (hiddenFlash.includes(p.id)) return false;
-    return true;
-  });
-
-  // Donkomi Deals: ONLY products with donkomi === true
-  const donkomiDeals = products.filter(p => {
-    if (p.donkomi !== true) return false;
-    if (hiddenDonkomi.includes(p.id)) return false;
-    return true;
-  });
-
-  // New Arrivals: ONLY products with new_arrivals === true
-  const newArrivals = products.filter(p => {
-    if (p.new_arrivals !== true) return false;
-    if (hiddenNewArrivals.includes(p.id)) return false;
-    return true;
-  });
-
-  // Top Selling: ONLY products with top_selling === true
-  const topSelling = products.filter(p => {
-    if (p.top_selling !== true) return false;
-    if (hiddenTopSelling.includes(p.id)) return false;
-    return true;
-  });
-
-  // Featured: ONLY products with featured === true (used by admin quick toggle)
-  const featuredProducts = products.filter(p => {
-    if (p.featured !== true) return false;
-    if (hiddenFeatured.includes(p.id)) return false;
-    return true;
-  });
-
-  // Loading skeleton
-  const SkeletonRow = () => (
-    <>
-      {Array(5).fill(0).map((_, i) => (
-        <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
-          <div className="aspect-square bg-gray-200 rounded animate-pulse" />
-          <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
-          <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
-        </div>
-      ))}
-    </>
-  );
+  // Product buckets
+  const phoneAccessoryCategories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers'];
+  // Flash sale: prefer products tagged flash_sale=true, fallback to discounted
+  const flashTagged = products.filter(p => p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()) && !hiddenFlash.includes(p.id));
+  const flashSaleProducts = flashTagged.length >= 2 ? flashTagged : products.filter(p => p.original_price && p.original_price > p.price && !hiddenFlash.includes(p.id)).slice(0, 6);
+  const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : products.filter(p => p.featured && !hiddenFlash.includes(p.id)).slice(0, 6);
+  const flashSaleEndTime = flashTagged.length > 0 ? flashTagged[0].flash_sale_end : null;
+  const newArrivals = [...products].filter(p => p.category !== 'home_appliances').sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 6);
+  const classicoDeals = products.filter(p => p.featured && !hiddenFeatured.includes(p.id)).slice(0, 6);
+  // Donkomi: prefer donkomi-tagged, fallback to cheapest
+  const donkomiTagged = products.filter(p => p.donkomi && !hiddenDonkomi.includes(p.id));
+  const donkomiDeals = donkomiTagged.length >= 2 ? donkomiTagged.slice(0, 6) : [...products].filter(p => p.price > 0 && p.category !== 'home_appliances' && !hiddenDonkomi.includes(p.id)).sort((a, b) => a.price - b.price).slice(0, 6);
+  // Top selling = highest reviews_count products
+  const topSelling = [...products].filter(p => p.reviews_count > 0).sort((a, b) => (b.reviews_count || 0) - (a.reviews_count || 0)).slice(0, 6);
+  const topSellingFallback = topSelling.length >= 2 ? topSelling : [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 6);
 
   return (
-    <div className="bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
+    <div className="pb-6 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
 
       {/* Hero Slider */}
       <HeroBanner />
@@ -284,7 +233,7 @@ export default function Home() {
         })()}
       </div>
 
-      {/* ── PROMO CARDS SCROLL ── */}
+      {/* ── PROMO CARDS SCROLL (same design as category cards) ── */}
       {(() => {
         const PROMO_KEYS = ['promo_card_1','promo_card_2','promo_card_3','promo_card_4','promo_card_5','promo_card_6'];
         const allCards = PROMO_KEYS.map(k => {
@@ -351,26 +300,34 @@ export default function Home() {
             </Link>
           </div>
           <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading ? <SkeletonRow /> : classicoDeals.length > 0 ? classicoDeals.map(product => (
-              <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
-                <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
-                  {product.image_url
-                    ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                  {product.original_price > product.price && (
-                    <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">
-                      -{Math.round((1 - product.price / product.original_price) * 100)}%
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
-                {product.original_price > product.price && (
-                  <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
-                )}
-              </Link>
-            )) : <EmptySection label="CLASSICO Deals" />}
+            {isLoading
+              ? Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  </div>
+                ))
+              : (flashItems.length > 0 ? flashItems : products.filter(p => !hiddenFlash.includes(p.id)).slice(0, 5)).map(product => (
+                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
+                      {product.image_url
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                      {product.original_price > product.price && (
+                       <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">
+                         -{Math.round((1 - product.price / product.original_price) * 100)}%
+                       </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                    <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && (
+                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                    )}
+                  </Link>
+                ))}
           </div>
         </div>
       </div>
@@ -389,60 +346,75 @@ export default function Home() {
             </Link>
           </div>
           <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading ? <SkeletonRow /> : donkomiDeals.length > 0 ? donkomiDeals.map(product => (
-              <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
-                <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
-                  {product.image_url
-                    ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                  <span className="absolute top-1 left-1 bg-green-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">🔥</span>
-                </div>
-                <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                <p className="text-xs font-black text-green-700">₵{product.price?.toLocaleString()}</p>
-                {product.original_price > product.price && (
-                  <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
-                )}
-              </Link>
-            )) : <EmptySection label="Donkomi Deals" />}
+            {isLoading
+              ? Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  </div>
+                ))
+              : (donkomiDeals.length > 0 ? donkomiDeals : products.filter(p => !hiddenDonkomi.includes(p.id)).slice(0, 5)).map(product => (
+                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
+                      {product.image_url
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                      <span className="absolute top-1 left-1 bg-green-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">🔥</span>
+                    </div>
+                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                    <p className="text-xs font-black text-green-700">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && (
+                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                    )}
+                  </Link>
+                ))}
           </div>
         </div>
       </div>
 
       {/* ── SHOP BY BRAND ── */}
       {showBrandSection && (
-        <div className="mt-5 mx-2 md:mx-4">
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <Gem className="h-5 w-5 text-purple-600" />
-                <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Shop by Brand</h2>
-              </div>
-              <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
-                See All <ChevronRight className="h-3 w-3" />
-              </Link>
+      <div className="mt-5 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <Gem className="h-5 w-5 text-purple-600" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Shop by Brand</h2>
             </div>
-            <div className="grid grid-cols-4 gap-3 p-4">
-              {[
-                'Apple', 'Samsung', 'Tecno', 'Hisense',
-                'TCL', 'Oraimo', 'Sony', 'JBL',
-              ].map(brandName => {
-                const uploadedLogo = appSettings.find(s => s.key === `brand_logo_${brandName.toLowerCase().replace(/ /g,'_')}`)?.value;
-                return (
-                  <Link key={brandName} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brandName)}`)}
-                    className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
-                    <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
-                      {uploadedLogo
-                        ? <img src={uploadedLogo} alt={brandName} className="max-w-full max-h-full object-contain" onError={e => { e.target.style.display='none'; }} />
-                        : <span className="text-lg font-black text-gray-400">{brandName[0]}</span>}
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-600">{brandName}</span>
-                  </Link>
-                );
-              })}
-            </div>
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-4 gap-3 p-4">
+            {[
+              { name: 'Apple', fallback: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
+              { name: 'Samsung', fallback: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },
+              { name: 'Tecno', fallback: 'https://upload.wikimedia.org/wikipedia/commons/a/a8/TECNO_Mobile_Logo.svg' },
+              { name: 'Hisense', fallback: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Hisense_logo.svg' },
+              { name: 'TCL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/1/16/TCL_Logo.svg' },
+              { name: 'Oraimo', fallback: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },
+              { name: 'Sony', fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
+              { name: 'JBL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
+            ].map(brand => {
+              const uploadedLogo = appSettings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
+              const logoSrc = uploadedLogo || brand.fallback;
+              return (
+                <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}
+                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
+                  <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
+                    {logoSrc
+                      ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { e.target.style.display='none'; }} />
+                      : <span className="text-[10px] font-black text-gray-400">{brand.name[0]}</span>}
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
+      </div>
       )}
 
       {/* ── NEW ARRIVALS ── */}
@@ -458,28 +430,36 @@ export default function Home() {
             </Link>
           </div>
           <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading ? <SkeletonRow /> : newArrivals.length > 0 ? newArrivals.map(product => (
-              <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
-                <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
-                  {product.image_url
-                    ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                  <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[8px] font-black px-1 py-0.5 rounded-full">NEW</span>
-                </div>
-                <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
-                {product.original_price > product.price && (
-                  <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
-                )}
-              </Link>
-            )) : <EmptySection label="New Arrivals" />}
+            {isLoading
+              ? Array(6).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  </div>
+                ))
+              : (newArrivals.length > 0 ? newArrivals : products.slice(0, 6)).map(product => (
+                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
+                      {product.image_url
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                      <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[8px] font-black px-1 py-0.5 rounded-full">NEW</span>
+                    </div>
+                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                    <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && (
+                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                    )}
+                  </Link>
+                ))}
           </div>
         </div>
       </div>
 
       {/* ── TOP SELLING ── */}
-      <div className="mt-5 mx-2 md:mx-4 mb-6">
+      <div className="mt-5 mx-2 md:mx-4">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
             <div className="flex items-center gap-2">
@@ -492,26 +472,36 @@ export default function Home() {
             </Link>
           </div>
           <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading ? <SkeletonRow /> : topSelling.length > 0 ? topSelling.map((product, idx) => (
-              <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
-                <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
-                  {product.image_url
-                    ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                  <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">#{idx + 1}</span>
-                </div>
-                <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
-                {product.reviews_count > 0 && (
-                  <p className="text-[10px] text-yellow-600 font-bold">⭐ {product.reviews_count} sold</p>
-                )}
-              </Link>
-            )) : <EmptySection label="Top Selling" />}
+            {isLoading
+              ? Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  </div>
+                ))
+              : (topSellingFallback.length > 0 ? topSellingFallback : products.slice(0, 6)).map((product, idx) => (
+                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
+                      {product.image_url
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                      <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">#{idx + 1}</span>
+                    </div>
+                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                    <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
+                    {product.reviews_count > 0 && (
+                      <p className="text-[10px] text-yellow-600 font-bold">⭐ {product.reviews_count} sold</p>
+                    )}
+                  </Link>
+                ))}
           </div>
         </div>
       </div>
 
+      {/* Bottom spacer for nav */}
+      <div className="h-6" />
     </div>
   );
 }

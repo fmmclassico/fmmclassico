@@ -33,7 +33,7 @@ const CATEGORIES = [
     subColor: 'rose',
     subCategories: [
       { label: 'Phone Cases', shopCategory: 'phone_cases' },
-      { label: 'Chargers', shopCategory: 'chargers' },
+      { label: 'Chargers & Power', shopCategory: 'chargers' },
       { label: 'Earphones & Audio', shopCategory: 'earphones' },
       { label: 'Cables', shopCategory: 'cables' },
       { label: 'Power Banks', shopCategory: 'power_banks' },
@@ -124,6 +124,7 @@ export default function Categories() {
 
   const isAdmin = user?.role === 'admin';
 
+  // Get overridden image for a category
   const getCatImage = (catId) => {
     const s = settings.find(x => x.key === `cat_bg_${catId}`);
     return s?.value || null;
@@ -346,9 +347,6 @@ export default function Categories() {
           );
         })}
       </div>
-
-      {/* Bottom spacer — clears the fixed bottom nav bar */}
-      <div className="h-24" />
     </div>
   );
 }

@@ -56,11 +56,16 @@ export default function AdminHomeEditor() {
     queryFn: () => base44.entities.Product.list('-created_date', 200),
   });
 
+  // Load custom categories from settings
   useEffect(() => {
     const cats = settings.filter(s => s.key.startsWith('custom_cat_'));
     if (cats.length > 0) {
       const parsed = cats.map(c => {
-        try { return JSON.parse(c.value); } catch { return null; }
+        try {
+          return JSON.parse(c.value);
+        } catch {
+          return null;
+        }
       }).filter(Boolean);
       setCustomCategories(parsed);
     }
@@ -77,6 +82,7 @@ export default function AdminHomeEditor() {
   const saveSetting = async (key, value, silent = false) => {
     setSaving(s => ({ ...s, [key]: true }));
     try {
+      // Re-read current settings from the server-side list to get latest ids
       const existing = settings.find(s => s.key === key);
       if (existing) {
         await base44.entities.AppSetting.update(existing.id, { value });
@@ -246,6 +252,7 @@ export default function AdminHomeEditor() {
   };
 
   if (!user) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
+  if (user?.role !== 'admin') return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
@@ -285,6 +292,7 @@ export default function AdminHomeEditor() {
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
+              {/* Existing hero */}
               <div className="p-3 bg-gray-50 rounded-lg space-y-3">
                 <p className="font-semibold text-sm text-gray-700">Main Hero Banner</p>
                 {['hero_title', 'hero_subtitle', 'hero_cta'].map(key => (
@@ -321,29 +329,31 @@ export default function AdminHomeEditor() {
               <p className="text-xs text-gray-500 mt-1">Edit core sections or add custom ones</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-gray-700">Core Sections</p>
-                {CORE_SECTIONS.map((sec, idx) => (
-                  <div key={sec.id} className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-lg">{sec.icon}</span>
-                      <p className="text-sm font-medium text-gray-700 flex-1">{sec.name}</p>
-                      <label className="flex items-center gap-2 text-xs cursor-pointer">
-                        <input type="checkbox" checked={getSetting(`home_${sec.id}_visible`) !== 'false'} onChange={e => saveSetting(`home_${sec.id}_visible`, e.target.checked ? 'true' : 'false')} />
-                        Visible
-                      </label>
-                    </div>
-                    <SettingTextRow
-                      label="Section Title"
-                      value={getSetting(`home_${sec.id}_title`) || sec.name}
-                      onChange={v => setLocalSettings(l => ({ ...l, [`home_${sec.id}_title`]: v }))}
-                      onSave={() => saveSetting(`home_${sec.id}_title`, getSetting(`home_${sec.id}_title`) || sec.name)}
-                      saving={saving[`home_${sec.id}_title`]}
-                    />
-                  </div>
-                ))}
+              {/* Core sections */}
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-gray-700">Core Sections</p>
+                      {CORE_SECTIONS.map((sec, idx) => (
+                        <div key={sec.id} className="p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-lg">{sec.icon}</span>
+                            <p className="text-sm font-medium text-gray-700 flex-1">{sec.name}</p>
+                            <label className="flex items-center gap-2 text-xs cursor-pointer">
+                              <input type="checkbox" checked={getSetting(`home_${sec.id}_visible`) !== 'false'} onChange={e => saveSetting(`home_${sec.id}_visible`, e.target.checked ? 'true' : 'false')} />
+                              Visible
+                            </label>
+                          </div>
+                          <SettingTextRow
+                            label="Section Title"
+                            value={getSetting(`home_${sec.id}_title`) || sec.name}
+                            onChange={v => setLocalSettings(l => ({ ...l, [`home_${sec.id}_title`]: v }))}
+                            onSave={() => saveSetting(`home_${sec.id}_title`, getSetting(`home_${sec.id}_title`) || sec.name)}
+                            saving={saving[`home_${sec.id}_title`]}
+                          />
+                        </div>
+                      ))}
               </div>
 
+              {/* Custom sections */}
               {settings.filter(s => s.key.startsWith('custom_section_')).length > 0 && (
                 <div className="space-y-3 pt-4 border-t">
                   <p className="text-sm font-semibold text-gray-700">Custom Sections</p>
@@ -363,6 +373,7 @@ export default function AdminHomeEditor() {
                 </div>
               )}
 
+              {/* Add custom section */}
               <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200 space-y-2">
                 <p className="text-sm font-semibold text-indigo-900">Add Custom Section</p>
                 <div className="flex gap-2">
@@ -390,6 +401,7 @@ export default function AdminHomeEditor() {
               <p className="text-xs text-gray-500 mt-1">Upload image files or use URLs</p>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Add new banner with file upload */}
               <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
                 <p className="text-sm font-semibold text-green-900">Add New Banner</p>
                 <input
@@ -433,6 +445,7 @@ export default function AdminHomeEditor() {
                     <EditableField label="Subtitle" value={b.subtitle} onSave={v => handleBannerFieldSave(b, 'subtitle', v)} />
                     <EditableField label="CTA Text" value={b.cta_text} onSave={v => handleBannerFieldSave(b, 'cta_text', v)} />
                     <EditableField label="CTA Link" value={b.cta_link} onSave={v => handleBannerFieldSave(b, 'cta_link', v)} />
+                    {/* File upload for image */}
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Change Image:</p>
                       <input
@@ -482,6 +495,7 @@ export default function AdminHomeEditor() {
               <p className="text-xs text-gray-500 mt-1">Edit default categories or add custom ones</p>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Default categories */}
               <div className="space-y-4">
                 <p className="text-sm font-semibold text-gray-700">Default Categories</p>
                 {CATEGORY_DEFS.map(cat => {
@@ -535,6 +549,7 @@ export default function AdminHomeEditor() {
                 })}
               </div>
 
+              {/* Custom categories */}
               {customCategories.length > 0 && (
                 <div className="space-y-4 pt-6 border-t">
                   <p className="text-sm font-semibold text-gray-700">Custom Categories</p>
@@ -586,6 +601,7 @@ export default function AdminHomeEditor() {
                 </div>
               )}
 
+              {/* Add custom category */}
               <div className="p-4 bg-purple-50 rounded-lg border border-purple-200 space-y-2">
                 <p className="text-sm font-semibold text-purple-900">Add Custom Category</p>
                 <div className="flex gap-2">
@@ -604,7 +620,6 @@ export default function AdminHomeEditor() {
             </CardContent>
           </Card>
         </TabsContent>
-
         {/* ── SECTION PRODUCTS ── */}
         <TabsContent value="products">
           <Card>
@@ -620,6 +635,7 @@ export default function AdminHomeEditor() {
               ].map(sec => {
                 const sectionProducts = products.filter(p => p[sec.field]);
                 const hiddenIds = getHiddenIds(sec.id);
+
                 return (
                   <div key={sec.id} className="border rounded-xl overflow-hidden">
                     <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">

@@ -174,12 +174,13 @@ export default function Home() {
   const hiddenNewArrivals = getHiddenIds('new_arrivals');
   const hiddenTopSelling = getHiddenIds('top_selling');
 
-  // ── PRODUCT FILTERING ──
-  // Products are filtered by checking if their tag field === true (strict equality)
-  // Only show products where the tag is explicitly set to true
+  // ── STRICT BOOLEAN FILTERING ──
+  // ONLY products with === true for that tag appear in that section
+  // If a product doesn't have the tag explicitly set to TRUE, it doesn't appear
 
-  // CLASSICO Deals: Products with flash_sale === true AND not expired
+  // CLASSICO Deals: ONLY products with flash_sale === true AND not expired
   const classicoDeals = products.filter(p => {
+    // ✅ STRICT: Must be exactly true
     if (p.flash_sale !== true) return false;
     // Check expiration
     if (p.flash_sale_end && new Date(p.flash_sale_end) <= new Date()) return false;
@@ -188,28 +189,28 @@ export default function Home() {
     return true;
   });
 
-  // Donkomi Deals: Products with donkomi === true
+  // Donkomi Deals: ONLY products with donkomi === true
   const donkomiDeals = products.filter(p => {
     if (p.donkomi !== true) return false;
     if (hiddenDonkomi.includes(p.id)) return false;
     return true;
   });
 
-  // New Arrivals: Products with new_arrivals === true
+  // New Arrivals: ONLY products with new_arrivals === true
   const newArrivals = products.filter(p => {
     if (p.new_arrivals !== true) return false;
     if (hiddenNewArrivals.includes(p.id)) return false;
     return true;
   });
 
-  // Top Selling: Products with top_selling === true
+  // Top Selling: ONLY products with top_selling === true
   const topSelling = products.filter(p => {
     if (p.top_selling !== true) return false;
     if (hiddenTopSelling.includes(p.id)) return false;
     return true;
   });
 
-  // Featured: Products with featured === true
+  // Featured: ONLY products with featured === true (used by admin quick toggle)
   const featuredProducts = products.filter(p => {
     if (p.featured !== true) return false;
     if (hiddenFeatured.includes(p.id)) return false;
@@ -447,27 +448,28 @@ export default function Home() {
       {/* ── NEW ARRIVALS ── */}
       <div className="mt-5 mx-2 md:mx-4">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-yellow-500 fill-yellow-400" />
+              <Tag className="h-5 w-5 text-green-600" />
               <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">New Arrivals</h2>
+              <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full">new</span>
             </div>
             <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
               See All <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
           <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-            {isLoading ? <SkeletonRow /> : newArrivals.length > 0 ? newArrivals.map(product => (
+            {isLoading ? <SkeletonRow /> : donkomiDeals.length > 0 ? donkomiDeals.map(product => (
               <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
+                className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
                 <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                   {product.image_url
                     ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
-                  <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[8px] font-black px-1 py-0.5 rounded-full">NEW</span>
+                  <span className="absolute top-1 left-1 bg-green-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">🔥</span>
                 </div>
                 <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
-                <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
+                <p className="text-xs font-black text-green-700">₵{product.price?.toLocaleString()}</p>
                 {product.original_price > product.price && (
                   <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
                 )}
@@ -478,7 +480,7 @@ export default function Home() {
       </div>
 
       {/* ── TOP SELLING ── */}
-      <div className="mt-5 mx-2 md:mx-4 mb-4">
+      <div className="mt-5 mx-2 md:mx-4 mb-6">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
             <div className="flex items-center gap-2">

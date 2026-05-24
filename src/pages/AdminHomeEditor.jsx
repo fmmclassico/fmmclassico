@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Loader2, Save, X, Plus, Trash2, Home, Grid3X3, Image, Type, Eye, EyeOff } from 'lucide-react';
+import { Upload, Loader2, Save, X, Plus, Trash2, Home, Grid3X3, Image, Type, Link as LinkIcon, ChevronDown, ChevronUp } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const CORE_SECTIONS = [
@@ -51,11 +51,6 @@ export default function AdminHomeEditor() {
     queryFn: () => base44.entities.PromoBanner.list(),
   });
 
-  const { data: products = [] } = useQuery({
-    queryKey: ['products-admin'],
-    queryFn: () => base44.entities.Product.list('-created_date', 200),
-  });
-
   // Load custom categories from settings
   useEffect(() => {
     const cats = settings.filter(s => s.key.startsWith('custom_cat_'));
@@ -79,10 +74,9 @@ export default function AdminHomeEditor() {
 
   const getSetting = (key) => localSettings[key] ?? '';
 
-  const saveSetting = async (key, value, silent = false) => {
+  const saveSetting = async (key, value) => {
     setSaving(s => ({ ...s, [key]: true }));
     try {
-      // Re-read current settings from the server-side list to get latest ids
       const existing = settings.find(s => s.key === key);
       if (existing) {
         await base44.entities.AppSetting.update(existing.id, { value });
@@ -90,40 +84,11 @@ export default function AdminHomeEditor() {
         await base44.entities.AppSetting.create({ key, value });
       }
       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
-      if (!silent) toast.success('Saved!');
+      toast.success('Saved!');
     } catch {
       toast.error('Failed to save');
     }
     setSaving(s => ({ ...s, [key]: false }));
-  };
-
-  const saveAllHero = async () => {
-    setSaving(s => ({ ...s, hero_all: true }));
-    try {
-      for (const key of ['hero_title', 'hero_subtitle', 'hero_cta', 'hero_bg_image']) {
-        const val = localSettings[key];
-        if (val !== undefined) await saveSetting(key, val, true);
-      }
-      toast.success('All hero settings saved!');
-    } catch {
-      toast.error('Save failed');
-    }
-    setSaving(s => ({ ...s, hero_all: false }));
-  };
-
-  const getHiddenIds = (secId) => {
-    const raw = localSettings[`home_hidden_${secId}`];
-    try { return JSON.parse(raw || '[]'); } catch { return []; }
-  };
-
-  const toggleHiddenProduct = async (secId, productId, currentHidden) => {
-    const key = `home_hidden_${secId}`;
-    const newHidden = currentHidden.includes(productId)
-      ? currentHidden.filter(id => id !== productId)
-      : [...currentHidden, productId];
-    setLocalSettings(l => ({ ...l, [key]: JSON.stringify(newHidden) }));
-    await saveSetting(key, JSON.stringify(newHidden), true);
-    toast.success(currentHidden.includes(productId) ? 'Product shown' : 'Product hidden');
   };
 
   const handleUpload = async (key, file) => {
@@ -273,23 +238,14 @@ export default function AdminHomeEditor() {
           <TabsTrigger value="sections" className="flex items-center gap-1.5"><Type className="h-3.5 w-3.5" />Section Titles</TabsTrigger>
           <TabsTrigger value="banners" className="flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" />Promo Banners</TabsTrigger>
           <TabsTrigger value="categories" className="flex items-center gap-1.5"><Grid3X3 className="h-3.5 w-3.5" />Category Cards</TabsTrigger>
-          <TabsTrigger value="products" className="flex items-center gap-1.5">🛒 Section Products</TabsTrigger>
         </TabsList>
 
         {/* ── HERO ── */}
         <TabsContent value="hero">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">Hero / Top Banner Section</CardTitle>
-                  <p className="text-xs text-gray-500 mt-1">Edit hero text and background image</p>
-                </div>
-                <Button size="sm" className="gap-1.5" onClick={saveAllHero} disabled={saving['hero_all']}>
-                  {saving['hero_all'] ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                  Save All
-                </Button>
-              </div>
+              <CardTitle className="text-base">Hero / Top Banner Section</CardTitle>
+              <p className="text-xs text-gray-500 mt-1">Add, edit, or delete hero banners</p>
             </CardHeader>
             <CardContent className="space-y-5">
               {/* Existing hero */}
@@ -620,76 +576,6 @@ export default function AdminHomeEditor() {
             </CardContent>
           </Card>
         </TabsContent>
-        {/* ── SECTION PRODUCTS ── */}
-        <TabsContent value="products">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Homepage Section Products</CardTitle>
-              <p className="text-xs text-gray-500 mt-1">Hide or delete products from each homepage section. Tap ⭐⚡🔥 on the product card to toggle section tags in Manage Products.</p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {[
-                { id: 'flash', label: '⚡ Flash Sale / CLASSICO Deals', field: 'flash_sale' },
-                { id: 'featured', label: '⭐ Featured Deals', field: 'featured' },
-                { id: 'donkomi', label: '🔥 Donkomi Best Prices', field: 'donkomi' },
-              ].map(sec => {
-                const sectionProducts = products.filter(p => p[sec.field]);
-                const hiddenIds = getHiddenIds(sec.id);
-
-                return (
-                  <div key={sec.id} className="border rounded-xl overflow-hidden">
-                    <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
-                      <p className="font-bold text-sm text-gray-800">{sec.label}</p>
-                      <span className="text-xs text-gray-500">
-                        {sectionProducts.length - hiddenIds.filter(id => sectionProducts.find(p => p.id === id)).length} visible / {sectionProducts.length} total
-                      </span>
-                    </div>
-                    {sectionProducts.length === 0 ? (
-                      <p className="text-gray-400 text-sm text-center py-6">No products tagged for this section yet.<br /><span className="text-xs">Go to Manage Products and toggle the tag on products.</span></p>
-                    ) : (
-                      <div className="divide-y max-h-80 overflow-y-auto">
-                        {sectionProducts.map(p => {
-                          const isHidden = hiddenIds.includes(p.id);
-                          return (
-                            <div key={p.id} className={`flex items-center gap-3 px-4 py-2.5 ${isHidden ? 'bg-red-50' : 'bg-white'}`}>
-                              {p.image_url && <img src={p.image_url} alt={p.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-xs font-semibold line-clamp-1 ${isHidden ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{p.name}</p>
-                                <p className="text-xs text-gray-400">₵{p.price?.toLocaleString()}</p>
-                              </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <button
-                                  onClick={() => toggleHiddenProduct(sec.id, p.id, hiddenIds)}
-                                  className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border transition-colors ${isHidden ? 'bg-green-100 border-green-400 text-green-700 hover:bg-green-200' : 'bg-orange-100 border-orange-300 text-orange-600 hover:bg-orange-200'}`}
-                                >
-                                  {isHidden ? <><Eye className="h-3 w-3" /> Show</> : <><EyeOff className="h-3 w-3" /> Hide</>}
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    if (!confirm(`Remove "${p.name}" from ${sec.label}? This will un-tag it from this section.`)) return;
-                                    base44.entities.Product.update(p.id, { [sec.field]: false }).then(() => {
-                                      queryClient.invalidateQueries({ queryKey: ['products-admin'] });
-                                      queryClient.invalidateQueries({ queryKey: ['products'] });
-                                      toast.success('Removed from section');
-                                    });
-                                  }}
-                                  className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full border bg-red-100 border-red-300 text-red-600 hover:bg-red-200 transition-colors"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
       </Tabs>
     </div>
   );

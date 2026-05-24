@@ -93,10 +93,11 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
       
-      // Check if user needs to verify admin password — all admin-role users require 2-step verification
-      const isAdminEmail = currentUser.role === 'admin';
+      // Check if user needs to verify admin password
+      const ADMIN_EMAILS = ['fmmcompanylimited@gmail.com', 'mensahfedramartha@gmail.com', 'marthamensahfedra@gmail.com'];
+      const isAdminEmail = ADMIN_EMAILS.includes(currentUser.email?.toLowerCase());
       
-      if (isAdminEmail) {
+      if (currentUser.role === 'admin' && isAdminEmail) {
         const adminVerified = sessionStorage.getItem(`admin_verified_${currentUser.email}`);
         if (!adminVerified) {
           setUser(currentUser);

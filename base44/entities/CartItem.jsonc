@@ -1,0 +1,88 @@
+{
+  "name": "CartItem",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "description": "Reference to the product"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Product name for quick access"
+    },
+    "product_image": {
+      "type": "string",
+      "description": "Product image URL"
+    },
+    "product_price": {
+      "type": "number",
+      "description": "Product price at time of adding"
+    },
+    "quantity": {
+      "type": "number",
+      "default": 1,
+      "description": "Quantity in cart"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "User who owns this cart item"
+    }
+  },
+  "required": [
+    "product_id",
+    "product_name",
+    "product_price",
+    "quantity",
+    "user_email"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "name": "SMSContact",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Contact name"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Ghana phone number e.g. 0244123456"
+    },
+    "group": {
+      "type": "string",
+      "description": "Group/list label e.g. Customers, VIP, Staff",
+      "default": "Customers"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes"
+    }
+  },
+  "required": [
+    "phone"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

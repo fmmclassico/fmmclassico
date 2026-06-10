@@ -1,0 +1,97 @@
+{
+  "name": "Feedback",
+  "type": "object",
+  "properties": {
+    "customer_name": {
+      "type": "string",
+      "description": "Customer's name"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Customer's email"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Customer's phone number"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "complaint",
+        "suggestion",
+        "compliment",
+        "order_issue",
+        "delivery_issue",
+        "other"
+      ],
+      "description": "Type of feedback"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Subject of feedback"
+    },
+    "message": {
+      "type": "string",
+      "description": "Feedback message"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "in_review",
+        "resolved"
+      ],
+      "default": "new",
+      "description": "Status of the feedback"
+    },
+    "admin_response": {
+      "type": "string",
+      "description": "Admin's response to the feedback"
+    },
+    "order_number": {
+      "type": "string",
+      "description": "Related order number if any"
+    }
+  },
+  "required": [
+    "customer_name",
+    "message",
+    "type"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.customer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.customer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

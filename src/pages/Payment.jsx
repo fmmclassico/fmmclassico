@@ -75,6 +75,9 @@ export default function Payment() {
     return p;
   };
 
+  const [diagReport, setDiagReport] = useState(null);
+  const [diagLoading, setDiagLoading] = useState(false);
+
   const handlePay = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -92,14 +95,12 @@ export default function Payment() {
 
     try {
       const checkout = new CheckoutSdk();
-
       const purchaseInfo = {
         amount: parseFloat(amount.toFixed(2)),
         purchaseDescription: `FMM CLASSICO Order #${orderNumber}`,
         customerPhoneNumber: normPhone,
         clientReference: clientRef,
       };
-
       const config = {
         branding: 'enabled',
         callbackUrl: returnUrl,
@@ -108,54 +109,82 @@ export default function Payment() {
         merchantAccount: HUBTEL_MERCHANT_ACCT,
         basicAuth: HUBTEL_BASIC_AUTH,
       };
-
-      // Use redirect — opens Hubtel checkout, no CORS issues
       checkout.redirect({ purchaseInfo, config });
-      // redirect navigates away, so loading stays true intentionally
     } catch (err) {
-      // SDK failed — try direct POST as fallback
-      await tryDirectPost({ clientRef, normPhone, customerName, returnUrl, cancelUrl });
+      setErrorMsg(`SDK error: ${err?.message}`);
+      setLoading(false);
     }
   };
 
-  const tryDirectPost = async ({ clientRef, normPhone, customerName, returnUrl, cancelUrl }) => {
-    try {
-      const body = {
-        totalAmount: parseFloat(amount.toFixed(2)),
-        description: `FMM CLASSICO Order #${orderNumber}`,
-        callbackUrl: returnUrl,
-        returnUrl: returnUrl,
-        merchantAccountNumber: String(HUBTEL_MERCHANT_ACCT),
-        cancellationUrl: cancelUrl,
-        clientReference: clientRef,
-        payeeName: customerName,
-        payeeMobileNumber: normalisePhone(phone),
-        payeeEmail: emailVal,
-      };
+  // ── DIAGNOSTIC: direct API call, captures exact request + response ──────
+  const runDiagnostic = async () => {
+    setDiagLoading(true);
+    setDiagReport(null);
 
+    const clientRef    = `DIAG${Date.now()}`.slice(0, 32);
+    const returnUrl    = `${window.location.origin}/PaymentConfirmed?orderId=DIAG&orderNumber=DIAG&amount=0.01`;
+    const cancelUrl    = window.location.href;
+
+    const requestBody = {
+      totalAmount: 0.01,
+      description: 'FMM CLASSICO Diagnostic Test',
+      callbackUrl: returnUrl,
+      returnUrl: returnUrl,
+      merchantAccountNumber: String(HUBTEL_MERCHANT_ACCT),
+      cancellationUrl: cancelUrl,
+      clientReference: clientRef,
+      payeeName: 'Diagnostic Test',
+      payeeMobileNumber: '233200000000',
+      payeeEmail: 'test@fmmclassico.com',
+    };
+
+    const authHeader = `Basic ${HUBTEL_BASIC_AUTH}`;
+
+    let httpStatus = null;
+    let responseBody = null;
+    let fetchError = null;
+
+    try {
       const res = await fetch('https://payproxyapi.hubtel.com/items/initiate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${HUBTEL_BASIC_AUTH}`,
+          'Authorization': authHeader,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(requestBody),
       });
-
-      const json = await res.json().catch(() => null);
-      const checkoutUrl = json?.data?.checkoutUrl || json?.data?.checkoutDirectUrl;
-
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
-        return;
-      }
-
-      throw new Error(json?.message || `Response code: ${json?.responseCode}`);
+      httpStatus = res.status;
+      const text = await res.text();
+      try { responseBody = JSON.parse(text); } catch { responseBody = text; }
     } catch (err) {
-      setErrorMsg(`Payment error: ${err?.message || 'Unable to connect to Hubtel'}. Please use WhatsApp below.`);
-      setShowFallback(true);
-      setLoading(false);
+      fetchError = err.message;
     }
+
+    setDiagReport({
+      requestSent: {
+        endpoint: 'POST https://payproxyapi.hubtel.com/items/initiate',
+        authorization: `Basic ${HUBTEL_CLIENT_ID}:******* (base64 encoded)`,
+        merchantAccountNumber: String(HUBTEL_MERCHANT_ACCT),
+        clientReference: clientRef,
+        totalAmount: requestBody.totalAmount,
+        callbackUrl: requestBody.callbackUrl,
+        returnUrl: requestBody.returnUrl,
+        cancellationUrl: requestBody.cancellationUrl,
+        payeeName: requestBody.payeeName,
+        payeeMobileNumber: requestBody.payeeMobileNumber,
+        payeeEmail: requestBody.payeeEmail,
+        description: requestBody.description,
+      },
+      httpStatus,
+      responseBody,
+      fetchError,
+      responseCode: responseBody?.responseCode || responseBody?.ResponseCode || 'N/A',
+      message: responseBody?.message || responseBody?.Message || 'N/A',
+      status: responseBody?.status || responseBody?.Status || 'N/A',
+      checkoutUrl: responseBody?.data?.checkoutUrl || 'none',
+    });
+
+    setDiagLoading(false);
   };
 
   const whatsappMsg = encodeURIComponent(
@@ -342,6 +371,78 @@ export default function Payment() {
               </div>
             </form>
           </div>
+        </div>
+      </div>
+
+      {/* ── DIAGNOSTIC PANEL ── */}
+      <div className="container mx-auto px-4 sm:px-6 max-w-6xl mb-10">
+        <div className="border border-dashed border-gray-300 rounded-xl p-5 bg-gray-50">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="font-bold text-gray-700 text-sm">🔍 Hubtel API Diagnostic</p>
+              <p className="text-xs text-gray-500">Send a test request to Hubtel and capture the exact response</p>
+            </div>
+            <Button onClick={runDiagnostic} disabled={diagLoading} variant="outline" size="sm" className="text-xs">
+              {diagLoading ? <><Loader2 className="h-3 w-3 animate-spin mr-1" />Running...</> : 'Run Diagnostic'}
+            </Button>
+          </div>
+
+          {diagReport && (
+            <div className="space-y-3 mt-3">
+              {/* Request sent */}
+              <div className="bg-white border border-gray-200 rounded-lg p-3">
+                <p className="text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">📤 Request Sent</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
+                  {Object.entries(diagReport.requestSent).map(([k, v]) => (
+                    <div key={k} className="flex gap-1">
+                      <span className="font-semibold text-gray-500 min-w-[140px]">{k}:</span>
+                      <span className="text-gray-800 break-all">{String(v)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Response received */}
+              <div className={`border rounded-lg p-3 ${diagReport.fetchError ? 'bg-red-50 border-red-200' : diagReport.responseCode === '0000' ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                <p className="text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">📥 Hubtel Response</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs mb-2">
+                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[140px]">HTTP Status:</span><span className="font-bold">{diagReport.httpStatus ?? 'N/A (fetch blocked)'}</span></div>
+                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[140px]">responseCode:</span><span className="font-bold text-red-600">{diagReport.responseCode}</span></div>
+                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[140px]">message:</span><span className="font-bold">{diagReport.message}</span></div>
+                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[140px]">status:</span><span className="font-bold">{diagReport.status}</span></div>
+                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[140px]">checkoutUrl:</span><span className="font-bold text-green-700 break-all">{diagReport.checkoutUrl}</span></div>
+                  {diagReport.fetchError && <div className="flex gap-1 col-span-2"><span className="font-semibold text-red-500 min-w-[140px]">Fetch Error:</span><span className="text-red-700">{diagReport.fetchError}</span></div>}
+                </div>
+                <p className="text-xs font-bold text-gray-600 mb-1">Full Raw Response:</p>
+                <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto whitespace-pre-wrap max-h-64">
+                  {JSON.stringify(diagReport.responseBody, null, 2)}
+                </pre>
+              </div>
+
+              {/* Diagnosis */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs font-bold text-blue-700 mb-1">⚡ What this means:</p>
+                <p className="text-xs text-blue-800">
+                  {diagReport.fetchError?.includes('CORS') || diagReport.fetchError?.includes('fetch') 
+                    ? '❌ CORS/Network block — direct browser fetch to Hubtel is blocked. The SDK redirect should still work.'
+                    : diagReport.responseCode === '0000'
+                    ? '✅ Merchant account is valid and working! The issue is elsewhere.'
+                    : diagReport.responseCode === '4000'
+                    ? '❌ ResponseCode 4000: Validation Error — one or more fields are invalid/missing or the merchant account number is wrong.'
+                    : diagReport.responseCode === '4070'
+                    ? '❌ ResponseCode 4070: Fees not configured for this merchant account. Contact Hubtel to enable Online Checkout for account 2025378.'
+                    : diagReport.httpStatus === 401
+                    ? '❌ HTTP 401: Invalid API credentials (Client ID or Secret is wrong).'
+                    : diagReport.httpStatus === 403
+                    ? '❌ HTTP 403: Merchant account 2025378 is not authorized/enabled for Online Checkout.'
+                    : diagReport.fetchError
+                    ? `❌ Network error: ${diagReport.fetchError}`
+                    : `❌ Unknown error — check the full response above and share with Hubtel support.`
+                  }
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

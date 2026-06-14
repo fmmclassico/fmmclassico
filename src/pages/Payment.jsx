@@ -11,10 +11,10 @@ const ASH = '#2E86C1';
 const ASH_HOVER = '#2578ae';
 
 // ── HUBTEL CONFIG ─────────────────────────────────────────────────────────────
-// API ID: 80pYxkm  |  API Key: db2c85757e9e4720a53f63d89cb1934a
-// Merchant Account Number: 0599676419
-const HUBTEL_MERCHANT_ACCOUNT = '0599676419';
-const HUBTEL_BASIC_AUTH = 'Basic ' + btoa('80pYxkm:db2c85757e9e4720a53f63d89cb1934a');
+// API ID: pQGpB7y  |  API Key: 14fda6847ee44c8fa910f355675cce73
+// Merchant Account ID: 2039285
+const HUBTEL_MERCHANT_ACCOUNT = 2039285;
+const HUBTEL_BASIC_AUTH = 'Basic ' + btoa('pQGpB7y:14fda6847ee44c8fa910f355675cce73');
 // ─────────────────────────────────────────────────────────────────────────────
 
 function formatAmount(num) {

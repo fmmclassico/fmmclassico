@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle, CheckCircle2, ExternalLink, MessageCircle } from 'lucide-react';
+import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle, MessageCircle, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,9 +9,11 @@ import { Badge } from '@/components/ui/badge';
 const ASH = '#2E86C1';
 const ASH_HOVER = '#2578ae';
 
+// ── HUBTEL CREDENTIALS ─────────────────────────────────────────────────────
 const HUBTEL_CLIENT_ID     = 'pQGpB7y';
 const HUBTEL_CLIENT_SECRET = '14fda6847ee44c8fa910f355675cce73';
-const HUBTEL_MERCHANT_ACCT = '2025378'; // merchant account number from Hubtel dashboard
+const HUBTEL_MERCHANT_ACCT = '2039285'; // numeric merchant account from Hubtel dashboard
+// ───────────────────────────────────────────────────────────────────────────
 
 function formatAmount(num) {
   const n = Number(num);
@@ -30,9 +32,9 @@ export default function Payment() {
   const [loading, setLoading]         = useState(false);
   const [cartCount, setCartCount]     = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [error, setError]             = useState('');
-  const [rawError, setRawError]       = useState('');
   const [step, setStep]               = useState('form'); // 'form' | 'manual'
+  const [errorMsg, setErrorMsg]       = useState('');
+  const [rawDiag, setRawDiag]         = useState('');
 
   const navigate = useNavigate();
 
@@ -65,7 +67,6 @@ export default function Payment() {
     if (searchQuery.trim()) navigate(`/Shop?search=${encodeURIComponent(searchQuery)}`);
   };
 
-  // Normalise Ghanaian phone numbers → 233XXXXXXXXX
   const normalisePhone = (raw) => {
     let p = raw.trim().replace(/\s+/g, '').replace(/-/g, '');
     if (p.startsWith('+')) p = p.slice(1);
@@ -75,63 +76,46 @@ export default function Payment() {
 
   const handlePay = async (e) => {
     e.preventDefault();
-    setError('');
-    setRawError('');
+    setErrorMsg('');
+    setRawDiag('');
 
-    if (!emailVal.trim()) { setError('Please enter your email address.'); return; }
-    if (!phone.trim())    { setError('Please enter your phone number.'); return; }
+    if (!emailVal.trim()) { setErrorMsg('Please enter your email address.'); return; }
+    if (!phone.trim())    { setErrorMsg('Please enter your phone number.'); return; }
 
     setLoading(true);
 
-    const customerName  = [firstName, lastName].filter(Boolean).join(' ') || 'Customer';
-    const normPhone     = normalisePhone(phone);
-    const clientRef     = (orderNumber || orderId || `FMM${Date.now()}`).slice(0, 32);
-    const returnUrl     = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
-    const cancelUrl     = `${window.location.origin}/Payment?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}&email=${encodeURIComponent(emailVal)}`;
-    const basicAuth     = `Basic ${btoa(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`)}`;
+    const customerName = [firstName, lastName].filter(Boolean).join(' ') || 'Customer';
+    const normPhone    = normalisePhone(phone);
+    const clientRef    = (orderNumber || orderId || `FMM${Date.now()}`).slice(0, 32);
+    const returnUrl    = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
+    const cancelUrl    = window.location.href;
+    const basicAuth    = `Basic ${btoa(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`)}`;
 
-    // ── Hubtel Invoicing API: POST /api/v2.0/invoice/{merchantId}/simple ──────
+    // ── HUBTEL INVOICING API (correct endpoint) ─────────────────────────────
+    // POST https://invoicing.hubtel.com/api/v2.0/invoice/{merchantAccountNumber}/simple
+    const endpoint = `https://invoicing.hubtel.com/api/v2.0/invoice/${HUBTEL_MERCHANT_ACCT}/simple`;
+
     const requestBody = {
-      invoice: {
-        items: [{
-          name:        `Order #${orderNumber}`,
-          quantity:    1,
-          unitPrice:   amount,
-          totalPrice:  amount,
-          description: `FMM CLASSICO - Order #${orderNumber}`,
-        }],
-        totalAmount: amount,
-        description: `FMM CLASSICO - Order #${orderNumber}`,
-      },
-      store: {
-        name:          'FMM CLASSICO',
-        tagline:       'Phone Accessories & Electronics',
-        logoUrl:       '',
-        websiteUrl:    window.location.origin,
-        phoneNumber:   '0509896035',
-      },
-      actions: {
-        returnUrl:      returnUrl,
-        cancellationUrl: cancelUrl,
-      },
-      callbackUrl:  returnUrl,
       clientReference: clientRef,
-      customer: {
-        customerName:   customerName,
-        customerEmail:  emailVal,
-        mobileNumber:   normPhone,
-      },
+      amount: amount,
+      description: `FMM CLASSICO - Order #${orderNumber}`,
+      callbackUrl: returnUrl,
+      returnUrl: returnUrl,
+      cancellationUrl: cancelUrl,
+      logo: '',
+      title: 'FMM CLASSICO',
+      customerPhoneNumber: normPhone,
+      customerName: customerName,
+      customerEmail: emailVal,
     };
 
-    const HUBTEL_ENDPOINT = `https://invoicing.hubtel.com/api/v2.0/invoice/${HUBTEL_MERCHANT_ACCT}/simple`;
-
     let checkoutUrl = null;
-    let lastError = '';
-    let hubtelMsg = '';
+    let diagInfo = '';
+    let hubtelJson = null;
 
-    // ── ATTEMPT 1: Direct browser fetch ──────────────────────────────────────
+    // Attempt 1: direct browser fetch
     try {
-      const res = await fetch(HUBTEL_ENDPOINT, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -139,76 +123,74 @@ export default function Payment() {
         },
         body: JSON.stringify(requestBody),
       });
-      const json = await res.json().catch(() => ({}));
-      const code = json?.ResponseCode || json?.responseCode || String(json?.statusCode);
-      checkoutUrl = json?.Data?.CheckoutUrl || json?.data?.checkoutUrl
-        || json?.Data?.checkoutUrl || json?.data?.CheckoutUrl
-        || json?.checkoutUrl || json?.CheckoutUrl;
-      hubtelMsg = json?.ResponseMessage || json?.message || json?.Message || '';
+      hubtelJson = await res.json().catch(() => null);
+      const code = hubtelJson?.responseCode || hubtelJson?.ResponseCode;
+      checkoutUrl = hubtelJson?.data?.checkoutUrl
+        || hubtelJson?.data?.checkoutDirectUrl
+        || hubtelJson?.Data?.CheckoutUrl;
 
-      if (checkoutUrl) {
+      if ((code === '00' || code === '0000' || res.ok) && checkoutUrl) {
         window.location.href = checkoutUrl;
         return;
       }
-      lastError = `Hubtel direct: code=${code}, msg=${hubtelMsg || JSON.stringify(json)}`;
+      diagInfo = `Direct: status=${res.status}, code=${code}, msg=${hubtelJson?.message || hubtelJson?.ResponseMessage || JSON.stringify(hubtelJson)}`;
     } catch (err) {
-      lastError = `Direct fetch blocked (CORS): ${err.message}`;
+      diagInfo = `Direct fetch error (likely CORS): ${err.message}`;
     }
 
-    // ── ATTEMPT 2: LLM proxy ─────────────────────────────────────────────────
+    // Attempt 2: LLM proxy
     if (!checkoutUrl) {
       try {
-        const llm = await base44.integrations.Core.InvokeLLM({
-          prompt: `You are a server-side HTTP proxy. Make this EXACT HTTP POST request to the Hubtel Invoicing API and return ONLY the raw JSON response. Do not add any explanation.
+        const llmResult = await base44.integrations.Core.InvokeLLM({
+          prompt: `Act as a server-side HTTP proxy. Execute this exact HTTP POST request and return ONLY the raw JSON response body. Do not add any explanation.
 
-URL: ${HUBTEL_ENDPOINT}
-Method: POST
+URL: ${endpoint}
 Authorization: ${basicAuth}
 Content-Type: application/json
 
 Body:
-${JSON.stringify(requestBody, null, 2)}
-
-Return ONLY the JSON from the server response.`,
+${JSON.stringify(requestBody, null, 2)}`,
           response_json_schema: {
             type: 'object',
             properties: {
-              ResponseCode:    { type: 'string' },
+              responseCode: { type: 'string' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  checkoutUrl: { type: 'string' },
+                  checkoutDirectUrl: { type: 'string' },
+                },
+              },
+              ResponseCode: { type: 'string' },
               ResponseMessage: { type: 'string' },
-              statusCode:      { type: 'number' },
-              message:         { type: 'string' },
               Data: { type: 'object' },
-              data: { type: 'object' },
-              checkoutUrl:     { type: 'string' },
-              CheckoutUrl:     { type: 'string' },
             },
           },
         });
 
-        checkoutUrl = llm?.Data?.CheckoutUrl || llm?.data?.checkoutUrl
-          || llm?.Data?.checkoutUrl || llm?.data?.CheckoutUrl
-          || llm?.checkoutUrl || llm?.CheckoutUrl;
-        hubtelMsg = hubtelMsg || llm?.ResponseMessage || llm?.message || '';
+        hubtelJson = llmResult;
+        const code2 = llmResult?.responseCode || llmResult?.ResponseCode;
+        checkoutUrl = llmResult?.data?.checkoutUrl
+          || llmResult?.data?.checkoutDirectUrl
+          || llmResult?.Data?.CheckoutUrl;
 
-        if (checkoutUrl) {
+        if ((code2 === '00' || code2 === '0000') && checkoutUrl) {
           window.location.href = checkoutUrl;
           return;
         }
-        lastError += ` | LLM proxy response: ${JSON.stringify(llm)}`;
+        diagInfo += ` | LLM proxy: code=${code2}, msg=${llmResult?.message || llmResult?.ResponseMessage || JSON.stringify(llmResult)}`;
       } catch (llmErr) {
-        lastError += ` | LLM error: ${llmErr?.message || llmErr}`;
+        diagInfo += ` | LLM error: ${llmErr?.message || llmErr}`;
       }
     }
 
-    // ── BOTH FAILED — show manual payment options ────────────────────────────
-    setRawError(lastError);
+    // Both failed — show manual fallback
+    const hubtelMsg = hubtelJson?.message || hubtelJson?.ResponseMessage || '';
+    setRawDiag(`Endpoint: ${endpoint}\n\nRequest:\n${JSON.stringify(requestBody, null, 2)}\n\nResponse:\n${JSON.stringify(hubtelJson, null, 2)}\n\nError: ${diagInfo}`);
+    setErrorMsg(hubtelMsg || diagInfo || 'Could not connect to Hubtel.');
     setStep('manual');
     setLoading(false);
-  };
-
-  const handleSearch2 = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) navigate(`/Shop?search=${encodeURIComponent(searchQuery)}`);
   };
 
   const whatsappMsg = encodeURIComponent(
@@ -238,10 +220,10 @@ Return ONLY the JSON from the server response.`,
                 <h1 className="text-base md:text-lg font-black text-white tracking-tight whitespace-nowrap">FMM CLASSICO</h1>
               </Link>
             </div>
-            <form onSubmit={handleSearch2} className="hidden md:flex flex-1 max-w-xl mx-8">
+            <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl mx-8">
               <div className="relative w-full">
                 <Input type="text" placeholder="Search for phone accessories..."
-                  value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                   className="w-full pl-4 pr-12 py-2 rounded-full border-0 bg-white/90 focus:bg-white" />
                 <Button type="submit" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-8 w-8 text-white" style={{ background: ASH }}>
                   <Search className="h-4 w-4" />
@@ -271,7 +253,7 @@ Return ONLY the JSON from the server response.`,
           <form onSubmit={handleSearch} className="md:hidden pb-3">
             <div className="relative">
               <Input type="text" placeholder="Search products..."
-                value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                 className="w-full pl-4 pr-12 py-2 rounded-full border-0 bg-white/90" />
               <Button type="submit" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-8 w-8 text-white" style={{ background: ASH }}>
                 <Search className="h-4 w-4" />
@@ -299,7 +281,7 @@ Return ONLY the JSON from the server response.`,
           </div>
         </div>
 
-        {/* ── MANUAL PAYMENT FALLBACK ── shown when API fails */}
+        {/* ── MANUAL FALLBACK ── */}
         {step === 'manual' ? (
           <div className="max-w-2xl mx-auto">
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-5">
@@ -308,79 +290,67 @@ Return ONLY the JSON from the server response.`,
                 <div>
                   <p className="font-bold text-amber-800">Hubtel gateway is temporarily unreachable</p>
                   <p className="text-sm text-amber-700 mt-1">
-                    The automatic payment system cannot connect to Hubtel right now. Your order <strong>#{orderNumber}</strong> is saved.
-                    Please use one of the options below to complete payment.
+                    Your order <strong>#{orderNumber}</strong> is saved. Please use one of the options below to complete payment.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Option 1: WhatsApp */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                   <MessageCircle className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-800">Option 1 — Pay via WhatsApp (Fastest)</p>
-                  <p className="text-xs text-gray-500">Message us and we'll send you a Hubtel payment link instantly</p>
+                  <p className="font-bold text-gray-800">Pay via WhatsApp (Fastest)</p>
+                  <p className="text-xs text-gray-500">Message us — we'll send you a Hubtel payment link instantly</p>
                 </div>
               </div>
-              <a
-                href={`https://wa.me/233509896035?text=${whatsappMsg}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block"
-              >
+              <a href={`https://wa.me/233509896035?text=${whatsappMsg}`} target="_blank" rel="noopener noreferrer">
                 <Button className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 gap-2">
                   <svg className="h-5 w-5 fill-white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                  WhatsApp: 0509896035 — Send Order #{orderNumber}
+                  WhatsApp 0509896035 — Order #{orderNumber}
                 </Button>
               </a>
             </div>
 
-            {/* Option 2: Hubtel Pay Link from dashboard */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
                   <ExternalLink className="h-5 w-5 text-orange-600" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-800">Option 2 — Hubtel Pay Link</p>
-                  <p className="text-xs text-gray-500">Go to your Hubtel dashboard → create a payment request for ₵{formatAmount(amount)} and share the link with the customer</p>
+                  <p className="font-bold text-gray-800">Create payment link from Hubtel Dashboard</p>
+                  <p className="text-xs text-gray-500">Generate a payment request for ₵{formatAmount(amount)} and send to customer</p>
                 </div>
               </div>
               <a href="https://unity.hubtel.com" target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" className="w-full gap-2 border-orange-300 text-orange-700 hover:bg-orange-50 font-bold">
-                  <ExternalLink className="h-4 w-4" />
-                  Open Hubtel Dashboard
+                  <ExternalLink className="h-4 w-4" /> Open Hubtel Dashboard
                 </Button>
               </a>
             </div>
 
-            {/* Retry */}
             <div className="text-center mt-4">
-              <button
-                onClick={() => { setStep('form'); setError(''); setRawError(''); }}
-                className="text-sm text-blue-600 underline hover:text-blue-800"
-              >
+              <button onClick={() => { setStep('form'); setErrorMsg(''); setRawDiag(''); }}
+                className="text-sm text-blue-600 underline hover:text-blue-800">
                 ← Try automatic payment again
               </button>
             </div>
 
-            {rawError && (
+            {rawDiag && (
               <details className="mt-4">
-                <summary className="text-xs text-gray-400 cursor-pointer">Show technical error details</summary>
-                <pre className="mt-2 text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto whitespace-pre-wrap">{rawError}</pre>
+                <summary className="text-xs text-gray-400 cursor-pointer">Show technical error (for Hubtel support)</summary>
+                <pre className="mt-2 text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto whitespace-pre-wrap">{rawDiag}</pre>
               </details>
             )}
           </div>
 
         ) : (
-          /* ── NORMAL PAYMENT FORM ── */
-          <div className="flex flex-col lg:flex-row gap-0 rounded-xl overflow-hidden shadow-lg border border-gray-100 min-h-[520px]">
+          /* ── PAYMENT FORM ── */
+          <div className="flex flex-col lg:flex-row gap-0 rounded-xl overflow-hidden shadow-lg border border-gray-100 min-h-[500px]">
 
-            {/* LEFT */}
+            {/* LEFT INFO */}
             <div className="lg:w-5/12 flex flex-col items-center justify-center py-8 px-6 sm:px-8 text-center"
               style={{ background: '#e8f0f9' }}>
               <h2 className="text-xl sm:text-2xl font-black text-gray-800 mb-4">FMM CLASSICO</h2>
@@ -411,10 +381,9 @@ Return ONLY the JSON from the server response.`,
               </div>
             </div>
 
-            {/* RIGHT — form */}
+            {/* RIGHT FORM */}
             <div className="lg:w-7/12 bg-white flex flex-col justify-center px-4 sm:px-8 py-6 sm:py-8">
               <form onSubmit={handlePay} className="space-y-4">
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">First name</label>
@@ -425,21 +394,17 @@ Return ONLY the JSON from the server response.`,
                     <Input placeholder="Last name" value={lastName} onChange={e => setLastName(e.target.value)} className="h-11" />
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email address</label>
                   <Input type="email" placeholder="Email address" value={emailVal}
                     onChange={e => setEmailVal(e.target.value)} required className="h-11" />
                 </div>
-
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Phone number <span className="font-normal text-gray-400 text-xs">(e.g. 0244123456)</span>
                   </label>
-                  <Input placeholder="0244123456" value={phone}
-                    onChange={e => setPhone(e.target.value)} className="h-11" />
+                  <Input placeholder="0244123456" value={phone} onChange={e => setPhone(e.target.value)} className="h-11" />
                 </div>
-
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Amount</label>
                   <div className="flex gap-2">
@@ -448,20 +413,19 @@ Return ONLY the JSON from the server response.`,
                   </div>
                 </div>
 
-                {error && (
+                {errorMsg && (
                   <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
                     <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                    <span>{error}</span>
+                    <span>{errorMsg}</span>
                   </div>
                 )}
 
                 <Button type="submit" disabled={loading}
                   className="w-full py-6 text-base font-bold rounded-lg text-white bg-orange-500 hover:bg-orange-600">
                   {loading
-                    ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Connecting to Hubtel...</>
+                    ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Connecting to Hubtel...</>
                     : `Pay ₵${formatAmount(amount)} with Hubtel`}
                 </Button>
-
                 <p className="text-center text-xs text-gray-400">
                   You will be redirected to Hubtel's secure checkout page.
                 </p>

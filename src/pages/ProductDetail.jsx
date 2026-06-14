@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import 'react-quill/dist/quill.snow.css';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import 'react-quill/dist/quill.snow.css';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";

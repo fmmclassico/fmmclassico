@@ -2,20 +2,28 @@ import React from "react";
 
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(135deg, #1a4a6e 0%, #2E86C1 60%, #1a4a6e 100%)' }}>
       <div className="w-full max-w-md">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-4">
-            <Icon className="w-7 h-7 text-primary-foreground" aria-hidden="true" />
+        {/* Brand Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex flex-col items-center">
+            <h1 className="text-4xl font-black text-white tracking-tight mb-1">
+              FMM <span className="text-yellow-300">CLASSICO</span>
+            </h1>
+            <p className="text-blue-200 text-sm font-medium">Phone Accessories · Electronics · Home Appliances</p>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
-          {subtitle && <p className="text-muted-foreground mt-2">{subtitle}</p>}
         </div>
-        <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
+
+        <div className="bg-white rounded-2xl shadow-2xl border border-white/20 p-8">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900">{title}</h2>
+            {subtitle && <p className="text-gray-500 mt-1 text-sm">{subtitle}</p>}
+          </div>
           {children}
         </div>
+
         {footer && (
-          <p className="text-center text-sm text-muted-foreground mt-6">{footer}</p>
+          <p className="text-center text-sm text-blue-100 mt-6">{footer}</p>
         )}
       </div>
     </div>

@@ -40,8 +40,10 @@ export const AuthProvider = ({ children }) => {
         .catch(() => {}); // non-fatal
 
       const authPromise = appParams.token ? checkUserAuth() : Promise.resolve().then(() => {
+        // No token = not logged in → require login
         setIsLoadingAuth(false);
         setIsAuthenticated(false);
+        setAuthError({ type: 'auth_required', message: 'Authentication required' });
       });
 
       // Wait for auth only (settings load in background)
@@ -101,7 +103,7 @@ export const AuthProvider = ({ children }) => {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
-      if (error?.status === 401) {
+      if (error?.status === 401 || error?.status === 403) {
         setAuthError({ type: 'auth_required', message: 'Authentication required' });
       }
       // Silently ignore other errors — don't force logout

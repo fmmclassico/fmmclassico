@@ -68,8 +68,13 @@ const AuthenticatedApp = () => {
         </>
       );
     } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return null;
+      // Redirect to login — but allow /login, /register, /forgot-password, /reset-password to render
+      const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
+      const isPublicPath = publicPaths.some(p => window.location.pathname.toLowerCase().startsWith(p));
+      if (!isPublicPath) {
+        navigateToLogin();
+        return null;
+      }
     }
   }
 

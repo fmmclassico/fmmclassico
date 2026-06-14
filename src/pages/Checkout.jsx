@@ -44,6 +44,9 @@ export default function Checkout() {
   });
 
   useEffect(() => {
+    // Reset submission state on mount (handles back-navigation)
+    setIsSubmitting(false);
+    setOrderSubmitted(false);
     base44.auth.me()
       .then(userData => {
         setUser(userData);

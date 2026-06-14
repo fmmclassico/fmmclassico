@@ -20,7 +20,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { motion } from 'framer-motion';
+
 import { toast } from 'sonner';
 
 const statusConfig = {
@@ -210,11 +210,7 @@ export default function Orders() {
             const isSelected = selectedOrders.includes(order.id);
 
             return (
-              <motion.div
-                key={order.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
+              <div key={order.id}>
                 <Card className="shadow-md hover:shadow-lg transition-shadow overflow-hidden">
                   {/* Top bar: checkbox + order number + amount */}
                   <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b">
@@ -317,7 +313,7 @@ export default function Orders() {
                     </div>
                   </div>
                 </Card>
-              </motion.div>
+              </div>
             );
           })
         )}

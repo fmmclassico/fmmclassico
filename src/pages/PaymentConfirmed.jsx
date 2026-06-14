@@ -161,13 +161,7 @@ export default function PaymentConfirmed() {
         body: `New order!\n\n📦 Order: #${stored.orderNumber || orderNumber}\n👤 Customer: ${custName}\n📧 Email: ${user.email}\n📞 Phone: ${stored.customerPhone}\n💰 Total: ₵${totalDisplay}\n📍 Address: ${stored.deliveryAddress}, ${stored.city}\n\nItems: ${itemsList}`,
       }).catch(() => {});
 
-      // Clear the cart
-      try {
-        const cartItems = await base44.entities.CartItem.filter({ user_email: user.email });
-        await Promise.all(cartItems.map(item => base44.entities.CartItem.delete(item.id).catch(() => {})));
-      } catch (_) {}
-
-      // Invalidate caches
+      // Invalidate caches (cart already cleared on page mount)
       queryClient.invalidateQueries({ queryKey: ['cartItems', user.email] });
       queryClient.invalidateQueries({ queryKey: ['notifications', user.email] });
       queryClient.invalidateQueries({ queryKey: ['orders', user.email] });

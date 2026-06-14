@@ -19,7 +19,7 @@ import {
   MapPin,
   X
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import { toast } from 'sonner';
 
 export default function Cart() {
@@ -98,11 +98,7 @@ export default function Cart() {
   if (cartItems.length === 0 && !isLoading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 mb-6">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 mb-6">
             <ShoppingBag className="h-12 w-12 text-[#1B3A6B]" />
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
@@ -113,7 +109,6 @@ export default function Cart() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
-        </motion.div>
       </div>
     );
   }
@@ -125,15 +120,9 @@ export default function Cart() {
       <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-          <AnimatePresence>
+          <>
             {cartItems.map((item) => (
-              <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-              >
+              <div key={item.id}>
                 <Card className="p-3 sm:p-4 shadow-sm">
                   <div className="flex gap-3">
                     <Link to={createPageUrl(`ProductDetail?id=${item.product_id}`)} className="flex-shrink-0">
@@ -190,9 +179,9 @@ export default function Cart() {
                     </div>
                   </div>
                 </Card>
-              </motion.div>
+              </div>
             ))}
-          </AnimatePresence>
+          </>
         </div>
 
         {/* Order Summary */}

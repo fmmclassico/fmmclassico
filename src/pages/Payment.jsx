@@ -75,6 +75,9 @@ export default function Payment() {
   const [phone, setPhone]         = useState('');
 
   useEffect(() => {
+    // Always reset loading on mount (handles back-navigation stuck state)
+    setLoading(false);
+    setErrorMsg('');
     base44.auth.me().then(u => {
       setUser(u);
       const parts = (u.full_name || '').trim().split(' ');
@@ -112,8 +115,11 @@ export default function Payment() {
 
     setLoading(true);
 
-    // Safety timeout — never leave button stuck spinning
-    const safetyTimer = setTimeout(() => setLoading(false), 30000);
+    // Safety timeout — if Hubtel takes >20s, reset the button so user isn't stuck
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+      setErrorMsg('Request timed out. Please check your internet connection and try again.');
+    }, 20000);
 
     const customerName = [firstName, lastName].filter(Boolean).join(' ') || 'Customer';
     const normPhone    = normalisePhone(phone);
@@ -148,6 +154,7 @@ export default function Payment() {
 
     try {
       const { httpStatus, body: hubtelResponse } = await callHubtelDirect(requestBody);
+      clearTimeout(safetyTimer);
       log.httpStatus = httpStatus;
       log.hubtelResponse = hubtelResponse;
 
@@ -162,7 +169,6 @@ export default function Payment() {
 
       if (isSuccess && checkoutUrl) {
         // SUCCESS — redirect to real Hubtel checkout page
-        clearTimeout(safetyTimer);
         window.location.href = checkoutUrl;
         return;
       }
@@ -173,12 +179,12 @@ export default function Payment() {
       setErrorMsg(`Hubtel [HTTP ${httpStatus}] code=${code}: ${diagMsg}`);
 
     } catch (err) {
+      clearTimeout(safetyTimer);
       log.error = err?.message || String(err);
       setPayLog(log);
       setErrorMsg(`Network error: ${err?.message || 'Could not reach Hubtel. Check your internet connection.'}`);
     }
 
-    clearTimeout(safetyTimer);
     setLoading(false);
   };
 

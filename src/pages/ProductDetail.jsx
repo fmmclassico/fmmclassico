@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
+import 'react-quill/dist/quill.snow.css';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -53,21 +54,18 @@ export default function ProductDetail() {
 
   const product = products.find(p => p.id === productId);
 
-  // Build image gallery: up to 4 images + 1 video slot
+  // Build image gallery from uploaded images only — no placeholders
   const allImages = product ? [
     product.image_url,
     ...(product.image_urls || [])
-  ].filter(Boolean).slice(0, 4) : [];
-
-  while (allImages.length < 4 && product?.image_url) {
-    allImages.push(product.image_url);
-  }
+  ].filter(Boolean) : [];
 
   const videoUrl = product?.video_url || null;
-  // gallery = images + video (if exists) = up to 5 items
-  const galleryItems = videoUrl
-    ? [...allImages, { type: 'video', url: videoUrl }]
-    : allImages.map(u => ({ type: 'image', url: u }));
+  // gallery = images + video (if exists)
+  const galleryItems = [
+    ...allImages.map(u => ({ type: 'image', url: u })),
+    ...(videoUrl ? [{ type: 'video', url: videoUrl }] : []),
+  ];
 
   const isVideo = (item) => typeof item === 'object' && item?.type === 'video';
   const getUrl = (item) => typeof item === 'string' ? item : item?.url;
@@ -134,12 +132,12 @@ export default function ProductDetail() {
 
   // Auto-scroll product images every 10 seconds
   useEffect(() => {
-    if (allImages.length <= 1) return;
+    if (galleryItems.length <= 1) return;
     const interval = setInterval(() => {
-      setSelectedImageIndex(prev => (prev + 1) % allImages.length);
+      setSelectedImageIndex(prev => (prev + 1) % galleryItems.length);
     }, 10000);
     return () => clearInterval(interval);
-  }, [allImages.length]);
+  }, [galleryItems.length]);
 
   if (isLoading) {
     return (
@@ -200,7 +198,7 @@ export default function ProductDetail() {
               ) : (
                 <motion.img
                   key={selectedImageIndex}
-                  src={getUrl(galleryItems[selectedImageIndex]) || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=800'}
+                  src={getUrl(galleryItems[selectedImageIndex])}
                   alt={product.name}
                   className="w-full h-full object-cover"
                   initial={{ opacity: 0, x: 30 }}
@@ -287,12 +285,15 @@ export default function ProductDetail() {
           </div>
 
           {product.description && (
-            <details className="group border border-gray-200 rounded-xl overflow-hidden">
+            <details className="group border border-gray-200 rounded-xl overflow-hidden" open>
               <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer font-semibold text-gray-700 select-none list-none">
                 <span>Product Details</span>
                 <span className="text-[#2E86C1] group-open:rotate-180 transition-transform">▼</span>
               </summary>
-              <div className="px-4 py-3 text-gray-600 leading-relaxed text-sm">{product.description}</div>
+              <div
+                className="px-4 py-3 text-gray-600 leading-relaxed text-sm product-description ql-editor"
+                dangerouslySetInnerHTML={{ __html: product.description }}
+              />
             </details>
           )}
 

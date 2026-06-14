@@ -492,14 +492,13 @@ export default function AdminProducts() {
             <div className="md:col-span-2">
               <Label className="font-semibold block mb-2">Description (Rich Text)</Label>
               <p className="text-xs text-gray-500 mb-2">Use the toolbar to format text with bold, bullets, headings, font size, and more. The description will appear exactly as styled to customers.</p>
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="border border-gray-200 rounded-lg overflow-hidden admin-quill">
                 <ReactQuill
                   theme="snow"
                   value={form.description}
                   onChange={val => setForm(f => ({ ...f, description: val }))}
                   modules={QUILL_MODULES}
                   placeholder="Write a detailed, well-formatted product description..."
-                  style={{ minHeight: 180 }}
                 />
               </div>
             </div>

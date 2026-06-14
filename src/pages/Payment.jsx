@@ -11,7 +11,7 @@ const ASH_HOVER = '#2578ae';
 
 const HUBTEL_CLIENT_ID     = 'pQGpB7y';
 const HUBTEL_CLIENT_SECRET = '14fda6847ee44c8fa910f355675cce73';
-const HUBTEL_MERCHANT_ACCT = '2039285';
+const HUBTEL_MERCHANT_ACCT = '2025378'; // merchant account number from Hubtel dashboard
 
 function formatAmount(num) {
   const n = Number(num);
@@ -87,21 +87,43 @@ export default function Payment() {
     const normPhone     = normalisePhone(phone);
     const clientRef     = (orderNumber || orderId || `FMM${Date.now()}`).slice(0, 32);
     const returnUrl     = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
-    const callbackUrl   = returnUrl;
     const cancelUrl     = `${window.location.origin}/Payment?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}&email=${encodeURIComponent(emailVal)}`;
     const basicAuth     = `Basic ${btoa(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`)}`;
 
+    // ── Hubtel Invoicing API: POST /api/v2.0/invoice/{merchantId}/simple ──────
     const requestBody = {
-      InvoiceId:           clientRef,
-      TotalAmount:         amount,
-      Description:         `FMM CLASSICO - Order #${orderNumber}`,
-      CustomerName:        customerName,
-      CustomerEmail:       emailVal,
-      CustomerMsisdn:      normPhone,
-      PrimaryCallbackUrl:  callbackUrl,
-      ReturnUrl:           returnUrl,
-      CancellationUrl:     cancelUrl,
+      invoice: {
+        items: [{
+          name:        `Order #${orderNumber}`,
+          quantity:    1,
+          unitPrice:   amount,
+          totalPrice:  amount,
+          description: `FMM CLASSICO - Order #${orderNumber}`,
+        }],
+        totalAmount: amount,
+        description: `FMM CLASSICO - Order #${orderNumber}`,
+      },
+      store: {
+        name:          'FMM CLASSICO',
+        tagline:       'Phone Accessories & Electronics',
+        logoUrl:       '',
+        websiteUrl:    window.location.origin,
+        phoneNumber:   '0509896035',
+      },
+      actions: {
+        returnUrl:      returnUrl,
+        cancellationUrl: cancelUrl,
+      },
+      callbackUrl:  returnUrl,
+      clientReference: clientRef,
+      customer: {
+        customerName:   customerName,
+        customerEmail:  emailVal,
+        mobileNumber:   normPhone,
+      },
     };
+
+    const HUBTEL_ENDPOINT = `https://invoicing.hubtel.com/api/v2.0/invoice/${HUBTEL_MERCHANT_ACCT}/simple`;
 
     let checkoutUrl = null;
     let lastError = '';
@@ -109,7 +131,7 @@ export default function Payment() {
 
     // ── ATTEMPT 1: Direct browser fetch ──────────────────────────────────────
     try {
-      const res = await fetch('https://payproxyapi.hubtel.com/items/initiate', {
+      const res = await fetch(HUBTEL_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,11 +140,13 @@ export default function Payment() {
         body: JSON.stringify(requestBody),
       });
       const json = await res.json().catch(() => ({}));
-      const code = json?.ResponseCode || json?.responseCode;
-      checkoutUrl = json?.Data?.CheckoutUrl || json?.data?.checkoutUrl || json?.data?.checkoutDirectUrl;
-      hubtelMsg = json?.ResponseMessage || json?.message || '';
+      const code = json?.ResponseCode || json?.responseCode || String(json?.statusCode);
+      checkoutUrl = json?.Data?.CheckoutUrl || json?.data?.checkoutUrl
+        || json?.Data?.checkoutUrl || json?.data?.CheckoutUrl
+        || json?.checkoutUrl || json?.CheckoutUrl;
+      hubtelMsg = json?.ResponseMessage || json?.message || json?.Message || '';
 
-      if ((code === '00' || code === '0000') && checkoutUrl) {
+      if (checkoutUrl) {
         window.location.href = checkoutUrl;
         return;
       }
@@ -135,35 +159,42 @@ export default function Payment() {
     if (!checkoutUrl) {
       try {
         const llm = await base44.integrations.Core.InvokeLLM({
-          prompt: `You are a server-side HTTP proxy. Make this exact HTTP request and return ONLY the raw JSON response body with no extra text.
+          prompt: `You are a server-side HTTP proxy. Make this EXACT HTTP POST request to the Hubtel Invoicing API and return ONLY the raw JSON response. Do not add any explanation.
 
-POST https://payproxyapi.hubtel.com/items/initiate
+URL: ${HUBTEL_ENDPOINT}
+Method: POST
 Authorization: ${basicAuth}
 Content-Type: application/json
 
-${JSON.stringify(requestBody)}`,
+Body:
+${JSON.stringify(requestBody, null, 2)}
+
+Return ONLY the JSON from the server response.`,
           response_json_schema: {
             type: 'object',
             properties: {
               ResponseCode:    { type: 'string' },
               ResponseMessage: { type: 'string' },
+              statusCode:      { type: 'number' },
+              message:         { type: 'string' },
               Data: { type: 'object' },
-              responseCode: { type: 'string' },
               data: { type: 'object' },
-              message: { type: 'string' },
+              checkoutUrl:     { type: 'string' },
+              CheckoutUrl:     { type: 'string' },
             },
           },
         });
 
-        const code2 = llm?.ResponseCode || llm?.responseCode;
-        checkoutUrl = llm?.Data?.CheckoutUrl || llm?.data?.checkoutUrl || llm?.data?.checkoutDirectUrl;
+        checkoutUrl = llm?.Data?.CheckoutUrl || llm?.data?.checkoutUrl
+          || llm?.Data?.checkoutUrl || llm?.data?.CheckoutUrl
+          || llm?.checkoutUrl || llm?.CheckoutUrl;
         hubtelMsg = hubtelMsg || llm?.ResponseMessage || llm?.message || '';
 
-        if ((code2 === '00' || code2 === '0000') && checkoutUrl) {
+        if (checkoutUrl) {
           window.location.href = checkoutUrl;
           return;
         }
-        lastError += ` | LLM proxy: code=${code2}, msg=${llm?.ResponseMessage || llm?.message || JSON.stringify(llm)}`;
+        lastError += ` | LLM proxy response: ${JSON.stringify(llm)}`;
       } catch (llmErr) {
         lastError += ` | LLM error: ${llmErr?.message || llmErr}`;
       }

@@ -15,7 +15,6 @@ import {
   Truck,
   MapPin,
   XCircle,
-  CreditCard,
   Trash2,
   Check,
   AlertTriangle
@@ -23,8 +22,6 @@ import {
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-
-const PAYSTACK_LINK = "https://paystack.shop/pay/1miimvhai8";
 
 const statusConfig = {
   pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
@@ -64,33 +61,6 @@ export default function Orders() {
     retry: 5,
     retryDelay: 1000,
     staleTime: 2000,
-  });
-
-  const claimPaymentMutation = useMutation({
-    mutationFn: async (order) => {
-      const newTracking = [
-        ...(order.tracking_updates || []),
-        {
-          status: 'Payment Claimed',
-          message: 'Customer confirmed payment – awaiting FMM CLASSICO verification',
-          timestamp: new Date().toISOString()
-        }
-      ];
-      await base44.entities.Order.update(order.id, { tracking_updates: newTracking });
-      await base44.entities.Notification.create({
-           user_email: order.customer_email,
-           title: '⏳ Payment Being Verified',
-           message: `We received your payment claim for order #${order.order_number}. We'll confirm within 2–5 minutes.`,
-           type: 'payment_pending',
-           order_id: order.id,
-           order_number: order.order_number,
-           is_read: false
-         });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success('Payment claim sent! We\'ll verify and confirm shortly.');
-    }
   });
 
   const deleteOrdersMutation = useMutation({
@@ -323,23 +293,6 @@ export default function Orders() {
                           Track Order
                         </Button>
                       </Link>
-                      {order.status === 'pending' && !order.tracking_updates?.some(t => t.status === 'Payment Claimed') && (
-                        <Button 
-                          size="sm" 
-                          className="gap-1 bg-green-600 hover:bg-green-700"
-                          onClick={() => claimPaymentMutation.mutate(order)}
-                          disabled={claimPaymentMutation.isPending}
-                        >
-                          <CreditCard className="h-4 w-4" />
-                          {claimPaymentMutation.isPending ? 'Sending...' : 'Payment Completed'}
-                        </Button>
-                      )}
-                      {order.status === 'pending' && order.tracking_updates?.some(t => t.status === 'Payment Claimed') && (
-                        <Button variant="outline" size="sm" disabled className="gap-1 text-orange-600">
-                          <Clock className="h-4 w-4" />
-                          Awaiting Verification
-                        </Button>
-                      )}
                       {(order.status === 'pending' || order.status === 'confirmed') && (
                         <Button
                           size="sm"

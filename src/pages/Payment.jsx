@@ -87,11 +87,8 @@ export default function Payment() {
     }).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (orderId && orderNumber && amount > 0) {
-      sessionStorage.setItem('fmm_pending_order', JSON.stringify({ orderId, orderNumber, amount }));
-    }
-  }, []);
+  // No orderId at this point — order is created only after successful payment
+  // sessionStorage already has full order data set by Checkout page
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -118,7 +115,7 @@ export default function Payment() {
     const customerName = [firstName, lastName].filter(Boolean).join(' ') || 'Customer';
     const normPhone    = normalisePhone(phone);
     const clientRef    = generateClientRef(orderNumber);
-    const returnUrl    = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
+    const returnUrl    = `${window.location.origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
     const cancelUrl    = window.location.href;
 
     const requestBody = {

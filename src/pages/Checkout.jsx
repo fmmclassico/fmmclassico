@@ -179,62 +179,37 @@ export default function Checkout() {
     setIsSubmitting(true);
 
     const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
+
+    // Do NOT create the order yet — only save all info to sessionStorage.
+    // The order will be created in PaymentConfirmed AFTER Hubtel confirms payment.
+    // This prevents ghost "pending" orders from users who abandon payment.
     const estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
 
-    const builtOrderData = {
-      order_number: orderNumber,
+    sessionStorage.setItem('fmm_pending_order', JSON.stringify({
+      orderNumber,
+      amount: total,
+      customerName: formData.customer_name,
+      customerEmail: user.email,
+      customerPhone: formData.customer_phone,
+      deliveryAddress: formData.delivery_address,
+      city: formData.city,
+      notes: formData.notes,
+      estimatedDelivery: estimatedDelivery.toISOString().split('T')[0],
       items: cartItems.map(item => ({
         product_id: item.product_id,
         product_name: item.product_name,
         product_image: item.product_image,
         price: item.product_price,
-        quantity: item.quantity
+        quantity: item.quantity,
+        cart_item_id: item.id,
       })),
-      total_amount: total,
-      status: 'pending',
-      customer_name: formData.customer_name,
-      customer_email: user.email,
-      customer_phone: formData.customer_phone,
-      delivery_address: formData.delivery_address,
-      city: formData.city,
-      notes: formData.notes,
-      estimated_delivery: estimatedDelivery.toISOString().split('T')[0],
-      tracking_updates: [{
-        status: 'Awaiting Payment',
-        message: 'Order created - awaiting payment confirmation',
-        timestamp: new Date().toISOString()
-      }]
-    };
-
-    // Create order with error handling
-    let newOrder;
-    try {
-      newOrder = await base44.entities.Order.create(builtOrderData);
-    } catch (error) {
-      console.error('Order creation error:', error);
-      toast.error('Failed to create order. Please try again.');
-      setIsSubmitting(false);
-      return;
-    }
-    
-    // Save extra info to sessionStorage so PaymentConfirmed can notify immediately
-    sessionStorage.setItem('fmm_pending_order', JSON.stringify({
-      orderId: newOrder.id,
-      orderNumber,
-      amount: total,
-      customerName: formData.customer_name,
-      customerPhone: formData.customer_phone,
-      deliveryAddress: formData.delivery_address,
-      city: formData.city,
     }));
-
-    // Clear the cart AFTER successful payment (not before)
-    // Cart will be cleared in PaymentConfirmed page after payment completion
 
     setOrderSubmitted(true);
     setIsSubmitting(false);
-    navigate(createPageUrl(`Payment?orderId=${newOrder.id}&orderNumber=${orderNumber}&amount=${total.toFixed(2)}&email=${encodeURIComponent(user.email)}`));
+    // Pass orderNumber + amount for the Payment page to use (no orderId yet)
+    navigate(createPageUrl(`Payment?orderNumber=${orderNumber}&amount=${total.toFixed(2)}&email=${encodeURIComponent(user.email)}`));
   };
 
 

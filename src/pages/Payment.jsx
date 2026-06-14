@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle, MessageCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import HubtelCheckout from '@hubteljs/checkout';
 
 const ASH = '#2E86C1';
 const ASH_HOVER = '#2578ae';
@@ -165,20 +164,8 @@ export default function Payment() {
       const isSuccess = code === '0000' || code === '00';
 
       if (isSuccess && checkoutUrl) {
-        // SUCCESS — open Hubtel checkout inline (like Paystack popup) inside FMM CLASSICO
-        setLoading(false);
-        HubtelCheckout.open({
-          checkoutUrl,
-          onClose: () => {
-            // user closed the popup without paying — stay on payment page
-          },
-          onPaymentSuccess: () => {
-            navigate(`/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`);
-          },
-          onPaymentFailure: () => {
-            setErrorMsg('Payment was not completed. Please try again or use WhatsApp.');
-          },
-        });
+        // SUCCESS — redirect to real Hubtel checkout page
+        window.location.href = checkoutUrl;
         return;
       }
 

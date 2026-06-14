@@ -118,15 +118,16 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);
-      setIsAuthenticated(false);
-      
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
+      // Only treat as logged-out if it's explicitly a 401 Unauthorized (token truly invalid/expired).
+      // Do NOT redirect on network errors, 403, or other transient failures — those should not log the user out.
+      if (error.status === 401) {
+        setIsAuthenticated(false);
         setAuthError({
           type: 'auth_required',
           message: 'Authentication required'
         });
       }
+      // For all other errors (network, 403, 5xx, etc.) keep the user logged in and silently fail.
     }
   };
 

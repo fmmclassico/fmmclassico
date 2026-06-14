@@ -30,43 +30,26 @@ function generateClientRef(orderNumber) {
   return base.slice(0, 32);
 }
 
-// ── SERVER-SIDE HUBTEL CALL via InvokeLLM proxy ─────────────────────────────
-// Credentials are embedded in the LLM prompt (runs server-side), never in browser fetch headers
-async function callHubtelViaProxy(requestBody) {
+// ── DIRECT HUBTEL API CALL ────────────────────────────────────────────────────
+// payproxyapi.hubtel.com is Hubtel's own CORS-enabled proxy endpoint — direct fetch works
+async function callHubtelDirect(requestBody) {
   const basicAuth = btoa(`${HUBTEL_API_ID}:${HUBTEL_API_KEY}`);
 
-  const result = await base44.integrations.Core.InvokeLLM({
-    prompt: `You are a secure HTTP proxy. Execute this exact HTTP POST request server-side and return ONLY the raw JSON response body. Do not add any explanation, markdown, or extra text.
-
-POST https://payproxyapi.hubtel.com/items/initiate
-Authorization: Basic ${basicAuth}
-Content-Type: application/json
-Accept: application/json
-
-Request Body:
-${JSON.stringify(requestBody, null, 2)}
-
-Return only the JSON response body from Hubtel, nothing else.`,
-    response_json_schema: {
-      type: 'object',
-      properties: {
-        responseCode: { type: 'string' },
-        status: { type: 'string' },
-        message: { type: 'string' },
-        data: {
-          type: 'object',
-          properties: {
-            checkoutUrl: { type: 'string' },
-            checkoutDirectUrl: { type: 'string' },
-            checkoutId: { type: 'string' },
-            clientReference: { type: 'string' },
-          },
-        },
-      },
+  const res = await fetch('https://payproxyapi.hubtel.com/items/initiate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Basic ${basicAuth}`,
     },
+    body: JSON.stringify(requestBody),
   });
 
-  return result;
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); } catch { json = { _rawText: text, _parseError: 'Response was not valid JSON' }; }
+
+  return { httpStatus: res.status, body: json };
 }
 
 export default function Payment() {
@@ -167,7 +150,8 @@ export default function Payment() {
     };
 
     try {
-      const hubtelResponse = await callHubtelViaProxy(requestBody);
+      const { httpStatus, body: hubtelResponse } = await callHubtelDirect(requestBody);
+      log.httpStatus = httpStatus;
       log.hubtelResponse = hubtelResponse;
 
       const code = hubtelResponse?.responseCode;
@@ -176,24 +160,24 @@ export default function Payment() {
 
       setPayLog(log);
 
-      // Hubtel may return "0000" or "00" for success
+      // Hubtel returns "0000" or "00" for success
       const isSuccess = code === '0000' || code === '00';
 
       if (isSuccess && checkoutUrl) {
-        // SUCCESS — redirect to Hubtel checkout
+        // SUCCESS — redirect to real Hubtel checkout page
         window.location.href = checkoutUrl;
         return;
       }
 
-      // Hubtel returned an error — show exact message
+      // Hubtel returned an error — show exact code, message, and full response
       const hubtelMsg = hubtelResponse?.message || hubtelResponse?.Message || '';
       const diagMsg = interpretHubtelCode(code, hubtelMsg);
-      setErrorMsg(`Hubtel error (${code}): ${diagMsg}`);
+      setErrorMsg(`Hubtel [HTTP ${httpStatus}] code=${code}: ${diagMsg}`);
 
     } catch (err) {
       log.error = err?.message || String(err);
       setPayLog(log);
-      setErrorMsg(`Server error: ${err?.message || 'Could not reach payment server'}`);
+      setErrorMsg(`Network error: ${err?.message || 'Could not reach Hubtel. Check your internet connection.'}`);
     }
 
     setLoading(false);
@@ -221,10 +205,13 @@ export default function Payment() {
     };
 
     let hubtelResponse = null;
+    let httpStatus = null;
     let proxyError = null;
 
     try {
-      hubtelResponse = await callHubtelViaProxy(testBody);
+      const result = await callHubtelDirect(testBody);
+      httpStatus = result.httpStatus;
+      hubtelResponse = result.body;
     } catch (err) {
       proxyError = err?.message || String(err);
     }
@@ -232,7 +219,8 @@ export default function Payment() {
     setDiagReport({
       requestSent: {
         endpoint: 'POST https://payproxyapi.hubtel.com/items/initiate',
-        via: 'InvokeLLM server-side proxy (no CORS)',
+        via: 'Direct fetch (real HTTP call — no mock)',
+        authorization: `Basic base64(${HUBTEL_API_ID}:***) — real credentials`,
         merchantAccountNumber: HUBTEL_COLLECTION_ACCOUNT,
         clientReference: testClientRef,
         totalAmount: testBody.totalAmount,
@@ -245,6 +233,7 @@ export default function Payment() {
         description: testBody.description,
       },
       hubtelResponse,
+      httpStatus,
       proxyError,
       responseCode: hubtelResponse?.responseCode || 'N/A',
       message: hubtelResponse?.message || 'N/A',
@@ -491,11 +480,12 @@ export default function Payment() {
               {/* Response */}
               <div className={`border rounded-lg p-3 ${
                 diagReport.proxyError ? 'bg-red-50 border-red-200' :
-                diagReport.responseCode === '0000' ? 'bg-green-50 border-green-200' :
+                (diagReport.responseCode === '0000' || diagReport.responseCode === '00') ? 'bg-green-50 border-green-200' :
                 'bg-amber-50 border-amber-200'
               }`}>
                 <p className="text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">📥 Hubtel Response</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs mb-3">
+                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[120px]">HTTP Status:</span><span className="font-bold text-lg">{diagReport.httpStatus ?? 'N/A (CORS blocked)'}</span></div>
                   <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[120px]">responseCode:</span><span className="font-bold text-lg">{diagReport.responseCode}</span></div>
                   <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[120px]">status:</span><span className="font-bold">{diagReport.status}</span></div>
                   <div className="flex gap-1 col-span-2"><span className="font-semibold text-gray-500 min-w-[120px]">message:</span><span className="font-bold">{diagReport.message}</span></div>
@@ -509,7 +499,7 @@ export default function Payment() {
               </div>
 
               {/* Interpretation */}
-              <div className={`rounded-lg p-3 text-xs font-semibold ${diagReport.responseCode === '0000' ? 'bg-green-100 text-green-800' : 'bg-blue-50 text-blue-800'}`}>
+              <div className={`rounded-lg p-3 text-xs font-semibold ${(diagReport.responseCode === '0000' || diagReport.responseCode === '00') ? 'bg-green-100 text-green-800' : 'bg-blue-50 text-blue-800'}`}>
                 ⚡ {interpretHubtelCodeStatic(diagReport.responseCode, diagReport.message, diagReport.proxyError)}
               </div>
             </div>

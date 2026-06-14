@@ -44,20 +44,12 @@ export default function Checkout() {
   });
 
   useEffect(() => {
-    const getUser = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
-      if (isAuth) {
-        const userData = await base44.auth.me();
+    base44.auth.me()
+      .then(userData => {
         setUser(userData);
-        setFormData(prev => ({
-          ...prev,
-          customer_name: userData.full_name || ''
-        }));
-      } else {
-        base44.auth.redirectToLogin(createPageUrl('Home'));
-      }
-    };
-    getUser();
+        setFormData(prev => ({ ...prev, customer_name: userData.full_name || '' }));
+      })
+      .catch(() => base44.auth.redirectToLogin(createPageUrl('Home')));
   }, []);
 
   const { data: cartItems = [] } = useQuery({

@@ -28,16 +28,9 @@ export default function Cart() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const getUser = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
-      if (isAuth) {
-        const userData = await base44.auth.me();
-        setUser(userData);
-      } else {
-        base44.auth.redirectToLogin(createPageUrl('Home'));
-      }
-    };
-    getUser();
+    base44.auth.me()
+      .then(setUser)
+      .catch(() => base44.auth.redirectToLogin(createPageUrl('Home')));
   }, []);
 
   const { data: cartItems = [], isLoading } = useQuery({
@@ -146,9 +139,12 @@ export default function Cart() {
                     <Link to={createPageUrl(`ProductDetail?id=${item.product_id}`)} className="flex-shrink-0">
                       <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
                         <img
-                          src={item.product_image || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=200'}
-                          alt={item.product_name}
-                          className="w-full h-full object-cover"
+                         src={item.product_image}
+                         alt={item.product_name}
+                         className="w-full h-full object-cover"
+                         loading="lazy"
+                         decoding="async"
+                         onError={e => { e.target.style.display='none'; }}
                         />
                       </div>
                     </Link>

@@ -129,6 +129,8 @@ export default function Home() {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list('-created_date', 100),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const addToCartMutation = useMutation({
@@ -188,7 +190,7 @@ export default function Home() {
               <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
                 <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden shadow-sm border-2 group-hover:scale-105 transition-transform ${isExpanded ? 'border-[#2E86C1]' : 'border-white'} ${cat.color} flex items-center justify-center`}>
                   {displayImg
-                    ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
+                    ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                     : <cat.icon className="h-10 w-10 opacity-70" />}
                 </div>
                 <span className="text-xs md:text-sm font-bold text-gray-800 text-center leading-tight">{cat.label}</span>
@@ -301,7 +303,7 @@ export default function Home() {
                     className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
-                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                         : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
                       {product.original_price > product.price && (
                        <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">
@@ -349,7 +351,7 @@ export default function Home() {
                     className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
-                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                         : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
                       <span className="absolute top-1 left-1 bg-green-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">🔥</span>
                     </div>
@@ -435,7 +437,7 @@ export default function Home() {
                     className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
-                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                         : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
                       <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[8px] font-black px-1 py-0.5 rounded-full">NEW</span>
                     </div>
@@ -479,7 +481,7 @@ export default function Home() {
                     className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
-                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                         : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
                       <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">#{idx + 1}</span>
                     </div>

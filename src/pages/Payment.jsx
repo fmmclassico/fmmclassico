@@ -115,8 +115,9 @@ export default function Payment() {
     const customerName = [firstName, lastName].filter(Boolean).join(' ') || 'Customer';
     const normPhone    = normalisePhone(phone);
     const clientRef    = generateClientRef(orderNumber);
-    const returnUrl    = `${window.location.origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
-    const cancelUrl    = window.location.href;
+    // Hubtel appends ?status=success&clientReference=...&transactionId=... to the returnUrl
+    const returnUrl    = `${window.location.origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount.toFixed(2)}`;
+    const cancelUrl    = `${window.location.origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount.toFixed(2)}&status=cancelled`;
 
     const requestBody = {
       totalAmount: parseFloat(amount.toFixed(2)),

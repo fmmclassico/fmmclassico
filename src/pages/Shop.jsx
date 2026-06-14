@@ -36,6 +36,8 @@ export default function Shop() {
   const { data: allProducts = [], isLoading } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list('-created_date', 100),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   // Filter out hidden and out-of-stock (stock === 0) products for public display

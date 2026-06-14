@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
+import CheckoutSdk from '@hubteljs/checkout';
+import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,9 +11,10 @@ const ASH = '#2E86C1';
 const ASH_HOVER = '#2578ae';
 
 // ── HUBTEL CONFIG ─────────────────────────────────────────────────────────────
-// Hubtel Hosted Checkout — no backend/CORS needed, works in all browsers
-// The customer is redirected to Hubtel's secure payment page then returned here.
+// API ID: 80pYxkm  |  API Key: db2c85757e9e4720a53f63d89cb1934a
+// Merchant Account Number: 0599676419
 const HUBTEL_MERCHANT_ACCOUNT = '0599676419';
+const HUBTEL_BASIC_AUTH = 'Basic ' + btoa('80pYxkm:db2c85757e9e4720a53f63d89cb1934a');
 // ─────────────────────────────────────────────────────────────────────────────
 
 function formatAmount(num) {
@@ -73,35 +75,47 @@ export default function Payment() {
     if (!emailVal.trim()) { setError('Please enter your email address.'); return; }
     if (!phone.trim())    { setError('Please enter your phone number.'); return; }
 
-    // Normalise phone to 10-digit Ghana format (e.g. 0244123456)
+    // Normalise phone to international format required by Hubtel (233XXXXXXXXX)
     let rawPhone = phone.trim().replace(/\s+/g, '');
-    if (rawPhone.startsWith('+233')) rawPhone = '0' + rawPhone.slice(4);
-    else if (rawPhone.startsWith('233') && rawPhone.length === 12) rawPhone = '0' + rawPhone.slice(3);
+    if (rawPhone.startsWith('+')) rawPhone = rawPhone.slice(1);
+    else if (rawPhone.startsWith('0')) rawPhone = '233' + rawPhone.slice(1);
 
     setLoading(true);
 
-    // Hubtel Hosted Checkout — redirects customer to Hubtel's own secure payment page.
-    // After payment, Hubtel redirects back to our callbackUrl.
     const callbackUrl = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
-    const cancelUrl   = `${window.location.origin}/Payment?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}&email=${encodeURIComponent(emailVal)}`;
 
-    const customerName = `${firstName} ${lastName}`.trim() || emailVal;
-
-    // Build Hubtel Hosted Checkout URL
-    const params = new URLSearchParams({
-      merchantAccountNumber: HUBTEL_MERCHANT_ACCOUNT,
-      returnUrl: callbackUrl,
-      cancelUrl: cancelUrl,
-      clientReference: orderNumber,
-      totalAmount: amount.toFixed(2),
-      description: `FMM CLASSICO – Order #${orderNumber}`,
+    const purchaseInfo = {
+      amount: amount,
+      purchaseDescription: `FMM CLASSICO – Order #${orderNumber}`,
       customerPhoneNumber: rawPhone,
-      customerEmailAddress: emailVal,
-      customerName: customerName,
-    });
+      clientReference: orderNumber,
+    };
 
-    const hubtelCheckoutUrl = `https://checkout.hubtel.com/checkout/initiate?${params.toString()}`;
-    window.location.href = hubtelCheckoutUrl;
+    const config = {
+      branding: 'enabled',
+      callbackUrl: callbackUrl,
+      merchantAccount: HUBTEL_MERCHANT_ACCOUNT,
+      basicAuth: HUBTEL_BASIC_AUTH,
+    };
+
+    const checkout = new CheckoutSdk();
+    checkout.openModal({
+      purchaseInfo,
+      config,
+      callBacks: {
+        onPaymentSuccess: (data) => {
+          checkout.closePopUp();
+          window.location.href = callbackUrl + `&reference=${data?.transactionId || ''}`;
+        },
+        onPaymentFailure: () => {
+          setLoading(false);
+          setError('Payment failed. Please try again.');
+        },
+        onClose: () => {
+          setLoading(false);
+        },
+      },
+    });
   };
 
   if (amount <= 0) {
@@ -214,7 +228,7 @@ export default function Payment() {
               <p className="text-xs font-bold text-gray-700 mb-2 text-center">How Hubtel Payment Works</p>
               {[
                 '1. Fill in your details below',
-                '2. Click "Pay now" — you\'ll go to Hubtel\'s secure page',
+                '2. Click "Pay now" — a Hubtel popup opens',
                 '3. Choose MoMo, Card, or Bank Transfer',
                 '4. Complete payment — your order is confirmed ✅',
               ].map(s => (
@@ -307,12 +321,12 @@ export default function Payment() {
                 className="w-full py-6 sm:py-7 text-base sm:text-lg font-bold rounded-lg text-white bg-orange-500 hover:bg-orange-600 mt-3"
               >
                 {loading
-                  ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Redirecting to Hubtel...</>
-                  : <><ExternalLink className="mr-2 h-5 w-5" /> Pay now with Hubtel</>}
+                  ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Opening Hubtel checkout...</>
+                  : 'Pay now with Hubtel'}
               </Button>
 
               <p className="text-center text-xs text-gray-400 mt-1">
-                You'll be redirected to Hubtel's secure payment page. After payment, you'll return here automatically.
+                A secure Hubtel checkout will open. Pay with MoMo, Card, or Bank Transfer.
               </p>
             </form>
           </div>

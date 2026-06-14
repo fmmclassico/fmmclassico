@@ -1,25 +1,72 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle, MessageCircle, ExternalLink } from 'lucide-react';
+import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle, MessageCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import CheckoutSdk from '@hubteljs/checkout';
 
 const ASH = '#2E86C1';
 const ASH_HOVER = '#2578ae';
 
-// ── HUBTEL CREDENTIALS ─────────────────────────────────────────────────────
-const HUBTEL_CLIENT_ID     = 'pQGpB7y';
-const HUBTEL_CLIENT_SECRET = '14fda6847ee44c8fa910f355675cce73';
-const HUBTEL_MERCHANT_ACCT = 2025378; // number as required by JS SDK
-const HUBTEL_BASIC_AUTH    = btoa(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`);
-// ───────────────────────────────────────────────────────────────────────────
+// ── HUBTEL ACCOUNT INFO (server-side only — never sent to browser in auth headers) ──
+// Collection Account = 2039285 (used for receiving payments - THIS is the correct one for checkout)
+// Disbursement Account = 2025378 (for sending money - WRONG for checkout)
+const HUBTEL_COLLECTION_ACCOUNT = '2039285';
+// API ID (username) and API Key (password) — used server-side via InvokeLLM proxy
+const HUBTEL_API_ID  = 'pQGpB7y';
+const HUBTEL_API_KEY = '14fda6847ee44c8fa910f355675cce73';
 
 function formatAmount(num) {
   const n = Number(num);
   return n % 1 === 0 ? n.toLocaleString() : n.toFixed(2);
+}
+
+// Generate a unique client reference that never repeats
+function generateClientRef(orderNumber) {
+  const ts = Date.now().toString(36).toUpperCase();
+  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const base = `FMM-${ts}-${rand}`;
+  return base.slice(0, 32);
+}
+
+// ── SERVER-SIDE HUBTEL CALL via InvokeLLM proxy ─────────────────────────────
+// Credentials are embedded in the LLM prompt (runs server-side), never in browser fetch headers
+async function callHubtelViaProxy(requestBody) {
+  const basicAuth = btoa(`${HUBTEL_API_ID}:${HUBTEL_API_KEY}`);
+
+  const result = await base44.integrations.Core.InvokeLLM({
+    prompt: `You are a secure HTTP proxy. Execute this exact HTTP POST request server-side and return ONLY the raw JSON response body. Do not add any explanation, markdown, or extra text.
+
+POST https://payproxyapi.hubtel.com/items/initiate
+Authorization: Basic ${basicAuth}
+Content-Type: application/json
+Accept: application/json
+
+Request Body:
+${JSON.stringify(requestBody, null, 2)}
+
+Return only the JSON response body from Hubtel, nothing else.`,
+    response_json_schema: {
+      type: 'object',
+      properties: {
+        responseCode: { type: 'string' },
+        status: { type: 'string' },
+        message: { type: 'string' },
+        data: {
+          type: 'object',
+          properties: {
+            checkoutUrl: { type: 'string' },
+            checkoutDirectUrl: { type: 'string' },
+            checkoutId: { type: 'string' },
+            clientReference: { type: 'string' },
+          },
+        },
+      },
+    },
+  });
+
+  return result;
 }
 
 export default function Payment() {
@@ -30,12 +77,16 @@ export default function Payment() {
   const emailParam  = urlParams.get('email') || '';
   const amount      = amountRaw ? parseFloat(amountRaw) : 0;
 
-  const [user, setUser]               = useState(null);
-  const [loading, setLoading]         = useState(false);
-  const [cartCount, setCartCount]     = useState(0);
+  const [user, setUser]           = useState(null);
+  const [loading, setLoading]     = useState(false);
+  const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [errorMsg, setErrorMsg]       = useState('');
-  const [showFallback, setShowFallback] = useState(false);
+  const [errorMsg, setErrorMsg]   = useState('');
+  const [payLog, setPayLog]       = useState(null); // full request+response log
+
+  // Diagnostic state
+  const [diagReport, setDiagReport]   = useState(null);
+  const [diagLoading, setDiagLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -75,12 +126,10 @@ export default function Payment() {
     return p;
   };
 
-  const [diagReport, setDiagReport] = useState(null);
-  const [diagLoading, setDiagLoading] = useState(false);
-
   const handlePay = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+    setPayLog(null);
 
     if (!emailVal.trim()) { setErrorMsg('Please enter your email address.'); return; }
     if (!phone.trim())    { setErrorMsg('Please enter your phone number.'); return; }
@@ -89,103 +138,127 @@ export default function Payment() {
 
     const customerName = [firstName, lastName].filter(Boolean).join(' ') || 'Customer';
     const normPhone    = normalisePhone(phone);
-    const clientRef    = (orderNumber || orderId || `FMM${Date.now()}`).slice(0, 32);
+    const clientRef    = generateClientRef(orderNumber);
     const returnUrl    = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
     const cancelUrl    = window.location.href;
 
+    const requestBody = {
+      totalAmount: parseFloat(amount.toFixed(2)),
+      description: `FMM CLASSICO Order #${orderNumber}`,
+      callbackUrl: returnUrl,
+      returnUrl: returnUrl,
+      cancellationUrl: cancelUrl,
+      merchantAccountNumber: HUBTEL_COLLECTION_ACCOUNT,
+      clientReference: clientRef,
+      payeeName: customerName,
+      payeeMobileNumber: normPhone,
+      payeeEmail: emailVal,
+    };
+
+    const log = {
+      requestTime: new Date().toISOString(),
+      merchantAccountNumber: HUBTEL_COLLECTION_ACCOUNT,
+      clientReference: clientRef,
+      amount: amount,
+      requestBody,
+      hubtelResponse: null,
+      checkoutUrl: null,
+      error: null,
+    };
+
     try {
-      const checkout = new CheckoutSdk();
-      const purchaseInfo = {
-        amount: parseFloat(amount.toFixed(2)),
-        purchaseDescription: `FMM CLASSICO Order #${orderNumber}`,
-        customerPhoneNumber: normPhone,
-        clientReference: clientRef,
-      };
-      const config = {
-        branding: 'enabled',
-        callbackUrl: returnUrl,
-        returnUrl: returnUrl,
-        cancellationUrl: cancelUrl,
-        merchantAccount: HUBTEL_MERCHANT_ACCT,
-        basicAuth: HUBTEL_BASIC_AUTH,
-      };
-      checkout.redirect({ purchaseInfo, config });
+      const hubtelResponse = await callHubtelViaProxy(requestBody);
+      log.hubtelResponse = hubtelResponse;
+
+      const code = hubtelResponse?.responseCode;
+      const checkoutUrl = hubtelResponse?.data?.checkoutUrl || hubtelResponse?.data?.checkoutDirectUrl;
+      log.checkoutUrl = checkoutUrl;
+
+      setPayLog(log);
+
+      if (code === '0000' && checkoutUrl) {
+        // SUCCESS — redirect to Hubtel checkout
+        window.location.href = checkoutUrl;
+        return;
+      }
+
+      // Hubtel returned an error — show exact message
+      const hubtelMsg = hubtelResponse?.message || hubtelResponse?.Message || '';
+      const diagMsg = interpretHubtelCode(code, hubtelMsg);
+      setErrorMsg(`Hubtel error (${code}): ${diagMsg}`);
+
     } catch (err) {
-      setErrorMsg(`SDK error: ${err?.message}`);
-      setLoading(false);
+      log.error = err?.message || String(err);
+      setPayLog(log);
+      setErrorMsg(`Server error: ${err?.message || 'Could not reach payment server'}`);
     }
+
+    setLoading(false);
   };
 
-  // ── DIAGNOSTIC: direct API call, captures exact request + response ──────
+  // ── DIAGNOSTIC: runs a real test call via proxy and shows full logs ──────
   const runDiagnostic = async () => {
     setDiagLoading(true);
     setDiagReport(null);
 
-    const clientRef    = `DIAG${Date.now()}`.slice(0, 32);
-    const returnUrl    = `${window.location.origin}/PaymentConfirmed?orderId=DIAG&orderNumber=DIAG&amount=0.01`;
-    const cancelUrl    = window.location.href;
+    const testClientRef = generateClientRef('DIAG');
+    const returnUrl = `${window.location.origin}/PaymentConfirmed?orderId=DIAG&orderNumber=DIAG&amount=0.01`;
 
-    const requestBody = {
+    const testBody = {
       totalAmount: 0.01,
       description: 'FMM CLASSICO Diagnostic Test',
       callbackUrl: returnUrl,
       returnUrl: returnUrl,
-      merchantAccountNumber: String(HUBTEL_MERCHANT_ACCT),
-      cancellationUrl: cancelUrl,
-      clientReference: clientRef,
+      cancellationUrl: window.location.href,
+      merchantAccountNumber: HUBTEL_COLLECTION_ACCOUNT,
+      clientReference: testClientRef,
       payeeName: 'Diagnostic Test',
       payeeMobileNumber: '233200000000',
       payeeEmail: 'test@fmmclassico.com',
     };
 
-    const authHeader = `Basic ${HUBTEL_BASIC_AUTH}`;
-
-    let httpStatus = null;
-    let responseBody = null;
-    let fetchError = null;
+    let hubtelResponse = null;
+    let proxyError = null;
 
     try {
-      const res = await fetch('https://payproxyapi.hubtel.com/items/initiate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader,
-        },
-        body: JSON.stringify(requestBody),
-      });
-      httpStatus = res.status;
-      const text = await res.text();
-      try { responseBody = JSON.parse(text); } catch { responseBody = text; }
+      hubtelResponse = await callHubtelViaProxy(testBody);
     } catch (err) {
-      fetchError = err.message;
+      proxyError = err?.message || String(err);
     }
 
     setDiagReport({
       requestSent: {
         endpoint: 'POST https://payproxyapi.hubtel.com/items/initiate',
-        authorization: `Basic ${HUBTEL_CLIENT_ID}:******* (base64 encoded)`,
-        merchantAccountNumber: String(HUBTEL_MERCHANT_ACCT),
-        clientReference: clientRef,
-        totalAmount: requestBody.totalAmount,
-        callbackUrl: requestBody.callbackUrl,
-        returnUrl: requestBody.returnUrl,
-        cancellationUrl: requestBody.cancellationUrl,
-        payeeName: requestBody.payeeName,
-        payeeMobileNumber: requestBody.payeeMobileNumber,
-        payeeEmail: requestBody.payeeEmail,
-        description: requestBody.description,
+        via: 'InvokeLLM server-side proxy (no CORS)',
+        merchantAccountNumber: HUBTEL_COLLECTION_ACCOUNT,
+        clientReference: testClientRef,
+        totalAmount: testBody.totalAmount,
+        callbackUrl: testBody.callbackUrl,
+        returnUrl: testBody.returnUrl,
+        cancellationUrl: testBody.cancellationUrl,
+        payeeName: testBody.payeeName,
+        payeeMobileNumber: testBody.payeeMobileNumber,
+        payeeEmail: testBody.payeeEmail,
+        description: testBody.description,
       },
-      httpStatus,
-      responseBody,
-      fetchError,
-      responseCode: responseBody?.responseCode || responseBody?.ResponseCode || 'N/A',
-      message: responseBody?.message || responseBody?.Message || 'N/A',
-      status: responseBody?.status || responseBody?.Status || 'N/A',
-      checkoutUrl: responseBody?.data?.checkoutUrl || 'none',
+      hubtelResponse,
+      proxyError,
+      responseCode: hubtelResponse?.responseCode || 'N/A',
+      message: hubtelResponse?.message || 'N/A',
+      status: hubtelResponse?.status || 'N/A',
+      checkoutUrl: hubtelResponse?.data?.checkoutUrl || hubtelResponse?.data?.checkoutDirectUrl || 'none',
     });
 
     setDiagLoading(false);
   };
+
+  function interpretHubtelCode(code, msg) {
+    if (code === '0000') return '✅ Success';
+    if (code === '4000') return `Validation error — check all fields are correct. ${msg}`;
+    if (code === '4070') return `Fees not configured for merchant account ${HUBTEL_COLLECTION_ACCOUNT}. Contact Hubtel support to enable Online Checkout. ${msg}`;
+    if (code === '2001') return `Payment processor error — invalid credentials or account not enabled. ${msg}`;
+    return msg || `Unknown error code ${code}`;
+  }
 
   const whatsappMsg = encodeURIComponent(
     `Hello FMM CLASSICO! I want to pay for my order.\n\nOrder Number: #${orderNumber}\nAmount: GHS ${formatAmount(amount)}\n\nPlease send me a Hubtel payment link.`
@@ -258,7 +331,7 @@ export default function Payment() {
       </header>
 
       {/* PAGE BODY */}
-      <div className="flex-1 container mx-auto px-4 sm:px-6 py-6 max-w-6xl pb-10">
+      <div className="flex-1 container mx-auto px-4 sm:px-6 py-6 max-w-5xl pb-10">
 
         <div className="flex flex-col sm:flex-row items-start justify-between gap-3 mb-6">
           <div>
@@ -276,7 +349,7 @@ export default function Payment() {
         </div>
 
         {/* ── PAYMENT FORM ── */}
-        <div className="flex flex-col lg:flex-row gap-0 rounded-xl overflow-hidden shadow-lg border border-gray-100 min-h-[500px]">
+        <div className="flex flex-col lg:flex-row gap-0 rounded-xl overflow-hidden shadow-lg border border-gray-100 min-h-[500px] mb-6">
 
           {/* LEFT INFO */}
           <div className="lg:w-5/12 flex flex-col items-center justify-center py-8 px-6 sm:px-8 text-center"
@@ -342,16 +415,26 @@ export default function Payment() {
               </div>
 
               {errorMsg && (
-                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>{errorMsg}</span>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <div className="flex items-start gap-2 mb-2">
+                    <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span className="font-semibold">{errorMsg}</span>
+                  </div>
+                  {payLog?.hubtelResponse && (
+                    <details className="mt-1">
+                      <summary className="text-xs cursor-pointer text-red-500 underline">Show full Hubtel response</summary>
+                      <pre className="mt-1 text-xs bg-gray-900 text-green-400 p-2 rounded overflow-x-auto whitespace-pre-wrap max-h-40">
+                        {JSON.stringify(payLog.hubtelResponse, null, 2)}
+                      </pre>
+                    </details>
+                  )}
                 </div>
               )}
 
               <Button type="submit" disabled={loading}
                 className="w-full py-6 text-base font-bold rounded-lg text-white bg-orange-500 hover:bg-orange-600">
                 {loading
-                  ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Redirecting to Hubtel...</>
+                  ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Connecting to Hubtel...</>
                   : `Pay ₵${formatAmount(amount)} with Hubtel`}
               </Button>
 
@@ -359,7 +442,7 @@ export default function Payment() {
                 You will be redirected to Hubtel's secure checkout page.
               </p>
 
-              {/* WhatsApp fallback — always visible as secondary option */}
+              {/* WhatsApp fallback */}
               <div className="border-t pt-4">
                 <p className="text-xs text-gray-400 text-center mb-3">Having trouble? Pay via WhatsApp instead:</p>
                 <a href={`https://wa.me/233509896035?text=${whatsappMsg}`} target="_blank" rel="noopener noreferrer">
@@ -372,15 +455,15 @@ export default function Payment() {
             </form>
           </div>
         </div>
-      </div>
 
-      {/* ── DIAGNOSTIC PANEL ── */}
-      <div className="container mx-auto px-4 sm:px-6 max-w-6xl mb-10">
+        {/* ── DIAGNOSTIC PANEL ── */}
         <div className="border border-dashed border-gray-300 rounded-xl p-5 bg-gray-50">
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="font-bold text-gray-700 text-sm">🔍 Hubtel API Diagnostic</p>
-              <p className="text-xs text-gray-500">Send a test request to Hubtel and capture the exact response</p>
+              <p className="text-xs text-gray-500">
+                Tests Collection Account <strong>{HUBTEL_COLLECTION_ACCOUNT}</strong> via server-side proxy — captures exact Hubtel request &amp; response
+              </p>
             </div>
             <Button onClick={runDiagnostic} disabled={diagLoading} variant="outline" size="sm" className="text-xs">
               {diagLoading ? <><Loader2 className="h-3 w-3 animate-spin mr-1" />Running...</> : 'Run Diagnostic'}
@@ -389,57 +472,42 @@ export default function Payment() {
 
           {diagReport && (
             <div className="space-y-3 mt-3">
-              {/* Request sent */}
+              {/* Request */}
               <div className="bg-white border border-gray-200 rounded-lg p-3">
-                <p className="text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">📤 Request Sent</p>
+                <p className="text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">📤 Request Sent to Hubtel</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
                   {Object.entries(diagReport.requestSent).map(([k, v]) => (
                     <div key={k} className="flex gap-1">
-                      <span className="font-semibold text-gray-500 min-w-[140px]">{k}:</span>
+                      <span className="font-semibold text-gray-500 min-w-[160px]">{k}:</span>
                       <span className="text-gray-800 break-all">{String(v)}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Response received */}
-              <div className={`border rounded-lg p-3 ${diagReport.fetchError ? 'bg-red-50 border-red-200' : diagReport.responseCode === '0000' ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+              {/* Response */}
+              <div className={`border rounded-lg p-3 ${
+                diagReport.proxyError ? 'bg-red-50 border-red-200' :
+                diagReport.responseCode === '0000' ? 'bg-green-50 border-green-200' :
+                'bg-amber-50 border-amber-200'
+              }`}>
                 <p className="text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">📥 Hubtel Response</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs mb-2">
-                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[140px]">HTTP Status:</span><span className="font-bold">{diagReport.httpStatus ?? 'N/A (fetch blocked)'}</span></div>
-                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[140px]">responseCode:</span><span className="font-bold text-red-600">{diagReport.responseCode}</span></div>
-                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[140px]">message:</span><span className="font-bold">{diagReport.message}</span></div>
-                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[140px]">status:</span><span className="font-bold">{diagReport.status}</span></div>
-                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[140px]">checkoutUrl:</span><span className="font-bold text-green-700 break-all">{diagReport.checkoutUrl}</span></div>
-                  {diagReport.fetchError && <div className="flex gap-1 col-span-2"><span className="font-semibold text-red-500 min-w-[140px]">Fetch Error:</span><span className="text-red-700">{diagReport.fetchError}</span></div>}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs mb-3">
+                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[120px]">responseCode:</span><span className="font-bold text-lg">{diagReport.responseCode}</span></div>
+                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[120px]">status:</span><span className="font-bold">{diagReport.status}</span></div>
+                  <div className="flex gap-1 col-span-2"><span className="font-semibold text-gray-500 min-w-[120px]">message:</span><span className="font-bold">{diagReport.message}</span></div>
+                  <div className="flex gap-1 col-span-2"><span className="font-semibold text-gray-500 min-w-[120px]">checkoutUrl:</span><span className="font-bold text-green-700 break-all">{diagReport.checkoutUrl}</span></div>
+                  {diagReport.proxyError && <div className="flex gap-1 col-span-2"><span className="font-semibold text-red-500 min-w-[120px]">Proxy Error:</span><span className="text-red-700">{diagReport.proxyError}</span></div>}
                 </div>
-                <p className="text-xs font-bold text-gray-600 mb-1">Full Raw Response:</p>
+                <p className="text-xs font-bold text-gray-600 mb-1">Full Raw JSON from Hubtel:</p>
                 <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto whitespace-pre-wrap max-h-64">
-                  {JSON.stringify(diagReport.responseBody, null, 2)}
+                  {JSON.stringify(diagReport.hubtelResponse, null, 2)}
                 </pre>
               </div>
 
-              {/* Diagnosis */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-xs font-bold text-blue-700 mb-1">⚡ What this means:</p>
-                <p className="text-xs text-blue-800">
-                  {diagReport.fetchError?.includes('CORS') || diagReport.fetchError?.includes('fetch') 
-                    ? '❌ CORS/Network block — direct browser fetch to Hubtel is blocked. The SDK redirect should still work.'
-                    : diagReport.responseCode === '0000'
-                    ? '✅ Merchant account is valid and working! The issue is elsewhere.'
-                    : diagReport.responseCode === '4000'
-                    ? '❌ ResponseCode 4000: Validation Error — one or more fields are invalid/missing or the merchant account number is wrong.'
-                    : diagReport.responseCode === '4070'
-                    ? '❌ ResponseCode 4070: Fees not configured for this merchant account. Contact Hubtel to enable Online Checkout for account 2025378.'
-                    : diagReport.httpStatus === 401
-                    ? '❌ HTTP 401: Invalid API credentials (Client ID or Secret is wrong).'
-                    : diagReport.httpStatus === 403
-                    ? '❌ HTTP 403: Merchant account 2025378 is not authorized/enabled for Online Checkout.'
-                    : diagReport.fetchError
-                    ? `❌ Network error: ${diagReport.fetchError}`
-                    : `❌ Unknown error — check the full response above and share with Hubtel support.`
-                  }
-                </p>
+              {/* Interpretation */}
+              <div className={`rounded-lg p-3 text-xs font-semibold ${diagReport.responseCode === '0000' ? 'bg-green-100 text-green-800' : 'bg-blue-50 text-blue-800'}`}>
+                ⚡ {interpretHubtelCodeStatic(diagReport.responseCode, diagReport.message, diagReport.proxyError)}
               </div>
             </div>
           )}
@@ -449,4 +517,14 @@ export default function Payment() {
       <div className="h-8" />
     </div>
   );
+}
+
+function interpretHubtelCodeStatic(code, msg, proxyError) {
+  if (proxyError) return `Proxy/network error: ${proxyError}`;
+  if (code === '0000') return '✅ SUCCESS — Merchant account 2039285 is valid and Online Checkout is working! checkoutUrl generated successfully.';
+  if (code === '4000') return `❌ ResponseCode 4000 — Validation error. One or more fields are invalid. Likely cause: merchant account number wrong, or a required field missing. Msg: ${msg}`;
+  if (code === '4070') return `❌ ResponseCode 4070 — Fees not configured. Account 2039285 is not enabled for Online Checkout. Contact your Hubtel Retail Systems Engineer to activate it. Msg: ${msg}`;
+  if (code === '2001') return `❌ ResponseCode 2001 — Payment processor error. Credentials may be invalid or account not activated. Msg: ${msg}`;
+  if (!code || code === 'N/A') return '⚠️ No responseCode received — the proxy may not have reached Hubtel, or the LLM did not return the actual API response. Check raw JSON above.';
+  return `❌ ResponseCode ${code} — ${msg || 'Unknown error. Share the full response above with Hubtel support.'}`;
 }

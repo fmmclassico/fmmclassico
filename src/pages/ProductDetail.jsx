@@ -61,10 +61,32 @@ export default function ProductDetail() {
   ].filter(Boolean) : [];
 
   const videoUrl = product?.video_url || null;
+
+  // Detect if a video URL is a social embed (YouTube, TikTok, etc.) or a direct file
+  const getSocialEmbedUrl = (url) => {
+    if (!url) return null;
+    // YouTube
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=0&rel=0`;
+    // TikTok — use oembed page
+    if (url.includes('tiktok.com')) return url; // render as link fallback
+    // Pinterest video pin
+    if (url.includes('pinterest.com/pin/')) return null; // no embed support, treat as direct
+    // Vimeo
+    const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    // Instagram — no public embed without login, treat as direct
+    // Facebook
+    if (url.includes('facebook.com') || url.includes('fb.watch')) {
+      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false`;
+    }
+    return null; // direct video file
+  };
+
   // gallery = images + video (if exists)
   const galleryItems = [
     ...allImages.map(u => ({ type: 'image', url: u })),
-    ...(videoUrl ? [{ type: 'video', url: videoUrl }] : []),
+    ...(videoUrl ? [{ type: 'video', url: videoUrl, embedUrl: getSocialEmbedUrl(videoUrl) }] : []),
   ];
 
   const isVideo = (item) => typeof item === 'object' && item?.type === 'video';
@@ -110,11 +132,11 @@ export default function ProductDetail() {
     : 0;
 
   const nextImage = () => {
-    setSelectedImageIndex((prev) => (prev + 1) % allImages.length);
+    setSelectedImageIndex((prev) => (prev + 1) % galleryItems.length);
   };
 
   const prevImage = () => {
-    setSelectedImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+    setSelectedImageIndex((prev) => (prev - 1 + galleryItems.length) % galleryItems.length);
   };
 
   const handleTouchStart = (e) => {
@@ -185,16 +207,30 @@ export default function ProductDetail() {
           >
             <AnimatePresence mode="wait">
               {isVideo(galleryItems[selectedImageIndex]) ? (
-                <motion.video
-                  key={`video-${selectedImageIndex}`}
-                  src={getUrl(galleryItems[selectedImageIndex])}
-                  className="w-full h-full object-cover"
-                  controls
-                  playsInline
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                />
+                galleryItems[selectedImageIndex].embedUrl ? (
+                  <motion.iframe
+                    key={`embed-${selectedImageIndex}`}
+                    src={galleryItems[selectedImageIndex].embedUrl}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={{ border: 'none' }}
+                  />
+                ) : (
+                  <motion.video
+                    key={`video-${selectedImageIndex}`}
+                    src={getUrl(galleryItems[selectedImageIndex])}
+                    className="w-full h-full object-cover"
+                    controls
+                    playsInline
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  />
+                )
               ) : (
                 <motion.img
                   key={selectedImageIndex}

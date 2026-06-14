@@ -378,27 +378,53 @@ export default function AdminProducts() {
               <p className="text-xs text-gray-400">Click + to add images. No limit. Click X on an image to remove it.</p>
             </div>
 
-            {/* Video Upload */}
+            {/* Video Upload or URL */}
             <div className="md:col-span-2">
               <Label className="font-semibold mb-2 block">Product Video (optional)</Label>
+              
+              {/* Video URL paste — supports YouTube, TikTok, Instagram, Pinterest, Snapchat, etc. */}
+              <div className="mb-3">
+                <p className="text-xs text-gray-500 mb-1.5">📎 Paste a video link from YouTube, TikTok, Instagram, Pinterest, Snapchat, or any platform:</p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. https://www.youtube.com/watch?v=... or https://www.tiktok.com/..."
+                    value={form.video_url && !form.video_url.startsWith('http') ? '' : (form.video_url || '')}
+                    onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))}
+                    className="text-sm"
+                  />
+                  {form.video_url && (
+                    <button onClick={() => setForm(f => ({ ...f, video_url: '' }))} className="text-red-400 hover:text-red-600 flex-shrink-0">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex-1 border-t border-gray-200" />
+                <span className="text-xs text-gray-400 font-medium">OR upload from computer</span>
+                <div className="flex-1 border-t border-gray-200" />
+              </div>
+
               <div className="flex items-start gap-4">
-                {form.video_url && (
+                {form.video_url && (form.video_url.startsWith('blob:') || (!form.video_url.includes('youtube') && !form.video_url.includes('tiktok') && !form.video_url.includes('youtu.be') && !form.video_url.includes('instagram') && !form.video_url.includes('pinterest') && !form.video_url.includes('snapchat') && !form.video_url.includes('vimeo') && !form.video_url.includes('facebook') && form.video_url.startsWith('https://') && !form.video_url.startsWith('https://www.youtube') && !form.video_url.startsWith('https://youtu'))) && (
                   <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                     <Video className="h-5 w-5 text-green-600" />
-                    <span className="text-xs text-green-700 font-medium">Video uploaded ✓</span>
-                    <button onClick={() => setForm(f => ({ ...f, video_url: '' }))} className="ml-1 text-red-400 hover:text-red-600">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+                    <span className="text-xs text-green-700 font-medium">Video file uploaded ✓</span>
                   </div>
                 )}
                 <label className="cursor-pointer">
                   <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-300 text-purple-700 rounded-lg text-sm font-semibold hover:bg-purple-100 transition-colors w-fit">
                     {uploadingVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
-                    {uploadingVideo ? 'Uploading video...' : form.video_url ? 'Replace Video' : 'Upload Video from Computer'}
+                    {uploadingVideo ? 'Uploading video...' : 'Upload Video File'}
                   </div>
                   <input type="file" accept="video/*" className="hidden" onChange={handleUploadVideo} disabled={uploadingVideo} />
                 </label>
               </div>
+
+              {form.video_url && (
+                <p className="text-xs text-green-600 mt-2 font-medium">✓ Video set: {form.video_url.length > 60 ? form.video_url.slice(0, 60) + '...' : form.video_url}</p>
+              )}
             </div>
 
             <div className="md:col-span-2">

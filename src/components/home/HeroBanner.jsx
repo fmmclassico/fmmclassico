@@ -115,8 +115,9 @@ export default function HeroBanner() {
   };
   const slide = slides[current] || DEFAULT_SLIDES[0];
 
+  // cta_link is already a full path (e.g. /Shop?category=phones) or an http URL
   const ctaHref = slide.cta_link
-    ? (slide.cta_link.startsWith('http') ? slide.cta_link : createPageUrl(slide.cta_link))
+    ? (slide.cta_link.startsWith('http') ? slide.cta_link : slide.cta_link)
     : createPageUrl('Shop');
 
   // Use bg_gradient class if it's a Tailwind class, else fallback inline style
@@ -150,7 +151,7 @@ export default function HeroBanner() {
                 {slide.title}
               </h1>
               {slide.subtitle && (
-                <p className="text-sm md:text-base text-white/90 mb-4 hidden md:block">
+                <p className="text-sm md:text-base text-white/90 mb-4">
                   {slide.subtitle}
                 </p>
               )}

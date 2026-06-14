@@ -144,14 +144,11 @@ export default function AdminProducts() {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
+  React.useEffect(() => {
     base44.auth.me().then(u => {
       setUser(u);
       setIsAdmin(u?.role === 'admin');
-    }).catch(() => {
-      // If auth check fails, set a non-null user placeholder so page doesn't spin forever
-      setUser({ role: 'guest' });
-    });
+    }).catch(() => {});
   }, []);
 
   const { data: products = [], isLoading } = useQuery({

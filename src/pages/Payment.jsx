@@ -9,7 +9,11 @@ import { Badge } from '@/components/ui/badge';
 const ASH = '#2E86C1';
 const ASH_HOVER = '#2578ae';
 
+// ── HUBTEL ACCOUNT INFO (server-side only — never sent to browser in auth headers) ──
+// Collection Account = 2039285 (used for receiving payments - THIS is the correct one for checkout)
+// Disbursement Account = 2025378 (for sending money - WRONG for checkout)
 const HUBTEL_COLLECTION_ACCOUNT = '2039285';
+// API ID (username) and API Key (password) — used server-side via InvokeLLM proxy
 const HUBTEL_API_ID  = 'pQGpB7y';
 const HUBTEL_API_KEY = '14fda6847ee44c8fa910f355675cce73';
 
@@ -61,7 +65,11 @@ export default function Payment() {
   const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [errorMsg, setErrorMsg]   = useState('');
-  const [_payLog, setPayLog]       = useState(null); // kept for internal error tracking
+  const [payLog, setPayLog]       = useState(null); // full request+response log
+
+  // Diagnostic state
+  const [diagReport, setDiagReport]   = useState(null);
+  const [diagLoading, setDiagLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -173,6 +181,67 @@ export default function Payment() {
     }
 
     setLoading(false);
+  };
+
+  // ── DIAGNOSTIC: runs a real test call via proxy and shows full logs ──────
+  const runDiagnostic = async () => {
+    setDiagLoading(true);
+    setDiagReport(null);
+
+    const testClientRef = generateClientRef('DIAG');
+    const returnUrl = `${window.location.origin}/PaymentConfirmed?orderId=DIAG&orderNumber=DIAG&amount=0.01`;
+
+    const testBody = {
+      totalAmount: 0.01,
+      description: 'FMM CLASSICO Diagnostic Test',
+      callbackUrl: returnUrl,
+      returnUrl: returnUrl,
+      cancellationUrl: window.location.href,
+      merchantAccountNumber: HUBTEL_COLLECTION_ACCOUNT,
+      clientReference: testClientRef,
+      payeeName: 'Diagnostic Test',
+      payeeMobileNumber: '233200000000',
+      payeeEmail: 'test@fmmclassico.com',
+    };
+
+    let hubtelResponse = null;
+    let httpStatus = null;
+    let proxyError = null;
+
+    try {
+      const result = await callHubtelDirect(testBody);
+      httpStatus = result.httpStatus;
+      hubtelResponse = result.body;
+    } catch (err) {
+      proxyError = err?.message || String(err);
+    }
+
+    setDiagReport({
+      requestSent: {
+        endpoint: 'POST https://payproxyapi.hubtel.com/items/initiate',
+        via: 'Direct fetch (real HTTP call — no mock)',
+        authorization: `Basic base64(${HUBTEL_API_ID}:***) — real credentials`,
+        merchantAccountNumber: HUBTEL_COLLECTION_ACCOUNT,
+        clientReference: testClientRef,
+        totalAmount: testBody.totalAmount,
+        callbackUrl: testBody.callbackUrl,
+        returnUrl: testBody.returnUrl,
+        cancellationUrl: testBody.cancellationUrl,
+        payeeName: testBody.payeeName,
+        payeeMobileNumber: testBody.payeeMobileNumber,
+        payeeEmail: testBody.payeeEmail,
+        description: testBody.description,
+      },
+      hubtelResponse,
+      httpStatus,
+      proxyError,
+      responseCode: hubtelResponse?.responseCode || 'N/A',
+      message: hubtelResponse?.message || 'N/A',
+      status: hubtelResponse?.status || 'N/A',
+      checkoutUrl: hubtelResponse?.data?.checkoutUrl || hubtelResponse?.data?.checkoutDirectUrl || 'none',
+    });
+
+    setDiagLoading(false);
   };
 
   function interpretHubtelCode(code, msg) {
@@ -339,10 +408,18 @@ export default function Payment() {
 
               {errorMsg && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-2 mb-2">
                     <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     <span className="font-semibold">{errorMsg}</span>
                   </div>
+                  {payLog?.hubtelResponse && (
+                    <details className="mt-1">
+                      <summary className="text-xs cursor-pointer text-red-500 underline">Show full Hubtel response</summary>
+                      <pre className="mt-1 text-xs bg-gray-900 text-green-400 p-2 rounded overflow-x-auto whitespace-pre-wrap max-h-40">
+                        {JSON.stringify(payLog.hubtelResponse, null, 2)}
+                      </pre>
+                    </details>
+                  )}
                 </div>
               )}
 
@@ -371,9 +448,76 @@ export default function Payment() {
           </div>
         </div>
 
+        {/* ── DIAGNOSTIC PANEL ── */}
+        <div className="border border-dashed border-gray-300 rounded-xl p-5 bg-gray-50">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="font-bold text-gray-700 text-sm">🔍 Hubtel API Diagnostic</p>
+              <p className="text-xs text-gray-500">
+                Tests Collection Account <strong>{HUBTEL_COLLECTION_ACCOUNT}</strong> via server-side proxy — captures exact Hubtel request &amp; response
+              </p>
+            </div>
+            <Button onClick={runDiagnostic} disabled={diagLoading} variant="outline" size="sm" className="text-xs">
+              {diagLoading ? <><Loader2 className="h-3 w-3 animate-spin mr-1" />Running...</> : 'Run Diagnostic'}
+            </Button>
+          </div>
+
+          {diagReport && (
+            <div className="space-y-3 mt-3">
+              {/* Request */}
+              <div className="bg-white border border-gray-200 rounded-lg p-3">
+                <p className="text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">📤 Request Sent to Hubtel</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
+                  {Object.entries(diagReport.requestSent).map(([k, v]) => (
+                    <div key={k} className="flex gap-1">
+                      <span className="font-semibold text-gray-500 min-w-[160px]">{k}:</span>
+                      <span className="text-gray-800 break-all">{String(v)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Response */}
+              <div className={`border rounded-lg p-3 ${
+                diagReport.proxyError ? 'bg-red-50 border-red-200' :
+                (diagReport.responseCode === '0000' || diagReport.responseCode === '00') ? 'bg-green-50 border-green-200' :
+                'bg-amber-50 border-amber-200'
+              }`}>
+                <p className="text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">📥 Hubtel Response</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs mb-3">
+                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[120px]">HTTP Status:</span><span className="font-bold text-lg">{diagReport.httpStatus ?? 'N/A (CORS blocked)'}</span></div>
+                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[120px]">responseCode:</span><span className="font-bold text-lg">{diagReport.responseCode}</span></div>
+                  <div className="flex gap-1"><span className="font-semibold text-gray-500 min-w-[120px]">status:</span><span className="font-bold">{diagReport.status}</span></div>
+                  <div className="flex gap-1 col-span-2"><span className="font-semibold text-gray-500 min-w-[120px]">message:</span><span className="font-bold">{diagReport.message}</span></div>
+                  <div className="flex gap-1 col-span-2"><span className="font-semibold text-gray-500 min-w-[120px]">checkoutUrl:</span><span className="font-bold text-green-700 break-all">{diagReport.checkoutUrl}</span></div>
+                  {diagReport.proxyError && <div className="flex gap-1 col-span-2"><span className="font-semibold text-red-500 min-w-[120px]">Proxy Error:</span><span className="text-red-700">{diagReport.proxyError}</span></div>}
+                </div>
+                <p className="text-xs font-bold text-gray-600 mb-1">Full Raw JSON from Hubtel:</p>
+                <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto whitespace-pre-wrap max-h-64">
+                  {JSON.stringify(diagReport.hubtelResponse, null, 2)}
+                </pre>
+              </div>
+
+              {/* Interpretation */}
+              <div className={`rounded-lg p-3 text-xs font-semibold ${(diagReport.responseCode === '0000' || diagReport.responseCode === '00') ? 'bg-green-100 text-green-800' : 'bg-blue-50 text-blue-800'}`}>
+                ⚡ {interpretHubtelCodeStatic(diagReport.responseCode, diagReport.message, diagReport.proxyError)}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="h-8" />
     </div>
   );
+}
+
+function interpretHubtelCodeStatic(code, msg, proxyError) {
+  if (proxyError) return `Proxy/network error: ${proxyError}`;
+  if (code === '0000' || code === '00') return '✅ SUCCESS — Merchant account 2039285 is valid and Online Checkout is working! checkoutUrl generated successfully.';
+  if (code === '4000') return `❌ ResponseCode 4000 — Validation error. One or more fields are invalid. Likely cause: merchant account number wrong, or a required field missing. Msg: ${msg}`;
+  if (code === '4070') return `❌ ResponseCode 4070 — Fees not configured. Account 2039285 is not enabled for Online Checkout. Contact your Hubtel Retail Systems Engineer to activate it. Msg: ${msg}`;
+  if (code === '2001') return `❌ ResponseCode 2001 — Payment processor error. Credentials may be invalid or account not activated. Msg: ${msg}`;
+  if (!code || code === 'N/A') return '⚠️ No responseCode received — the proxy may not have reached Hubtel, or the LLM did not return the actual API response. Check raw JSON above.';
+  return `❌ ResponseCode ${code} — ${msg || 'Unknown error. Share the full response above with Hubtel support.'}`;
 }

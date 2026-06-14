@@ -197,10 +197,19 @@ export default function PaymentConfirmed() {
         </div>
 
         {/* Notifying status */}
-        {isNotifying && (
-          <Card className="p-5 bg-gray-50 border-gray-200 text-center mb-4">
-            <Loader2 className="h-7 w-7 animate-spin text-gray-500 mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-600">Processing your order...</p>
+        {isNotifying ? (
+          <Card className="p-5 bg-red-50 border-red-200 text-center mb-4">
+            <Loader2 className="h-7 w-7 animate-spin text-red-600 mx-auto mb-2" />
+            <p className="text-sm font-medium text-red-800">Processing your order...</p>
+          </Card>
+        ) : (
+          <Card className="p-5 bg-blue-50 border-blue-200 text-center mb-4">
+            <Bell className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+            <p className="text-sm text-blue-700">
+              {paymentConfirmedByAdmin
+                ? '🎉 Payment verified! Your order is being prepared.'
+                : 'Payment confirmed. Your order is being processed and will be verified shortly.'}
+            </p>
           </Card>
         )}
 

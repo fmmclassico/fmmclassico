@@ -176,7 +176,10 @@ export default function Payment() {
 
       setPayLog(log);
 
-      if (code === '0000' && checkoutUrl) {
+      // Hubtel may return "0000" or "00" for success
+      const isSuccess = code === '0000' || code === '00';
+
+      if (isSuccess && checkoutUrl) {
         // SUCCESS — redirect to Hubtel checkout
         window.location.href = checkoutUrl;
         return;
@@ -253,7 +256,7 @@ export default function Payment() {
   };
 
   function interpretHubtelCode(code, msg) {
-    if (code === '0000') return '✅ Success';
+    if (code === '0000' || code === '00') return '✅ Success';
     if (code === '4000') return `Validation error — check all fields are correct. ${msg}`;
     if (code === '4070') return `Fees not configured for merchant account ${HUBTEL_COLLECTION_ACCOUNT}. Contact Hubtel support to enable Online Checkout. ${msg}`;
     if (code === '2001') return `Payment processor error — invalid credentials or account not enabled. ${msg}`;
@@ -521,7 +524,7 @@ export default function Payment() {
 
 function interpretHubtelCodeStatic(code, msg, proxyError) {
   if (proxyError) return `Proxy/network error: ${proxyError}`;
-  if (code === '0000') return '✅ SUCCESS — Merchant account 2039285 is valid and Online Checkout is working! checkoutUrl generated successfully.';
+  if (code === '0000' || code === '00') return '✅ SUCCESS — Merchant account 2039285 is valid and Online Checkout is working! checkoutUrl generated successfully.';
   if (code === '4000') return `❌ ResponseCode 4000 — Validation error. One or more fields are invalid. Likely cause: merchant account number wrong, or a required field missing. Msg: ${msg}`;
   if (code === '4070') return `❌ ResponseCode 4070 — Fees not configured. Account 2039285 is not enabled for Online Checkout. Contact your Hubtel Retail Systems Engineer to activate it. Msg: ${msg}`;
   if (code === '2001') return `❌ ResponseCode 2001 — Payment processor error. Credentials may be invalid or account not activated. Msg: ${msg}`;

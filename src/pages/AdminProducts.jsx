@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload, X, Pencil, Plus, Trash2, ImagePlus, Loader2, Check, Video, Eye, EyeOff } from 'lucide-react';
+import { Upload, X, Pencil, Plus, ImagePlus, Loader2, Check, Video, Eye, EyeOff } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import { toast } from 'sonner';
 
@@ -207,17 +207,6 @@ export default function AdminProducts() {
       setShowForm(false);
       setEditingProduct(null);
       setForm(EMPTY_FORM);
-    }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Product.delete(id),
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ['products'] });
-      queryClient.removeQueries({ queryKey: ['products-admin'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['products-admin'] });
-      toast.success('Product deleted');
     }
   });
 
@@ -647,11 +636,6 @@ export default function AdminProducts() {
                     </Button>
                     <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
                       <Pencil className="h-3 w-3" /> Edit
-                    </Button>
-                    <Button size="sm" variant="destructive" className="h-7 w-7 p-0" onClick={() => {
-                      if (confirm('Delete this product?')) deleteMutation.mutate(product.id);
-                    }}>
-                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>

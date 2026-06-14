@@ -24,13 +24,24 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 const statusConfig = {
-  pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
   confirmed: { color: 'bg-blue-100 text-blue-800', icon: CheckCircle2, label: 'Confirmed' },
   processing: { color: 'bg-purple-100 text-purple-800', icon: Package, label: 'Processing' },
+  packed: { color: 'bg-orange-100 text-orange-800', icon: Package, label: 'Packed' },
   shipped: { color: 'bg-indigo-100 text-indigo-800', icon: Truck, label: 'Shipped' },
+  out_for_delivery: { color: 'bg-cyan-100 text-cyan-800', icon: MapPin, label: 'Out for Delivery' },
   in_transit: { color: 'bg-cyan-100 text-cyan-800', icon: MapPin, label: 'In Transit' },
   delivered: { color: 'bg-green-100 text-green-800', icon: CheckCircle2, label: 'Delivered' },
   cancelled: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Cancelled' },
+  returned: { color: 'bg-gray-100 text-gray-800', icon: XCircle, label: 'Returned' },
+};
+
+const CANCELLABLE_STATUSES = ['confirmed', 'processing'];
+const paymentStatusConfig = {
+  paid: { color: 'bg-green-100 text-green-700', label: '✅ Paid' },
+  pending_payment: { color: 'bg-yellow-100 text-yellow-700', label: '⏳ Pending Payment' },
+  failed: { color: 'bg-red-100 text-red-700', label: '❌ Failed' },
+  cancelled: { color: 'bg-gray-100 text-gray-600', label: '🚫 Cancelled' },
+  refunded: { color: 'bg-blue-100 text-blue-700', label: '↩️ Refunded' },
 };
 
 export default function Orders() {
@@ -228,9 +239,16 @@ export default function Orders() {
                     </div>
                     <div className="text-right">
                       <p className="font-black text-blue-800 text-base">₵{order.total_amount?.toFixed(2)}</p>
-                      <Badge className={`text-[10px] ${statusConfig[order.status]?.color || 'bg-gray-100 text-gray-800'}`}>
-                        {statusConfig[order.status]?.label || order.status}
-                      </Badge>
+                      <div className="flex flex-col items-end gap-0.5 mt-1">
+                        <Badge className={`text-[10px] ${statusConfig[order.status]?.color || 'bg-gray-100 text-gray-800'}`}>
+                          {statusConfig[order.status]?.label || order.status}
+                        </Badge>
+                        {order.payment_status && (
+                          <Badge className={`text-[10px] ${paymentStatusConfig[order.payment_status]?.color || 'bg-gray-100 text-gray-600'}`}>
+                            {paymentStatusConfig[order.payment_status]?.label || order.payment_status}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -253,17 +271,19 @@ export default function Orders() {
 
                   {/* Tracking checklist */}
                   <div className="px-4 py-3 border-b bg-white">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Order Progress <span className="text-green-600 font-normal normal-case">(green = processed)</span></p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Order Progress</p>
                     {(() => {
-                      const tracking = order.tracking_updates || [];
-                      const hasStatus = (keywords) => tracking.some(t =>
-                        keywords.some(k => t.status?.toLowerCase().includes(k.toLowerCase()))
-                      );
+                      const s = order.status;
+                      const ORDER_RANK = { confirmed: 1, processing: 2, packed: 3, shipped: 4, out_for_delivery: 5, in_transit: 5, delivered: 6 };
+                      const rank = ORDER_RANK[s] || 0;
                       const steps = [
-                        { label: 'Payment Confirmed', done: hasStatus(['confirmed', 'order placed', 'payment confirmed']) || ['confirmed','processing','shipped','in_transit','delivered'].includes(order.status) },
-                        { label: 'Order(s) Placed', done: hasStatus(['order placed', 'processing']) || ['processing','shipped','in_transit','delivered'].includes(order.status) },
-                        { label: 'Order(s) Shipped', done: hasStatus(['shipped','in_transit']) || ['shipped','in_transit','delivered'].includes(order.status) },
-                        { label: 'Product(s) Delivered', done: hasStatus(['delivered']) || order.status === 'delivered' },
+                        { label: 'Payment Confirmed', done: true },
+                        { label: 'Order Confirmed', done: rank >= 1 },
+                        { label: 'Processing', done: rank >= 2 },
+                        { label: 'Packed', done: rank >= 3 },
+                        { label: 'Shipped', done: rank >= 4 },
+                        { label: 'Out for Delivery', done: rank >= 5 },
+                        { label: 'Delivered', done: rank >= 6 },
                       ];
                       return (
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
@@ -293,7 +313,7 @@ export default function Orders() {
                           Track Order
                         </Button>
                       </Link>
-                      {(order.status === 'pending' || order.status === 'confirmed') && (
+                      {CANCELLABLE_STATUSES.includes(order.status) && (
                         <Button
                           size="sm"
                           variant="outline"

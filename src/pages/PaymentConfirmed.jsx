@@ -71,7 +71,8 @@ export default function PaymentConfirmed() {
           quantity: item.quantity,
         })),
         total_amount: stored.amount || amount,
-        status: 'confirmed',  // Immediately confirmed since payment went through Hubtel
+        payment_status: 'paid',        // Hubtel confirmed payment
+        status: 'confirmed',           // Order confirmed immediately after payment
         customer_name: stored.customerName || user.full_name || '',
         customer_email: stored.customerEmail || user.email,
         customer_phone: stored.customerPhone || '',
@@ -82,7 +83,7 @@ export default function PaymentConfirmed() {
         tracking_updates: [
           {
             status: 'Payment Confirmed',
-            message: 'Payment completed via Hubtel. Order is being processed.',
+            message: 'Payment completed via Hubtel. Order confirmed.',
             timestamp: new Date().toISOString(),
           }
         ],
@@ -152,10 +153,12 @@ export default function PaymentConfirmed() {
   };
 
   const trackingSteps = [
-    { label: 'Payment Received', icon: Package, done: true },
-    { label: 'Order Confirmed', icon: CheckCircle2, done: orderCreated },
+    { label: 'Payment Confirmed', icon: CheckCircle2, done: true },
+    { label: 'Order Confirmed', icon: Package, done: orderCreated },
     { label: 'Processing', icon: Clock, done: false },
+    { label: 'Packed', icon: Package, done: false },
     { label: 'Shipped', icon: Truck, done: false },
+    { label: 'Out for Delivery', icon: Truck, done: false },
     { label: 'Delivered', icon: HomeIcon, done: false },
   ];
 

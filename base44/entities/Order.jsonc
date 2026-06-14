@@ -34,19 +34,32 @@
       "type": "number",
       "description": "Total order amount"
     },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "pending_payment",
+        "paid",
+        "failed",
+        "cancelled",
+        "refunded"
+      ],
+      "default": "paid",
+      "description": "Payment status \u2014 independent of order fulfillment status"
+    },
     "status": {
       "type": "string",
       "enum": [
-        "pending",
         "confirmed",
         "processing",
+        "packed",
         "shipped",
-        "in_transit",
+        "out_for_delivery",
         "delivered",
-        "cancelled"
+        "cancelled",
+        "returned"
       ],
-      "default": "pending",
-      "description": "Order status"
+      "default": "confirmed",
+      "description": "Order fulfillment status \u2014 only set after payment is confirmed"
     },
     "customer_name": {
       "type": "string"

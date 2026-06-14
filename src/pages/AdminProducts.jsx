@@ -298,11 +298,9 @@ export default function AdminProducts() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (!isAdmin && user) {
+  // Only block on "user loaded but not admin" — not on loading state
+  if (user && !isAdmin) {
     return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
-  }
-  if (!user) {
-    return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
   }
 
   const availableSubcategories = ((BRAND_SUBCATEGORIES[form.category] || {})[

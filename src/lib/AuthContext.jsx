@@ -22,14 +22,12 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
       
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
       const appClient = createAxiosClient({
         baseURL: `/api/apps/public`,
         headers: {
           'X-App-Id': appParams.appId
         },
-        token: appParams.token, // Include token if available
+        token: appParams.token,
         interceptResponses: true
       });
       
@@ -37,7 +35,6 @@ export const AuthProvider = ({ children }) => {
         const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
         setAppPublicSettings(publicSettings);
         
-        // If we got the app public settings successfully, check if user is authenticated
         if (appParams.token) {
           await checkUserAuth();
         } else {
@@ -48,40 +45,32 @@ export const AuthProvider = ({ children }) => {
       } catch (appError) {
         console.error('App state check failed:', appError);
         
-        // Handle app-level errors
+        // Only handle app-level 403s with a specific reason from the platform
         if (appError.status === 403 && appError.data?.extra_data?.reason) {
           const reason = appError.data.extra_data.reason;
           if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
+            // App requires login — only redirect if there's truly no token
+            if (!appParams.token) {
+              setAuthError({ type: 'auth_required', message: 'Authentication required' });
+            } else {
+              // Token exists but app check failed — try to check auth anyway before redirecting
+              await checkUserAuth();
+            }
           } else if (reason === 'user_not_registered') {
-            setAuthError({
-              type: 'user_not_registered',
-              message: 'User not registered for this app'
-            });
+            setAuthError({ type: 'user_not_registered', message: 'User not registered for this app' });
           } else {
-            setAuthError({
-              type: reason,
-              message: appError.message
-            });
+            setAuthError({ type: reason, message: appError.message });
           }
         } else {
-          setAuthError({
-            type: 'unknown',
-            message: appError.message || 'Failed to load app'
-          });
+          // Network error, timeout, etc. — don't log out, just clear the loading state
+          // so the user stays on the page they were on
+          setIsLoadingAuth(false);
         }
         setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
       }
     } catch (error) {
-      console.error('Unexpected error:', error);
-      setAuthError({
-        type: 'unknown',
-        message: error.message || 'An unexpected error occurred'
-      });
+      console.error('Unexpected error in checkAppState:', error);
+      // Don't set a hard auth error on unexpected failures — this prevents spurious logouts
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
     }
@@ -119,14 +108,16 @@ export const AuthProvider = ({ children }) => {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
-      
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
+      // Only force logout/redirect on a definitive 401 from the auth endpoint itself.
+      // Do NOT redirect on network errors, timeouts, or other transient failures —
+      // those would cause spurious logouts when navigating between pages.
+      if (error.status === 401) {
         setAuthError({
           type: 'auth_required',
           message: 'Authentication required'
         });
       }
+      // For 403 and other errors, stay silent — user stays on page without forced redirect.
     }
   };
 

@@ -35,14 +35,14 @@ export default function PaymentConfirmed() {
 
   const amount = amountRaw ? parseFloat(amountRaw) : 0;
 
-  // Auth
+  // Auth — do not redirect; if user session is available load it, otherwise show content anyway
+  // (the order data is loaded by orderId from session storage so it works even if auth is slow)
   useEffect(() => {
-    base44.auth.isAuthenticated().then(isAuth => {
-      if (isAuth) {
-        base44.auth.me().then(setUser);
-      } else {
-        base44.auth.redirectToLogin(window.location.href);
-      }
+    base44.auth.me().then(setUser).catch(() => {
+      // If auth fails, still try to show the page — orderId from sessionStorage still works
+      base44.auth.isAuthenticated().then(isAuth => {
+        if (!isAuth) base44.auth.redirectToLogin(window.location.href);
+      });
     });
   }, []);
 
@@ -172,7 +172,7 @@ export default function PaymentConfirmed() {
     { label: 'Delivered', icon: HomeIcon, done: orderData?.status === 'delivered' },
   ];
 
-  if (!user || !orderId) {
+  if (!orderId) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto text-red-700" />
@@ -197,19 +197,10 @@ export default function PaymentConfirmed() {
         </div>
 
         {/* Notifying status */}
-        {isNotifying ? (
+        {isNotifying && (
           <Card className="p-5 bg-red-50 border-red-200 text-center mb-4">
             <Loader2 className="h-7 w-7 animate-spin text-red-600 mx-auto mb-2" />
             <p className="text-sm font-medium text-red-800">Processing your order...</p>
-          </Card>
-        ) : (
-          <Card className="p-5 bg-blue-50 border-blue-200 text-center mb-4">
-            <Bell className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-            <p className="text-sm text-blue-700">
-              {paymentConfirmedByAdmin
-                ? '🎉 Payment verified! Your order is being prepared.'
-                : 'Payment confirmed. Your order is being processed and will be verified shortly.'}
-            </p>
           </Card>
         )}
 

@@ -5,7 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CheckCircle2, Package, Bell, Loader2, Clock, Truck, Home as HomeIcon } from 'lucide-react';
+import { CheckCircle2, Package, Loader2, Clock, Truck, Home as HomeIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -130,10 +130,11 @@ export default function PaymentConfirmed() {
         body: `New order!\n\n📦 Order: #${stored.orderNumber || orderNumber}\n👤 Customer: ${custName}\n📧 Email: ${user.email}\n📞 Phone: ${stored.customerPhone}\n💰 Total: ₵${totalDisplay}\n📍 Address: ${stored.deliveryAddress}, ${stored.city}\n\nItems: ${itemsList}`,
       }).catch(() => {});
 
-      // Clear the cart
-      base44.entities.CartItem.filter({ user_email: user.email })
-        .then(cartItems => Promise.all(cartItems.map(item => base44.entities.CartItem.delete(item.id).catch(() => {}))))
-        .catch(() => {});
+      // Clear the cart immediately
+      try {
+        const cartItems = await base44.entities.CartItem.filter({ user_email: user.email });
+        await Promise.all(cartItems.map(item => base44.entities.CartItem.delete(item.id).catch(() => {})));
+      } catch (_) {}
 
       // Invalidate caches
       queryClient.invalidateQueries({ queryKey: ['cartItems', user.email] });
@@ -171,36 +172,38 @@ export default function PaymentConfirmed() {
       >
         {/* Header */}
         <div className="text-center mb-6">
-          <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-3 ${isProcessing ? 'bg-blue-100' : orderCreated ? 'bg-green-100' : 'bg-red-100'}`}>
+          <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-3 ${isProcessing ? 'bg-blue-100' : orderCreated ? 'bg-green-100' : 'bg-amber-100'}`}>
             {isProcessing
               ? <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
-              : orderCreated
-                ? <CheckCircle2 className="h-10 w-10 text-green-600" />
-                : <CheckCircle2 className="h-10 w-10 text-red-500" />}
+              : <CheckCircle2 className={`h-10 w-10 ${orderCreated ? 'text-green-600' : 'text-amber-500'}`} />}
           </div>
-          <h1 className="text-xl font-bold text-gray-800">
-            {isProcessing ? 'Processing your order...' : orderCreated ? 'Payment Confirmed!' : 'Payment Received'}
+          <h1 className="text-2xl font-bold text-gray-800">
+            {isProcessing ? 'Placing your order...' : orderCreated ? '🎉 Order Confirmed!' : 'Payment Received'}
           </h1>
           {!isProcessing && orderNumber && (
             <p className="text-sm text-gray-500 mt-1">Order #{orderNumber}</p>
+          )}
+          {orderCreated && (
+            <p className="text-sm text-green-600 font-medium mt-1">Your order has been placed successfully!</p>
           )}
         </div>
 
         {/* Error message */}
         {error && (
           <Card className="p-4 bg-amber-50 border-amber-300 mb-4 text-center">
-            <p className="text-sm text-amber-800">{error}</p>
-            <a href="https://wa.me/233509896035" target="_blank" rel="noopener noreferrer"
-              className="mt-2 inline-block text-sm font-bold text-green-700 underline">
+            <p className="text-sm text-amber-800 font-medium">Your payment was received but there was an issue saving the order. Please contact us with your order number and we'll sort it out.</p>
+            <a href={`https://wa.me/233509896035?text=${encodeURIComponent(`Hi FMM CLASSICO, I paid for order #${orderNumber} but my order wasn't saved. Please help!`)}`}
+              target="_blank" rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold">
               Contact us on WhatsApp →
             </a>
           </Card>
         )}
 
-        {/* Order tracking steps */}
-        {!error && (
+        {/* Order tracking steps — only show on success */}
+        {orderCreated && (
           <Card className="p-5 mb-4 shadow-sm">
-            <h3 className="font-bold text-gray-800 mb-4 text-sm uppercase tracking-wider">Order Progress</h3>
+            <h3 className="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Order Progress</h3>
             <div className="space-y-0">
               {trackingSteps.map((step, i) => {
                 const Icon = step.icon;
@@ -211,15 +214,15 @@ export default function PaymentConfirmed() {
                     <div className="flex flex-col items-center">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
                         step.done ? 'bg-green-500 border-green-500'
-                          : isActive ? 'bg-orange-100 border-orange-400 animate-pulse'
+                          : isActive ? 'bg-blue-100 border-blue-400 animate-pulse'
                           : 'bg-white border-gray-200'
                       }`}>
-                        <Icon className={`h-4 w-4 ${step.done ? 'text-white' : isActive ? 'text-orange-500' : 'text-gray-300'}`} />
+                        <Icon className={`h-4 w-4 ${step.done ? 'text-white' : isActive ? 'text-blue-500' : 'text-gray-300'}`} />
                       </div>
                       {!isLast && <div className={`w-0.5 h-6 my-1 ${step.done ? 'bg-green-400' : 'bg-gray-200'}`} />}
                     </div>
                     <div className="flex-1 pb-2 pt-1">
-                      <p className={`text-sm font-semibold ${step.done ? 'text-green-700' : isActive ? 'text-orange-600' : 'text-gray-400'}`}>{step.label}</p>
+                      <p className={`text-sm font-semibold ${step.done ? 'text-green-700' : isActive ? 'text-blue-600' : 'text-gray-400'}`}>{step.label}</p>
                     </div>
                   </div>
                 );
@@ -232,7 +235,7 @@ export default function PaymentConfirmed() {
         <div className="space-y-2 mt-4">
           {createdOrderId && (
             <Link to={createPageUrl(`OrderTracking?id=${createdOrderId}`)} className="block">
-              <Button className="w-full gap-2 bg-blue-700 hover:bg-blue-800">
+              <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3">
                 <Package className="h-4 w-4" />
                 Track My Order
               </Button>
@@ -244,14 +247,8 @@ export default function PaymentConfirmed() {
               View My Orders
             </Button>
           </Link>
-          <a href="https://wa.me/233509896035" target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" className="w-full gap-2 text-green-700 border-green-300 hover:bg-green-50">
-              <Bell className="h-4 w-4" />
-              Contact Support on WhatsApp
-            </Button>
-          </a>
           <Link to={createPageUrl('Home')} className="block">
-            <Button variant="ghost" className="w-full">Return to Home</Button>
+            <Button variant="ghost" className="w-full text-gray-500">Return to Home</Button>
           </Link>
         </div>
       </motion.div>

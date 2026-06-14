@@ -52,16 +52,9 @@ export default function Orders() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const getUser = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
-      if (isAuth) {
-        const userData = await base44.auth.me();
-        setUser(userData);
-      } else {
-        base44.auth.redirectToLogin(createPageUrl('Home'));
-      }
-    };
-    getUser();
+    base44.auth.me()
+      .then(setUser)
+      .catch(() => base44.auth.redirectToLogin(createPageUrl('Home')));
   }, []);
 
   const { data: orders = [], isLoading } = useQuery({
@@ -278,11 +271,8 @@ export default function Orders() {
                       const rank = ORDER_RANK[s] || 0;
                       const steps = [
                         { label: 'Payment Confirmed', done: true },
-                        { label: 'Order Confirmed', done: rank >= 1 },
                         { label: 'Processing', done: rank >= 2 },
-                        { label: 'Packed', done: rank >= 3 },
                         { label: 'Shipped', done: rank >= 4 },
-                        { label: 'Out for Delivery', done: rank >= 5 },
                         { label: 'Delivered', done: rank >= 6 },
                       ];
                       return (

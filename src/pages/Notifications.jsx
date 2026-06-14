@@ -143,7 +143,7 @@ export default function Notifications() {
                 ? `${selectedNotifs.length} selected`
                 : unreadCount > 0
                 ? `${unreadCount} unread`
-                : 'All caught up!'}
+                : `${notifications.length} notification${notifications.length !== 1 ? 's' : ''}`}
             </p>
           </div>
         </div>

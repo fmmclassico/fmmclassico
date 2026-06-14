@@ -324,7 +324,7 @@ export default function ProductDetail() {
           </div>
 
           {product.description && (
-            <details className="group border border-gray-200 rounded-xl overflow-hidden" open>
+            <details className="group border border-gray-200 rounded-xl overflow-hidden">
               <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer font-semibold text-gray-700 select-none list-none">
                 <span>Product Details</span>
                 <span className="text-[#2E86C1] group-open:rotate-180 transition-transform">▼</span>

@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  ChevronLeft,
   Package,
   Clock,
   CheckCircle2,
@@ -35,16 +34,9 @@ export default function OrderTracking() {
   const orderId = urlParams.get('id');
 
   useEffect(() => {
-    const getUser = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
-      if (isAuth) {
-        const userData = await base44.auth.me();
-        setUser(userData);
-      } else {
-        base44.auth.redirectToLogin(window.location.href);
-      }
-    };
-    getUser();
+    base44.auth.me()
+      .then(setUser)
+      .catch(() => base44.auth.redirectToLogin(window.location.href));
   }, []);
 
   const { data: orders = [], isLoading } = useQuery({
@@ -85,10 +77,6 @@ export default function OrderTracking() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
-      <Link to={createPageUrl('Orders')} className="inline-flex items-center text-gray-600 hover:text-orange-600 mb-6">
-        <ChevronLeft className="h-4 w-4 mr-1" /> Back to Orders
-      </Link>
-
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Order #{order.order_number}</h1>
@@ -199,7 +187,7 @@ export default function OrderTracking() {
               <div key={index} className="flex gap-3">
                 <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
                   <img
-                    src={item.product_image || 'https://images.unsplash.com/photo-1606229365485-93a3b8ee0385?w=100'}
+                    src={item.product_image || ''}
                     alt={item.product_name}
                     className="w-full h-full object-cover"
                   />

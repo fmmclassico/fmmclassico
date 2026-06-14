@@ -10,5 +10,13 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Remove base44 badge as soon as it appears in the DOM
+      const observer = new MutationObserver(() => {
+        const badge = document.getElementById('base44-badge');
+        if (badge) badge.remove();
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    </script>
   </body>
 </html>

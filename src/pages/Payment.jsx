@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import CheckoutSdk from '@hubteljs/checkout';
 import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,10 +10,9 @@ const ASH = '#2E86C1';
 const ASH_HOVER = '#2578ae';
 
 // ── HUBTEL CONFIG ─────────────────────────────────────────────────────────────
-// API ID: pQGpB7y  |  API Key: 14fda6847ee44c8fa910f355675cce73
-// Merchant Account ID: 2039285
-const HUBTEL_MERCHANT_ACCOUNT = 2039285;
-const HUBTEL_BASIC_AUTH = 'Basic ' + btoa('pQGpB7y:14fda6847ee44c8fa910f355675cce73');
+const HUBTEL_API_ID  = 'pQGpB7y';
+const HUBTEL_API_KEY = '14fda6847ee44c8fa910f355675cce73';
+const HUBTEL_MERCHANT_ACCOUNT = '2039285';
 // ─────────────────────────────────────────────────────────────────────────────
 
 function formatAmount(num) {
@@ -30,11 +28,11 @@ export default function Payment() {
   const emailParam  = urlParams.get('email') || '';
   const amount      = amountRaw ? parseFloat(amountRaw) : 0;
 
-  const [user, setUser]           = useState(null);
-  const [loading, setLoading]     = useState(false);
-  const [cartCount, setCartCount] = useState(0);
+  const [user, setUser]               = useState(null);
+  const [loading, setLoading]         = useState(false);
+  const [cartCount, setCartCount]     = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [error, setError]         = useState('');
+  const [error, setError]             = useState('');
   const navigate = useNavigate();
 
   // Form fields
@@ -68,14 +66,14 @@ export default function Payment() {
     if (searchQuery.trim()) navigate(`/Shop?search=${encodeURIComponent(searchQuery)}`);
   };
 
-  const handlePay = (e) => {
+  const handlePay = async (e) => {
     e.preventDefault();
     setError('');
 
     if (!emailVal.trim()) { setError('Please enter your email address.'); return; }
     if (!phone.trim())    { setError('Please enter your phone number.'); return; }
 
-    // Normalise phone to international format required by Hubtel (233XXXXXXXXX)
+    // Normalise phone to international format (233XXXXXXXXX)
     let rawPhone = phone.trim().replace(/\s+/g, '');
     if (rawPhone.startsWith('+')) rawPhone = rawPhone.slice(1);
     else if (rawPhone.startsWith('0')) rawPhone = '233' + rawPhone.slice(1);
@@ -83,39 +81,26 @@ export default function Payment() {
     setLoading(true);
 
     const callbackUrl = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
+    const cancelUrl   = `${window.location.origin}/Payment?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}&email=${encodeURIComponent(emailVal)}`;
 
-    const purchaseInfo = {
-      amount: amount,
-      purchaseDescription: `FMM CLASSICO – Order #${orderNumber}`,
-      customerPhoneNumber: rawPhone,
-      clientReference: orderNumber,
-    };
-
-    const config = {
-      branding: 'enabled',
-      callbackUrl: callbackUrl,
+    // Build Hubtel hosted checkout URL directly — no SDK, no popup
+    const params = new URLSearchParams({
       merchantAccount: HUBTEL_MERCHANT_ACCOUNT,
-      basicAuth: HUBTEL_BASIC_AUTH,
-    };
-
-    const checkout = new CheckoutSdk();
-    checkout.openModal({
-      purchaseInfo,
-      config,
-      callBacks: {
-        onPaymentSuccess: (data) => {
-          checkout.closePopUp();
-          window.location.href = callbackUrl + `&reference=${data?.transactionId || ''}`;
-        },
-        onPaymentFailure: () => {
-          setLoading(false);
-          setError('Payment failed. Please try again.');
-        },
-        onClose: () => {
-          setLoading(false);
-        },
-      },
+      basicAuth: 'Basic ' + btoa(`${HUBTEL_API_ID}:${HUBTEL_API_KEY}`),
+      totalAmount: amount.toFixed(2),
+      description: `FMM CLASSICO – Order #${orderNumber}`,
+      clientReference: orderNumber || orderId || Date.now().toString(),
+      callbackUrl: callbackUrl,
+      returnUrl: callbackUrl,
+      cancellationUrl: cancelUrl,
+      merchantBusinessLogoUrl: 'https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg',
+      customerEmail: emailVal.trim(),
+      customerPhoneNumber: rawPhone,
+      customerName: `${firstName} ${lastName}`.trim() || 'Customer',
     });
+
+    // Redirect to Hubtel hosted checkout — this ALWAYS works, no popup needed
+    window.location.href = `https://payhere.hubtel.com/pay?${params.toString()}`;
   };
 
   if (amount <= 0) {
@@ -228,7 +213,7 @@ export default function Payment() {
               <p className="text-xs font-bold text-gray-700 mb-2 text-center">How Hubtel Payment Works</p>
               {[
                 '1. Fill in your details below',
-                '2. Click "Pay now" — a Hubtel popup opens',
+                '2. Click "Pay now" — you are taken to Hubtel',
                 '3. Choose MoMo, Card, or Bank Transfer',
                 '4. Complete payment — your order is confirmed ✅',
               ].map(s => (
@@ -321,12 +306,12 @@ export default function Payment() {
                 className="w-full py-6 sm:py-7 text-base sm:text-lg font-bold rounded-lg text-white bg-orange-500 hover:bg-orange-600 mt-3"
               >
                 {loading
-                  ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Opening Hubtel checkout...</>
+                  ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Redirecting to Hubtel...</>
                   : 'Pay now with Hubtel'}
               </Button>
 
               <p className="text-center text-xs text-gray-400 mt-1">
-                A secure Hubtel checkout will open. Pay with MoMo, Card, or Bank Transfer.
+                You will be redirected to Hubtel's secure payment page. Pay with MoMo, Card, or Bank Transfer.
               </p>
             </form>
           </div>

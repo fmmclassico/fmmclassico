@@ -81,26 +81,22 @@ export default function Payment() {
     setLoading(true);
 
     const callbackUrl = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
-    const cancelUrl   = `${window.location.origin}/Payment?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}&email=${encodeURIComponent(emailVal)}`;
 
-    // Build Hubtel hosted checkout URL directly — no SDK, no popup
+    // Build the exact Hubtel checkout URL using the same params as their official SDK
+    const basicAuth = 'Basic ' + btoa(`${HUBTEL_API_ID}:${HUBTEL_API_KEY}`);
     const params = new URLSearchParams({
-      merchantAccount: HUBTEL_MERCHANT_ACCOUNT,
-      basicAuth: 'Basic ' + btoa(`${HUBTEL_API_ID}:${HUBTEL_API_KEY}`),
-      totalAmount: amount.toFixed(2),
-      description: `FMM CLASSICO – Order #${orderNumber}`,
+      amount: amount.toFixed(2),
+      purchaseDescription: `FMM CLASSICO – Order #${orderNumber}`,
+      customerPhoneNumber: rawPhone,
       clientReference: orderNumber || orderId || Date.now().toString(),
       callbackUrl: callbackUrl,
-      returnUrl: callbackUrl,
-      cancellationUrl: cancelUrl,
-      merchantBusinessLogoUrl: 'https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg',
-      customerEmail: emailVal.trim(),
-      customerPhoneNumber: rawPhone,
-      customerName: `${firstName} ${lastName}`.trim() || 'Customer',
+      merchantAccount: HUBTEL_MERCHANT_ACCOUNT,
+      basicAuth: basicAuth,
+      branding: 'enabled',
     });
 
-    // Redirect to Hubtel hosted checkout — this ALWAYS works, no popup needed
-    window.location.href = `https://payhere.hubtel.com/pay?${params.toString()}`;
+    // Redirect in same tab — avoids popup blockers, uses official Hubtel checkout domain
+    window.location.href = `https://unified-pay.hubtel.com/pay?${params.toString()}`;
   };
 
   if (amount <= 0) {

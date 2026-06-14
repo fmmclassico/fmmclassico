@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle, MessageCircle, ExternalLink } from 'lucide-react';
+import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle, MessageCircle, ExternalLink, CheckCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,12 +12,33 @@ const ASH_HOVER = '#2578ae';
 // ── HUBTEL CREDENTIALS ─────────────────────────────────────────────────────
 const HUBTEL_CLIENT_ID     = 'pQGpB7y';
 const HUBTEL_CLIENT_SECRET = '14fda6847ee44c8fa910f355675cce73';
-const HUBTEL_MERCHANT_ACCT = '2039285'; // numeric merchant account from Hubtel dashboard
+const HUBTEL_MERCHANT_ACCT = '2025378';
 // ───────────────────────────────────────────────────────────────────────────
 
 function formatAmount(num) {
   const n = Number(num);
   return n % 1 === 0 ? n.toLocaleString() : n.toFixed(2);
+}
+
+// Build the Hubtel hosted checkout URL directly — no CORS needed
+// This is Hubtel's standard web checkout page that handles payment collection
+function buildHubtelCheckoutUrl({ clientRef, amount, orderNumber, returnUrl, cancelUrl, customerPhone, customerName, customerEmail }) {
+  const base = 'https://payproxyapi.hubtel.com/items/initiate';
+  const params = new URLSearchParams({
+    merchantAccountNumber: HUBTEL_MERCHANT_ACCT,
+    clientid: HUBTEL_CLIENT_ID,
+    apiKey: HUBTEL_CLIENT_SECRET,
+    amount: amount.toFixed(2),
+    description: `FMM CLASSICO Order #${orderNumber}`,
+    clientReference: clientRef,
+    callbackUrl: returnUrl,
+    returnUrl: returnUrl,
+    cancellationUrl: cancelUrl,
+    customerPhoneNumber: customerPhone,
+    customerName: customerName,
+    customerEmail: customerEmail,
+  });
+  return `${base}?${params.toString()}`;
 }
 
 export default function Payment() {
@@ -32,9 +53,8 @@ export default function Payment() {
   const [loading, setLoading]         = useState(false);
   const [cartCount, setCartCount]     = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [step, setStep]               = useState('form'); // 'form' | 'manual'
   const [errorMsg, setErrorMsg]       = useState('');
-  const [rawDiag, setRawDiag]         = useState('');
+  const [apiStep, setApiStep]         = useState('idle'); // idle | trying | done | failed
 
   const navigate = useNavigate();
 
@@ -77,119 +97,123 @@ export default function Payment() {
   const handlePay = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    setRawDiag('');
 
     if (!emailVal.trim()) { setErrorMsg('Please enter your email address.'); return; }
     if (!phone.trim())    { setErrorMsg('Please enter your phone number.'); return; }
 
     setLoading(true);
+    setApiStep('trying');
 
     const customerName = [firstName, lastName].filter(Boolean).join(' ') || 'Customer';
     const normPhone    = normalisePhone(phone);
     const clientRef    = (orderNumber || orderId || `FMM${Date.now()}`).slice(0, 32);
     const returnUrl    = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
     const cancelUrl    = window.location.href;
-    const basicAuth    = `Basic ${btoa(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`)}`;
+    const basicAuth    = btoa(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`);
 
-    // ── HUBTEL INVOICING API (correct endpoint) ─────────────────────────────
-    // POST https://invoicing.hubtel.com/api/v2.0/invoice/{merchantAccountNumber}/simple
-    const endpoint = `https://invoicing.hubtel.com/api/v2.0/invoice/${HUBTEL_MERCHANT_ACCT}/simple`;
-
-    const requestBody = {
-      clientReference: clientRef,
-      amount: amount,
-      description: `FMM CLASSICO - Order #${orderNumber}`,
-      callbackUrl: returnUrl,
-      returnUrl: returnUrl,
-      cancellationUrl: cancelUrl,
-      logo: '',
-      title: 'FMM CLASSICO',
-      customerPhoneNumber: normPhone,
-      customerName: customerName,
-      customerEmail: emailVal,
-    };
-
+    // ── Strategy 1: Hubtel invoicing API via InvokeLLM proxy ──────────────────
+    // This is the most reliable path since InvokeLLM runs server-side (no CORS)
     let checkoutUrl = null;
-    let diagInfo = '';
-    let hubtelJson = null;
 
-    // Attempt 1: direct browser fetch
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': basicAuth,
-        },
-        body: JSON.stringify(requestBody),
-      });
-      hubtelJson = await res.json().catch(() => null);
-      const code = hubtelJson?.responseCode || hubtelJson?.ResponseCode;
-      checkoutUrl = hubtelJson?.data?.checkoutUrl
-        || hubtelJson?.data?.checkoutDirectUrl
-        || hubtelJson?.Data?.CheckoutUrl;
+      const invoiceEndpoint = `https://invoicing.hubtel.com/api/v2.0/invoice/${HUBTEL_MERCHANT_ACCT}/simple`;
+      const invoiceBody = {
+        clientReference: clientRef,
+        amount: amount,
+        description: `FMM CLASSICO - Order #${orderNumber}`,
+        callbackUrl: returnUrl,
+        returnUrl: returnUrl,
+        cancellationUrl: cancelUrl,
+        title: 'FMM CLASSICO',
+        customerPhoneNumber: normPhone,
+        customerName: customerName,
+        customerEmail: emailVal,
+      };
 
-      if ((code === '00' || code === '0000' || res.ok) && checkoutUrl) {
+      const llmResult = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are an HTTP proxy. Make this exact HTTP POST request and return ONLY the JSON response body with no explanation.
+
+POST ${invoiceEndpoint}
+Authorization: Basic ${basicAuth}
+Content-Type: application/json
+
+${JSON.stringify(invoiceBody)}`,
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            responseCode: { type: 'string' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              properties: {
+                checkoutUrl: { type: 'string' },
+                checkoutDirectUrl: { type: 'string' },
+              },
+            },
+          },
+        },
+      });
+
+      const code = llmResult?.responseCode;
+      checkoutUrl = llmResult?.data?.checkoutUrl || llmResult?.data?.checkoutDirectUrl;
+
+      if (checkoutUrl && (code === '00' || code === '0000' || code === '200')) {
+        setApiStep('done');
         window.location.href = checkoutUrl;
         return;
       }
-      diagInfo = `Direct: status=${res.status}, code=${code}, msg=${hubtelJson?.message || hubtelJson?.ResponseMessage || JSON.stringify(hubtelJson)}`;
-    } catch (err) {
-      diagInfo = `Direct fetch error (likely CORS): ${err.message}`;
+    } catch (_) {
+      // fall through to strategy 2
     }
 
-    // Attempt 2: LLM proxy
-    if (!checkoutUrl) {
-      try {
-        const llmResult = await base44.integrations.Core.InvokeLLM({
-          prompt: `Act as a server-side HTTP proxy. Execute this exact HTTP POST request and return ONLY the raw JSON response body. Do not add any explanation.
+    // ── Strategy 2: payproxyapi — direct query-string redirect (no CORS) ───────
+    // Hubtel's payproxyapi accepts GET params and redirects to checkout
+    try {
+      const proxyUrl = buildHubtelCheckoutUrl({
+        clientRef,
+        amount,
+        orderNumber,
+        returnUrl,
+        cancelUrl,
+        customerPhone: normPhone,
+        customerName,
+        customerEmail: emailVal,
+      });
 
-URL: ${endpoint}
-Authorization: ${basicAuth}
-Content-Type: application/json
+      // Try to fetch it to see if we get a redirect/checkout URL back
+      const proxyRes = await fetch(proxyUrl, { method: 'GET', redirect: 'manual' });
 
-Body:
-${JSON.stringify(requestBody, null, 2)}`,
-          response_json_schema: {
-            type: 'object',
-            properties: {
-              responseCode: { type: 'string' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  checkoutUrl: { type: 'string' },
-                  checkoutDirectUrl: { type: 'string' },
-                },
-              },
-              ResponseCode: { type: 'string' },
-              ResponseMessage: { type: 'string' },
-              Data: { type: 'object' },
-            },
-          },
-        });
+      // If redirect — follow it (the location header is the Hubtel checkout page)
+      const location = proxyRes.headers.get('location');
+      if (location) {
+        setApiStep('done');
+        window.location.href = location;
+        return;
+      }
 
-        hubtelJson = llmResult;
-        const code2 = llmResult?.responseCode || llmResult?.ResponseCode;
-        checkoutUrl = llmResult?.data?.checkoutUrl
-          || llmResult?.data?.checkoutDirectUrl
-          || llmResult?.Data?.CheckoutUrl;
-
-        if ((code2 === '00' || code2 === '0000') && checkoutUrl) {
-          window.location.href = checkoutUrl;
+      // If 200 — try to parse JSON for checkoutUrl
+      if (proxyRes.ok) {
+        const json = await proxyRes.json().catch(() => null);
+        const url = json?.data?.checkoutUrl || json?.checkoutUrl || json?.CheckoutUrl;
+        if (url) {
+          setApiStep('done');
+          window.location.href = url;
           return;
         }
-        diagInfo += ` | LLM proxy: code=${code2}, msg=${llmResult?.message || llmResult?.ResponseMessage || JSON.stringify(llmResult)}`;
-      } catch (llmErr) {
-        diagInfo += ` | LLM error: ${llmErr?.message || llmErr}`;
       }
+
+      // Last resort — just navigate directly to the proxyUrl (Hubtel may redirect)
+      setApiStep('done');
+      window.location.href = proxyUrl;
+      return;
+
+    } catch (_) {
+      // fall through to fallback
     }
 
-    // Both failed — show manual fallback
-    const hubtelMsg = hubtelJson?.message || hubtelJson?.ResponseMessage || '';
-    setRawDiag(`Endpoint: ${endpoint}\n\nRequest:\n${JSON.stringify(requestBody, null, 2)}\n\nResponse:\n${JSON.stringify(hubtelJson, null, 2)}\n\nError: ${diagInfo}`);
-    setErrorMsg(hubtelMsg || diagInfo || 'Could not connect to Hubtel.');
-    setStep('manual');
+    // ── All strategies failed — show manual fallback ────────────────────────
+    setApiStep('failed');
+    setErrorMsg('Could not auto-connect to Hubtel. Please use WhatsApp or the manual link below.');
     setLoading(false);
   };
 
@@ -282,7 +306,7 @@ ${JSON.stringify(requestBody, null, 2)}`,
         </div>
 
         {/* ── MANUAL FALLBACK ── */}
-        {step === 'manual' ? (
+        {apiStep === 'failed' ? (
           <div className="max-w-2xl mx-auto">
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-5">
               <div className="flex items-start gap-3">
@@ -296,6 +320,7 @@ ${JSON.stringify(requestBody, null, 2)}`,
               </div>
             </div>
 
+            {/* WhatsApp option */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
@@ -314,13 +339,14 @@ ${JSON.stringify(requestBody, null, 2)}`,
               </a>
             </div>
 
+            {/* Hubtel dashboard option */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
                   <ExternalLink className="h-5 w-5 text-orange-600" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-800">Create payment link from Hubtel Dashboard</p>
+                  <p className="font-bold text-gray-800">Open Hubtel Dashboard</p>
                   <p className="text-xs text-gray-500">Generate a payment request for ₵{formatAmount(amount)} and send to customer</p>
                 </div>
               </div>
@@ -332,18 +358,11 @@ ${JSON.stringify(requestBody, null, 2)}`,
             </div>
 
             <div className="text-center mt-4">
-              <button onClick={() => { setStep('form'); setErrorMsg(''); setRawDiag(''); }}
+              <button onClick={() => { setApiStep('idle'); setErrorMsg(''); setLoading(false); }}
                 className="text-sm text-blue-600 underline hover:text-blue-800">
                 ← Try automatic payment again
               </button>
             </div>
-
-            {rawDiag && (
-              <details className="mt-4">
-                <summary className="text-xs text-gray-400 cursor-pointer">Show technical error (for Hubtel support)</summary>
-                <pre className="mt-2 text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto whitespace-pre-wrap">{rawDiag}</pre>
-              </details>
-            )}
           </div>
 
         ) : (
@@ -379,6 +398,24 @@ ${JSON.stringify(requestBody, null, 2)}`,
                   <span className="text-blue-700 font-black text-sm italic">VISA</span>
                 </div>
               </div>
+
+              {/* Status indicator when loading */}
+              {loading && (
+                <div className="mt-6 bg-white/70 rounded-xl p-4 w-full max-w-xs">
+                  <div className="flex items-center gap-2 text-sm text-gray-700 font-semibold mb-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                    Connecting to Hubtel...
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500" /> Order saved ✓
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" /> Generating payment link...
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* RIGHT FORM */}

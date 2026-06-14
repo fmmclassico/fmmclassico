@@ -144,7 +144,7 @@ export default function HeroBanner() {
           transition={{ duration: 0.4 }}
           className="flex items-center min-h-[200px] md:min-h-[280px]"
         >
-          <div className="container mx-auto px-4 py-8 md:py-12 flex items-center justify-between gap-4">
+          <div className="container mx-auto px-6 sm:px-8 md:px-10 py-8 md:py-12 flex items-center justify-between gap-4">
             <div className="flex-1 max-w-md">
               {slide.badge && (
                 <span className="inline-block bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full mb-3">

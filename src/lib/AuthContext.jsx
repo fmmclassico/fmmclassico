@@ -11,78 +11,61 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
   const [authError, setAuthError] = useState(null);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
+  const [appPublicSettings, setAppPublicSettings] = useState(null);
 
   useEffect(() => {
     checkAppState();
   }, []);
 
   const checkAppState = async () => {
-    // Safety timeout — if loading takes more than 8s, clear the spinner so users aren't stuck
+    setAuthError(null);
+
+    // Safety timeout — never block the user more than 5s
     const loadingTimeout = setTimeout(() => {
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
-    }, 8000);
+    }, 5000);
 
     try {
-      setIsLoadingPublicSettings(true);
-      setAuthError(null);
-      
       const appClient = createAxiosClient({
         baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
+        headers: { 'X-App-Id': appParams.appId },
         token: appParams.token,
-        interceptResponses: true
+        interceptResponses: true,
       });
-      
-      try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
-        setAppPublicSettings(publicSettings);
-        
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-        }
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        console.error('App state check failed:', appError);
-        
-        // Only handle app-level 403s with a specific reason from the platform
-        if (appError.status === 403 && appError.data?.extra_data?.reason) {
-          const reason = appError.data.extra_data.reason;
-          if (reason === 'auth_required') {
-            // App requires login — only redirect if there's truly no token
-            if (!appParams.token) {
-              setAuthError({ type: 'auth_required', message: 'Authentication required' });
-              setIsLoadingAuth(false);
-              setIsLoadingPublicSettings(false);
-            } else {
-              // Token exists but app check failed — try to check auth anyway before redirecting
-              await checkUserAuth();
-              setIsLoadingPublicSettings(false);
-            }
-          } else if (reason === 'user_not_registered') {
-            setAuthError({ type: 'user_not_registered', message: 'User not registered for this app' });
-          } else {
-            setAuthError({ type: reason, message: appError.message });
-          }
-        } else {
-          // Network error, timeout, etc. — don't log out, just clear the loading state
-          // so the user stays on the page they were on
-          setIsLoadingAuth(false);
-        }
-        clearTimeout(loadingTimeout);
-        setIsLoadingPublicSettings(false);
-      }
+
+      // Fetch public settings and auth in parallel for maximum speed
+      const settingsPromise = appClient.get(`/prod/public-settings/by-id/${appParams.appId}`)
+        .then(data => setAppPublicSettings(data))
+        .catch(() => {}); // non-fatal
+
+      const authPromise = appParams.token ? checkUserAuth() : Promise.resolve().then(() => {
+        setIsLoadingAuth(false);
+        setIsAuthenticated(false);
+      });
+
+      // Wait for auth only (settings load in background)
+      await authPromise;
+      settingsPromise.finally(() => setIsLoadingPublicSettings(false));
+
     } catch (error) {
-      console.error('Unexpected error in checkAppState:', error);
-      // Don't set a hard auth error on unexpected failures — this prevents spurious logouts
+      console.error('checkAppState error:', error);
+
+      if (error?.status === 403 && error?.data?.extra_data?.reason) {
+        const reason = error.data.extra_data.reason;
+        if (reason === 'auth_required') {
+          setAuthError({ type: 'auth_required', message: 'Authentication required' });
+          setIsLoadingAuth(false);
+        } else if (reason === 'user_not_registered') {
+          setAuthError({ type: 'user_not_registered', message: 'User not registered for this app' });
+        } else {
+          setAuthError({ type: reason, message: error.message });
+        }
+      } else {
+        // Network/unknown error — don't force logout, just unblock rendering
+        setIsLoadingAuth(false);
+      }
       setIsLoadingPublicSettings(false);
-      setIsLoadingAuth(false);
     } finally {
       clearTimeout(loadingTimeout);
     }
@@ -90,14 +73,12 @@ export const AuthProvider = ({ children }) => {
 
   const checkUserAuth = async () => {
     try {
-      // Now check if the user is authenticated
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
-      
-      // Check if user needs to verify admin password
+
       const ADMIN_EMAILS = ['fmmcompanylimited@gmail.com', 'mensahfedramartha@gmail.com', 'marthamensahfedra@gmail.com'];
       const isAdminEmail = ADMIN_EMAILS.includes(currentUser.email?.toLowerCase());
-      
+
       if (currentUser.role === 'admin' && isAdminEmail) {
         const adminVerified = sessionStorage.getItem(`admin_verified_${currentUser.email}`);
         if (!adminVerified) {
@@ -106,13 +87,13 @@ export const AuthProvider = ({ children }) => {
           setAuthError({
             type: 'admin_verification_required',
             email: currentUser.email,
-            message: 'Admin password verification required'
+            message: 'Admin password verification required',
           });
           setIsLoadingAuth(false);
           return;
         }
       }
-      
+
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
@@ -120,16 +101,10 @@ export const AuthProvider = ({ children }) => {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
-      // Only force logout/redirect on a definitive 401 from the auth endpoint itself.
-      // Do NOT redirect on network errors, timeouts, or other transient failures —
-      // those would cause spurious logouts when navigating between pages.
-      if (error.status === 401) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
+      if (error?.status === 401) {
+        setAuthError({ type: 'auth_required', message: 'Authentication required' });
       }
-      // For 403 and other errors, stay silent — user stays on page without forced redirect.
+      // Silently ignore other errors — don't force logout
     }
   };
 
@@ -143,25 +118,21 @@ export const AuthProvider = ({ children }) => {
   const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
-    
     if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
       base44.auth.logout(window.location.href);
     } else {
-      // Just remove the token without redirect
       base44.auth.logout();
     }
   };
 
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
     base44.auth.redirectToLogin(window.location.href);
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
       isLoadingAuth,
       isLoadingPublicSettings,
       authError,
@@ -169,7 +140,7 @@ export const AuthProvider = ({ children }) => {
       logout,
       navigateToLogin,
       checkAppState,
-      verifyAdminPassword
+      verifyAdminPassword,
     }}>
       {children}
     </AuthContext.Provider>

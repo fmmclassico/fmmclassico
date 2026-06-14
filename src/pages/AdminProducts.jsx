@@ -140,11 +140,16 @@ const QUILL_MODULES = {
   ],
 };
 
+const PRESET_COLORS = ['Black','White','Red','Blue','Green','Yellow','Gold','Silver','Rose Gold','Purple','Orange','Pink','Navy','Grey','Clear/Transparent'];
+
 const EMPTY_FORM = {
   name: '', description: '', price: '', original_price: '',
   main_group: '', category: '', brand: '', custom_brand: '', subcategory: '', custom_subcategory: '',
   stock: '', home_sections: [], review_enabled: true, rating: '', reviews_count: '',
   image_url: '', image_urls: [], video_url: '', is_visible: true,
+  show_colors: false, available_colors: [], color_input: '',
+  show_wattage: false, available_wattage: [], wattage_input: '',
+  show_type: false, available_types: [], type_input: '',
 };
 
 export default function AdminProducts() {
@@ -173,7 +178,7 @@ export default function AdminProducts() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const { main_group, home_sections, custom_brand, custom_subcategory, ...rest } = data;
+      const { main_group, home_sections, custom_brand, custom_subcategory, color_input, wattage_input, type_input, ...rest } = data;
       const sections = home_sections || [];
       const finalBrand = rest.brand === 'Other (type below)' ? (custom_brand || 'Other') : rest.brand;
       const finalSubcategory = rest.subcategory === '__custom__' ? (custom_subcategory || '') : rest.subcategory;
@@ -297,6 +302,15 @@ export default function AdminProducts() {
       video_url: product.video_url || '',
       flash_sale_end: product.flash_sale_end || '',
       is_visible: product.is_visible !== false,
+      show_colors: product.show_colors || false,
+      available_colors: product.available_colors || [],
+      color_input: '',
+      show_wattage: product.show_wattage || false,
+      available_wattage: product.available_wattage || [],
+      wattage_input: '',
+      show_type: product.show_type || false,
+      available_types: product.available_types || [],
+      type_input: '',
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -567,6 +581,132 @@ export default function AdminProducts() {
                   <Input type="datetime-local" value={form.flash_sale_end || ''} onChange={e => setForm(f => ({ ...f, flash_sale_end: e.target.value }))} />
                 </div>
               )}
+            </div>
+
+            {/* ── CUSTOMER OPTIONS: Colors / Wattage / Type ── */}
+            <div className="md:col-span-2 space-y-4">
+              <Label className="font-semibold block">🎨 Customer Options (optional)</Label>
+              <p className="text-xs text-gray-400 -mt-3">Enable any option to let customers choose before adding to cart. Leave off if not applicable.</p>
+
+              {/* Colors */}
+              <div className="border rounded-xl p-3 space-y-2">
+                <label className={`flex items-center gap-2 cursor-pointer`}
+                  onClick={() => setForm(f => ({ ...f, show_colors: !f.show_colors }))}>
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${form.show_colors ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
+                    {form.show_colors && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                  </div>
+                  <span className="font-medium text-sm text-gray-700">Show Color Options to Customers</span>
+                </label>
+                {form.show_colors && (
+                  <div className="pt-1 space-y-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {PRESET_COLORS.map(c => (
+                        <button key={c} type="button"
+                          onClick={() => setForm(f => ({
+                            ...f,
+                            available_colors: f.available_colors.includes(c)
+                              ? f.available_colors.filter(x => x !== c)
+                              : [...f.available_colors, c]
+                          }))}
+                          className={`text-xs px-2 py-1 rounded-full border transition-all ${form.available_colors.includes(c) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input value={form.color_input || ''} onChange={e => setForm(f => ({ ...f, color_input: e.target.value }))}
+                        placeholder="Add custom color..." className="h-8 text-xs flex-1" />
+                      <Button type="button" size="sm" className="h-8 text-xs" onClick={() => {
+                        if (!form.color_input?.trim()) return;
+                        setForm(f => ({ ...f, available_colors: [...new Set([...f.available_colors, f.color_input.trim()])], color_input: '' }));
+                      }}>Add</Button>
+                    </div>
+                    {form.available_colors.length > 0 && (
+                      <p className="text-xs text-green-600">Selected: {form.available_colors.join(', ')}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Wattage */}
+              <div className="border rounded-xl p-3 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer"
+                  onClick={() => setForm(f => ({ ...f, show_wattage: !f.show_wattage }))}>
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${form.show_wattage ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
+                    {form.show_wattage && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                  </div>
+                  <span className="font-medium text-sm text-gray-700">Show Wattage Options to Customers</span>
+                </label>
+                {form.show_wattage && (
+                  <div className="pt-1 space-y-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {['5W','10W','18W','20W','25W','33W','45W','65W','100W','120W','150W'].map(w => (
+                        <button key={w} type="button"
+                          onClick={() => setForm(f => ({
+                            ...f,
+                            available_wattage: f.available_wattage.includes(w)
+                              ? f.available_wattage.filter(x => x !== w)
+                              : [...f.available_wattage, w]
+                          }))}
+                          className={`text-xs px-2 py-1 rounded-full border transition-all ${form.available_wattage.includes(w) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
+                          {w}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input value={form.wattage_input || ''} onChange={e => setForm(f => ({ ...f, wattage_input: e.target.value }))}
+                        placeholder="Custom wattage e.g. 30W..." className="h-8 text-xs flex-1" />
+                      <Button type="button" size="sm" className="h-8 text-xs" onClick={() => {
+                        if (!form.wattage_input?.trim()) return;
+                        setForm(f => ({ ...f, available_wattage: [...new Set([...f.available_wattage, f.wattage_input.trim()])], wattage_input: '' }));
+                      }}>Add</Button>
+                    </div>
+                    {form.available_wattage.length > 0 && (
+                      <p className="text-xs text-green-600">Selected: {form.available_wattage.join(', ')}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Type */}
+              <div className="border rounded-xl p-3 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer"
+                  onClick={() => setForm(f => ({ ...f, show_type: !f.show_type }))}>
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${form.show_type ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
+                    {form.show_type && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                  </div>
+                  <span className="font-medium text-sm text-gray-700">Show Type/Variant Options to Customers</span>
+                </label>
+                {form.show_type && (
+                  <div className="pt-1 space-y-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {['USB-C','Lightning','Micro USB','Type-A','Wireless','Original','Compatible','Standard','Pro','Plus','Max'].map(t => (
+                        <button key={t} type="button"
+                          onClick={() => setForm(f => ({
+                            ...f,
+                            available_types: f.available_types.includes(t)
+                              ? f.available_types.filter(x => x !== t)
+                              : [...f.available_types, t]
+                          }))}
+                          className={`text-xs px-2 py-1 rounded-full border transition-all ${form.available_types.includes(t) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input value={form.type_input || ''} onChange={e => setForm(f => ({ ...f, type_input: e.target.value }))}
+                        placeholder="Custom type e.g. 256GB..." className="h-8 text-xs flex-1" />
+                      <Button type="button" size="sm" className="h-8 text-xs" onClick={() => {
+                        if (!form.type_input?.trim()) return;
+                        setForm(f => ({ ...f, available_types: [...new Set([...f.available_types, f.type_input.trim()])], type_input: '' }));
+                      }}>Add</Button>
+                    </div>
+                    {form.available_types.length > 0 && (
+                      <p className="text-xs text-green-600">Selected: {form.available_types.join(', ')}</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Other Settings */}

@@ -20,6 +20,13 @@ export default function ReviewSection({ product, user }) {
     enabled: !!product.id,
   });
 
+  const { data: settings = [] } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: () => base44.entities.AppSetting.list(),
+  });
+
+  const autoApprove = settings.find(s => s.key === 'auto_approve_reviews')?.value === 'true';
+
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!user) { base44.auth.redirectToLogin(window.location.href); return; }
@@ -30,11 +37,11 @@ export default function ReviewSection({ product, user }) {
         rating,
         comment,
         verified_purchase: true,
-        approved: false,
+        approved: autoApprove,
       });
     },
     onSuccess: () => {
-      toast.success('Review submitted! It will appear after admin approval.');
+      toast.success(autoApprove ? 'Review posted!' : 'Review submitted! It will appear after admin approval.');
       setComment('');
       setRating(5);
       setShowForm(false);

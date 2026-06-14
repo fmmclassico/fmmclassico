@@ -70,13 +70,11 @@
     },
     "featured": {
       "type": "boolean",
-      "default": false,
-      "description": "Show in Featured / Classico Picks section on homepage"
+      "default": false
     },
     "flash_sale": {
       "type": "boolean",
-      "default": false,
-      "description": "Show in CLASSICO Deals (Flash Sale) section on homepage"
+      "default": false
     },
     "flash_sale_end": {
       "type": "string",
@@ -84,31 +82,61 @@
     },
     "donkomi": {
       "type": "boolean",
-      "default": false,
-      "description": "Show in Donkomi Deals (Best Prices) section on homepage"
+      "default": false
     },
     "new_arrival": {
       "type": "boolean",
-      "default": false,
-      "description": "Show in New Arrivals section on homepage"
+      "default": false
     },
     "top_selling": {
       "type": "boolean",
-      "default": false,
-      "description": "Show in Top Selling section on homepage"
+      "default": false
     },
     "review_enabled": {
       "type": "boolean",
-      "default": true,
-      "description": "Are customer reviews enabled for this product"
+      "default": true
     },
     "rating": {
-      "type": "number",
-      "description": "Product rating out of 5"
+      "type": "number"
     },
     "reviews_count": {
-      "type": "number",
-      "description": "Number of reviews"
+      "type": "number"
+    },
+    "show_colors": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show color options to customers"
+    },
+    "available_colors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Available colors for this product"
+    },
+    "show_wattage": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show wattage options to customers"
+    },
+    "available_wattage": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Available wattage options e.g. 20W, 65W"
+    },
+    "show_type": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show type/variant options to customers"
+    },
+    "available_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Available type/variant options e.g. Type-C, Lightning"
     }
   },
   "required": [

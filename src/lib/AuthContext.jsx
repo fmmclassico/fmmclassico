@@ -18,6 +18,12 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAppState = async () => {
+    // Safety timeout — if loading takes more than 8s, clear the spinner so users aren't stuck
+    const loadingTimeout = setTimeout(() => {
+      setIsLoadingPublicSettings(false);
+      setIsLoadingAuth(false);
+    }, 8000);
+
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
@@ -66,6 +72,7 @@ export const AuthProvider = ({ children }) => {
           // so the user stays on the page they were on
           setIsLoadingAuth(false);
         }
+        clearTimeout(loadingTimeout);
         setIsLoadingPublicSettings(false);
       }
     } catch (error) {
@@ -73,6 +80,8 @@ export const AuthProvider = ({ children }) => {
       // Don't set a hard auth error on unexpected failures — this prevents spurious logouts
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
+    } finally {
+      clearTimeout(loadingTimeout);
     }
   };
 

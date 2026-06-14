@@ -115,10 +115,14 @@ export default function HeroBanner() {
   };
   const slide = slides[current] || DEFAULT_SLIDES[0];
 
-  // cta_link is already a full path (e.g. /Shop?category=phones) or an http URL
-  const ctaHref = slide.cta_link
-    ? (slide.cta_link.startsWith('http') ? slide.cta_link : slide.cta_link)
-    : createPageUrl('Shop');
+  // Normalize cta_link: could be a full URL, an absolute path (/Shop), or a relative page name (Shop?category=phones)
+  const ctaHref = (() => {
+    const link = slide.cta_link;
+    if (!link) return createPageUrl('Shop');
+    if (link.startsWith('http')) return link;
+    if (link.startsWith('/')) return link;
+    return '/' + link;
+  })();
 
   // Use bg_gradient class if it's a Tailwind class, else fallback inline style
   const gradientClass = slide.bg_gradient && !slide.bg_gradient.startsWith('#')

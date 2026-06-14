@@ -68,15 +68,8 @@ const AuthenticatedApp = () => {
         </>
       );
     } else if (authError.type === 'auth_required') {
-      // Only redirect if we're truly sure the user has no session.
-      // Check for stored token before redirecting, to avoid spurious logouts during navigation.
-      const storedToken = localStorage.getItem('base44_access_token') || localStorage.getItem('token');
-      if (!storedToken) {
-        navigateToLogin();
-        return null;
-      }
-      // Token exists but we got an auth error — let the page render normally;
-      // individual pages handle their own auth checks.
+      navigateToLogin();
+      return null;
     }
   }
 

@@ -114,6 +114,17 @@
   margin-bottom: 0.2em;
 }
 
+/* ── Mobile typography & layout fixes ── */
+@media (max-width: 640px) {
+  h1 { font-size: 1.25rem !important; line-height: 1.4 !important; }
+  h2 { font-size: 1.1rem !important; }
+  h3 { font-size: 1rem !important; }
+  .container { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+}
+
+/* Ensure images don't overflow on mobile */
+img { max-width: 100%; }
+
 /* Hide Base44 platform badge */
 #base44-badge,
 [id="base44-badge"] {

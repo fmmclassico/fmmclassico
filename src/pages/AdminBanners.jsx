@@ -6,8 +6,28 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, Trash2, Sparkles, Eye, EyeOff, Pencil, X, Check, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+
+const PAGE_LINK_OPTIONS = [
+  { label: '🏠 Home', value: 'Home' },
+  { label: '🛒 Shop — All Products', value: 'Shop' },
+  { label: '📱 Shop — Phones', value: 'Shop?category=phones' },
+  { label: '📦 Shop — Phone Cases', value: 'Shop?category=phone_cases' },
+  { label: '🔌 Shop — Chargers', value: 'Shop?category=chargers' },
+  { label: '🎧 Shop — Earphones', value: 'Shop?category=earphones' },
+  { label: '🔗 Shop — Cables', value: 'Shop?category=cables' },
+  { label: '🔋 Shop — Power Banks', value: 'Shop?category=power_banks' },
+  { label: '🛡️ Shop — Screen Protectors', value: 'Shop?category=screen_protectors' },
+  { label: '📡 Shop — Holders & Mounts', value: 'Shop?category=holders' },
+  { label: '🔊 Shop — Speakers', value: 'Shop?category=speakers' },
+  { label: '⌚ Shop — Smart Watches', value: 'Shop?category=smart_watches' },
+  { label: '📺 Shop — Electronics', value: 'Shop?category=electronic_appliances' },
+  { label: '🏡 Shop — Home Appliances', value: 'Shop?category=home_appliances' },
+  { label: '📂 Categories Page', value: 'Categories' },
+  { label: '⚡ Flash Sales', value: 'Shop?flash=true' },
+];
 
 const GRADIENTS = [
   { label: '🩵 Teal (Default)', value: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]' },
@@ -159,8 +179,23 @@ function BannerForm({ initial, onSave, onCancel, isSaving, isNew }) {
             <Input value={form.cta_text} onChange={e => setForm(f => ({ ...f, cta_text: e.target.value }))} placeholder="Shop Now" />
           </div>
           <div>
-            <Label className="text-xs mb-1 block">Button Link (page name)</Label>
-            <Input value={form.cta_link} onChange={e => setForm(f => ({ ...f, cta_link: e.target.value }))} placeholder="Shop?category=phones" />
+            <Label className="text-xs mb-1 block">Where does the button go?</Label>
+            <Select value={form.cta_link} onValueChange={v => setForm(f => ({ ...f, cta_link: v }))}>
+              <SelectTrigger className="text-xs h-9">
+                <SelectValue placeholder="Pick a page/category..." />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_LINK_OPTIONS.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              className="mt-1 text-xs h-8"
+              value={form.cta_link}
+              onChange={e => setForm(f => ({ ...f, cta_link: e.target.value }))}
+              placeholder="Or type a custom link..."
+            />
           </div>
         </div>
         <div className="flex gap-3 pt-2">

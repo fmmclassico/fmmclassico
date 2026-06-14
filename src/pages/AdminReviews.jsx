@@ -22,6 +22,32 @@ export default function AdminReviews() {
     }).catch(() => {});
   }, []);
 
+  const { data: settings = [] } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: () => base44.entities.AppSetting.list(),
+    enabled: isAdmin,
+  });
+
+  // Load auto-approve setting from DB
+  useEffect(() => {
+    const setting = settings.find(s => s.key === 'auto_approve_reviews');
+    setAutoApprove(setting?.value === 'true');
+  }, [settings]);
+
+  const saveAutoApproveMutation = useMutation({
+    mutationFn: async (enabled) => {
+      const existing = settings.find(s => s.key === 'auto_approve_reviews');
+      if (existing) return base44.entities.AppSetting.update(existing.id, { value: String(enabled) });
+      return base44.entities.AppSetting.create({ key: 'auto_approve_reviews', value: String(enabled) });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['appSettings'] }),
+  });
+
+  const handleAutoApproveToggle = (val) => {
+    setAutoApprove(val);
+    saveAutoApproveMutation.mutate(val);
+  };
+
   const { data: reviews = [], isLoading: loadingReviews } = useQuery({
     queryKey: ['adminReviews'],
     queryFn: () => base44.entities.Review.list('-created_date', 200),
@@ -99,7 +125,7 @@ export default function AdminReviews() {
           <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-3 py-1.5">
             <Switch
               checked={autoApprove}
-              onCheckedChange={setAutoApprove}
+              onCheckedChange={handleAutoApproveToggle}
               id="auto-approve"
             />
             <label htmlFor="auto-approve" className="text-sm font-medium text-blue-800 cursor-pointer">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import 'react-quill/dist/quill.snow.css';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShoppingCart, Star, Shield, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Star, Plus, Minus } from 'lucide-react';
 import ReviewSection from '@/components/products/ReviewSection';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -31,6 +31,9 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [selectedWattage, setSelectedWattage] = useState(null);
+  const [selectedType, setSelectedType] = useState(null);
   const queryClient = useQueryClient();
   
   const urlParams = new URLSearchParams(window.location.search);
@@ -333,6 +336,51 @@ export default function ProductDetail() {
             </details>
           )}
 
+          {/* Color selector */}
+          {product.show_colors && product.available_colors?.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-1.5">Color: {selectedColor && <span className="text-[#2E86C1]">{selectedColor}</span>}</p>
+              <div className="flex flex-wrap gap-2">
+                {product.available_colors.map(c => (
+                  <button key={c} onClick={() => setSelectedColor(c === selectedColor ? null : c)}
+                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedColor === c ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Wattage selector */}
+          {product.show_wattage && product.available_wattage?.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-1.5">Wattage: {selectedWattage && <span className="text-[#2E86C1]">{selectedWattage}</span>}</p>
+              <div className="flex flex-wrap gap-2">
+                {product.available_wattage.map(w => (
+                  <button key={w} onClick={() => setSelectedWattage(w === selectedWattage ? null : w)}
+                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedWattage === w ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
+                    {w}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Type selector */}
+          {product.show_type && product.available_types?.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-1.5">Type: {selectedType && <span className="text-[#2E86C1]">{selectedType}</span>}</p>
+              <div className="flex flex-wrap gap-2">
+                {product.available_types.map(t => (
+                  <button key={t} onClick={() => setSelectedType(t === selectedType ? null : t)}
+                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedType === t ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
             <span className="text-gray-600 font-medium text-sm">Quantity:</span>
             <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
@@ -373,13 +421,7 @@ export default function ProductDetail() {
             </Button>
           </div>
 
-          {/* Features */}
-          <div className="grid grid-cols-1 gap-3 pt-4 border-t relative" id="product-features">
-            <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg">
-              <Shield className="h-6 w-6 text-[#2E86C1] mb-2" />
-              <span className="text-xs font-medium text-gray-600">Genuine Product</span>
-            </div>
-          </div>
+
         </motion.div>
       </div>
 

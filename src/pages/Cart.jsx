@@ -299,7 +299,7 @@ export default function Cart() {
                   navigate(createPageUrl('Checkout') + params);
                 }}
               >
-                💳 Place Order & Pay with Paystack
+                💳 Place Order & Pay with Hubtel
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>

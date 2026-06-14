@@ -38,7 +38,8 @@ export default function Shop() {
     queryFn: () => base44.entities.Product.list('-created_date', 100),
   });
 
-  let filteredProducts = [...allProducts];
+  // Filter out hidden and out-of-stock (stock === 0) products for public display
+  let filteredProducts = allProducts.filter(p => p.is_visible !== false && !(p.stock != null && p.stock === 0));
 
   if (category) {
     filteredProducts = filteredProducts.filter(p => p.category === category);

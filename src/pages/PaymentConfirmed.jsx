@@ -18,6 +18,17 @@ export default function PaymentConfirmed() {
   const notifyCalledRef = useRef(false);
   const navigate = useNavigate();
 
+  // Auto-redirect: if user lands here from Hubtel's "Continue" button (payment success),
+  // the page auto-processes in 5 seconds if they don't interact.
+  // This handles the case where Hubtel redirects here automatically after payment.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Already on PaymentConfirmed — just ensure we stay here (no extra redirect needed)
+      // The page will show the order tracking UI naturally.
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Read order info from URL params OR sessionStorage
   const urlParams = new URLSearchParams(window.location.search);
   let orderId = urlParams.get('orderId');

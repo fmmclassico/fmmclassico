@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload, X, Pencil, Plus, Trash2, ImagePlus, Loader2, Check, Video } from 'lucide-react';
+import { Upload, X, Pencil, Plus, Trash2, ImagePlus, Loader2, Check, Video, Eye, EyeOff } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import { toast } from 'sonner';
 
@@ -44,64 +44,78 @@ const GROUP_BRANDS = {
   home_appliances_group: ['Samsung', 'LG', 'Hisense', 'TCL', 'Midea', 'Roch', 'Silver Crest', 'Nasco', 'Hoffman', 'Other (type below)'],
 };
 
-const BRAND_SUBCATEGORIES = {
-  phones: {
-    Apple: ['iPhone SE', 'iPhone 11', 'iPhone 12 Series', 'iPhone 13 Series', 'iPhone 14 Series', 'iPhone 15 Series'],
-    Samsung: ['Galaxy A Series', 'Galaxy S Series', 'Galaxy Z Fold/Flip'],
-    Tecno: ['Spark Series', 'Camon Series', 'Phantom Series', 'Pop Series'],
-    Infinix: ['Hot Series', 'Note Series', 'Smart Series', 'Zero Series'],
-    Itel: ['A Series', 'S Series', 'P Series (Big Battery)'],
-  },
-  phone_cases: { Apple: ['iPhone Cases'], Samsung: ['Galaxy Cases'], Oraimo: ['Universal Cases'] },
-  chargers: {
-    Apple: ['Apple 20W Charger', 'MagSafe Charger', 'Apple Car Charger'],
-    Samsung: ['Samsung Fast Charger', 'Samsung Wireless Charger'],
-    Oraimo: ['Fast Charger 20W', 'Car Charger', 'Wireless Charger', 'Multi-port Charger'],
-  },
-  earphones: {
-    Apple: ['AirPods', 'AirPods Pro', 'AirPods Max'],
-    Samsung: ['Galaxy Buds', 'Galaxy Buds Pro'],
-    Oraimo: ['FreePods (Wireless Earbuds)', 'Neckband Earphones', 'Wired Earphones', 'Bluetooth Headphones'],
-    JBL: ['JBL Tune Earbuds', 'JBL Free X', 'JBL Live Series', 'JBL Wired Earphones'],
-    Sony: ['Sony WF Series (Earbuds)', 'Sony WH Series (Headphones)', 'Sony Wired Earphones'],
-  },
-  cables: {
-    Apple: ['Lightning Cable', 'USB-C to Lightning'],
-    Samsung: ['USB-C Cable', 'Samsung Data Cable'],
-    Oraimo: ['USB-C Cable', 'Lightning Cable', 'Micro USB Cable', 'Braided Cable'],
-  },
-  power_banks: { Oraimo: ['Power Bank 10,000mAh', 'Power Bank 20,000mAh', 'Solar Power Bank'], Samsung: ['Samsung Power Bank'] },
-  screen_protectors: { Apple: ['iPhone Screen Protector'], Samsung: ['Galaxy Screen Protector'] },
-  holders: { Oraimo: ['Car Phone Holder', 'Desk Stand'], Samsung: ['Samsung Phone Stand'] },
-  speakers: {
-    JBL: ['JBL Go', 'JBL Flip', 'JBL Charge', 'JBL Xtreme', 'JBL PartyBox'],
-    Sony: ['Sony Portable Speaker', 'Sony Party Speaker'],
-    Oraimo: ['Bluetooth Speaker', 'Mini Speaker'],
-  },
-  smart_watches: {
-    Apple: ['Apple Watch SE', 'Apple Watch Series 8', 'Apple Watch Ultra'],
-    Samsung: ['Galaxy Watch'],
-    Oraimo: ['Oraimo Watch', 'Oraimo Watch Pro'],
-  },
-  electronic_appliances: {
-    Samsung: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Soundbar', 'Home Theatre'],
-    Sony: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Soundbar', 'Home Theatre'],
-    LG: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'OLED TV', 'Soundbar'],
-    TCL: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Smart TV 65"', 'Android TV', '4K UHD TV'],
-    Hisense: ['Smart TV 32"', 'Smart TV 43"', 'Smart TV 55"', 'Smart TV 65"', 'QLED TV'],
-    Midea: ['Air Conditioner Split Unit', 'Air Purifier'],
-  },
-  home_appliances: {
-    Samsung: ['Refrigerator', 'Washing Machine', 'Microwave', 'Air Conditioner'],
-    LG: ['Refrigerator', 'Washing Machine', 'Air Conditioner', 'Microwave'],
-    Hisense: ['Refrigerator (Single Door)', 'Refrigerator (Double Door)', 'Chest Freezer', 'Washing Machine', 'Air Conditioner', 'Microwave'],
-    TCL: ['Refrigerator', 'Washing Machine', 'Air Conditioner'],
-    Midea: ['Refrigerator', 'Washing Machine', 'Air Conditioner', 'Microwave', 'Rice Cooker', 'Blender'],
-    Roch: ['Refrigerator (Single Door)', 'Refrigerator (Double Door)', 'Chest Freezer', 'Washing Machine', 'Blender', 'Rice Cooker', 'Electric Kettle', 'Microwave', 'Standing Fan', 'Air Conditioner'],
-    'Silver Crest': ['Blender', 'Rice Cooker', 'Electric Kettle', 'Microwave', 'Toaster', 'Sandwich Maker', 'Food Processor', 'Juicer', 'Standing Fan'],
-    Nasco: ['Refrigerator', 'Chest Freezer', 'Washing Machine', 'Blender', 'Rice Cooker', 'Electric Kettle', 'Standing Fan', 'Air Conditioner'],
-    Hoffman: ['Refrigerator', 'Chest Freezer', 'Washing Machine', 'Air Conditioner', 'Standing Fan', 'Blender', 'Rice Cooker', 'Electric Kettle'],
-  },
+// All subcategories per category (not brand-dependent — show all options + "Other")
+const CATEGORY_SUBCATEGORIES = {
+  phones: [
+    'iPhone SE', 'iPhone 11', 'iPhone 12 Series', 'iPhone 13 Series', 'iPhone 14 Series', 'iPhone 15 Series', 'iPhone 16 Series',
+    'Galaxy A Series', 'Galaxy S Series', 'Galaxy Z Fold/Flip',
+    'Tecno Spark Series', 'Tecno Camon Series', 'Tecno Phantom Series', 'Tecno Pop Series',
+    'Infinix Hot Series', 'Infinix Note Series', 'Infinix Smart Series', 'Infinix Zero Series',
+    'Itel A Series', 'Itel S Series', 'Itel P Series (Big Battery)',
+  ],
+  phone_cases: [
+    'iPhone Cases', 'Samsung Galaxy Cases', 'Tecno Cases', 'Infinix Cases', 'Universal Cases',
+    'Clear Cases', 'Leather Cases', 'Wallet Cases', 'Rugged / Armor Cases', 'Silicone Cases',
+  ],
+  chargers: [
+    'Apple 20W Charger', 'MagSafe Charger', 'Apple Car Charger',
+    'Samsung Fast Charger', 'Samsung Wireless Charger',
+    'Oraimo Fast Charger 20W', 'Oraimo Car Charger', 'Oraimo Wireless Charger', 'Oraimo Multi-port Charger',
+    'USB-C Charger', 'USB-A Charger', 'Wireless Charger', 'Car Charger', 'Desktop / Travel Charger',
+  ],
+  earphones: [
+    'AirPods', 'AirPods Pro', 'AirPods Max',
+    'Samsung Galaxy Buds', 'Samsung Galaxy Buds Pro',
+    'Oraimo FreePods (Wireless Earbuds)', 'Oraimo Neckband Earphones', 'Oraimo Wired Earphones', 'Oraimo Bluetooth Headphones',
+    'JBL Tune Earbuds', 'JBL Free X', 'JBL Live Series', 'JBL Wired Earphones',
+    'Sony WF Series (Earbuds)', 'Sony WH Series (Headphones)', 'Sony Wired Earphones',
+    'Wired Earphones', 'Wireless Earbuds', 'Over-Ear Headphones', 'Neckband / Sports Earphones',
+  ],
+  cables: [
+    'Lightning Cable', 'USB-C to Lightning', 'USB-C Cable', 'Micro USB Cable',
+    'Braided Cable', 'Samsung Data Cable', 'Fast Charging Cable', 'Data Transfer Cable', '3-in-1 Cable',
+  ],
+  power_banks: [
+    'Power Bank 5,000mAh', 'Power Bank 10,000mAh', 'Power Bank 20,000mAh', 'Solar Power Bank',
+    'Mini Power Bank', 'Fast Charge Power Bank', 'Wireless Power Bank',
+  ],
+  screen_protectors: [
+    'iPhone Screen Protector', 'Samsung Galaxy Screen Protector', 'Universal Screen Protector',
+    'Tempered Glass', 'Anti-Glare Screen Protector', 'Privacy Screen Protector', 'Camera Lens Protector',
+  ],
+  holders: [
+    'Car Phone Holder', 'Desk Stand / Phone Stand', 'Ring Holder', 'Tripod Stand',
+    'Dashboard Mount', 'Windshield Mount', 'Vent Clip Holder',
+  ],
+  speakers: [
+    'JBL Go', 'JBL Flip', 'JBL Charge', 'JBL Xtreme', 'JBL PartyBox',
+    'Sony Portable Speaker', 'Sony Party Speaker',
+    'Oraimo Bluetooth Speaker', 'Oraimo Mini Speaker',
+    'Portable Bluetooth Speaker', 'Party / Large Speaker', 'Mini Speaker', 'Soundbar',
+  ],
+  smart_watches: [
+    'Apple Watch SE', 'Apple Watch Series 8', 'Apple Watch Series 9', 'Apple Watch Ultra',
+    'Samsung Galaxy Watch', 'Oraimo Watch', 'Oraimo Watch Pro',
+    'Fitness Tracker / Band', 'Smart Watch with Calling', 'Kids Smart Watch',
+  ],
+  electronic_appliances: [
+    'Smart TV 24"', 'Smart TV 32"', 'Smart TV 43"', 'Smart TV 50"', 'Smart TV 55"', 'Smart TV 65"', 'Smart TV 75"',
+    '4K UHD TV', 'OLED TV', 'QLED TV', 'Android TV',
+    'Soundbar', 'Home Theatre',
+    'Air Conditioner Split Unit', 'Air Purifier',
+    'Projector', 'Digital Camera', 'Laptop', 'Desktop Computer',
+  ],
+  home_appliances: [
+    'Refrigerator (Single Door)', 'Refrigerator (Double Door)', 'Refrigerator (Side-by-Side)',
+    'Chest Freezer', 'Upright Freezer',
+    'Washing Machine (Front Load)', 'Washing Machine (Top Load)',
+    'Air Conditioner (Window)', 'Air Conditioner (Split Unit)',
+    'Microwave Oven', 'Electric Oven',
+    'Blender', 'Rice Cooker', 'Electric Kettle', 'Toaster', 'Sandwich Maker',
+    'Food Processor', 'Juicer', 'Hand Mixer',
+    'Standing Fan', 'Ceiling Fan', 'Table Fan', 'Tower Fan',
+    'Water Dispenser', 'Iron',
+  ],
 };
 
 const HOME_SECTIONS = [
@@ -130,12 +144,12 @@ const EMPTY_FORM = {
   name: '', description: '', price: '', original_price: '',
   main_group: '', category: '', brand: '', custom_brand: '', subcategory: '', custom_subcategory: '',
   stock: '', home_sections: [], review_enabled: true, rating: '', reviews_count: '',
-  image_url: '', image_urls: [], video_url: '',
+  image_url: '', image_urls: [], video_url: '', is_visible: true,
 };
 
 export default function AdminProducts() {
-  const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [user, setUser] = React.useState(null);
+  const [isAdmin, setIsAdmin] = React.useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -161,7 +175,6 @@ export default function AdminProducts() {
     mutationFn: async (data) => {
       const { main_group, home_sections, custom_brand, custom_subcategory, ...rest } = data;
       const sections = home_sections || [];
-      // Use custom value if "Other (type below)" was selected
       const finalBrand = rest.brand === 'Other (type below)' ? (custom_brand || 'Other') : rest.brand;
       const finalSubcategory = rest.subcategory === '__custom__' ? (custom_subcategory || '') : rest.subcategory;
       const payload = {
@@ -173,6 +186,7 @@ export default function AdminProducts() {
         stock: data.stock !== '' ? parseInt(data.stock) : undefined,
         rating: data.rating ? parseFloat(data.rating) : undefined,
         reviews_count: data.reviews_count ? parseInt(data.reviews_count) : undefined,
+        is_visible: data.is_visible !== false,
         featured:   sections.includes('featured'),
         flash_sale: sections.includes('flash_sale'),
         donkomi:    sections.includes('donkomi'),
@@ -204,6 +218,15 @@ export default function AdminProducts() {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['products-admin'] });
       toast.success('Product deleted');
+    }
+  });
+
+  // Quick visibility toggle from the product list (no form needed)
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: ({ id, is_visible }) => base44.entities.Product.update(id, { is_visible }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     }
   });
 
@@ -253,15 +276,13 @@ export default function AdminProducts() {
     if (product.new_arrival) home_sections.push('new_arrival');
     if (product.top_selling) home_sections.push('top_selling');
 
-    // Determine if brand is a custom one
     const knownBrands = GROUP_BRANDS[main_group] || [];
     const knownBrandNames = knownBrands.map(b => b.replace(' (type below)', ''));
     const brandIsKnown = knownBrandNames.includes(product.brand);
     const brandValue = brandIsKnown ? product.brand : 'Other (type below)';
     const customBrand = brandIsKnown ? '' : (product.brand || '');
 
-    // Determine if subcategory is a known one
-    const knownSubs = ((BRAND_SUBCATEGORIES[product.category] || {})[product.brand] || []);
+    const knownSubs = CATEGORY_SUBCATEGORIES[cat] || [];
     const subIsKnown = knownSubs.includes(product.subcategory);
     const subValue = subIsKnown ? product.subcategory : (product.subcategory ? '__custom__' : '');
     const customSub = subIsKnown ? '' : (product.subcategory || '');
@@ -286,6 +307,7 @@ export default function AdminProducts() {
       image_urls: product.image_urls || [],
       video_url: product.video_url || '',
       flash_sale_end: product.flash_sale_end || '',
+      is_visible: product.is_visible !== false,
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -298,14 +320,11 @@ export default function AdminProducts() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Only block on "user loaded but not admin" — not on loading state
   if (user && !isAdmin) {
     return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
   }
 
-  const availableSubcategories = ((BRAND_SUBCATEGORIES[form.category] || {})[
-    form.brand === 'Other (type below)' ? (form.custom_brand || '') : form.brand
-  ] || []);
+  const availableSubcategories = CATEGORY_SUBCATEGORIES[form.category] || [];
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl">
@@ -347,7 +366,7 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            {/* Extra Images — unlimited */}
+            {/* Extra Images */}
             <div className="md:col-span-2">
               <Label className="font-semibold mb-2 block">Extra Product Images (upload as many as you want)</Label>
               <div className="flex flex-wrap gap-2 mb-2">
@@ -409,15 +428,15 @@ export default function AdminProducts() {
               </Select>
             </div>
 
-            {/* ── STEP 2: Subcategory ── */}
+            {/* ── STEP 2: Category ── */}
             <div>
-              <Label>Step 2 — Subcategory *</Label>
+              <Label>Step 2 — Category *</Label>
               <Select
                 value={form.category}
                 onValueChange={v => setForm(f => ({ ...f, category: v, brand: '', custom_brand: '', subcategory: '', custom_subcategory: '' }))}
                 disabled={!form.main_group}
               >
-                <SelectTrigger><SelectValue placeholder={form.main_group ? 'Select subcategory' : 'Select main category first'} /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={form.main_group ? 'Select category' : 'Select main category first'} /></SelectTrigger>
                 <SelectContent>
                   {(GROUP_CATEGORIES[form.main_group] || []).map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                 </SelectContent>
@@ -432,7 +451,7 @@ export default function AdminProducts() {
                 onValueChange={v => setForm(f => ({ ...f, brand: v, custom_brand: '', subcategory: '', custom_subcategory: '' }))}
                 disabled={!form.category}
               >
-                <SelectTrigger><SelectValue placeholder={form.category ? 'Select brand' : 'Select subcategory first'} /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={form.category ? 'Select brand' : 'Select category first'} /></SelectTrigger>
                 <SelectContent>
                   {(GROUP_BRANDS[form.main_group] || []).map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                 </SelectContent>
@@ -447,26 +466,26 @@ export default function AdminProducts() {
               )}
             </div>
 
-            {/* ── STEP 4: Product Type ── */}
+            {/* ── STEP 4: Product Type / Subcategory ── */}
             <div>
               <Label>Step 4 — Product Type / Subcategory</Label>
               <Select
                 value={form.subcategory}
                 onValueChange={v => setForm(f => ({ ...f, subcategory: v, custom_subcategory: '' }))}
-                disabled={!form.brand}
+                disabled={!form.category}
               >
-                <SelectTrigger><SelectValue placeholder={form.brand ? 'Select product type' : 'Select brand first'} /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger><SelectValue placeholder={form.category ? 'Select product type' : 'Select category first'} /></SelectTrigger>
+                <SelectContent className="max-h-72 overflow-y-auto">
                   {availableSubcategories.map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
-                  <SelectItem value="__custom__">✏️ Type my own...</SelectItem>
+                  <SelectItem value="__custom__">✏️ Other (type my own...)</SelectItem>
                 </SelectContent>
               </Select>
               {form.subcategory === '__custom__' && (
                 <Input
                   className="mt-2"
-                  placeholder="Type product type/subcategory..."
+                  placeholder="Type product type / subcategory..."
                   value={form.custom_subcategory}
                   onChange={e => setForm(f => ({ ...f, custom_subcategory: e.target.value }))}
                 />
@@ -481,15 +500,20 @@ export default function AdminProducts() {
               <Label>Original Price (₵) — for discount display</Label>
               <Input type="number" value={form.original_price} onChange={e => setForm(f => ({ ...f, original_price: e.target.value }))} placeholder="0.00" />
             </div>
-            <div>
+
+            {/* Stock — with 0-stock explanation */}
+            <div className="md:col-span-2">
               <Label>Stock Quantity</Label>
-              <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="e.g. 20" />
+              <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="Leave empty = unlimited / no stock tracking" className="mb-1" />
+              <p className="text-xs text-gray-400">
+                <strong>Empty</strong> = no stock tracking (always shown). <strong>0</strong> = out of stock (hidden from customers). <strong>1+</strong> = shown with that quantity available.
+              </p>
             </div>
 
             {/* Description — Rich Text Editor */}
             <div className="md:col-span-2">
               <Label className="font-semibold block mb-2">Description (Rich Text)</Label>
-              <p className="text-xs text-gray-500 mb-2">Use the toolbar to format text with bold, bullets, headings, font size, and more. The description will appear exactly as styled to customers.</p>
+              <p className="text-xs text-gray-500 mb-2">Use the toolbar to format text with bold, bullets, headings, font size, and more.</p>
               <div className="border border-gray-200 rounded-lg overflow-hidden admin-quill">
                 <ReactQuill
                   theme="snow"
@@ -530,16 +554,30 @@ export default function AdminProducts() {
               )}
             </div>
 
-            {/* Reviews */}
+            {/* Other Settings */}
             <div className="md:col-span-2">
               <Label className="font-semibold block mb-2">Other Settings</Label>
-              <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors inline-flex ${form.review_enabled ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
-                onClick={() => setForm(f => ({ ...f, review_enabled: !f.review_enabled }))}>
-                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form.review_enabled ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
-                  {form.review_enabled && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
-                </div>
-                <span className="text-sm font-medium text-gray-700">💬 Reviews Enabled</span>
-              </label>
+              <div className="flex flex-wrap gap-3">
+                {/* Reviews toggle */}
+                <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors ${form.review_enabled ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                  onClick={() => setForm(f => ({ ...f, review_enabled: !f.review_enabled }))}>
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form.review_enabled ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
+                    {form.review_enabled && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">💬 Reviews Enabled</span>
+                </label>
+
+                {/* Visibility toggle */}
+                <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors ${form.is_visible ? 'border-green-400 bg-green-50' : 'border-red-300 bg-red-50'}`}
+                  onClick={() => setForm(f => ({ ...f, is_visible: !f.is_visible }))}>
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form.is_visible ? 'bg-green-600 border-green-600' : 'border-red-400 bg-red-100'}`}>
+                    {form.is_visible ? <Eye className="h-3 w-3 text-white" /> : <EyeOff className="h-3 w-3 text-red-500" />}
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {form.is_visible ? '👁️ Visible to Customers' : '🚫 Hidden from Customers'}
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -566,37 +604,60 @@ export default function AdminProducts() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {products.map(product => (
-            <Card key={product.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-              <div className="aspect-square bg-gray-50 relative overflow-hidden">
-                {product.image_url
-                  ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                  : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
-                <div className="absolute top-1 left-1 flex flex-col gap-1">
-                  {product.featured    && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
-                  {product.flash_sale  && <Badge className="text-[9px] px-1 py-0 bg-orange-500">Flash</Badge>}
-                  {product.donkomi     && <Badge className="text-[9px] px-1 py-0 bg-green-500">Donkomi</Badge>}
-                  {product.new_arrival && <Badge className="text-[9px] px-1 py-0 bg-yellow-500">New</Badge>}
-                  {product.top_selling && <Badge className="text-[9px] px-1 py-0 bg-blue-500">Top</Badge>}
+          {products.map(product => {
+            const isHidden = product.is_visible === false;
+            const isOutOfStock = product.stock != null && product.stock === 0;
+            return (
+              <Card key={product.id} className={`overflow-hidden shadow-sm hover:shadow-md transition-shadow ${isHidden ? 'opacity-60 border-dashed border-red-300' : ''}`}>
+                <div className="aspect-square bg-gray-50 relative overflow-hidden">
+                  {product.image_url
+                    ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
+                  <div className="absolute top-1 left-1 flex flex-col gap-1">
+                    {product.featured    && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
+                    {product.flash_sale  && <Badge className="text-[9px] px-1 py-0 bg-orange-500">Flash</Badge>}
+                    {product.donkomi     && <Badge className="text-[9px] px-1 py-0 bg-green-500">Donkomi</Badge>}
+                    {product.new_arrival && <Badge className="text-[9px] px-1 py-0 bg-yellow-500">New</Badge>}
+                    {product.top_selling && <Badge className="text-[9px] px-1 py-0 bg-blue-500">Top</Badge>}
+                  </div>
+                  {/* Visibility / stock badge */}
+                  <div className="absolute top-1 right-1 flex flex-col gap-1 items-end">
+                    {isHidden && <Badge className="text-[9px] px-1 py-0 bg-red-500">Hidden</Badge>}
+                    {isOutOfStock && !isHidden && <Badge className="text-[9px] px-1 py-0 bg-gray-500">Out of Stock</Badge>}
+                  </div>
                 </div>
-              </div>
-              <div className="p-2">
-                <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
-                <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
-                {product.stock != null && <p className="text-[10px] text-gray-400">Stock: {product.stock}</p>}
-                <div className="flex gap-1 mt-2">
-                  <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
-                    <Pencil className="h-3 w-3" /> Edit
-                  </Button>
-                  <Button size="sm" variant="destructive" className="h-7 w-7 p-0" onClick={() => {
-                    if (confirm('Delete this product?')) deleteMutation.mutate(product.id);
-                  }}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                <div className="p-2">
+                  <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
+                  <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
+                  {product.stock != null && (
+                    <p className={`text-[10px] font-medium ${product.stock === 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                      Stock: {product.stock === 0 ? 'Out of Stock' : product.stock}
+                    </p>
+                  )}
+                  <div className="flex gap-1 mt-2">
+                    {/* Visibility toggle button */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={`h-7 w-7 p-0 flex-shrink-0 ${isHidden ? 'text-red-500 border-red-300 hover:bg-red-50' : 'text-green-600 border-green-300 hover:bg-green-50'}`}
+                      title={isHidden ? 'Hidden — click to show' : 'Visible — click to hide'}
+                      onClick={() => toggleVisibilityMutation.mutate({ id: product.id, is_visible: !product.is_visible })}
+                    >
+                      {isHidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
+                      <Pencil className="h-3 w-3" /> Edit
+                    </Button>
+                    <Button size="sm" variant="destructive" className="h-7 w-7 p-0" onClick={() => {
+                      if (confirm('Delete this product?')) deleteMutation.mutate(product.id);
+                    }}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
       {!isLoading && products.length === 0 && (

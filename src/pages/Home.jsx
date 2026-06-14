@@ -154,13 +154,16 @@ export default function Home() {
     }
   });
 
+  // Filter out hidden and out-of-stock (stock === 0) products for public display
+  const visibleProducts = products.filter(p => p.is_visible !== false && !(p.stock != null && p.stock === 0));
+
   // Product buckets — STRICT: only show products explicitly assigned to each section by admin
-  const flashItems    = products.filter(p => p.flash_sale  && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
+  const flashItems    = visibleProducts.filter(p => p.flash_sale  && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
   const flashSaleEndTime = flashItems.length > 0 ? flashItems[0].flash_sale_end : null;
-  const classicoDeals = products.filter(p => p.featured);
-  const donkomiDeals  = products.filter(p => p.donkomi);
-  const newArrivals   = products.filter(p => p.new_arrival);
-  const topSellingFallback = products.filter(p => p.top_selling);
+  const classicoDeals = visibleProducts.filter(p => p.featured);
+  const donkomiDeals  = visibleProducts.filter(p => p.donkomi);
+  const newArrivals   = visibleProducts.filter(p => p.new_arrival);
+  const topSellingFallback = visibleProducts.filter(p => p.top_selling);
 
   return (
     <div className="pb-6 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>

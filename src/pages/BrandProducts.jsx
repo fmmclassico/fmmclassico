@@ -74,6 +74,8 @@ export default function BrandProducts() {
   const allowedCats = BRAND_PRIMARY_CATEGORIES[brand] || [];
 
   let brandProducts = allProducts.filter(p => {
+    if (p.is_visible === false) return false;
+    if (p.stock != null && p.stock === 0) return false;
     const matchBrand = p.brand?.toLowerCase() === brand?.toLowerCase();
     const matchCat = category
       ? p.category === category

@@ -328,10 +328,8 @@ export default function Payment() {
                   onChange={e => setEmailVal(e.target.value)} required className="h-11" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Phone number <span className="font-normal text-gray-400 text-xs">(e.g. 0244123456)</span>
-                </label>
-                <Input placeholder="0244123456" value={phone} onChange={e => setPhone(e.target.value)} className="h-11" />
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone number</label>
+                <Input placeholder="Enter your phone number" value={phone} onChange={e => setPhone(e.target.value)} className="h-11" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Amount</label>

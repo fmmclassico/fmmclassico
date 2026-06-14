@@ -50,7 +50,7 @@ export default function Settings() {
           newsletter_enabled: userData.newsletter_enabled ?? true
         });
       } else {
-        base44.auth.redirectToLogin(window.location.href);
+        base44.auth.redirectToLogin('/');
       }
       setIsLoading(false);
     };

@@ -53,7 +53,7 @@
       "items": {
         "type": "string"
       },
-      "description": "Additional product images (up to 4)"
+      "description": "Additional product images"
     },
     "video_url": {
       "type": "string",
@@ -62,6 +62,11 @@
     "stock": {
       "type": "number",
       "description": "Available stock quantity"
+    },
+    "is_visible": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this product is visible to customers"
     },
     "featured": {
       "type": "boolean",

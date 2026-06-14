@@ -55,7 +55,8 @@ export default function Checkout() {
   const { data: cartItems = [] } = useQuery({
     queryKey: ['cartItems', user?.email],
     queryFn: () => base44.entities.CartItem.filter({ user_email: user?.email }),
-    enabled: !!user?.email
+    enabled: !!user?.email,
+    staleTime: 30000,
   });
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
@@ -199,8 +200,7 @@ export default function Checkout() {
     }));
 
     setOrderSubmitted(true);
-    setIsSubmitting(false);
-    // Pass orderNumber + amount for the Payment page to use (no orderId yet)
+    // Navigate immediately — do NOT setIsSubmitting(false) before navigation to avoid flash
     navigate(createPageUrl(`Payment?orderNumber=${orderNumber}&amount=${total.toFixed(2)}&email=${encodeURIComponent(user.email)}`));
   };
 

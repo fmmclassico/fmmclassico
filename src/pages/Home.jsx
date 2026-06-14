@@ -129,8 +129,7 @@ export default function Home() {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list('-created_date', 100),
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 60000,
   });
 
   const addToCartMutation = useMutation({
@@ -189,9 +188,11 @@ export default function Home() {
             return (
               <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
                 <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden shadow-sm border-2 group-hover:scale-105 transition-transform ${isExpanded ? 'border-[#2E86C1]' : 'border-white'} ${cat.color} flex items-center justify-center`}>
-                  {displayImg
-                    ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
-                    : <cat.icon className="h-10 w-10 opacity-70" />}
+                  {adminImg
+                    ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
+                    : displayImg
+                      ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
+                      : <cat.icon className="h-10 w-10 opacity-70" />}
                 </div>
                 <span className="text-xs md:text-sm font-bold text-gray-800 text-center leading-tight">{cat.label}</span>
               </button>

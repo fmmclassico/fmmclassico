@@ -50,9 +50,19 @@ export default function PaymentConfirmed() {
     }
   }, [hubtelStatus]);
 
-  // Get user
+  // Get user — and immediately clear the cart so it shows empty right away
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {
+    base44.auth.me().then(u => {
+      setUser(u);
+      // Clear cart immediately on landing here (payment was initiated)
+      if (u?.email) {
+        base44.entities.CartItem.filter({ user_email: u.email })
+          .then(items => Promise.all(items.map(i => base44.entities.CartItem.delete(i.id).catch(() => {}))))
+          .catch(() => {});
+        queryClient.removeQueries({ queryKey: ['cartItems', u.email] });
+        queryClient.setQueryData(['cartItems', u.email], []);
+      }
+    }).catch(() => {
       base44.auth.redirectToLogin(window.location.href);
     });
   }, []);

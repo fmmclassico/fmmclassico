@@ -112,6 +112,9 @@ export default function Payment() {
 
     setLoading(true);
 
+    // Safety timeout — never leave button stuck spinning
+    const safetyTimer = setTimeout(() => setLoading(false), 30000);
+
     const customerName = [firstName, lastName].filter(Boolean).join(' ') || 'Customer';
     const normPhone    = normalisePhone(phone);
     const clientRef    = generateClientRef(orderNumber);
@@ -159,6 +162,7 @@ export default function Payment() {
 
       if (isSuccess && checkoutUrl) {
         // SUCCESS — redirect to real Hubtel checkout page
+        clearTimeout(safetyTimer);
         window.location.href = checkoutUrl;
         return;
       }
@@ -174,6 +178,7 @@ export default function Payment() {
       setErrorMsg(`Network error: ${err?.message || 'Could not reach Hubtel. Check your internet connection.'}`);
     }
 
+    clearTimeout(safetyTimer);
     setLoading(false);
   };
 

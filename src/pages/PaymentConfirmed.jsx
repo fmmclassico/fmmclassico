@@ -24,7 +24,7 @@ export default function PaymentConfirmed() {
   let orderNumber = urlParams.get('orderNumber');
   let amountRaw = urlParams.get('amount');
 
-  // Always fall back to sessionStorage (Paystack strips URL params on redirect)
+  // Always fall back to sessionStorage (Hubtel strips URL params on redirect)
   const stored = (() => {
     try { return JSON.parse(sessionStorage.getItem('fmm_pending_order') || '{}'); } catch { return {}; }
   })();
@@ -96,7 +96,7 @@ export default function PaymentConfirmed() {
             ...(orderData.tracking_updates || []),
             {
               status: 'Payment Confirmed',
-              message: 'Payment completed via Paystack. Order is being processed.',
+              message: 'Payment completed via Hubtel. Order is being processed.',
               timestamp: new Date().toISOString()
             }
           ]
@@ -248,7 +248,7 @@ export default function PaymentConfirmed() {
                   </div>
                   <div className="flex-1 pb-2 pt-1">
                     <p className={`text-sm font-semibold ${step.done ? 'text-green-700' : 'text-gray-400'}`}>{step.label}</p>
-                    {i === 0 && <p className="text-xs text-gray-400">Payment received from Paystack</p>}
+                    {i === 0 && <p className="text-xs text-gray-400">Payment received via Hubtel</p>}
                     {i === 1 && step.done && <p className="text-xs text-green-600">Verified by FMM CLASSICO</p>}
                   </div>
                 </div>

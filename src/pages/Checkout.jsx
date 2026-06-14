@@ -412,7 +412,7 @@ export default function Checkout() {
                   <span className="text-white text-base">💳</span>
                 </div>
                 <div className="text-center">
-                  <span className="font-bold text-gray-800 text-sm block">Pay with Paystack</span>
+                  <span className="font-bold text-gray-800 text-sm block">Pay with Hubtel</span>
                   <span className="text-xs text-gray-600">Mobile Money, Card & Bank Transfer – secure checkout</span>
                 </div>
               </div>
@@ -480,7 +480,7 @@ export default function Checkout() {
                       Processing...
                     </>
                   ) : (
-                    '💳 Place Order & Pay with Paystack'
+                    '💳 Place Order & Pay with Hubtel'
                   )}
                 </Button>
               </div>

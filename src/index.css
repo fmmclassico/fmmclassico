@@ -86,3 +86,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Hide Base44 platform badge */
+#base44-badge,
+[id="base44-badge"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { Menu, Search, Bell, ShoppingCart, User, ChevronLeft, Lock, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,11 +10,8 @@ const ASH = '#2E86C1';
 const ASH_HOVER = '#2578ae';
 
 // ── HUBTEL CONFIG ─────────────────────────────────────────────────────────────
-// API ID (username): 80pYxkm
-// API Key (password): db2c85757e9e4720a53f63d89cb1934a
-// Merchant number: 0599676419
-const HUBTEL_API_ID  = '80pYxkm';
-const HUBTEL_API_KEY = 'db2c85757e9e4720a53f63d89cb1934a';
+// Hubtel Hosted Checkout — no backend/CORS needed, works in all browsers
+// The customer is redirected to Hubtel's secure payment page then returned here.
 const HUBTEL_MERCHANT_ACCOUNT = '0599676419';
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -24,18 +21,18 @@ function formatAmount(num) {
 }
 
 export default function Payment() {
-  const urlParams  = new URLSearchParams(window.location.search);
-  const orderId    = urlParams.get('orderId');
+  const urlParams   = new URLSearchParams(window.location.search);
+  const orderId     = urlParams.get('orderId');
   const orderNumber = urlParams.get('orderNumber');
-  const amountRaw  = urlParams.get('amount');
-  const emailParam = urlParams.get('email') || '';
-  const amount     = amountRaw ? parseFloat(amountRaw) : 0;
+  const amountRaw   = urlParams.get('amount');
+  const emailParam  = urlParams.get('email') || '';
+  const amount      = amountRaw ? parseFloat(amountRaw) : 0;
 
-  const [user, setUser]         = useState(null);
-  const [loading, setLoading]   = useState(false);
+  const [user, setUser]           = useState(null);
+  const [loading, setLoading]     = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [error, setError]       = useState('');
+  const [error, setError]         = useState('');
   const navigate = useNavigate();
 
   // Form fields
@@ -69,7 +66,7 @@ export default function Payment() {
     if (searchQuery.trim()) navigate(`/Shop?search=${encodeURIComponent(searchQuery)}`);
   };
 
-  const handlePay = async (e) => {
+  const handlePay = (e) => {
     e.preventDefault();
     setError('');
 
@@ -80,68 +77,31 @@ export default function Payment() {
     let rawPhone = phone.trim().replace(/\s+/g, '');
     if (rawPhone.startsWith('+233')) rawPhone = '0' + rawPhone.slice(4);
     else if (rawPhone.startsWith('233') && rawPhone.length === 12) rawPhone = '0' + rawPhone.slice(3);
-    if (rawPhone.length !== 10 || !rawPhone.startsWith('0')) {
-      setError('Enter a valid Ghana phone number e.g. 0244123456');
-      return;
-    }
 
     setLoading(true);
 
-    // Hubtel Receive Money (Direct Debit / Prompt-to-Pay)
-    // POST https://rmp.hubtel.com/merchantaccount/merchants/{merchantNumber}/receive/mobilemoney
+    // Hubtel Hosted Checkout — redirects customer to Hubtel's own secure payment page.
+    // After payment, Hubtel redirects back to our callbackUrl.
     const callbackUrl = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
+    const cancelUrl   = `${window.location.origin}/Payment?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}&email=${encodeURIComponent(emailVal)}`;
 
-    const body = {
-      customerPhoneNumber: rawPhone,
-      amount: amount,
-      title: `FMM CLASSICO – Order #${orderNumber}`,
-      description: `Payment for Order #${orderNumber} at FMM CLASSICO`,
+    const customerName = `${firstName} ${lastName}`.trim() || emailVal;
+
+    // Build Hubtel Hosted Checkout URL
+    const params = new URLSearchParams({
+      merchantAccountNumber: HUBTEL_MERCHANT_ACCOUNT,
+      returnUrl: callbackUrl,
+      cancelUrl: cancelUrl,
       clientReference: orderNumber,
-      callbackUrl: callbackUrl,
-    };
+      totalAmount: amount.toFixed(2),
+      description: `FMM CLASSICO – Order #${orderNumber}`,
+      customerPhoneNumber: rawPhone,
+      customerEmailAddress: emailVal,
+      customerName: customerName,
+    });
 
-    // We call Hubtel via InvokeLLM as a proxy because browser CORS blocks direct calls.
-    // InvokeLLM is used purely as an HTTP proxy here — NOT for AI generation.
-    let result;
-    try {
-      result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Make an HTTP POST request to the Hubtel Receive Money API and return ONLY the raw JSON response body, nothing else.
-
-URL: https://rmp.hubtel.com/merchantaccount/merchants/${HUBTEL_MERCHANT_ACCOUNT}/receive/mobilemoney
-
-Headers:
-  Authorization: Basic ${btoa(HUBTEL_API_ID + ':' + HUBTEL_API_KEY)}
-  Content-Type: application/json
-
-Body (send exactly as-is):
-${JSON.stringify(body, null, 2)}
-
-Return ONLY the JSON response from Hubtel, no explanation.`,
-        response_json_schema: {
-          type: 'object',
-          properties: {
-            responseCode: { type: 'string' },
-            message: { type: 'string' },
-            data: { type: 'object' },
-          },
-        },
-      });
-    } catch (err) {
-      setLoading(false);
-      setError('Network error. Please check your connection and try again.');
-      return;
-    }
-
-    setLoading(false);
-
-    // Hubtel returns responseCode "0000" on success and sends USSD push to customer phone
-    if (result?.responseCode === '0000' || result?.message?.toLowerCase().includes('success')) {
-      // Payment prompt sent — redirect to PaymentConfirmed to show instructions
-      window.location.href = callbackUrl + `&prompted=1&phone=${encodeURIComponent(rawPhone)}`;
-    } else {
-      const msg = result?.message || 'Payment initiation failed. Please check your number and try again.';
-      setError(msg);
-    }
+    const hubtelCheckoutUrl = `https://checkout.hubtel.com/checkout/initiate?${params.toString()}`;
+    window.location.href = hubtelCheckoutUrl;
   };
 
   if (amount <= 0) {
@@ -253,10 +213,10 @@ Return ONLY the JSON response from Hubtel, no explanation.`,
             <div className="mt-6 bg-white/70 rounded-xl p-4 text-left w-full max-w-xs">
               <p className="text-xs font-bold text-gray-700 mb-2 text-center">How Hubtel Payment Works</p>
               {[
-                '1. Enter your MoMo phone number below',
-                '2. Click "Pay now" — a prompt is sent to your phone',
-                '3. Enter your MoMo PIN to confirm payment',
-                '4. Your order is automatically confirmed ✅',
+                '1. Fill in your details below',
+                '2. Click "Pay now" — you\'ll go to Hubtel\'s secure page',
+                '3. Choose MoMo, Card, or Bank Transfer',
+                '4. Complete payment — your order is confirmed ✅',
               ].map(s => (
                 <p key={s} className="text-xs text-gray-600 mb-1">{s}</p>
               ))}
@@ -281,6 +241,9 @@ Return ONLY the JSON response from Hubtel, no explanation.`,
               </div>
               <div className="h-8 w-12 bg-white rounded flex items-center justify-center shadow-sm px-1">
                 <svg viewBox="0 0 38 24" width="36" height="22"><circle cx="15" cy="12" r="10" fill="#EB001B"/><circle cx="23" cy="12" r="10" fill="#F79E1B"/><path d="M19 4.8a10 10 0 0 1 0 14.4A10 10 0 0 1 19 4.8z" fill="#FF5F00"/></svg>
+              </div>
+              <div className="h-8 w-12 bg-white rounded flex items-center justify-center shadow-sm px-1">
+                <span className="text-blue-700 font-black text-sm italic">VISA</span>
               </div>
             </div>
           </div>
@@ -309,7 +272,7 @@ Return ONLY the JSON response from Hubtel, no explanation.`,
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  MoMo / Phone number
+                  Phone number
                   <span className="ml-1 text-xs font-normal text-gray-400">(e.g. 0244123456)</span>
                 </label>
                 <Input
@@ -344,12 +307,12 @@ Return ONLY the JSON response from Hubtel, no explanation.`,
                 className="w-full py-6 sm:py-7 text-base sm:text-lg font-bold rounded-lg text-white bg-orange-500 hover:bg-orange-600 mt-3"
               >
                 {loading
-                  ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Sending payment prompt...</>
-                  : 'Pay now with Hubtel'}
+                  ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Redirecting to Hubtel...</>
+                  : <><ExternalLink className="mr-2 h-5 w-5" /> Pay now with Hubtel</>}
               </Button>
 
               <p className="text-center text-xs text-gray-400 mt-1">
-                A Mobile Money prompt will be sent to your phone. Enter your MoMo PIN to complete payment.
+                You'll be redirected to Hubtel's secure payment page. After payment, you'll return here automatically.
               </p>
             </form>
           </div>

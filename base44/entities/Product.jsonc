@@ -34,30 +34,30 @@
         "electronic_appliances",
         "home_appliances"
       ],
-      "description": "Product category (strict \u2014 determines which main group this product belongs to)"
+      "description": "Product category"
     },
     "brand": {
       "type": "string",
-      "description": "Product brand. Must belong to the correct category group."
+      "description": "Product brand"
     },
     "subcategory": {
       "type": "string",
-      "description": "Product type/subcategory within the brand+category, e.g. iPhone 15 Series, Galaxy Buds, Smart TV 43\""
+      "description": "Product type/subcategory"
     },
     "image_url": {
       "type": "string",
-      "description": "Product main image \u2014 uploaded file URL (upload from computer only)"
+      "description": "Product main image URL"
     },
     "image_urls": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Additional product images (up to 4) \u2014 uploaded file URLs"
+      "description": "Additional product images (up to 4)"
     },
     "video_url": {
       "type": "string",
-      "description": "Product video URL (shows as 5th slide in gallery)"
+      "description": "Product video URL"
     },
     "stock": {
       "type": "number",
@@ -66,21 +66,31 @@
     "featured": {
       "type": "boolean",
       "default": false,
-      "description": "Is this a featured product"
+      "description": "Show in Featured / Classico Picks section on homepage"
     },
     "flash_sale": {
       "type": "boolean",
       "default": false,
-      "description": "Is this product in a CLASSICO flash sale"
+      "description": "Show in CLASSICO Deals (Flash Sale) section on homepage"
     },
     "flash_sale_end": {
       "type": "string",
-      "description": "ISO datetime when flash sale ends (e.g. 2026-05-03T23:59:00)"
+      "description": "ISO datetime when flash sale ends"
     },
     "donkomi": {
       "type": "boolean",
       "default": false,
-      "description": "Is this product featured in Donkomi (best price) section"
+      "description": "Show in Donkomi Deals (Best Prices) section on homepage"
+    },
+    "new_arrival": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show in New Arrivals section on homepage"
+    },
+    "top_selling": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show in Top Selling section on homepage"
     },
     "review_enabled": {
       "type": "boolean",

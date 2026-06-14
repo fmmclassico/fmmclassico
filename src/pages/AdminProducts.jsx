@@ -123,11 +123,19 @@ const BRAND_SUBCATEGORIES = {
   },
 };
 
+// Homepage sections a product can appear in
+const HOME_SECTIONS = [
+  { key: 'flash_sale', label: '⚡ CLASSICO Deals (Flash Sale)' },
+  { key: 'featured',   label: '⭐ Featured / Classico Picks' },
+  { key: 'donkomi',    label: '🔥 Donkomi Deals (Best Prices)' },
+  { key: 'new_arrival', label: '🆕 New Arrivals' },
+  { key: 'top_selling', label: '📈 Top Selling' },
+];
+
 const EMPTY_FORM = {
   name: '', description: '', price: '', original_price: '',
   main_group: '', category: '', brand: '', subcategory: '',
-  stock: '', featured: false, flash_sale: false,
-  donkomi: false, review_enabled: true, rating: '', reviews_count: '',
+  stock: '', home_sections: [], review_enabled: true, rating: '', reviews_count: '',
   image_url: '', image_urls: [], video_url: '',
 };
 
@@ -156,7 +164,8 @@ export default function AdminProducts() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const { main_group, ...rest } = data; // don't store main_group in db
+      const { main_group, home_sections, ...rest } = data;
+      const sections = home_sections || [];
       const payload = {
         ...rest,
         price: parseFloat(data.price) || 0,
@@ -164,6 +173,12 @@ export default function AdminProducts() {
         stock: data.stock !== '' ? parseInt(data.stock) : undefined,
         rating: data.rating ? parseFloat(data.rating) : undefined,
         reviews_count: data.reviews_count ? parseInt(data.reviews_count) : undefined,
+        // Map sections checkboxes → product flags
+        featured:   sections.includes('featured'),
+        flash_sale: sections.includes('flash_sale'),
+        donkomi:    sections.includes('donkomi'),
+        new_arrival: sections.includes('new_arrival'),
+        top_selling: sections.includes('top_selling'),
       };
       if (editingProduct) {
         return base44.entities.Product.update(editingProduct.id, payload);
@@ -222,6 +237,14 @@ export default function AdminProducts() {
     else if (cat === 'electronic_appliances') main_group = 'electronics';
     else if (cat === 'home_appliances') main_group = 'home_appliances_group';
     else if (cat) main_group = 'phone_accessories';
+    // Reconstruct home_sections array from product flags
+    const home_sections = [];
+    if (product.featured)    home_sections.push('featured');
+    if (product.flash_sale)  home_sections.push('flash_sale');
+    if (product.donkomi)     home_sections.push('donkomi');
+    if (product.new_arrival) home_sections.push('new_arrival');
+    if (product.top_selling) home_sections.push('top_selling');
+
     setForm({
       name: product.name || '',
       description: product.description || '',
@@ -232,9 +255,7 @@ export default function AdminProducts() {
       brand: product.brand || '',
       subcategory: product.subcategory || '',
       stock: product.stock ?? '',
-      featured: product.featured || false,
-      flash_sale: product.flash_sale || false,
-      donkomi: product.donkomi || false,
+      home_sections,
       review_enabled: product.review_enabled !== false,
       rating: product.rating ?? '',
       reviews_count: product.reviews_count ?? '',
@@ -409,33 +430,45 @@ export default function AdminProducts() {
               <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Product description..." />
             </div>
 
-            {/* Flags */}
+            {/* Homepage Sections */}
             <div className="md:col-span-2">
-              <Label className="font-semibold block mb-2">Product Tags</Label>
+              <Label className="font-semibold block mb-1">📍 Homepage Sections</Label>
+              <p className="text-xs text-gray-500 mb-3">Select which sections of the homepage this product will appear in. Only checked sections will show this product.</p>
               <div className="flex flex-wrap gap-3">
-                {[
-                  { key: 'featured', label: '⭐ Featured' },
-                  { key: 'flash_sale', label: '⚡ Flash Sale (CLASSICO Deals)' },
-                  { key: 'donkomi', label: '🔥 Donkomi' },
-                  { key: 'review_enabled', label: '💬 Reviews Enabled' },
-                ].map(({ key, label }) => (
-                  <label key={key} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50">
-                    <div
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form[key] ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
-                      onClick={() => setForm(f => ({ ...f, [key]: !f[key] }))}
-                    >
-                      {form[key] && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">{label}</span>
-                  </label>
-                ))}
+                {HOME_SECTIONS.map(({ key, label }) => {
+                  const checked = (form.home_sections || []).includes(key);
+                  return (
+                    <label key={key} className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors ${checked ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                      onClick={() => setForm(f => {
+                        const sections = f.home_sections || [];
+                        return { ...f, home_sections: checked ? sections.filter(s => s !== key) : [...sections, key] };
+                      })}>
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${checked ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
+                        {checked && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">{label}</span>
+                    </label>
+                  );
+                })}
               </div>
-              {form.flash_sale && (
+              {(form.home_sections || []).includes('flash_sale') && (
                 <div className="mt-3">
                   <Label>Flash Sale End Date/Time (optional)</Label>
                   <Input type="datetime-local" value={form.flash_sale_end || ''} onChange={e => setForm(f => ({ ...f, flash_sale_end: e.target.value }))} />
                 </div>
               )}
+            </div>
+
+            {/* Reviews */}
+            <div className="md:col-span-2">
+              <Label className="font-semibold block mb-2">Other Settings</Label>
+              <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors inline-flex ${form.review_enabled ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                onClick={() => setForm(f => ({ ...f, review_enabled: !f.review_enabled }))}>
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form.review_enabled ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
+                  {form.review_enabled && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                </div>
+                <span className="text-sm font-medium text-gray-700">💬 Reviews Enabled</span>
+              </label>
             </div>
           </div>
 
@@ -469,9 +502,11 @@ export default function AdminProducts() {
                   ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                   : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
                 <div className="absolute top-1 left-1 flex flex-col gap-1">
-                  {product.featured && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
-                  {product.flash_sale && <Badge className="text-[9px] px-1 py-0 bg-orange-500">Flash</Badge>}
-                  {product.donkomi && <Badge className="text-[9px] px-1 py-0 bg-green-500">Donkomi</Badge>}
+                  {product.featured    && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
+                  {product.flash_sale  && <Badge className="text-[9px] px-1 py-0 bg-orange-500">Flash</Badge>}
+                  {product.donkomi     && <Badge className="text-[9px] px-1 py-0 bg-green-500">Donkomi</Badge>}
+                  {product.new_arrival && <Badge className="text-[9px] px-1 py-0 bg-yellow-500">New</Badge>}
+                  {product.top_selling && <Badge className="text-[9px] px-1 py-0 bg-blue-500">Top</Badge>}
                 </div>
               </div>
               <div className="p-2">

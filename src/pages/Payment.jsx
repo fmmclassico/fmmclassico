@@ -12,7 +12,11 @@ import { Badge } from '@/components/ui/badge';
 const ASH = '#2E86C1';
 const ASH_HOVER = '#2578ae';
 
-const PAYSTACK_PUBLIC_KEY = 'pk_live_8e08afef1e1e7e7130f3f22d1c30a62cdd6b647e';
+// ── HUBTEL CONFIG ─────────────────────────────────────────────────────────────
+// Replace these with your actual Hubtel merchant credentials
+const HUBTEL_MERCHANT_ACCOUNT = ''; // e.g. 2001000
+const HUBTEL_BASIC_AUTH = '';       // e.g. 'Basic dXNlcm5hbWU6cGFzc3dvcmQ='
+// ─────────────────────────────────────────────────────────────────────────────
 
 function formatAmount(num) {
   const n = Number(num);
@@ -28,7 +32,7 @@ export default function Payment() {
   const amount      = amountRaw ? parseFloat(amountRaw) : 0;
 
   const [user, setUser] = useState(null);
-  const [paystackReady, setPaystackReady] = useState(false);
+  const [hubtelReady, setHubtelReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [cartCount, setCartCount] = useState(0);
@@ -62,17 +66,17 @@ export default function Payment() {
     }
   }, []);
 
-  // Load Paystack inline script
+  // Load Hubtel Checkout SDK
   useEffect(() => {
-    if (document.getElementById('paystack-script')) {
-      setPaystackReady(true);
+    if (document.getElementById('hubtel-script')) {
+      setHubtelReady(true);
       setLoading(false);
       return;
     }
     const script = document.createElement('script');
-    script.id = 'paystack-script';
-    script.src = 'https://js.paystack.co/v1/inline.js';
-    script.onload = () => { setPaystackReady(true); setLoading(false); };
+    script.id = 'hubtel-script';
+    script.src = 'https://unified-pay.hubtel.com/js/v1/checkout.js';
+    script.onload = () => { setHubtelReady(true); setLoading(false); };
     script.onerror = () => setLoading(false);
     document.body.appendChild(script);
   }, []);
@@ -84,38 +88,44 @@ export default function Payment() {
 
   const handlePay = (e) => {
     e.preventDefault();
-    if (!window.PaystackPop) return;
     if (!emailVal) { alert('Please enter your email address.'); return; }
+    if (!phone) { alert('Please enter your phone number.'); return; }
+    if (!hubtelReady || typeof window.CheckoutSdk === 'undefined') {
+      alert('Payment system is still loading, please wait a moment and try again.');
+      return;
+    }
     setPaying(true);
 
     const callbackUrl = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
+    const customerPhone = phone.startsWith('0') ? '233' + phone.slice(1) : phone.startsWith('+') ? phone.slice(1) : phone;
 
-    const handler = window.PaystackPop.setup({
-      key: PAYSTACK_PUBLIC_KEY,
-      email: emailVal,
-      amount: Math.round(amount * 100), // pesewas
-      currency: 'GHS',
-      ref: orderNumber,
-      metadata: {
-        order_id: orderId,
-        order_number: orderNumber,
-        first_name: firstName,
-        last_name: lastName,
-        phone,
-        custom_fields: [
-          { display_name: 'Store', variable_name: 'store', value: 'FMM CLASSICO' },
-          { display_name: 'Order Number', variable_name: 'order_number', value: orderNumber },
-        ]
+    const checkout = new window.CheckoutSdk();
+    checkout.openModal({
+      purchaseInfo: {
+        amount: amount,
+        purchaseDescription: `Payment of GHS ${amount} for Order ${orderNumber} – FMM CLASSICO`,
+        customerPhoneNumber: customerPhone,
+        clientReference: orderNumber,
       },
-      callback: function(response) {
-        window.location.href = callbackUrl + `&reference=${response.reference}`;
+      config: {
+        branding: 'enabled',
+        callbackUrl: callbackUrl,
+        merchantAccount: HUBTEL_MERCHANT_ACCOUNT,
+        basicAuth: HUBTEL_BASIC_AUTH,
       },
-      onClose: function() {
-        setPaying(false);
-      }
+      callBacks: {
+        onPaymentSuccess: (data) => {
+          checkout.closePopUp();
+          window.location.href = callbackUrl + `&reference=${data?.transactionId || orderNumber}`;
+        },
+        onPaymentFailure: () => {
+          setPaying(false);
+        },
+        onClose: () => {
+          setPaying(false);
+        },
+      },
     });
-
-    handler.openIframe();
   };
 
   if (amount <= 0) {
@@ -246,11 +256,11 @@ export default function Payment() {
               products and convenient shopping for our customers.
             </p>
 
-            {/* Paystack badge */}
+            {/* Hubtel badge */}
             <div className="mt-6 flex items-center gap-1.5 text-xs text-gray-500">
               <Lock className="h-3.5 w-3.5" />
               <span>Secured by</span>
-              <span className="font-black text-gray-700">paystack</span>
+              <span className="font-black text-orange-600">Hubtel</span>
             </div>
 
             {/* Payment method logos */}
@@ -345,20 +355,20 @@ export default function Payment() {
               {/* Pay button */}
               <Button
                 type="submit"
-                disabled={loading || paying}
-                className="w-full py-6 sm:py-7 text-base sm:text-lg font-bold rounded-lg text-white bg-green-500 hover:bg-green-600 mt-3"
+                disabled={loading || paying || !hubtelReady}
+                className="w-full py-6 sm:py-7 text-base sm:text-lg font-bold rounded-lg text-white bg-orange-500 hover:bg-orange-600 mt-3"
               >
                 {loading ? (
                   <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading payment...</>
                 ) : paying ? (
-                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Opening payment window...</>
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Opening Hubtel checkout...</>
                 ) : (
-                  'Pay now'
+                  'Pay now with Hubtel'
                 )}
               </Button>
 
               <p className="text-center text-xs text-gray-400 mt-1">
-                You will be redirected to Paystack to complete your payment securely.
+                Secure embedded payment powered by Hubtel — no page redirect.
               </p>
             </form>
           </div>

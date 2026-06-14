@@ -154,30 +154,13 @@ export default function Home() {
     }
   });
 
-  // Hidden product IDs per section (set by admin in Home Editor)
-  const getHiddenIds = (secId) => {
-    const raw = appSettings.find(s => s.key === `home_hidden_${secId}`)?.value;
-    try { return JSON.parse(raw || '[]'); } catch { return []; }
-  };
-  const hiddenFlash = getHiddenIds('flash');
-  const hiddenFeatured = getHiddenIds('featured');
-  const hiddenDonkomi = getHiddenIds('donkomi');
-
-  // Product buckets
-  const phoneAccessoryCategories = ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers'];
-  // Flash sale: prefer products tagged flash_sale=true, fallback to discounted
-  const flashTagged = products.filter(p => p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()) && !hiddenFlash.includes(p.id));
-  const flashSaleProducts = flashTagged.length >= 2 ? flashTagged : products.filter(p => p.original_price && p.original_price > p.price && !hiddenFlash.includes(p.id)).slice(0, 6);
-  const flashItems = flashSaleProducts.length >= 2 ? flashSaleProducts : products.filter(p => p.featured && !hiddenFlash.includes(p.id)).slice(0, 6);
-  const flashSaleEndTime = flashTagged.length > 0 ? flashTagged[0].flash_sale_end : null;
-  const newArrivals = [...products].filter(p => p.category !== 'home_appliances').sort((a, b) => new Date(b.created_date) - new Date(a.created_date)).slice(0, 6);
-  const classicoDeals = products.filter(p => p.featured && !hiddenFeatured.includes(p.id)).slice(0, 6);
-  // Donkomi: prefer donkomi-tagged, fallback to cheapest
-  const donkomiTagged = products.filter(p => p.donkomi && !hiddenDonkomi.includes(p.id));
-  const donkomiDeals = donkomiTagged.length >= 2 ? donkomiTagged.slice(0, 6) : [...products].filter(p => p.price > 0 && p.category !== 'home_appliances' && !hiddenDonkomi.includes(p.id)).sort((a, b) => a.price - b.price).slice(0, 6);
-  // Top selling = highest reviews_count products
-  const topSelling = [...products].filter(p => p.reviews_count > 0).sort((a, b) => (b.reviews_count || 0) - (a.reviews_count || 0)).slice(0, 6);
-  const topSellingFallback = topSelling.length >= 2 ? topSelling : [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 6);
+  // Product buckets — STRICT: only show products explicitly assigned to each section by admin
+  const flashItems    = products.filter(p => p.flash_sale  && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
+  const flashSaleEndTime = flashItems.length > 0 ? flashItems[0].flash_sale_end : null;
+  const classicoDeals = products.filter(p => p.featured);
+  const donkomiDeals  = products.filter(p => p.donkomi);
+  const newArrivals   = products.filter(p => p.new_arrival);
+  const topSellingFallback = products.filter(p => p.top_selling);
 
   return (
     <div className="pb-6 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
@@ -308,7 +291,9 @@ export default function Home() {
                     <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                   </div>
                 ))
-              : (flashItems.length > 0 ? flashItems : products.filter(p => !hiddenFlash.includes(p.id)).slice(0, 5)).map(product => (
+              : flashItems.length === 0
+                ? <div className="px-6 py-8 text-gray-400 text-sm">No products assigned to this section yet.</div>
+                : flashItems.map(product => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
                     className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
@@ -354,7 +339,9 @@ export default function Home() {
                     <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                   </div>
                 ))
-              : (donkomiDeals.length > 0 ? donkomiDeals : products.filter(p => !hiddenDonkomi.includes(p.id)).slice(0, 5)).map(product => (
+              : donkomiDeals.length === 0
+                ? <div className="px-6 py-8 text-gray-400 text-sm">No products assigned to this section yet.</div>
+                : donkomiDeals.map(product => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
                     className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
@@ -438,7 +425,9 @@ export default function Home() {
                     <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                   </div>
                 ))
-              : (newArrivals.length > 0 ? newArrivals : products.slice(0, 6)).map(product => (
+              : newArrivals.length === 0
+                ? <div className="px-6 py-8 text-gray-400 text-sm">No products assigned to this section yet.</div>
+                : newArrivals.map(product => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
                     className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
@@ -480,7 +469,9 @@ export default function Home() {
                     <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                   </div>
                 ))
-              : (topSellingFallback.length > 0 ? topSellingFallback : products.slice(0, 6)).map((product, idx) => (
+              : topSellingFallback.length === 0
+                ? <div className="px-6 py-8 text-gray-400 text-sm">No products assigned to this section yet.</div>
+                : topSellingFallback.map((product, idx) => (
                   <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
                     className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">

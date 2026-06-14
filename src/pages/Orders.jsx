@@ -251,7 +251,7 @@ export default function Orders() {
                       {order.items?.map((item, idx) => (
                         <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2 py-1.5">
                           {item.product_image && (
-                            <img src={item.product_image} alt={item.product_name} className="w-10 h-10 rounded object-cover flex-shrink-0" loading="lazy" decoding="async" />
+                            <img src={item.product_image} alt={item.product_name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
                           )}
                           <div>
                             <p className="text-xs font-semibold text-gray-800 max-w-[140px] truncate">{item.product_name}</p>

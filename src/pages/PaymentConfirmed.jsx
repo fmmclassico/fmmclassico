@@ -263,17 +263,7 @@ export default function PaymentConfirmed() {
           </Card>
         )}
 
-        {/* Save failed */}
-        {error === 'save_failed' && (
-          <Card className="p-4 bg-amber-50 border-amber-300 mb-4 text-center">
-            <p className="text-sm text-amber-800 font-medium mb-2">⚠️ Your payment went through but we had trouble saving the order. Please contact us immediately with your order number.</p>
-            <a href={`https://wa.me/233509896035?text=${encodeURIComponent(`Hi FMM CLASSICO, I paid for order #${orderNumber} (₵${amount}) but my order wasn't saved. Please help!`)}`}
-              target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold mt-1">
-              Contact us on WhatsApp →
-            </a>
-          </Card>
-        )}
+
 
         {/* Order tracking steps */}
         {orderCreated && (
@@ -320,12 +310,6 @@ export default function PaymentConfirmed() {
               </Button>
             </Link>
           )}
-          <Link to={createPageUrl('Orders')} className="block">
-            <Button variant="outline" className="w-full gap-2">
-              <Package className="h-4 w-4" />
-              View My Orders
-            </Button>
-          </Link>
           <Link to={createPageUrl('Home')} className="block">
             <Button variant="ghost" className="w-full text-gray-500">Return to Home</Button>
           </Link>

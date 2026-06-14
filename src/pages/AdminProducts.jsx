@@ -768,7 +768,7 @@ export default function AdminProducts() {
               <Card key={product.id} className={`overflow-hidden shadow-sm hover:shadow-md transition-shadow ${isHidden ? 'opacity-60 border-dashed border-red-300' : ''}`}>
                 <div className="aspect-square bg-gray-50 relative overflow-hidden">
                   {product.image_url
-                    ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                    ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
                   <div className="absolute top-1 left-1 flex flex-col gap-1">
                     {product.featured    && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}

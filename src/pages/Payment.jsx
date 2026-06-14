@@ -13,9 +13,9 @@ const ASH = '#2E86C1';
 const ASH_HOVER = '#2578ae';
 
 // ── HUBTEL CONFIG ─────────────────────────────────────────────────────────────
-// Replace these with your actual Hubtel merchant credentials
-const HUBTEL_MERCHANT_ACCOUNT = ''; // e.g. 2001000
-const HUBTEL_BASIC_AUTH = '';       // e.g. 'Basic dXNlcm5hbWU6cGFzc3dvcmQ='
+const HUBTEL_MERCHANT_ACCOUNT = '0599676419';
+// Basic Auth = base64("username:password")
+const HUBTEL_BASIC_AUTH = 'Basic ' + btoa('80pYxkm:db2c85757e9e4720a53f63d89cb1934a');
 // ─────────────────────────────────────────────────────────────────────────────
 
 function formatAmount(num) {
@@ -97,7 +97,8 @@ export default function Payment() {
     setPaying(true);
 
     const callbackUrl = `${window.location.origin}/PaymentConfirmed?orderId=${orderId}&orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount}`;
-    const customerPhone = phone.startsWith('0') ? '233' + phone.slice(1) : phone.startsWith('+') ? phone.slice(1) : phone;
+    const rawPhone = phone.trim();
+    const customerPhone = rawPhone.startsWith('0') ? '233' + rawPhone.slice(1) : rawPhone.startsWith('+') ? rawPhone.slice(1) : rawPhone;
 
     const checkout = new window.CheckoutSdk();
     checkout.openModal({

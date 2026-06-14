@@ -46,6 +46,15 @@ export default function AdminReviews() {
   const handleAutoApproveToggle = (val) => {
     setAutoApprove(val);
     saveAutoApproveMutation.mutate(val);
+    // When enabling auto-approve, immediately approve all pending reviews
+    if (val) {
+      const pending = reviews.filter(r => !r.approved);
+      if (pending.length > 0) {
+        Promise.all(pending.map(r => base44.entities.Review.update(r.id, { approved: true }))).then(() => {
+          queryClient.invalidateQueries({ queryKey: ['adminReviews'] });
+        });
+      }
+    }
   };
 
   const { data: reviews = [], isLoading: loadingReviews } = useQuery({
@@ -95,16 +104,7 @@ export default function AdminReviews() {
     }
   });
 
-  // Auto-approve new reviews when toggle is on
-  useEffect(() => {
-    if (!autoApprove || !isAdmin) return;
-    const pending = reviews.filter(r => !r.approved);
-    if (pending.length > 0) {
-      Promise.all(pending.map(r => base44.entities.Review.update(r.id, { approved: true }))).then(() => {
-        queryClient.invalidateQueries({ queryKey: ['adminReviews'] });
-      });
-    }
-  }, [autoApprove, reviews, isAdmin]);
+
 
   if (!isAdmin && user) return (
     <div className="container mx-auto px-4 py-12 text-center">

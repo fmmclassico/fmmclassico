@@ -58,9 +58,12 @@ export const AuthProvider = ({ children }) => {
             // App requires login — only redirect if there's truly no token
             if (!appParams.token) {
               setAuthError({ type: 'auth_required', message: 'Authentication required' });
+              setIsLoadingAuth(false);
+              setIsLoadingPublicSettings(false);
             } else {
               // Token exists but app check failed — try to check auth anyway before redirecting
               await checkUserAuth();
+              setIsLoadingPublicSettings(false);
             }
           } else if (reason === 'user_not_registered') {
             setAuthError({ type: 'user_not_registered', message: 'User not registered for this app' });

@@ -18,15 +18,19 @@ export default function PaymentConfirmed() {
   const notifyCalledRef = useRef(false);
   const navigate = useNavigate();
 
-  // Auto-redirect: if user lands here from Hubtel's "Continue" button (payment success),
-  // the page auto-processes in 5 seconds if they don't interact.
-  // This handles the case where Hubtel redirects here automatically after payment.
+  // Auto-redirect: if user lands here from Hubtel and doesn't interact within 5 seconds,
+  // navigate them to the Orders page so they can see their order status.
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Already on PaymentConfirmed — just ensure we stay here (no extra redirect needed)
-      // The page will show the order tracking UI naturally.
+      navigate(createPageUrl('Orders'));
     }, 5000);
-    return () => clearTimeout(timer);
+    // Clear the timer if the user interacts (clicks any button/link)
+    const cancelTimer = () => clearTimeout(timer);
+    document.addEventListener('click', cancelTimer, { once: true });
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', cancelTimer);
+    };
   }, []);
 
   // Read order info from URL params OR sessionStorage

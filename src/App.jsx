@@ -40,8 +40,18 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
+// Routes that require authentication — guests clicking these are redirected to /login
+const PROTECTED_ROUTES = [
+  'Checkout', 'Orders', 'Cart', 'Settings', 'Notifications', 'OrderTracking',
+  'AdminOrders', 'AdminMessages', 'AdminInvoice', 'AdminBanners', 'AdminBroadcast',
+  'AdminSMSBroadcast', 'AdminReviews', 'AdminProducts', 'AdminCategoryImages',
+  'AdminPromoBanners2', 'AdminBrandLogos', 'AdminAbout', 'AdminPageContent',
+  'AdminHomeEditor', 'AdminInterfaceControl', 'AdminAI', 'AdminAccessControl',
+  'AdminContactSettings', 'Chat', 'Feedback'
+];
+
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, authError, navigateToLogin, user, verifyAdminPassword } = useAuth();
+  const { isLoadingAuth, authError, navigateToLogin, user, isAuthenticated, verifyAdminPassword } = useAuth();
 
   // Show loading spinner while checking auth
   if (isLoadingAuth) {
@@ -71,18 +81,29 @@ const AuthenticatedApp = () => {
         </>
       );
     } else if (authError.type === 'auth_required') {
-      // Allow public auth pages to render normally — everything else redirects to /login
-      const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
-      const isPublicPath = publicPaths.some(p => window.location.pathname.toLowerCase().startsWith(p));
-      if (!isPublicPath) {
-        // Redirect to our own /login page (NOT base44's external page)
+      // GUEST MODE FIX:
+      // Do NOT redirect all unauthenticated users to login.
+      // Only redirect if they are trying to access a protected route.
+      const currentPath = window.location.pathname.replace('/', '');
+      const isProtectedRoute = PROTECTED_ROUTES.some(r =>
+        currentPath.toLowerCase() === r.toLowerCase()
+      );
+      const publicAuthPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
+      const isPublicAuthPath = publicAuthPaths.some(p =>
+        window.location.pathname.toLowerCase().startsWith(p)
+      );
+
+      if (!isPublicAuthPath && isProtectedRoute) {
+        // Save where user was trying to go so we return them after login
+        sessionStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
         window.location.href = '/login';
         return null;
       }
+      // Otherwise: render normally — this is a guest browsing public pages
     }
   }
 
-  // Render the main app
+  // Render the full app — Layout handles showing guest vs authenticated UI
   return (
     <Routes>
       <Route path="/" element={
@@ -198,7 +219,6 @@ const AuthenticatedApp = () => {
       } />
 
       {Object.entries(Pages).map(([path, Page]) => (
-        // Skip pages that already have explicit routes above
         ['Payment', 'Login', 'Register', 'ForgotPassword', 'ResetPassword'].includes(path) ? null :
         <Route
           key={path}
@@ -217,7 +237,6 @@ const AuthenticatedApp = () => {
 
 
 function App() {
-
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>

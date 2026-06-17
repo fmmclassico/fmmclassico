@@ -10,7 +10,6 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Package,
-  Clock,
   CheckCircle2,
   Truck,
   MapPin,
@@ -20,7 +19,6 @@ import {
   Mail
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { motion } from 'framer-motion';
 
 const statusLabels = {
   confirmed: 'Confirmed', processing: 'Processing', shipped: 'Shipped',

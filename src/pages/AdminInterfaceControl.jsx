@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Toggle } from "@/components/ui/toggle";
 import { Loader2, Eye, EyeOff, Settings, Layers, Zap } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 

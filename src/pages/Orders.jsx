@@ -10,7 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Package,
   ChevronRight,
-  Clock,
   CheckCircle2,
   Truck,
   MapPin,

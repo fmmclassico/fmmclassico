@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Loader2, ImagePlus, Trash2 } from 'lucide-react';
+import { Upload, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 // 6 promo card slots

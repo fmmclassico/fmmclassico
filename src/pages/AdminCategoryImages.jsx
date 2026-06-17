@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Upload, Loader2, ImagePlus, ChevronLeft, ChevronRight, Trash2, Check } from 'lucide-react';
+import { Upload, Loader2, ImagePlus, ChevronLeft, Trash2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 const CATEGORY_KEYS = [

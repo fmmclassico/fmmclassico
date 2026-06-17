@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,8 +14,7 @@ import {
   Truck,
   CreditCard,
   Loader2,
-  Info,
-  ChevronLeft
+  Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DeliveryInfoModal from '../components/delivery/DeliveryInfoModal';

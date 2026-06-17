@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { createPageUrl } from '../../utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import ProductCard from '../products/ProductCard';
 import { Skeleton } from "@/components/ui/skeleton";

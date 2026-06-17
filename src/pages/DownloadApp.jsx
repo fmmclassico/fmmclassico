@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Smartphone, Download, Globe, Apple, Monitor, CheckCircle, QrCode } from 'lucide-react';
+import { Smartphone, Globe, Monitor, CheckCircle, QrCode } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function DownloadApp() {

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Send, Loader2, Sparkles, Trash2, User, Image, Download, X, Paperclip } from 'lucide-react';
+import { Bot, Send, Loader2, Sparkles, Trash2, User, Download, X, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 

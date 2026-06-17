@@ -5,19 +5,15 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { 
-  ShoppingCart, 
   Trash2, 
   Plus, 
   Minus, 
   ArrowRight,
   ShoppingBag,
   Truck,
-  ChevronDown,
-  MapPin,
-  X
+  ChevronDown
 } from 'lucide-react';
 
 import { toast } from 'sonner';

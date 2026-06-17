@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Loader2, Save, X, Plus, Trash2, Home, Grid3X3, Image, Type, Link as LinkIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, Loader2, Save, X, Plus, Trash2, Home, Grid3X3, Image, Type } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const CORE_SECTIONS = [

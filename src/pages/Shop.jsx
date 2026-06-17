@@ -5,8 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Filter, Grid3X3, LayoutList, X } from 'lucide-react';
+import { Filter, Grid3X3, LayoutList } from 'lucide-react';
 import ProductCard from '../components/products/ProductCard';
 
 const categoryNames = {

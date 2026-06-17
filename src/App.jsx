@@ -3,7 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -27,12 +27,9 @@ import Policies from './pages/Policies';
 import AdminSMSBroadcast from './pages/AdminSMSBroadcast';
 import AdminAccessControl from './pages/AdminAccessControl';
 import AdminContactSettings from './pages/AdminContactSettings';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
 
 const { Pages, Layout, mainPage } = pagesConfig;
+// make Pages accessible in JSX scope for fallback routes
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
@@ -40,20 +37,10 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
-// Routes that require authentication — guests clicking these are redirected to /login
-const PROTECTED_ROUTES = [
-  'Checkout', 'Orders', 'Cart', 'Settings', 'Notifications', 'OrderTracking',
-  'AdminOrders', 'AdminMessages', 'AdminInvoice', 'AdminBanners', 'AdminBroadcast',
-  'AdminSMSBroadcast', 'AdminReviews', 'AdminProducts', 'AdminCategoryImages',
-  'AdminPromoBanners2', 'AdminBrandLogos', 'AdminAbout', 'AdminPageContent',
-  'AdminHomeEditor', 'AdminInterfaceControl', 'AdminAI', 'AdminAccessControl',
-  'AdminContactSettings', 'Chat', 'Feedback'
-];
-
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, authError, navigateToLogin, user, isAuthenticated, verifyAdminPassword } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, verifyAdminPassword } = useAuth();
 
-  // Show loading spinner while checking auth
+  // Show loading spinner only while checking auth — public settings load in background
   if (isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -81,29 +68,17 @@ const AuthenticatedApp = () => {
         </>
       );
     } else if (authError.type === 'auth_required') {
-      // GUEST MODE FIX:
-      // Do NOT redirect all unauthenticated users to login.
-      // Only redirect if they are trying to access a protected route.
-      const currentPath = window.location.pathname.replace('/', '');
-      const isProtectedRoute = PROTECTED_ROUTES.some(r =>
-        currentPath.toLowerCase() === r.toLowerCase()
-      );
-      const publicAuthPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
-      const isPublicAuthPath = publicAuthPaths.some(p =>
-        window.location.pathname.toLowerCase().startsWith(p)
-      );
-
-      if (!isPublicAuthPath && isProtectedRoute) {
-        // Save where user was trying to go so we return them after login
-        sessionStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
-        window.location.href = '/login';
+      // Redirect to login — but allow /login, /register, /forgot-password, /reset-password to render
+      const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
+      const isPublicPath = publicPaths.some(p => window.location.pathname.toLowerCase().startsWith(p));
+      if (!isPublicPath) {
+        navigateToLogin();
         return null;
       }
-      // Otherwise: render normally — this is a guest browsing public pages
     }
   }
 
-  // Render the full app — Layout handles showing guest vs authenticated UI
+  // Render the main app
   return (
     <Routes>
       <Route path="/" element={
@@ -111,18 +86,8 @@ const AuthenticatedApp = () => {
           <MainPage />
         </LayoutWrapper>
       } />
-
-      {/* Auth pages — no Layout wrapper (they use AuthLayout) */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/Login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/Register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-
       {/* Payment — own header (no layout wrapper) */}
       <Route path="/Payment" element={<Payment />} />
-
       <Route path="/AdminReviews" element={
         <LayoutWrapper currentPageName="AdminReviews">
           <AdminReviews />
@@ -219,7 +184,7 @@ const AuthenticatedApp = () => {
       } />
 
       {Object.entries(Pages).map(([path, Page]) => (
-        ['Payment', 'Login', 'Register', 'ForgotPassword', 'ResetPassword'].includes(path) ? null :
+        path === 'Payment' ? null :
         <Route
           key={path}
           path={`/${path}`}
@@ -237,6 +202,7 @@ const AuthenticatedApp = () => {
 
 
 function App() {
+
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>

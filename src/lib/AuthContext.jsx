@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }) => {
   const checkAppState = async () => {
     setAuthError(null);
 
+    // Safety timeout — never block the user more than 5s
     const loadingTimeout = setTimeout(() => {
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
@@ -33,28 +34,20 @@ export const AuthProvider = ({ children }) => {
         interceptResponses: true,
       });
 
-      const settingsPromise = appClient
-        .get(`/prod/public-settings/by-id/${appParams.appId}`)
+      // Fetch public settings and auth in parallel for maximum speed
+      const settingsPromise = appClient.get(`/prod/public-settings/by-id/${appParams.appId}`)
         .then(data => setAppPublicSettings(data))
-        .catch(() => {});
+        .catch(() => {}); // non-fatal
 
-      const hasToken =
-        appParams.token ||
-        localStorage.getItem('base44_access_token') ||
-        localStorage.getItem('token');
-
-      if (hasToken) {
-        // User has a token — try to verify it
-        await checkUserAuth();
-      } else {
-        // No token — user is a guest. Allow them to browse publicly.
-        // Do NOT set auth_required here — that would block the homepage.
-        setUser(null);
-        setIsAuthenticated(false);
+      const authPromise = appParams.token ? checkUserAuth() : Promise.resolve().then(() => {
+        // No token = not logged in → require login
         setIsLoadingAuth(false);
-        // No authError set — guests can browse freely
-      }
+        setIsAuthenticated(false);
+        setAuthError({ type: 'auth_required', message: 'Authentication required' });
+      });
 
+      // Wait for auth only (settings load in background)
+      await authPromise;
       settingsPromise.finally(() => setIsLoadingPublicSettings(false));
 
     } catch (error) {
@@ -62,19 +55,18 @@ export const AuthProvider = ({ children }) => {
 
       if (error?.status === 403 && error?.data?.extra_data?.reason) {
         const reason = error.data.extra_data.reason;
-
-        if (reason === 'user_not_registered') {
+        if (reason === 'auth_required') {
+          setAuthError({ type: 'auth_required', message: 'Authentication required' });
+          setIsLoadingAuth(false);
+        } else if (reason === 'user_not_registered') {
           setAuthError({ type: 'user_not_registered', message: 'User not registered for this app' });
-        } else if (reason !== 'auth_required') {
-          // Only set non-auth errors — auth_required just means guest, which is fine
+        } else {
           setAuthError({ type: reason, message: error.message });
         }
-
-        setIsLoadingAuth(false);
       } else {
+        // Network/unknown error — don't force logout, just unblock rendering
         setIsLoadingAuth(false);
       }
-
       setIsLoadingPublicSettings(false);
     } finally {
       clearTimeout(loadingTimeout);
@@ -84,31 +76,13 @@ export const AuthProvider = ({ children }) => {
   const checkUserAuth = async () => {
     try {
       setIsLoadingAuth(true);
-
       const currentUser = await base44.auth.me();
 
-      if (!currentUser) {
-        setUser(null);
-        setIsAuthenticated(false);
-        setIsLoadingAuth(false);
-        return;
-      }
-
-      const ADMIN_EMAILS = [
-        'fmmcompanylimited@gmail.com',
-        'mensahfedramartha@gmail.com',
-        'marthamensahfedra@gmail.com'
-      ];
-
-      const isAdminEmail = ADMIN_EMAILS.includes(
-        currentUser.email?.toLowerCase()
-      );
+      const ADMIN_EMAILS = ['fmmcompanylimited@gmail.com', 'mensahfedramartha@gmail.com', 'marthamensahfedra@gmail.com'];
+      const isAdminEmail = ADMIN_EMAILS.includes(currentUser.email?.toLowerCase());
 
       if (currentUser.role === 'admin' && isAdminEmail) {
-        const adminVerified = sessionStorage.getItem(
-          `admin_verified_${currentUser.email}`
-        );
-
+        const adminVerified = sessionStorage.getItem(`admin_verified_${currentUser.email}`);
         if (!adminVerified) {
           setUser(currentUser);
           setIsAuthenticated(true);
@@ -125,18 +99,14 @@ export const AuthProvider = ({ children }) => {
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
-
     } catch (error) {
       console.error('User auth check failed:', error);
-
-      setUser(null);
-      setIsAuthenticated(false);
       setIsLoadingAuth(false);
-
-      // Token was invalid/expired — clear it and allow guest browsing
-      localStorage.removeItem('base44_access_token');
-      localStorage.removeItem('token');
-      // Do NOT set authError here — guest can still browse
+      setIsAuthenticated(false);
+      if (error?.status === 401 || error?.status === 403) {
+        setAuthError({ type: 'auth_required', message: 'Authentication required' });
+      }
+      // Silently ignore other errors — don't force logout
     }
   };
 
@@ -150,7 +120,6 @@ export const AuthProvider = ({ children }) => {
   const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
-
     if (shouldRedirect) {
       base44.auth.logout(window.location.href);
     } else {
@@ -158,26 +127,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Redirect to your own /login page (NOT base44's external login page)
   const navigateToLogin = () => {
-    window.location.href = '/login';
+    base44.auth.redirectToLogin(window.location.href);
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated,
-        isLoadingAuth,
-        isLoadingPublicSettings,
-        authError,
-        appPublicSettings,
-        logout,
-        navigateToLogin,
-        checkAppState,
-        verifyAdminPassword,
-      }}
-    >
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
+      isLoadingAuth,
+      isLoadingPublicSettings,
+      authError,
+      appPublicSettings,
+      logout,
+      navigateToLogin,
+      checkAppState,
+      verifyAdminPassword,
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -185,10 +151,8 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-
   return context;
 };

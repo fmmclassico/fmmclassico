@@ -134,7 +134,7 @@ export default function Home() {
 
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {
-      if (!user) { base44.auth.redirectToLogin(window.location.href); return; }
+      if (!user) { window.location.href = '/login'; return; }
       toast.success('Added to cart!');
       queryClient.setQueryData(['cartItems', user?.email], (old = []) => {
         const existing = old.find(i => i.product_id === product.id);

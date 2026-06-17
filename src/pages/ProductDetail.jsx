@@ -183,15 +183,7 @@ export default function ProductDetail() {
   if (!product) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Product not found</h2>
-        <Link to={createPageUrl('Shop')}>
-          <Button>Back to Shop</Button>
-        </Link>
-      </div>
-    );
-  }
-
-  return (
+        <h2 clas
     <div className="container mx-auto px-4 py-6">
 
 

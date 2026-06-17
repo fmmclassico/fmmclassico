@@ -1,19 +1,26 @@
-async function handleHubtelCallback(req, res) {
-  try {
-    console.log("Hubtel Callback Received");
+import { createClientFromRequest } from "npm:@base44/sdk";
 
-    // Basic verification (optional): if HUBTEL_CALLBACK_SECRET is set, require matching header
-    const CALLBACK_SECRET = process.env.HUBTEL_CALLBACK_SECRET;
+// This one is called directly BY HUBTEL (a webhook), not by your app.
+// After you create this function, Base44 will show you its public URL.
+// Copy that URL into:
+//   1) The HUBTEL_CALLBACK_URL secret (used by hubtelInitiate above)
+//   2) Your Hubtel merchant dashboard's "Callback URL" field
+
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+
+    // Optional shared-secret check — only enforced if you set HUBTEL_CALLBACK_SECRET
+    const CALLBACK_SECRET = Deno.env.get("HUBTEL_CALLBACK_SECRET");
     if (CALLBACK_SECRET) {
-      const sig = req.headers['x-hubtel-signature'] || req.headers['x-hubtel-secret'];
+      const sig = req.headers.get("x-hubtel-signature") || req.headers.get("x-hubtel-secret");
       if (sig !== CALLBACK_SECRET) {
-        console.warn('Hubtel callback rejected due to invalid signature');
-        return res.status(403).json({ ResponseCode: '0001', Status: 'Forbidden' });
+        return Response.json({ ResponseCode: "0001", Status: "Forbidden" }, { status: 403 });
       }
     }
 
-    const body = req.body || {};
-    const hubtelData = body.Data || body.data || body || {};
+    const body = await req.json().catch(() => ({}));
+    const hubtelData = body?.Data || body?.data || body || {};
 
     const clientReference = hubtelData.ClientReference || hubtelData.clientReference || hubtelData.ClientRef || hubtelData.clientRef;
     const status = hubtelData.Status || hubtelData.status;
@@ -21,37 +28,19 @@ async function handleHubtelCallback(req, res) {
     const amount = hubtelData.Amount || hubtelData.amount;
 
     if (!clientReference) {
-      return res.status(200).json({
-        ResponseCode: "0001",
-        Status: "Error",
-        Message: "Missing reference"
-      });
+      return Response.json({ ResponseCode: "0001", Status: "Error", Message: "Missing reference" });
     }
 
-    // Ensure base44 is available in this server handler
-    let base44;
-    try {
-      base44 = require('./base44Client').base44;
-    } catch (e) {
-      console.error('base44 client not available in callback handler:', e.message);
-      return res.status(500).json({ ResponseCode: '0001', Status: 'Error', Message: 'Server misconfiguration' });
-    }
-
-    // FIND ORDER USING payment_reference (IMPORTANT FIX)
-    const orders = await base44.entities.Order.filter({ payment_reference: clientReference });
+    // Hubtel's server has no logged-in user, so we use asServiceRole to read/write Orders.
+    const orders = await base44.asServiceRole.entities.Order.filter({ payment_reference: clientReference });
     const order = orders?.[0];
 
     if (!order) {
-      return res.status(200).json({
-        ResponseCode: "0000",
-        Status: "Success",
-        Message: "Order not found"
-      });
+      return Response.json({ ResponseCode: "0000", Status: "Success", Message: "Order not found" });
     }
 
-    // SUCCESS PAYMENT
-    if (status === "Success") {
-      await base44.entities.Order.update(order.id, {
+    if (status === "Success" || status === "Paid") {
+      await base44.asServiceRole.entities.Order.update(order.id, {
         payment_status: "paid",
         hubtel_status: "successful",
         hubtel_transaction_id: transactionId,
@@ -60,37 +49,21 @@ async function handleHubtelCallback(req, res) {
           {
             status: "Payment Confirmed",
             message: `Payment of ₵${amount} confirmed via Hubtel`,
-            timestamp: new Date().toISOString()
-          }
-        ]
+            timestamp: new Date().toISOString(),
+          },
+        ],
       });
-
     } else {
-      // FAILED PAYMENT
-      await base44.entities.Order.update(order.id, {
+      await base44.asServiceRole.entities.Order.update(order.id, {
         payment_status: "failed",
         hubtel_status: "failed",
-        hubtel_transaction_id: transactionId
+        hubtel_transaction_id: transactionId,
       });
     }
 
-    return res.status(200).json({
-      ResponseCode: "0000",
-      Status: "Success"
-    });
-
+    return Response.json({ ResponseCode: "0000", Status: "Success" });
   } catch (error) {
-    console.error(error);
-
-    return res.status(200).json({
-      ResponseCode: "0001",
-      Status: "Error"
-    });
+    console.error("hubtelCallback error:", error);
+    return Response.json({ ResponseCode: "0001", Status: "Error" });
   }
-}
-
-module.exports = {
-  handler: handleHubtelCallback,
-  route: "/api/hubtel/callback",
-  method: "POST"
-};
+});

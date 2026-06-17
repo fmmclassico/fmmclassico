@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function Settings() {
+  const { logout } = useAuth();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -73,15 +75,18 @@ export default function Settings() {
     toast.success('Settings saved successfully!');
   };
 
+  // FIXED: was calling base44.auth.logout() directly, which sends people to the
+  // Base44 auth page. Now uses the app's logout(), which clears the session and
+  // sends people to the guest homepage instead.
   const handleLogout = () => {
-    base44.auth.logout();
+    logout();
   };
 
   const handleDeleteAccount = async () => {
     if (!confirm('Are you sure you want to delete your account? This action cannot be undone and all your data will be lost.')) return;
     if (!confirm('This is permanent. Delete account?')) return;
     await base44.entities.User.delete(user.id);
-    base44.auth.logout();
+    logout();
   };
 
   if (isLoading) {

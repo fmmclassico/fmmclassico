@@ -15,11 +15,11 @@
  * See .env.example for the complete template
  */
 
-// Load credentials from environment variables
-// These are prefixed with VITE_ to be accessible in frontend code via import.meta.env
+// Load non-sensitive config from environment variables. DO NOT expose API credentials in client bundles.
+// Server-side code should use server environment variables (e.g., process.env.HUBTEL_API_ID).
 const MERCHANT_ACCOUNT = import.meta.env.VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER;
-const API_ID = import.meta.env.VITE_HUBTEL_API_ID;
-const API_KEY = import.meta.env.VITE_HUBTEL_API_KEY;
+const API_ID = null; // server-only
+const API_KEY = null; // server-only
 const MERCHANT_EMAIL = import.meta.env.VITE_HUBTEL_MERCHANT_EMAIL;
 const MERCHANT_PHONE = import.meta.env.VITE_HUBTEL_MERCHANT_PHONE;
 

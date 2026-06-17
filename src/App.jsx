@@ -29,6 +29,7 @@ import AdminSMSBroadcast from './pages/AdminSMSBroadcast';
 import AdminAccessControl from './pages/AdminAccessControl';
 import AdminContactSettings from './pages/AdminContactSettings';
 import GuestLayout from '@/components/layouts/GuestLayout';
+import GuestHome from './pages/GuestHome';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 // make Pages accessible in JSX scope for fallback routes
@@ -95,12 +96,24 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      {/* Public routes - accessible to all */}
-      <Route path="/" element={
-        <LayoutWrapper currentPageName={mainPageKey} isAuthenticated={isAuthenticated}>
-          <MainPage />
-        </LayoutWrapper>
-      } />
+      {/* Guest Homepage - default for unauthenticated visitors */}
+      {!isAuthenticated && (
+        <Route path="/" element={
+          <GuestLayout currentPageName="GuestHome">
+            <GuestHome />
+          </GuestLayout>
+        } />
+      )}
+
+      {/* Authenticated Homepage - for logged-in users */}
+      {isAuthenticated && (
+        <Route path="/" element={
+          <LayoutWrapper currentPageName={mainPageKey} isAuthenticated={true}>
+            <MainPage />
+          </LayoutWrapper>
+        } />
+      )}
+
       <Route path="/Payment" element={<Payment />} />
       <Route path="/PaymentConfirmed" element={
         <LayoutWrapper currentPageName="PaymentConfirmed" isAuthenticated={isAuthenticated}>

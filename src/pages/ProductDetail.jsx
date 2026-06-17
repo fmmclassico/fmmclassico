@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import guestCart from '@/lib/guest-cart';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -98,10 +99,19 @@ export default function ProductDetail() {
   const addToCartMutation = useMutation({
     mutationFn: async () => {
       if (!user) {
-        base44.auth.redirectToLogin(window.location.href);
+        // Guest: add to local cart only
+        guestCart.addItem({
+          id: product.id,
+          product_id: product.id,
+          product_name: product.name,
+          product_image: product.image_url,
+          product_price: product.price,
+          quantity
+        });
+        toast.success('Added to cart!');
         return;
       }
-      // Optimistic update: instantly update cart and stock in UI
+      // Authenticated: Optimistic update + backend persistence
       queryClient.setQueryData(['cartItems', user.email], (old = []) => {
         const existing = old.find(i => i.product_id === product.id);
         if (existing) return old.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + quantity } : i);

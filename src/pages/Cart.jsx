@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import guestCart from '@/lib/guest-cart';
+import { useAuth } from '@/lib/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -22,11 +24,15 @@ export default function Cart() {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { navigateToLogin } = useAuth();
 
   useEffect(() => {
     base44.auth.me()
       .then(setUser)
-      .catch(() => base44.auth.redirectToLogin(createPageUrl('Home')));
+      .catch(() => {
+        // Not authenticated — allow guest cart view
+        setUser(null);
+      });
   }, []);
 
   const { data: cartItems = [], isLoading } = useQuery({
@@ -35,13 +41,32 @@ export default function Cart() {
     enabled: !!user?.email
   });
 
+  // Guest cart state
+  const [guestItems, setGuestItems] = React.useState(() => guestCart.getItems());
+  useEffect(() => {
+    const update = () => setGuestItems(guestCart.getItems());
+    window.addEventListener('fmm-cart-updated', update);
+    window.addEventListener('storage', update);
+    return () => {
+      window.removeEventListener('fmm-cart-updated', update);
+      window.removeEventListener('storage', update);
+    };
+  }, []);
+
   const updateQuantityMutation = useMutation({
     mutationFn: async ({ item, delta }) => {
-      const newQty = item.quantity + delta;
-      if (newQty < 1) {
-        await base44.entities.CartItem.delete(item.id);
+      if (user) {
+        const newQty = item.quantity + delta;
+        if (newQty < 1) {
+          await base44.entities.CartItem.delete(item.id);
+        } else {
+          await base44.entities.CartItem.update(item.id, { quantity: newQty });
+        }
       } else {
-        await base44.entities.CartItem.update(item.id, { quantity: newQty });
+        // Guest update
+        const newQty = (item.quantity || 1) + delta;
+        guestCart.updateQuantity(item.product_id || item.id, newQty);
+        setGuestItems(guestCart.getItems());
       }
     },
     onSuccess: () => {
@@ -51,7 +76,12 @@ export default function Cart() {
 
   const removeItemMutation = useMutation({
     mutationFn: async (item) => {
-      await base44.entities.CartItem.delete(item.id);
+      if (user) {
+        await base44.entities.CartItem.delete(item.id);
+      } else {
+        guestCart.removeItem(item.product_id || item.id);
+        setGuestItems(guestCart.getItems());
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems'] });
@@ -62,7 +92,8 @@ export default function Cart() {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
+  const itemsSource = user ? cartItems : guestItems;
+  const subtotal = itemsSource.reduce((sum, item) => sum + ((item.product_price || item.product_price === 0 ? item.product_price : item.product_price) * (item.quantity || 1)), 0);
 
   const deliveryZones = [
     { id: 'umat_pickup', label: '🏫 UMAT Campus – Pickup / Meeting Point', fee: 0, note: 'FREE – collect on campus' },
@@ -83,15 +114,10 @@ export default function Cart() {
   const shipping = selectedZone ? selectedZone.fee : 0;
   const total = subtotal + shipping;
 
-  if (!user) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <p className="text-gray-500">Loading...</p>
-      </div>
-    );
-  }
+  // Allow guest view: show guest cart when not authenticated
+  // Render continues below using itemsSource
 
-  if (cartItems.length === 0 && !isLoading) {
+  if (itemsSource.length === 0 && !isLoading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
             <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 mb-6">
@@ -117,7 +143,7 @@ export default function Cart() {
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-3 sm:space-y-4">
           <>
-            {cartItems.map((item) => (
+            {itemsSource.map((item) => (
               <div key={item.id}>
                 <Card className="p-3 sm:p-4 shadow-sm">
                   <div className="flex gap-3">
@@ -187,7 +213,7 @@ export default function Cart() {
             
             <div className="space-y-3">
               <div className="flex justify-between text-gray-600">
-                <span>Subtotal ({cartItems.length} items)</span>
+                <span>Subtotal ({itemsSource.length} items)</span>
                 <span>₵{subtotal.toFixed(2)}</span>
               </div>
 
@@ -263,6 +289,10 @@ export default function Cart() {
                     return;
                   }
                   const params = `?zone=${selectedZone.id}&zoneName=${encodeURIComponent(selectedZone.label)}&fee=${selectedZone.fee}`;
+                  if (!user) {
+                    navigateToLogin();
+                    return;
+                  }
                   navigate(createPageUrl('Checkout') + params);
                 }}
               >

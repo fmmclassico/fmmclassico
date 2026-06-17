@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import guestCart from '@/lib/guest-cart';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
@@ -99,6 +100,28 @@ export const AuthProvider = ({ children }) => {
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
+
+      // Merge any guest cart items into the authenticated user's cart in background
+      (async function mergeGuestCart() {
+        try {
+          const items = guestCart.getItems();
+          if (!items || items.length === 0) return;
+          for (const item of items) {
+            const productId = item.product_id || item.id;
+            if (!productId) continue;
+            const existing = await base44.entities.CartItem.filter({ user_email: currentUser.email, product_id: productId });
+            const qtyToAdd = item.quantity || 1;
+            if (existing.length > 0) {
+              await base44.entities.CartItem.update(existing[0].id, { quantity: existing[0].quantity + qtyToAdd });
+            } else {
+              await base44.entities.CartItem.create({ product_id: productId, product_name: item.product_name || item.name || '', product_image: item.product_image || item.image_url || '', product_price: item.product_price || item.price || 0, quantity: qtyToAdd, user_email: currentUser.email });
+            }
+          }
+          guestCart.clear();
+        } catch (e) {
+          console.error('Failed to merge guest cart:', e);
+        }
+      })();
     } catch (error) {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);
@@ -117,19 +140,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = (redirectToGuest = false) => {
+  const logout = (redirectToGuest = true) => {
     setUser(null);
     setIsAuthenticated(false);
     setAuthError(null);
-    if (redirectToGuest) {
-      // Redirect to guest homepage after logout
-      base44.auth.logout();
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
-    } else {
-      base44.auth.logout();
-    }
+    // Always redirect to guest homepage after logout
+    base44.auth.logout();
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 500);
   };
 
   const navigateToLogin = () => {

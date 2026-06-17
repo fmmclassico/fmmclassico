@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from '@/lib/AuthContext';
 
 export default function GuestLayout({ children, currentPageName }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +23,7 @@ export default function GuestLayout({ children, currentPageName }) {
   const helpRef = useRef(null);
   const accountRef = useRef(null);
   const navigate = useNavigate();
+  const { navigateToLogin } = useAuth();
 
   // Load cart count from localStorage for guest mode
   useEffect(() => {
@@ -73,7 +75,7 @@ export default function GuestLayout({ children, currentPageName }) {
 
   const handleAuthRedirect = (path) => {
     setAccountOpen(false);
-    navigate('/Login');
+    navigateToLogin();
   };
 
   const ASH = '#2E86C1';

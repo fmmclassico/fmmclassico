@@ -9,14 +9,6 @@ import { Badge } from '@/components/ui/badge';
 const ASH = '#2E86C1';
 const ASH_HOVER = '#2578ae';
 
-// ── HUBTEL ACCOUNT INFO (server-side only — never sent to browser in auth headers) ──
-// Collection Account = loaded from environment variables (used for receiving payments)
-// Disbursement Account = 2025378 (for sending money - WRONG for checkout)
-const HUBTEL_COLLECTION_ACCOUNT = import.meta.env.VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER;
-// API ID (username) and API Key (password) — loaded from environment variables
-const HUBTEL_API_ID  = import.meta.env.VITE_HUBTEL_API_ID;
-const HUBTEL_API_KEY = import.meta.env.VITE_HUBTEL_API_KEY;
-
 function formatAmount(num) {
   const n = Number(num);
   return n % 1 === 0 ? n.toLocaleString() : n.toFixed(2);
@@ -30,25 +22,14 @@ function generateClientRef(orderNumber) {
   return base.slice(0, 32);
 }
 
-// ── DIRECT HUBTEL API CALL ────────────────────────────────────────────────────
-// payproxyapi.hubtel.com is Hubtel's own CORS-enabled proxy endpoint — direct fetch works
-async function callHubtelDirect(requestBody) {
-  const basicAuth = btoa(`${HUBTEL_API_ID}:${HUBTEL_API_KEY}`);
-
-  const res = await fetch('https://payproxyapi.hubtel.com/items/initiate', {
+// Call our server-side initiate endpoint to prevent exposing API keys
+async function callHubtelInitiateOnServer(payload) {
+  const res = await fetch('/api/hubtel/initiate', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Basic ${basicAuth}`,
-    },
-    body: JSON.stringify(requestBody),
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify(payload),
   });
-
-  const text = await res.text();
-  let json;
-  try { json = JSON.parse(text); } catch { json = { _rawText: text, _parseError: 'Response was not valid JSON' }; }
-
+  const json = await res.json().catch(() => null);
   return { httpStatus: res.status, body: json };
 }
 
@@ -131,10 +112,6 @@ export default function Payment() {
     const requestBody = {
       totalAmount: parseFloat(amount.toFixed(2)),
       description: `FMM CLASSICO Order #${orderNumber}`,
-      callbackUrl: returnUrl,
-      returnUrl: returnUrl,
-      cancellationUrl: cancelUrl,
-      merchantAccountNumber: HUBTEL_COLLECTION_ACCOUNT,
       clientReference: clientRef,
       payeeName: customerName,
       payeeMobileNumber: normPhone,
@@ -143,7 +120,7 @@ export default function Payment() {
 
     const log = {
       requestTime: new Date().toISOString(),
-      merchantAccountNumber: HUBTEL_COLLECTION_ACCOUNT,
+      merchantAccountNumber: null,
       clientReference: clientRef,
       amount: amount,
       requestBody,
@@ -153,7 +130,7 @@ export default function Payment() {
     };
 
     try {
-      const { httpStatus, body: hubtelResponse } = await callHubtelDirect(requestBody);
+      const { httpStatus, body: hubtelResponse } = await callHubtelInitiateOnServer(requestBody);
       clearTimeout(safetyTimer);
       log.httpStatus = httpStatus;
       log.hubtelResponse = hubtelResponse;
@@ -191,7 +168,7 @@ export default function Payment() {
   function interpretHubtelCode(code, msg) {
     if (code === '0000' || code === '00') return '✅ Success';
     if (code === '4000') return `Validation error — check all fields are correct. ${msg}`;
-    if (code === '4070') return `Fees not configured for merchant account ${HUBTEL_COLLECTION_ACCOUNT}. Contact Hubtel support to enable Online Checkout. ${msg}`;
+    if (code === '4070') return `Fees not configured for merchant account. Contact Hubtel support to enable Online Checkout. ${msg}`;
     if (code === '2001') return `Payment processor error — invalid credentials or account not enabled. ${msg}`;
     return msg || `Unknown error code ${code}`;
   }

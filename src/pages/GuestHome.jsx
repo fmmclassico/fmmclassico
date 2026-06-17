@@ -93,11 +93,15 @@ const HOME_CATEGORIES = [
   },
 ];
 
-export default function Home() {
-  const [user, setUser] = useState(null);
+/**
+ * GuestHome – Dedicated Guest Homepage
+ * This is the first page unauthenticated visitors land on.
+ * Features: Browse products, search, view details, add to guest cart.
+ * Restrictions: Cannot checkout, cannot access user-only pages.
+ */
+export default function GuestHome() {
   const [expandedCat, setExpandedCat] = useState(null);
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   const { data: appSettings = [] } = useQuery({
     queryKey: ['appSettings'],
@@ -110,8 +114,6 @@ export default function Home() {
     if (!raw) return null;
     try { const d = JSON.parse(raw); return d?.active && d?.image_url ? d : null; } catch { return null; }
   };
-  const notice1 = getPromoNotice('promo_notice_1');
-  const notice2 = getPromoNotice('promo_notice_2');
 
   const showBrandSection = appSettings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
 
@@ -120,55 +122,34 @@ export default function Home() {
   const showFlashTimer = flashConfig.show_timer !== false;
   const flashTimerEndTime = flashConfig.end_time || null;
 
-
-
-  useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
-  }, []);
-
   const { data: products = [], isLoading, refetch } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list('-created_date', 100),
-    staleTime: 30000, // Reduced from 60000 to 30s for faster updates
-    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
   });
 
-  // Refetch products when component mounts to ensure fresh data
   useEffect(() => {
     refetch();
   }, [refetch]);
 
+  // Guest can add to local cart only
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {
-      if (!user) {
-        // Guest: add to local guest cart
-        guestCart.addItem({ id: product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1 });
-        toast.success('Added to cart!');
-        return;
-      }
-      queryClient.setQueryData(['cartItems', user?.email], (old = []) => {
-        const existing = old.find(i => i.product_id === product.id);
-        if (existing) return old.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
-        return [...old, { id: 'optimistic-' + product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1, user_email: user.email }];
+      guestCart.addItem({ 
+        id: product.id, 
+        product_id: product.id, 
+        product_name: product.name, 
+        product_image: product.image_url, 
+        product_price: product.price, 
+        quantity: 1 
       });
-      const existingItems = await base44.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
-      if (existingItems.length > 0) {
-        await base44.entities.CartItem.update(existingItems[0].id, { quantity: existingItems[0].quantity + 1 });
-      } else {
-        await base44.entities.CartItem.create({ product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1, user_email: user.email });
-      }
-      if (product.stock != null) base44.entities.Product.update(product.id, { stock: Math.max(0, product.stock - 1) });
+      toast.success('Added to cart!');
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cartItems'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-    }
   });
 
-  // Filter out hidden and out-of-stock (stock === 0) products for public display
   const visibleProducts = products.filter(p => p.is_visible !== false && !(p.stock != null && p.stock === 0));
 
-  // Product buckets — STRICT: only show products explicitly assigned to each section by admin
   const flashItems    = visibleProducts.filter(p => p.flash_sale  && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
   const flashSaleEndTime = flashItems.length > 0 ? flashItems[0].flash_sale_end : null;
   const classicoDeals = visibleProducts.filter(p => p.featured);
@@ -232,7 +213,7 @@ export default function Home() {
         })()}
       </div>
 
-      {/* ── PROMO CARDS SCROLL (same design as category cards) ── */}
+      {/* ── PROMO CARDS SCROLL ── */}
       {(() => {
         const PROMO_KEYS = ['promo_card_1','promo_card_2','promo_card_3','promo_card_4','promo_card_5','promo_card_6'];
         const allCards = PROMO_KEYS.map(k => {

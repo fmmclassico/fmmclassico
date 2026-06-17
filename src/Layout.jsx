@@ -120,7 +120,7 @@ export default function Layout({ children, currentPageName }) {
     } catch (e) {
       // Ignore
     }
-    logout(true); // Redirect to guest homepage after logout
+    logout(); // Redirect to guest homepage after logout
   };
 
   const isAdmin = user?.role === 'admin';

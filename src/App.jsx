@@ -96,23 +96,18 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      {/* Guest Homepage - default for unauthenticated visitors */}
-      {!isAuthenticated && (
-        <Route path="/" element={
-          <GuestLayout currentPageName="GuestHome">
-            <GuestHome />
-          </GuestLayout>
-        } />
-      )}
-
-      {/* Authenticated Homepage - for logged-in users */}
-      {isAuthenticated && (
-        <Route path="/" element={
+      {/* Home route - conditionally renders GuestHome or authenticated Home */}
+      <Route path="/" element={
+        isAuthenticated ? (
           <LayoutWrapper currentPageName={mainPageKey} isAuthenticated={true}>
             <MainPage />
           </LayoutWrapper>
-        } />
-      )}
+        ) : (
+          <GuestLayout currentPageName="GuestHome">
+            <GuestHome />
+          </GuestLayout>
+        )
+      } />
 
       <Route path="/Payment" element={<Payment />} />
       <Route path="/PaymentConfirmed" element={

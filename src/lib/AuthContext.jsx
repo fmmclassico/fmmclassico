@@ -20,7 +20,6 @@ export const AuthProvider = ({ children }) => {
   const checkAppState = async () => {
     setAuthError(null);
 
-    // Safety timeout — never block the user more than 5s
     const loadingTimeout = setTimeout(() => {
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
@@ -34,19 +33,25 @@ export const AuthProvider = ({ children }) => {
         interceptResponses: true,
       });
 
-      // Fetch public settings and auth in parallel for maximum speed
-      const settingsPromise = appClient.get(`/prod/public-settings/by-id/${appParams.appId}`)
+      const settingsPromise = appClient
+        .get(`/prod/public-settings/by-id/${appParams.appId}`)
         .then(data => setAppPublicSettings(data))
-        .catch(() => {}); // non-fatal
+        .catch(() => {});
 
-      const authPromise = appParams.token ? checkUserAuth() : Promise.resolve().then(() => {
-        // No token = not logged in → require login
-        setIsLoadingAuth(false);
-        setIsAuthenticated(false);
-        setAuthError({ type: 'auth_required', message: 'Authentication required' });
-      });
+      const hasToken =
+        appParams.token ||
+        localStorage.getItem('base44_access_token') ||
+        localStorage.getItem('token');
 
-      // Wait for auth only (settings load in background)
+      const authPromise = hasToken
+        ? checkUserAuth()
+        : Promise.resolve().then(() => {
+            setUser(null);
+            setIsAuthenticated(false);
+            setIsLoadingAuth(false);
+            setAuthError({ type: 'auth_required', message: 'Authentication required' });
+          });
+
       await authPromise;
       settingsPromise.finally(() => setIsLoadingPublicSettings(false));
 
@@ -55,18 +60,20 @@ export const AuthProvider = ({ children }) => {
 
       if (error?.status === 403 && error?.data?.extra_data?.reason) {
         const reason = error.data.extra_data.reason;
+
         if (reason === 'auth_required') {
           setAuthError({ type: 'auth_required', message: 'Authentication required' });
-          setIsLoadingAuth(false);
         } else if (reason === 'user_not_registered') {
           setAuthError({ type: 'user_not_registered', message: 'User not registered for this app' });
         } else {
           setAuthError({ type: reason, message: error.message });
         }
+
+        setIsLoadingAuth(false);
       } else {
-        // Network/unknown error — don't force logout, just unblock rendering
         setIsLoadingAuth(false);
       }
+
       setIsLoadingPublicSettings(false);
     } finally {
       clearTimeout(loadingTimeout);
@@ -76,13 +83,31 @@ export const AuthProvider = ({ children }) => {
   const checkUserAuth = async () => {
     try {
       setIsLoadingAuth(true);
+
       const currentUser = await base44.auth.me();
 
-      const ADMIN_EMAILS = ['fmmcompanylimited@gmail.com', 'mensahfedramartha@gmail.com', 'marthamensahfedra@gmail.com'];
-      const isAdminEmail = ADMIN_EMAILS.includes(currentUser.email?.toLowerCase());
+      if (!currentUser) {
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsLoadingAuth(false);
+        return;
+      }
+
+      const ADMIN_EMAILS = [
+        'fmmcompanylimited@gmail.com',
+        'mensahfedramartha@gmail.com',
+        'marthamensahfedra@gmail.com'
+      ];
+
+      const isAdminEmail = ADMIN_EMAILS.includes(
+        currentUser.email?.toLowerCase()
+      );
 
       if (currentUser.role === 'admin' && isAdminEmail) {
-        const adminVerified = sessionStorage.getItem(`admin_verified_${currentUser.email}`);
+        const adminVerified = sessionStorage.getItem(
+          `admin_verified_${currentUser.email}`
+        );
+
         if (!adminVerified) {
           setUser(currentUser);
           setIsAuthenticated(true);
@@ -99,14 +124,17 @@ export const AuthProvider = ({ children }) => {
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
+
     } catch (error) {
       console.error('User auth check failed:', error);
-      setIsLoadingAuth(false);
+
+      setUser(null);
       setIsAuthenticated(false);
+      setIsLoadingAuth(false);
+
       if (error?.status === 401 || error?.status === 403) {
         setAuthError({ type: 'auth_required', message: 'Authentication required' });
       }
-      // Silently ignore other errors — don't force logout
     }
   };
 
@@ -120,6 +148,7 @@ export const AuthProvider = ({ children }) => {
   const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
+
     if (shouldRedirect) {
       base44.auth.logout(window.location.href);
     } else {
@@ -132,18 +161,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated,
-      isLoadingAuth,
-      isLoadingPublicSettings,
-      authError,
-      appPublicSettings,
-      logout,
-      navigateToLogin,
-      checkAppState,
-      verifyAdminPassword,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        isLoadingAuth,
+        isLoadingPublicSettings,
+        authError,
+        appPublicSettings,
+        logout,
+        navigateToLogin,
+        checkAppState,
+        verifyAdminPassword,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -151,8 +182,10 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
+
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
+
   return context;
 };

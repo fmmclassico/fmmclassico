@@ -43,16 +43,18 @@ export const AuthProvider = ({ children }) => {
         localStorage.getItem('base44_access_token') ||
         localStorage.getItem('token');
 
-      const authPromise = hasToken
-        ? checkUserAuth()
-        : Promise.resolve().then(() => {
-            setUser(null);
-            setIsAuthenticated(false);
-            setIsLoadingAuth(false);
-            setAuthError({ type: 'auth_required', message: 'Authentication required' });
-          });
+      if (hasToken) {
+        // User has a token — try to verify it
+        await checkUserAuth();
+      } else {
+        // No token — user is a guest. Allow them to browse publicly.
+        // Do NOT set auth_required here — that would block the homepage.
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsLoadingAuth(false);
+        // No authError set — guests can browse freely
+      }
 
-      await authPromise;
       settingsPromise.finally(() => setIsLoadingPublicSettings(false));
 
     } catch (error) {
@@ -61,11 +63,10 @@ export const AuthProvider = ({ children }) => {
       if (error?.status === 403 && error?.data?.extra_data?.reason) {
         const reason = error.data.extra_data.reason;
 
-        if (reason === 'auth_required') {
-          setAuthError({ type: 'auth_required', message: 'Authentication required' });
-        } else if (reason === 'user_not_registered') {
+        if (reason === 'user_not_registered') {
           setAuthError({ type: 'user_not_registered', message: 'User not registered for this app' });
-        } else {
+        } else if (reason !== 'auth_required') {
+          // Only set non-auth errors — auth_required just means guest, which is fine
           setAuthError({ type: reason, message: error.message });
         }
 
@@ -132,9 +133,10 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setIsLoadingAuth(false);
 
-      if (error?.status === 401 || error?.status === 403) {
-        setAuthError({ type: 'auth_required', message: 'Authentication required' });
-      }
+      // Token was invalid/expired — clear it and allow guest browsing
+      localStorage.removeItem('base44_access_token');
+      localStorage.removeItem('token');
+      // Do NOT set authError here — guest can still browse
     }
   };
 
@@ -156,8 +158,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Redirect to your own /login page (NOT base44's external login page)
   const navigateToLogin = () => {
-    base44.auth.redirectToLogin(window.location.href);
+    window.location.href = '/login';
   };
 
   return (

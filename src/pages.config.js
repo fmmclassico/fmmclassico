@@ -69,3 +69,4 @@ export const pagesConfig = {
     mainPage: "Home",
     Pages: PAGES,
     Layout: __Layout,
+};

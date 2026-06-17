@@ -59,16 +59,7 @@ const AuthenticatedApp = () => {
     } else if (authError.type === 'admin_verification_required') {
       return (
         <>
-          <AdminAuthModal
-            isOpen={true}
-            onClose={() => navigateToLogin()}
-            onSuccess={verifyAdminPassword}
-            userEmail={authError.email}
-          />
-          <Routes>
-            <Route path="*" element={<div />} />
-          </Routes>
-        </>
+          <Adm
       );
     } else if (authError.type === 'auth_required') {
       // Allow public auth pages to render normally — everything else redirects to /login

@@ -1,3 +1,4 @@
+cat > /home/claude/fmm-fixes/Payment.jsx << 'ENDOFFILE'
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
@@ -22,15 +23,10 @@ function generateClientRef(orderNumber) {
   return base.slice(0, 32);
 }
 
-// Call our server-side initiate endpoint to prevent exposing API keys
+// FIXED: calls the Base44 backend function "hubtelInitiate" via base44.functions.invoke.
+// The old fetch('/api/hubtel/initiate') hit nothing — that route does not exist in Base44.
 async function callHubtelInitiateOnServer(payload) {
-  const res = await fetch('/api/hubtel/initiate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  const json = await res.json().catch(() => null);
-  return { httpStatus: res.status, body: json };
+  return await base44.functions.invoke('hubtelInitiate', payload);
 }
 
 export default function Payment() {
@@ -46,7 +42,7 @@ export default function Payment() {
   const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [errorMsg, setErrorMsg]   = useState('');
-  const [payLog, setPayLog]       = useState(null); // full request+response log
+  const [payLog, setPayLog]       = useState(null);
 
   const navigate = useNavigate();
 
@@ -56,7 +52,6 @@ export default function Payment() {
   const [phone, setPhone]         = useState('');
 
   useEffect(() => {
-    // Always reset loading on mount (handles back-navigation stuck state)
     setLoading(false);
     setErrorMsg('');
     base44.auth.me().then(u => {
@@ -70,9 +65,6 @@ export default function Payment() {
         .catch(() => {});
     }).catch(() => {});
   }, []);
-
-  // No orderId at this point — order is created only after successful payment
-  // sessionStorage already has full order data set by Checkout page
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -96,7 +88,6 @@ export default function Payment() {
 
     setLoading(true);
 
-    // Safety timeout — if Hubtel takes >20s, reset the button so user isn't stuck
     const safetyTimer = setTimeout(() => {
       setLoading(false);
       setErrorMsg('Request timed out. Please check your internet connection and try again.');
@@ -105,9 +96,6 @@ export default function Payment() {
     const customerName = [firstName, lastName].filter(Boolean).join(' ') || 'Customer';
     const normPhone    = normalisePhone(phone);
     const clientRef    = generateClientRef(orderNumber);
-    // Hubtel appends ?status=success&clientReference=...&transactionId=... to the returnUrl
-    const returnUrl    = `${window.location.origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount.toFixed(2)}`;
-    const cancelUrl    = `${window.location.origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber)}&amount=${amount.toFixed(2)}&status=cancelled`;
 
     const requestBody = {
       totalAmount: parseFloat(amount.toFixed(2)),
@@ -116,11 +104,12 @@ export default function Payment() {
       payeeName: customerName,
       payeeMobileNumber: normPhone,
       payeeEmail: emailVal,
+      orderNumber,
+      appOrigin: window.location.origin,
     };
 
     const log = {
       requestTime: new Date().toISOString(),
-      merchantAccountNumber: null,
       clientReference: clientRef,
       amount: amount,
       requestBody,
@@ -130,30 +119,31 @@ export default function Payment() {
     };
 
     try {
-      const { httpStatus, body: hubtelResponse } = await callHubtelInitiateOnServer(requestBody);
+      const result = await callHubtelInitiateOnServer(requestBody);
       clearTimeout(safetyTimer);
-      log.httpStatus = httpStatus;
-      log.hubtelResponse = hubtelResponse;
-
-      const code = hubtelResponse?.responseCode;
-      const checkoutUrl = hubtelResponse?.data?.checkoutUrl || hubtelResponse?.data?.checkoutDirectUrl;
-      log.checkoutUrl = checkoutUrl;
-
+      log.hubtelResponse = result;
       setPayLog(log);
 
-      // Hubtel returns "0000" or "00" for success
+      if (!result || result.ok === false) {
+        setErrorMsg(result?.error || 'Hubtel could not be reached. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      const code = result?.responseCode;
+      const checkoutUrl = result?.data?.checkoutUrl || result?.data?.checkoutDirectUrl;
+      log.checkoutUrl = checkoutUrl;
+
       const isSuccess = code === '0000' || code === '00';
 
       if (isSuccess && checkoutUrl) {
-        // SUCCESS — redirect to real Hubtel checkout page
         window.location.href = checkoutUrl;
         return;
       }
 
-      // Hubtel returned an error — show exact code, message, and full response
-      const hubtelMsg = hubtelResponse?.message || hubtelResponse?.Message || '';
+      const hubtelMsg = result?.message || result?.Message || '';
       const diagMsg = interpretHubtelCode(code, hubtelMsg);
-      setErrorMsg(`Hubtel [HTTP ${httpStatus}] code=${code}: ${diagMsg}`);
+      setErrorMsg(`Hubtel code=${code}: ${diagMsg}`);
 
     } catch (err) {
       clearTimeout(safetyTimer);
@@ -349,7 +339,6 @@ export default function Payment() {
                 You will be redirected to Hubtel's secure checkout page.
               </p>
 
-
             </form>
           </div>
         </div>
@@ -360,3 +349,4 @@ export default function Payment() {
     </div>
   );
 }
+ENDOFFILE

@@ -415,7 +415,20 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <Sta
+              <Star className="h-5 w-5 text-yellow-500 fill-yellow-400" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">New Arrivals</h2>
+            </div>
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+            {isLoading
+              ? Array(6).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
                   </div>
                 ))
               : newArrivals.length === 0

@@ -349,4 +349,3 @@ export default function Payment() {
     </div>
   );
 }
-ENDOFFILE

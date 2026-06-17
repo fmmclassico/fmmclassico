@@ -37,7 +37,9 @@ const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
 // Protected routes that require authentication
-const PROTECTED_ROUTES = new Set(['Checkout', 'Cart', 'Account', 'Orders', 'OrderTracking', 'Notifications', 'Settings', 'Chat', 'AdminReviews', 'AdminProducts', 'AdminCategoryImages', 'AdminAI', 'AdminPromoBanners2', 'AdminBrandLogos', 'AdminAbout', 'AdminPageContent', 'AdminHomeEditor', 'AdminInterfaceControl', 'AdminSMSBroadcast', 'AdminAccessControl', 'AdminContactSettings']);
+// NOTE: 'Cart' was removed from this list — guests MUST be able to view/manage
+// their cart. Only Checkout (and the buttons inside Cart.jsx) require login.
+const PROTECTED_ROUTES = new Set(['Checkout', 'Account', 'Orders', 'OrderTracking', 'Notifications', 'Settings', 'Chat', 'AdminReviews', 'AdminProducts', 'AdminCategoryImages', 'AdminAI', 'AdminPromoBanners2', 'AdminBrandLogos', 'AdminAbout', 'AdminPageContent', 'AdminHomeEditor', 'AdminInterfaceControl', 'AdminSMSBroadcast', 'AdminAccessControl', 'AdminContactSettings']);
 
 // Helper component for routes that can render in both guest and authenticated modes
 const LayoutWrapper = ({ children, currentPageName, isAuthenticated }) => {

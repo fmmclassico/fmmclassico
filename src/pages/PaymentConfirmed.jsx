@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckCircle2, Package, Loader2, Truck, Home as HomeIcon, AlertTriangle } from 'lucide-react';
+import { checkTransactionStatus } from '@/utils/hubtel-status-check';
 
 export default function PaymentConfirmed() {
   const [user, setUser] = useState(null);
@@ -92,6 +93,9 @@ export default function PaymentConfirmed() {
         return d.toISOString().split('T')[0];
       })();
 
+      // ════════════════════════════════════════════════════════════════════════
+      // STEP 1: CREATE ORDER WITH "pending_payment" STATUS (NOT PAID YET)
+      // ════════════════════════════════════════════════════════════════════════
       const newOrder = await base44.entities.Order.create({
         order_number: stored.orderNumber || orderNumber,
         items: stored.items.map(item => ({
@@ -102,8 +106,8 @@ export default function PaymentConfirmed() {
           quantity: item.quantity,
         })),
         total_amount: stored.amount || amount,
-        payment_status: 'paid',
-        status: 'confirmed',
+        payment_status: 'pending_payment',  // ← HUBTEL MUST VERIFY THIS
+        status: 'confirmed',  // Fulfillment can be confirmed, but order waits for payment
         customer_name: stored.customerName || user.full_name || '',
         customer_email: stored.customerEmail || user.email,
         customer_phone: stored.customerPhone || '',
@@ -111,55 +115,115 @@ export default function PaymentConfirmed() {
         city: stored.city || '',
         notes: stored.notes || '',
         estimated_delivery: estimatedDelivery,
+        hubtel_transaction_id: hubtelTxRef || 'pending',  // ← TRACK HUBTEL TRANSACTION
+        hubtel_status: 'pending',  // ← WILL UPDATE AFTER VERIFICATION
+        payment_reference: stored.orderNumber || orderNumber,  // ← FOR HUBTEL LOOKUP
         tracking_updates: [
           {
-            status: 'Payment Confirmed',
-            message: `Payment completed via Hubtel. Order confirmed.${hubtelTxRef ? ` Ref: ${hubtelTxRef}` : ''}`,
+            status: 'Payment Initiated',
+            message: `Order created. Waiting for Hubtel payment confirmation.${hubtelTxRef ? ` Hubtel Ref: ${hubtelTxRef}` : ''}`,
             timestamp: new Date().toISOString(),
           }
         ],
       });
 
       setCreatedOrderId(newOrder.id);
-
       const totalDisplay = (stored.amount || amount).toFixed(2);
       const custName = stored.customerName || user.full_name || 'Customer';
       const itemsList = (stored.items || []).map(i => `${i.product_name} x${i.quantity}`).join(', ');
 
-      // Notify customer
-      await base44.entities.Notification.create({
-        user_email: user.email,
-        title: '🛍️ Order Placed & Payment Received!',
-        message: `Your order #${stored.orderNumber || orderNumber} has been placed and payment confirmed. Total: ₵${totalDisplay}.`,
-        type: 'order_placed',
-        order_id: newOrder.id,
-        order_number: stored.orderNumber || orderNumber,
-        is_read: false,
-      });
+      // ════════════════════════════════════════════════════════════════════════
+      // STEP 2: VERIFY PAYMENT WITH HUBTEL USING STATUS CHECK API
+      // ════════════════════════════════════════════════════════════════════════
+      console.log('🔍 Verifying payment with Hubtel...');
+      let hubtelVerificationResult = null;
+      let paymentVerified = false;
 
-      // Notify admin (non-blocking)
-      base44.entities.Notification.create({
-        user_email: 'fmmclassico@gmail.com',
-        title: `🆕 New Order – ${custName} | ₵${totalDisplay}`,
-        message: `Order #${stored.orderNumber || orderNumber} by ${custName} (${user.email}). Phone: ${stored.customerPhone}. Address: ${stored.deliveryAddress}, ${stored.city}. Items: ${itemsList}`,
-        type: 'order_placed',
-        order_id: newOrder.id,
-        order_number: stored.orderNumber || orderNumber,
-        is_read: false,
-      }).catch(() => {});
+      try {
+        // Use clientReference from Payment.jsx for verification
+        const clientRef = hubtelClientRef || stored.orderNumber;
+        if (clientRef) {
+          hubtelVerificationResult = await checkTransactionStatus(clientRef);
+          console.log('✅ Hubtel verification result:', hubtelVerificationResult);
+          
+          if (hubtelVerificationResult.success && hubtelVerificationResult.status === 'Paid') {
+            paymentVerified = true;
+          }
+        }
+      } catch (err) {
+        console.warn('⚠️ Hubtel status check error (non-blocking):', err.message);
+        // Continue anyway - callback endpoint will handle final verification
+      }
 
-      // Send confirmation emails (non-blocking)
-      base44.integrations.Core.SendEmail({
-        to: user.email,
-        subject: `🛍️ Order Confirmed – FMM CLASSICO #${stored.orderNumber || orderNumber}`,
-        body: `Hi ${custName},\n\nThank you! Your order #${stored.orderNumber || orderNumber} has been placed and payment confirmed.\n\nOrder Total: ₵${totalDisplay}\nDelivery: ${stored.deliveryAddress}, ${stored.city}\n\nTrack your order in the app.\n\n📞 FMM CLASSICO: 0509896035\n📧 fmmclassico@gmail.com`,
-      }).catch(() => {});
+      // ════════════════════════════════════════════════════════════════════════
+      // STEP 3: UPDATE ORDER WITH VERIFICATION RESULTS
+      // ════════════════════════════════════════════════════════════════════════
+      if (paymentVerified && hubtelVerificationResult) {
+        // Payment confirmed by Hubtel - update order
+        await base44.entities.Order.update(newOrder.id, {
+          payment_status: 'paid',  // ← NOW MARK AS PAID
+          hubtel_status: 'successful',
+          hubtel_transaction_id: hubtelVerificationResult.transactionId || hubtelTxRef,
+          tracking_updates: [
+            ...newOrder.tracking_updates,
+            {
+              status: 'Payment Verified',
+              message: `Hubtel confirmed payment of ₵${hubtelVerificationResult.amount} via ${hubtelVerificationResult.paymentMethod || 'payment gateway'}.`,
+              timestamp: new Date().toISOString(),
+            }
+          ],
+        });
 
-      base44.integrations.Core.SendEmail({
-        to: 'fmmclassico@gmail.com',
-        subject: `🆕 NEW ORDER – ${custName} | ₵${totalDisplay}`,
-        body: `New order!\n\n📦 Order: #${stored.orderNumber || orderNumber}\n👤 Customer: ${custName}\n📧 Email: ${user.email}\n📞 Phone: ${stored.customerPhone}\n💰 Total: ₵${totalDisplay}\n📍 Address: ${stored.deliveryAddress}, ${stored.city}\n\nItems: ${itemsList}`,
-      }).catch(() => {});
+        // Notify customer - payment received
+        await base44.entities.Notification.create({
+          user_email: user.email,
+          title: '🛍️ Order Placed & Payment Received!',
+          message: `Your order #${stored.orderNumber || orderNumber} has been placed and payment confirmed. Total: ₵${totalDisplay}.`,
+          type: 'order_placed',
+          order_id: newOrder.id,
+          order_number: stored.orderNumber || orderNumber,
+          is_read: false,
+        });
+
+        // Notify admin
+        base44.entities.Notification.create({
+          user_email: 'fmmclassico@gmail.com',
+          title: `🆕 New Order – ${custName} | ₵${totalDisplay} [PAYMENT VERIFIED]`,
+          message: `Order #${stored.orderNumber || orderNumber} by ${custName} (${user.email}). Phone: ${stored.customerPhone}. Address: ${stored.deliveryAddress}, ${stored.city}. Items: ${itemsList}\n\n✅ Hubtel Payment Verified`,
+          type: 'order_placed',
+          order_id: newOrder.id,
+          order_number: stored.orderNumber || orderNumber,
+          is_read: false,
+        }).catch(() => {});
+
+        // Send confirmation emails
+        base44.integrations.Core.SendEmail({
+          to: user.email,
+          subject: `🛍️ Order Confirmed – FMM CLASSICO #${stored.orderNumber || orderNumber}`,
+          body: `Hi ${custName},\n\nThank you! Your order #${stored.orderNumber || orderNumber} has been placed and payment confirmed.\n\nOrder Total: ₵${totalDisplay}\nDelivery: ${stored.deliveryAddress}, ${stored.city}\n\nTrack your order in the app.\n\n📞 FMM CLASSICO: 0509896035\n📧 fmmclassico@gmail.com`,
+        }).catch(() => {});
+
+        base44.integrations.Core.SendEmail({
+          to: 'fmmclassico@gmail.com',
+          subject: `🆕 NEW ORDER – ${custName} | ₵${totalDisplay}`,
+          body: `New order!\n\n📦 Order: #${stored.orderNumber || orderNumber}\n👤 Customer: ${custName}\n📧 Email: ${user.email}\n📞 Phone: ${stored.customerPhone}\n💰 Total: ₵${totalDisplay}\n📍 Address: ${stored.deliveryAddress}, ${stored.city}\n\nItems: ${itemsList}\n\n✅ Payment verified via Hubtel`,
+        }).catch(() => {});
+
+      } else {
+        // Payment not verified yet - waiting for callback endpoint
+        console.warn('⚠️ Payment not verified by status check - waiting for Hubtel callback...');
+        
+        // Notify customer - payment pending verification
+        await base44.entities.Notification.create({
+          user_email: user.email,
+          title: '⏳ Order Pending Payment Confirmation',
+          message: `Your order #${stored.orderNumber || orderNumber} has been created. We are verifying your payment with Hubtel. You will receive a confirmation email shortly.`,
+          type: 'payment_pending',
+          order_id: newOrder.id,
+          order_number: stored.orderNumber || orderNumber,
+          is_read: false,
+        });
+      }
 
       // Invalidate caches (cart already cleared on page mount)
       queryClient.invalidateQueries({ queryKey: ['cartItems', user.email] });

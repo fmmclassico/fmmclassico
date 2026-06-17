@@ -44,7 +44,7 @@
         "refunded"
       ],
       "default": "pending_payment",
-      "description": "Controlled strictly by Hubtel callback"
+      "description": "Payment status. CRITICAL: Controlled ONLY by Hubtel verification (callback or status check). NEVER set to 'paid' without Hubtel confirmation. Orders with payment_status='pending_payment' must NOT be processed/shipped."
     },
     "status": {
       "type": "string",
@@ -59,7 +59,7 @@
         "returned"
       ],
       "default": "confirmed",
-      "description": "Only changes AFTER payment is confirmed"
+      "description": "Fulfillment status. IMPORTANT: Do NOT change to 'processing' unless payment_status is 'paid'. Check BOTH payment_status AND status before fulfilling orders."
     },
     "customer_name": {
       "type": "string"

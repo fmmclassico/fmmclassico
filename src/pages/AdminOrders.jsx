@@ -196,6 +196,12 @@ export default function AdminOrders() {
                 {order.payment_status === 'paid' && (
                   <Badge className="bg-green-100 text-green-700 text-[10px]">✅ Paid</Badge>
                 )}
+                {order.payment_status === 'pending_payment' && (
+                  <Badge className="bg-yellow-100 text-yellow-700 text-[10px]">⏳ Pending Payment</Badge>
+                )}
+                {order.payment_status === 'failed' && (
+                  <Badge className="bg-red-100 text-red-700 text-[10px]">❌ Payment Failed</Badge>
+                )}
               </div>
               <p className="text-sm text-gray-700 font-semibold">{order.customer_name}</p>
               <p className="text-xs text-gray-500">{order.customer_email} · {order.customer_phone}</p>
@@ -219,9 +225,14 @@ export default function AdminOrders() {
                 <FileText className="h-4 w-4" /> Invoice
               </Button>
             </Link>
-            {next && (
+            {next && order.payment_status === 'paid' && (
               <Button size="sm" className="w-full" onClick={() => updateStatusMutation.mutate({ order, newStatus: next.newStatus, message: next.message })} disabled={updateStatusMutation.isPending}>
                 {next.label}
+              </Button>
+            )}
+            {next && order.payment_status !== 'paid' && (
+              <Button size="sm" className="w-full bg-gray-300 text-gray-600 cursor-not-allowed" disabled>
+                {next.label} (⏳ Awaiting Payment)
               </Button>
             )}
             {!['cancelled','delivered','returned'].includes(order.status) && (

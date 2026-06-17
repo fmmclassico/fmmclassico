@@ -26,10 +26,7 @@ import MobileAppGuide from './pages/MobileAppGuide';
 import DownloadApp from './pages/DownloadApp';
 import Policies from './pages/Policies';
 import AdminSMSBroadcast from './pages/AdminSMSBroadcast';
-import AdminAccessControl from './pages/AdminAccessControl';
-import AdminContactSettings from './pages/AdminContactSettings';
-import GuestLayout from '@/components/layouts/GuestLayout';
-import GuestHome from './pages/GuestHome';
+
 
 const { Pages, Layout, mainPage } = pagesConfig;
 // make Pages accessible in JSX scope for fallback routes

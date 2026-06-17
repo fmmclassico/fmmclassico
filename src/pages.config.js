@@ -6,46 +6,6 @@
  * 
  * THE ONLY EDITABLE VALUE: mainPage
  * This controls which page is the landing page (shown when users visit the app).
- * 
- * Example file structure:
- * 
- *   import HomePage from './pages/HomePage';
- *   import Dashboard from './pages/Dashboard';
- *   import Settings from './pages/Settings';
- *   
- *   export const PAGES = {
- *       "HomePage": HomePage,
- *       "Dashboard": Dashboard,
- *       "Settings": Settings,
- *   }
- *   
- *   export const pagesConfig = {
- *       mainPage: "HomePage",
- *       Pages: PAGES,
- *   };
- * 
- * Example with Layout (wraps all pages):
- *
- *   import Home from './pages/Home';
- *   import Settings from './pages/Settings';
- *   import __Layout from './Layout.jsx';
- *
- *   export const PAGES = {
- *       "Home": Home,
- *       "Settings": Settings,
- *   }
- *
- *   export const pagesConfig = {
- *       mainPage: "Home",
- *       Pages: PAGES,
- *       Layout: __Layout,
- *   };
- *
- * To change the main page from HomePage to Dashboard, use find_replace:
- *   Old: mainPage: "HomePage",
- *   New: mainPage: "Dashboard",
- *
- * The mainPage value must match a key in the PAGES object exactly.
  */
 import About from './pages/About';
 import AdminBanners from './pages/AdminBanners';
@@ -61,6 +21,10 @@ import Checkout from './pages/Checkout';
 import Feedback from './pages/Feedback';
 import Home from './pages/Home';
 import HowToUse from './pages/HowToUse';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Notifications from './pages/Notifications';
 import OrderTracking from './pages/OrderTracking';
 import Orders from './pages/Orders';
@@ -87,6 +51,10 @@ export const PAGES = {
     "Feedback": Feedback,
     "Home": Home,
     "HowToUse": HowToUse,
+    "Login": Login,
+    "Register": Register,
+    "ForgotPassword": ForgotPassword,
+    "ResetPassword": ResetPassword,
     "Notifications": Notifications,
     "OrderTracking": OrderTracking,
     "Orders": Orders,

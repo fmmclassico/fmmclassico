@@ -43,8 +43,8 @@
         "cancelled",
         "refunded"
       ],
-      "default": "paid",
-      "description": "Payment status \u2014 independent of order fulfillment status"
+      "default": "pending_payment",
+      "description": "Payment status handled by Hubtel"
     },
     "status": {
       "type": "string",
@@ -59,7 +59,7 @@
         "returned"
       ],
       "default": "confirmed",
-      "description": "Order fulfillment status \u2014 only set after payment is confirmed"
+      "description": "Fulfillment status (only after payment success)"
     },
     "customer_name": {
       "type": "string"
@@ -85,7 +85,6 @@
     },
     "tracking_updates": {
       "type": "array",
-      "description": "Tracking history",
       "items": {
         "type": "object",
         "properties": {
@@ -100,6 +99,24 @@
           }
         }
       }
+    },
+    "hubtel_transaction_id": {
+      "type": "string",
+      "description": "Hubtel transaction ID"
+    },
+    "hubtel_status": {
+      "type": "string",
+      "enum": [
+        "initiated",
+        "pending",
+        "successful",
+        "failed"
+      ],
+      "default": "initiated"
+    },
+    "payment_reference": {
+      "type": "string",
+      "description": "Hubtel payment reference"
     }
   },
   "required": [

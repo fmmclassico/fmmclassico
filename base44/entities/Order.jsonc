@@ -44,7 +44,7 @@
         "refunded"
       ],
       "default": "pending_payment",
-      "description": "Payment status handled by Hubtel"
+      "description": "Controlled strictly by Hubtel callback"
     },
     "status": {
       "type": "string",
@@ -59,7 +59,7 @@
         "returned"
       ],
       "default": "confirmed",
-      "description": "Fulfillment status (only after payment success)"
+      "description": "Only changes AFTER payment is confirmed"
     },
     "customer_name": {
       "type": "string"
@@ -101,8 +101,7 @@
       }
     },
     "hubtel_transaction_id": {
-      "type": "string",
-      "description": "Hubtel transaction ID"
+      "type": "string"
     },
     "hubtel_status": {
       "type": "string",
@@ -116,7 +115,7 @@
     },
     "payment_reference": {
       "type": "string",
-      "description": "Hubtel payment reference"
+      "description": "Unique Hubtel reference used for verification"
     }
   },
   "required": [

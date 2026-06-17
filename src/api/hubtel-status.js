@@ -1,36 +1,56 @@
-const HUBTEL_API_ID = process.env.VITE_HUBTEL_API_ID;
-const HUBTEL_API_KEY = process.env.VITE_HUBTEL_API_KEY;
-const MERCHANT_ACCOUNT = process.env.VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER;
+import { createClientFromRequest } from "npm:@base44/sdk";
 
-async function handleHubtelStatus(req, res) {
+// Called from the frontend via: base44.functions.invoke('hubtelStatus', { clientReference })
+// Hubtel's rule: if you don't get a callback within 5 minutes, you must check status yourself.
+
+Deno.serve(async (req) => {
   try {
-    const clientReference = req.query.clientReference || req.query.clientreference || req.body?.clientReference;
-    if (!clientReference) return res.status(400).json({ error: 'clientReference is required' });
-    if (!HUBTEL_API_ID || !HUBTEL_API_KEY || !MERCHANT_ACCOUNT) return res.status(500).json({ error: 'Hubtel not configured' });
+    const base44 = createClientFromRequest(req);
+    const body = await req.json().catch(() => ({}));
+    const clientReference = body?.clientReference;
 
-    const auth = Buffer.from(`${HUBTEL_API_ID}:${HUBTEL_API_KEY}`).toString('base64');
-    const url = `https://api-txnstatus.hubtel.com/transactions/${MERCHANT_ACCOUNT}/status?clientReference=${encodeURIComponent(clientReference)}`;
+    if (!clientReference) {
+      return Response.json({ ok: false, error: "clientReference is required" });
+    }
+
+    const HUBTEL_API_ID = Deno.env.get("HUBTEL_API_ID");
+    const HUBTEL_API_KEY = Deno.env.get("HUBTEL_API_KEY");
+    const HUBTEL_MERCHANT_ACCOUNT = Deno.env.get("HUBTEL_MERCHANT_ACCOUNT_NUMBER");
+
+    if (!HUBTEL_API_ID || !HUBTEL_API_KEY || !HUBTEL_MERCHANT_ACCOUNT) {
+      return Response.json({ ok: false, error: "Hubtel is not configured on the server." });
+    }
+
+    const basicAuth = btoa(`${HUBTEL_API_ID}:${HUBTEL_API_KEY}`);
+    const url = `https://api-txnstatus.hubtel.com/transactions/${HUBTEL_MERCHANT_ACCOUNT}/status?clientReference=${encodeURIComponent(clientReference)}`;
 
     const resp = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Basic ${auth}`,
-      },
-      timeout: 20000,
+      method: "GET",
+      headers: { "Accept": "application/json", "Authorization": `Basic ${basicAuth}` },
     });
 
     const data = await resp.json().catch(() => null);
-    if (!resp.ok) return res.status(resp.status).json({ error: 'Hubtel status error', detail: data });
-    return res.status(200).json(data || {});
-  } catch (err) {
-    console.error('Hubtel status check failed:', err);
-    return res.status(500).json({ error: 'Status check failed', detail: err.message });
-  }
-}
 
-module.exports = {
-  handler: handleHubtelStatus,
-  route: '/api/hubtel/status',
-  method: 'GET',
-};
+    if (!resp.ok) {
+      return Response.json({ ok: false, error: "Hubtel status check failed", httpStatus: resp.status, detail: data });
+    }
+
+    // Normalise Hubtel's real response shape into the flat shape the app expects.
+    const d = data?.data || {};
+    const status = d.status || data?.status || "";
+    const success = (data?.responseCode === "0000" || data?.responseCode === "00") && status === "Paid";
+
+    return Response.json({
+      ok: true,
+      success,
+      status,
+      transactionId: d.transactionId || d.externalTransactionId || null,
+      amount: d.amount ?? null,
+      paymentMethod: d.paymentMethod || null,
+      raw: data,
+    });
+  } catch (error) {
+    console.error("hubtelStatus error:", error);
+    return Response.json({ ok: false, error: error.message || "Status check failed" });
+  }
+});

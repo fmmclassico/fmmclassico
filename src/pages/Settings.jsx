@@ -235,7 +235,16 @@ export default function Settings() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Order Updates</p>
-                <p classNa
+                <p className="text-sm text-gray-500">Get notified about your order status</p>
+              </div>
+              <Switch
+                checked={formData.notifications_enabled}
+                onCheckedChange={(value) => handleSwitchChange('notifications_enabled', value)}
+              />
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="font-medium">Newsletter</p>
                 <p className="text-sm text-gray-500">Receive deals and promotions</p>
               </div>

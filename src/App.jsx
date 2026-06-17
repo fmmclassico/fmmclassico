@@ -3,7 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -27,9 +27,12 @@ import Policies from './pages/Policies';
 import AdminSMSBroadcast from './pages/AdminSMSBroadcast';
 import AdminAccessControl from './pages/AdminAccessControl';
 import AdminContactSettings from './pages/AdminContactSettings';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 const { Pages, Layout, mainPage } = pagesConfig;
-// make Pages accessible in JSX scope for fallback routes
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
@@ -38,9 +41,9 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, verifyAdminPassword } = useAuth();
+  const { isLoadingAuth, authError, navigateToLogin, user, verifyAdminPassword } = useAuth();
 
-  // Show loading spinner only while checking auth — public settings load in background
+  // Show loading spinner while checking auth
   if (isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -68,11 +71,12 @@ const AuthenticatedApp = () => {
         </>
       );
     } else if (authError.type === 'auth_required') {
-      // Redirect to login — but allow /login, /register, /forgot-password, /reset-password to render
+      // Allow public auth pages to render normally — everything else redirects to /login
       const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
       const isPublicPath = publicPaths.some(p => window.location.pathname.toLowerCase().startsWith(p));
       if (!isPublicPath) {
-        navigateToLogin();
+        // Redirect to our own /login page (NOT base44's external page)
+        window.location.href = '/login';
         return null;
       }
     }
@@ -86,8 +90,18 @@ const AuthenticatedApp = () => {
           <MainPage />
         </LayoutWrapper>
       } />
+
+      {/* Auth pages — no Layout wrapper (they use AuthLayout) */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/Login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/Register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
       {/* Payment — own header (no layout wrapper) */}
       <Route path="/Payment" element={<Payment />} />
+
       <Route path="/AdminReviews" element={
         <LayoutWrapper currentPageName="AdminReviews">
           <AdminReviews />
@@ -184,7 +198,8 @@ const AuthenticatedApp = () => {
       } />
 
       {Object.entries(Pages).map(([path, Page]) => (
-        path === 'Payment' ? null :
+        // Skip pages that already have explicit routes above
+        ['Payment', 'Login', 'Register', 'ForgotPassword', 'ResetPassword'].includes(path) ? null :
         <Route
           key={path}
           path={`/${path}`}

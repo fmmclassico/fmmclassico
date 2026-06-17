@@ -98,7 +98,7 @@ export default function ProductDetail() {
   const addToCartMutation = useMutation({
     mutationFn: async () => {
       if (!user) {
-        base44.auth.redirectToLogin(window.location.href);
+        window.location.href = '/login';
         return;
       }
       // Optimistic update: instantly update cart and stock in UI

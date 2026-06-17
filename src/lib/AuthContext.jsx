@@ -40,10 +40,10 @@ export const AuthProvider = ({ children }) => {
         .catch(() => {}); // non-fatal
 
       const authPromise = appParams.token ? checkUserAuth() : Promise.resolve().then(() => {
-        // No token = not logged in → require login
+        // No token = not logged in → Guest Mode (no error)
         setIsLoadingAuth(false);
         setIsAuthenticated(false);
-        setAuthError({ type: 'auth_required', message: 'Authentication required' });
+        setAuthError(null); // Allow guest browsing - no auth error
       });
 
       // Wait for auth only (settings load in background)
@@ -117,11 +117,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = (shouldRedirect = true) => {
+  const logout = (redirectToGuest = false) => {
     setUser(null);
     setIsAuthenticated(false);
-    if (shouldRedirect) {
-      base44.auth.logout(window.location.href);
+    setAuthError(null);
+    if (redirectToGuest) {
+      // Redirect to guest homepage after logout
+      base44.auth.logout();
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
     } else {
       base44.auth.logout();
     }

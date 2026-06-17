@@ -10,12 +10,12 @@ const ASH = '#2E86C1';
 const ASH_HOVER = '#2578ae';
 
 // ── HUBTEL ACCOUNT INFO (server-side only — never sent to browser in auth headers) ──
-// Collection Account = 2039285 (used for receiving payments - THIS is the correct one for checkout)
+// Collection Account = loaded from environment variables (used for receiving payments)
 // Disbursement Account = 2025378 (for sending money - WRONG for checkout)
-const HUBTEL_COLLECTION_ACCOUNT = '2039285';
-// API ID (username) and API Key (password) — used server-side via InvokeLLM proxy
-const HUBTEL_API_ID  = 'pQGpB7y';
-const HUBTEL_API_KEY = '14fda6847ee44c8fa910f355675cce73';
+const HUBTEL_COLLECTION_ACCOUNT = import.meta.env.VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER;
+// API ID (username) and API Key (password) — loaded from environment variables
+const HUBTEL_API_ID  = import.meta.env.VITE_HUBTEL_API_ID;
+const HUBTEL_API_KEY = import.meta.env.VITE_HUBTEL_API_KEY;
 
 function formatAmount(num) {
   const n = Number(num);

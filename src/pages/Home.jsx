@@ -126,11 +126,17 @@ export default function Home() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [], isLoading, refetch } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list('-created_date', 100),
-    staleTime: 60000,
+    staleTime: 30000, // Reduced from 60000 to 30s for faster updates
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
   });
+
+  // Refetch products when component mounts to ensure fresh data
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {

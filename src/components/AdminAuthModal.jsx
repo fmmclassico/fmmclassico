@@ -13,8 +13,8 @@ export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }
     e.preventDefault();
     setLoading(true);
 
-    // Admin password verification - passwords stored securely in environment variables
-    const ADMIN_PASSWORD = '0244129908fmm';
+    // Admin password verification - load from environment variables
+    const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
     
     if (password === ADMIN_PASSWORD) {
       onSuccess();

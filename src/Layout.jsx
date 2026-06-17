@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/lib/AuthContext';
 import { 
   Home, 
   ShoppingCart,
@@ -49,6 +50,7 @@ export default function Layout({ children, currentPageName }) {
   const helpRef = React.useRef(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { logout } = useAuth();
 
   useEffect(() => {
     Promise.all([
@@ -112,7 +114,13 @@ export default function Layout({ children, currentPageName }) {
   };
 
   const handleLogout = () => {
-    base44.auth.logout();
+    // Clear guest cart on logout
+    try {
+      localStorage.removeItem('fmm_guest_cart');
+    } catch (e) {
+      // Ignore
+    }
+    logout(true); // Redirect to guest homepage after logout
   };
 
   const isAdmin = user?.role === 'admin';

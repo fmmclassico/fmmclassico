@@ -1,3 +1,4 @@
+import React from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -27,20 +28,41 @@ import Policies from './pages/Policies';
 import AdminSMSBroadcast from './pages/AdminSMSBroadcast';
 import AdminAccessControl from './pages/AdminAccessControl';
 import AdminContactSettings from './pages/AdminContactSettings';
+import GuestLayout from '@/components/layouts/GuestLayout';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 // make Pages accessible in JSX scope for fallback routes
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
-const LayoutWrapper = ({ children, currentPageName }) => Layout ?
-  <Layout currentPageName={currentPageName}>{children}</Layout>
-  : <>{children}</>;
+// Protected routes that require authentication
+const PROTECTED_ROUTES = new Set(['Checkout', 'Cart', 'Account', 'Orders', 'OrderTracking', 'Notifications', 'Settings', 'Chat', 'AdminReviews', 'AdminProducts', 'AdminCategoryImages', 'AdminAI', 'AdminPromoBanners2', 'AdminBrandLogos', 'AdminAbout', 'AdminPageContent', 'AdminHomeEditor', 'AdminInterfaceControl', 'AdminSMSBroadcast', 'AdminAccessControl', 'AdminContactSettings']);
+
+// Helper component for routes that can render in both guest and authenticated modes
+const LayoutWrapper = ({ children, currentPageName, isAuthenticated }) => {
+  const SelectedLayout = isAuthenticated ? Layout : GuestLayout;
+  return SelectedLayout ? (
+    <SelectedLayout currentPageName={currentPageName}>{children}</SelectedLayout>
+  ) : (
+    <>{children}</>
+  );
+};
+
+// Helper component for protected routes
+const ProtectedLayout = ({ children, currentPageName, isAuthenticated, navigateToLogin }) => {
+  if (!isAuthenticated) {
+    React.useEffect(() => {
+      navigateToLogin();
+    }, []);
+    return null;
+  }
+  return <LayoutWrapper currentPageName={currentPageName} isAuthenticated={true}>{children}</LayoutWrapper>;
+};
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, verifyAdminPassword } = useAuth();
+  const { isLoadingAuth, authError, navigateToLogin, verifyAdminPassword, isAuthenticated } = useAuth();
 
-  // Show loading spinner only while checking auth — public settings load in background
+  // Show loading spinner only while checking auth
   if (isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -67,134 +89,138 @@ const AuthenticatedApp = () => {
           </Routes>
         </>
       );
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login — but allow /login, /register, /forgot-password, /reset-password to render
-      const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
-      const isPublicPath = publicPaths.some(p => window.location.pathname.toLowerCase().startsWith(p));
-      if (!isPublicPath) {
-        navigateToLogin();
-        return null;
-      }
     }
   }
 
   // Render the main app
   return (
     <Routes>
+      {/* Public routes - accessible to all */}
       <Route path="/" element={
-        <LayoutWrapper currentPageName={mainPageKey}>
+        <LayoutWrapper currentPageName={mainPageKey} isAuthenticated={isAuthenticated}>
           <MainPage />
         </LayoutWrapper>
       } />
-      {/* Payment — own header (no layout wrapper) */}
       <Route path="/Payment" element={<Payment />} />
-      <Route path="/AdminReviews" element={
-        <LayoutWrapper currentPageName="AdminReviews">
-          <AdminReviews />
-        </LayoutWrapper>
-      } />
-      <Route path="/AdminProducts" element={
-        <LayoutWrapper currentPageName="AdminProducts">
-          <AdminProducts />
+      <Route path="/PaymentConfirmed" element={
+        <LayoutWrapper currentPageName="PaymentConfirmed" isAuthenticated={isAuthenticated}>
+          <PaymentConfirmed />
         </LayoutWrapper>
       } />
       <Route path="/BrandProducts" element={
-        <LayoutWrapper currentPageName="BrandProducts">
+        <LayoutWrapper currentPageName="BrandProducts" isAuthenticated={isAuthenticated}>
           <BrandProducts />
         </LayoutWrapper>
       } />
-      <Route path="/AdminCategoryImages" element={
-        <LayoutWrapper currentPageName="AdminCategoryImages">
-          <AdminCategoryImages />
-        </LayoutWrapper>
-      } />
-      <Route path="/AdminAI" element={
-        <LayoutWrapper currentPageName="AdminAI">
-          <AdminAI />
-        </LayoutWrapper>
-      } />
-      <Route path="/AdminPromoBanners2" element={
-        <LayoutWrapper currentPageName="AdminPromoBanners2">
-          <AdminPromoBanners2 />
-        </LayoutWrapper>
-      } />
-      <Route path="/AdminBrandLogos" element={
-        <LayoutWrapper currentPageName="AdminBrandLogos">
-          <AdminBrandLogos />
-        </LayoutWrapper>
-      } />
-      <Route path="/AdminAbout" element={
-        <LayoutWrapper currentPageName="AdminAbout">
-          <AdminAbout />
-        </LayoutWrapper>
-      } />
-      <Route path="/AdminPageContent" element={
-        <LayoutWrapper currentPageName="AdminPageContent">
-          <AdminPageContent />
-        </LayoutWrapper>
-      } />
-      <Route path="/AdminHomeEditor" element={
-        <LayoutWrapper currentPageName="AdminHomeEditor">
-          <AdminHomeEditor />
-        </LayoutWrapper>
-      } />
-      <Route path="/AdminInterfaceControl" element={
-        <LayoutWrapper currentPageName="AdminInterfaceControl">
-          <AdminInterfaceControl />
-        </LayoutWrapper>
-      } />
       <Route path="/MobileAppGuide" element={
-        <LayoutWrapper currentPageName="MobileAppGuide">
+        <LayoutWrapper currentPageName="MobileAppGuide" isAuthenticated={isAuthenticated}>
           <MobileAppGuide />
         </LayoutWrapper>
       } />
       <Route path="/DownloadApp" element={
-        <LayoutWrapper currentPageName="DownloadApp">
+        <LayoutWrapper currentPageName="DownloadApp" isAuthenticated={isAuthenticated}>
           <DownloadApp />
         </LayoutWrapper>
       } />
       <Route path="/Policies" element={
-        <LayoutWrapper currentPageName="Policies">
+        <LayoutWrapper currentPageName="Policies" isAuthenticated={isAuthenticated}>
           <Policies />
         </LayoutWrapper>
       } />
+      
+      {/* Case-insensitive fallback routes for common pages */}
+      <Route path="/shop" element={<LayoutWrapper currentPageName="Shop" isAuthenticated={isAuthenticated}><Pages.Shop /></LayoutWrapper>} />
+      <Route path="/shop/*" element={<LayoutWrapper currentPageName="Shop" isAuthenticated={isAuthenticated}><Pages.Shop /></LayoutWrapper>} />
+
+      {/* Protected admin routes */}
+      <Route path="/AdminReviews" element={
+        <ProtectedLayout currentPageName="AdminReviews" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminReviews />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminProducts" element={
+        <ProtectedLayout currentPageName="AdminProducts" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminProducts />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminCategoryImages" element={
+        <ProtectedLayout currentPageName="AdminCategoryImages" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminCategoryImages />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminAI" element={
+        <ProtectedLayout currentPageName="AdminAI" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminAI />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminPromoBanners2" element={
+        <ProtectedLayout currentPageName="AdminPromoBanners2" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminPromoBanners2 />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminBrandLogos" element={
+        <ProtectedLayout currentPageName="AdminBrandLogos" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminBrandLogos />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminAbout" element={
+        <ProtectedLayout currentPageName="AdminAbout" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminAbout />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminPageContent" element={
+        <ProtectedLayout currentPageName="AdminPageContent" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminPageContent />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminHomeEditor" element={
+        <ProtectedLayout currentPageName="AdminHomeEditor" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminHomeEditor />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminInterfaceControl" element={
+        <ProtectedLayout currentPageName="AdminInterfaceControl" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminInterfaceControl />
+        </ProtectedLayout>
+      } />
       <Route path="/AdminSMSBroadcast" element={
-        <LayoutWrapper currentPageName="AdminSMSBroadcast">
+        <ProtectedLayout currentPageName="AdminSMSBroadcast" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
           <AdminSMSBroadcast />
-        </LayoutWrapper>
+        </ProtectedLayout>
       } />
       <Route path="/AdminAccessControl" element={
-        <LayoutWrapper currentPageName="AdminAccessControl">
+        <ProtectedLayout currentPageName="AdminAccessControl" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
           <AdminAccessControl />
-        </LayoutWrapper>
+        </ProtectedLayout>
       } />
       <Route path="/AdminContactSettings" element={
-        <LayoutWrapper currentPageName="AdminContactSettings">
+        <ProtectedLayout currentPageName="AdminContactSettings" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
           <AdminContactSettings />
-        </LayoutWrapper>
-      } />
-      {/* Case-insensitive fallback routes for common pages */}
-      <Route path="/shop" element={<LayoutWrapper currentPageName="Shop"><Pages.Shop /></LayoutWrapper>} />
-      <Route path="/shop/*" element={<LayoutWrapper currentPageName="Shop"><Pages.Shop /></LayoutWrapper>} />
-      {/* PaymentConfirmed — WITH layout so header/nav is visible for tracking */}
-      <Route path="/PaymentConfirmed" element={
-        <LayoutWrapper currentPageName="PaymentConfirmed">
-          <PaymentConfirmed />
-        </LayoutWrapper>
+        </ProtectedLayout>
       } />
 
-      {Object.entries(Pages).map(([path, Page]) => (
-        path === 'Payment' ? null :
-        <Route
-          key={path}
-          path={`/${path}`}
-          element={
-            <LayoutWrapper currentPageName={path}>
-              <Page />
-            </LayoutWrapper>
-          }
-        />
-      ))}
+      {/* Dynamic routes - public and protected handled by Pages components */}
+      {Object.entries(Pages).map(([path, Page]) => {
+        const isProtected = PROTECTED_ROUTES.has(path);
+        return path === 'Payment' ? null : (
+          <Route
+            key={path}
+            path={`/${path}`}
+            element={
+              isProtected ? (
+                <ProtectedLayout currentPageName={path} isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+                  <Page />
+                </ProtectedLayout>
+              ) : (
+                <LayoutWrapper currentPageName={path} isAuthenticated={isAuthenticated}>
+                  <Page />
+                </LayoutWrapper>
+              )
+            }
+          />
+        );
+      })}
+
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

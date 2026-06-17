@@ -33,12 +33,18 @@ export default function Shop() {
   const search = searchParams.get('search');
   const featured = searchParams.get('featured');
 
-  const { data: allProducts = [], isLoading } = useQuery({
+  const { data: allProducts = [], isLoading, refetch } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list('-created_date', 100),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 30000, // Reduced stale time for faster updates
+    refetchOnWindowFocus: true, // Refetch when user returns to browser tab
     gcTime: 10 * 60 * 1000,
   });
+
+  // Refetch products when route changes to ensure fresh data
+  React.useEffect(() => {
+    refetch();
+  }, [category, search, featured, refetch]);
 
   // Filter out hidden and out-of-stock (stock === 0) products for public display
   let filteredProducts = allProducts.filter(p => p.is_visible !== false && !(p.stock != null && p.stock === 0));

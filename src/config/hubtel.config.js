@@ -3,24 +3,34 @@
  * =============================
  * 
  * This file contains all Hubtel payment settings.
- * IMPORTANT: These credentials are safe here (frontend) because:
- * 1. The API ID and Key are public-facing (not secret)
- * 2. Hubtel's payproxyapi.hubtel.com endpoint is CORS-enabled for direct browser calls
- * 3. For production, consider moving to a backend service for extra security
+ * All sensitive credentials are loaded from environment variables (.env file)
+ * 
+ * To configure: Create a .env file with the following variables:
+ * - VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER
+ * - VITE_HUBTEL_API_ID
+ * - VITE_HUBTEL_API_KEY
+ * - VITE_HUBTEL_MERCHANT_EMAIL
+ * - VITE_HUBTEL_MERCHANT_PHONE
+ * 
+ * See .env.example for the complete template
  */
 
-// ╔════════════════════════════════════════════════════════════╗
-// ║ YOUR HUBTEL ACCOUNT DETAILS (from your Hubtel Dashboard)  ║
-// ╚════════════════════════════════════════════════════════════╝
+// Load credentials from environment variables
+// These are prefixed with VITE_ to be accessible in frontend code via import.meta.env
+const MERCHANT_ACCOUNT = import.meta.env.VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER;
+const API_ID = import.meta.env.VITE_HUBTEL_API_ID;
+const API_KEY = import.meta.env.VITE_HUBTEL_API_KEY;
+const MERCHANT_EMAIL = import.meta.env.VITE_HUBTEL_MERCHANT_EMAIL;
+const MERCHANT_PHONE = import.meta.env.VITE_HUBTEL_MERCHANT_PHONE;
 
 export const HUBTEL_CONFIG = {
   // 🔑 COLLECTION ACCOUNT (for receiving payments)
   // This is the account number that receives money from customers
-  merchantAccountNumber: '2039285',
+  merchantAccountNumber: MERCHANT_ACCOUNT,
 
   // 🔐 API CREDENTIALS (from Hubtel Developer Dashboard)
-  apiId: 'pQGpB7y',           // Username
-  apiKey: '14fda6847ee44c8fa910f355675cce73', // Password
+  apiId: API_ID,           // Username
+  apiKey: API_KEY,         // Password
 
   // 🌐 API ENDPOINTS
   checkoutInitiate: 'https://payproxyapi.hubtel.com/items/initiate',
@@ -43,8 +53,8 @@ export const HUBTEL_CONFIG = {
 
   // 🏢 MERCHANT INFORMATION
   merchantName: 'FMM CLASSICO',
-  merchantEmail: 'fmmclassico@gmail.com',
-  merchantPhone: '0509896035',
+  merchantEmail: MERCHANT_EMAIL,
+  merchantPhone: MERCHANT_PHONE,
 };
 
 /**

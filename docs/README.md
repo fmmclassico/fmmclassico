@@ -159,19 +159,24 @@ src/
 
 ### Merchant Account
 ```
-2039285
+CONFIGURED IN: .env file (VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER)
 ```
 
 ### API Credentials
 ```
-API ID: pQGpB7y
-API Key: 14fda6847ee44c8fa910f355675cce73
+⚠️ SENSITIVE - DO NOT COMMIT TO VERSION CONTROL
+
+Stored in .env file:
+- VITE_HUBTEL_API_ID
+- VITE_HUBTEL_API_KEY
+
+Get these from your Hubtel Dashboard: https://dashboard.hubtel.com
 ```
 
 ### Endpoints
 ```
 Initiate Payment: https://payproxyapi.hubtel.com/items/initiate
-Check Status: https://api-txnstatus.hubtel.com/transactions/2039285/status
+Check Status: https://api-txnstatus.hubtel.com/transactions/{merchant_account}/status
 Callback: https://fmmclassico.com/api/hubtel/callback
 ```
 

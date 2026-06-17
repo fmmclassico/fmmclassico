@@ -84,7 +84,7 @@ When you send your integration to Hubtel, provide these files:
 ### Required Documents:
 
 ```
-✅ Merchant Account Number: 2039285
+✅ Merchant Account Number: `Configured in .env file (VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER)`
 ✅ Integration Status: Redirect Checkout (CORS-enabled)
 ✅ API Endpoint: https://payproxyapi.hubtel.com/items/initiate
 ✅ Return URL: https://fmmclassico.com/PaymentConfirmed
@@ -173,7 +173,7 @@ Please provide test phone numbers for:
 2. Failed payment scenario
 3. Test bank card (if applicable)
 
-Merchant Account: 2039285
+Merchant Account: Check .env file (VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER)
 ```
 
 ### 4. Test Different Scenarios
@@ -207,7 +207,7 @@ Attached:
 3. FMM_CLASSICO_HUBTEL_PAYMENT_FLOW.pptx (payment flow)
 4. Test screenshots
 
-Merchant Account: 2039285
+Merchant Account: See .env file
 Live URL: https://fmmclassico.com
 Admin: https://fmmclassico.com/AdminOrders
 
@@ -265,7 +265,7 @@ Test Card (Optional):
 
 ### If status check is not working:
 
-1. **Check merchant account:** Should be `2039285`
+1. **Check merchant account:** Should match the value in your `.env` file
 2. **Check API credentials:** From Hubtel Developer Dashboard
 3. **Check IP whitelist:** Ask Hubtel to add your server IP
 

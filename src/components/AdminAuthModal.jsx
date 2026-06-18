@@ -4,19 +4,27 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+
+const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || '0599676419fmm';
 
 export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const { data: adminPasswordData = [], isLoading: isLoadingAdminPassword } = useQuery({
+    queryKey: ['adminPassword'],
+    queryFn: () => base44.entities.AdminPassword.list(),
+  });
+
+  const currentAdminPassword = adminPasswordData?.[0]?.password_hash || DEFAULT_ADMIN_PASSWORD;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Admin password verification - load from environment variables
-    const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
-    
-    if (password === ADMIN_PASSWORD) {
+    if (password === currentAdminPassword) {
       onSuccess();
       toast.success('Admin access granted!');
       setPassword('');

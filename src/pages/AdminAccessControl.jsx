@@ -46,7 +46,7 @@ export default function AdminAccessControl() {
     'lovelyfedra@gmail.com'
   ];
 
-  const DEFAULT_ADMIN_PASSWORD = '0599676419fmm';
+  const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || '0599676419fmm';
 
   useEffect(() => {
     const checkMasterAdmin = async () => {

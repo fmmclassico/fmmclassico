@@ -13,6 +13,7 @@ import {
   Minus, 
   ShoppingBag
 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 import { toast } from 'sonner';
 

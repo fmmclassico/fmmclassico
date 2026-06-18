@@ -1,5 +1,6 @@
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
@@ -7,6 +8,7 @@ import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { useLocation } from 'react-router-dom';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AdminAuthModal from '@/components/AdminAuthModal';
 import Payment from './pages/Payment';
@@ -71,6 +73,8 @@ const ProtectedLayout = ({ children, currentPageName, isAuthenticated, navigateT
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, authError, navigateToLogin, verifyAdminPassword, isAuthenticated } = useAuth();
+  const location = useLocation();
+  const isAdminPath = location.pathname.toLowerCase().startsWith('/admin');
 
   // Show loading spinner only while checking auth
   if (isLoadingAuth) {
@@ -85,7 +89,8 @@ const AuthenticatedApp = () => {
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
-    } else if (authError.type === 'admin_verification_required') {
+    } else if (authError.type === 'admin_verification_required' && isAdminPath) {
+      // Only require admin verification when trying to access admin routes
       return (
         <>
           <AdminAuthModal
@@ -264,6 +269,7 @@ function App() {
           <AuthenticatedApp />
         </Router>
         <Toaster />
+        <SonnerToaster />
       </QueryClientProvider>
     </AuthProvider>
   )

@@ -1,6 +1,5 @@
-/* eslint-disable */
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -27,23 +26,23 @@ const CATEGORY_BRANDS = {
     { label: 'Sony', brand: 'Sony', category: 'earphones' },
   ],
   electronics: [
-    { label: 'Samsung', brand: 'Samsung', category: '' },
-    { label: 'TCL', brand: 'TCL', category: '' },
-    { label: 'Hisense', brand: 'Hisense', category: '' },
-    { label: 'Sony', brand: 'Sony', category: '' },
-    { label: 'LG', brand: 'LG', category: '' },
-    { label: 'Midea', brand: 'Midea', category: '' },
-    { label: 'Oraimo', brand: 'Oraimo', category: '' },
+    { label: 'Samsung', brand: 'Samsung' },
+    { label: 'TCL', brand: 'TCL' },
+    { label: 'Hisense', brand: 'Hisense' },
+    { label: 'Sony', brand: 'Sony' },
+    { label: 'LG', brand: 'LG' },
+    { label: 'Midea', brand: 'Midea' },
+    { label: 'Oraimo', brand: 'Oraimo' },
   ],
   home_appliances: [
-    { label: 'Hisense', brand: 'Hisense', category: '' },
-    { label: 'Roch', brand: 'Roch', category: '' },
-    { label: 'Silver Crest', brand: 'Silver Crest', category: '' },
-    { label: 'TCL', brand: 'TCL', category: '' },
-    { label: 'Nasco', brand: 'Nasco', category: '' },
-    { label: 'Hoffman', brand: 'Hoffman', category: '' },
-    { label: 'Samsung', brand: 'Samsung', category: '' },
-    { label: 'Oraimo', brand: 'Oraimo', category: '' },
+    { label: 'Hisense', brand: 'Hisense' },
+    { label: 'Roch', brand: 'Roch' },
+    { label: 'Silver Crest', brand: 'Silver Crest' },
+    { label: 'TCL', brand: 'TCL' },
+    { label: 'Nasco', brand: 'Nasco' },
+    { label: 'Hoffman', brand: 'Hoffman' },
+    { label: 'Samsung', brand: 'Samsung' },
+    { label: 'Oraimo', brand: 'Oraimo' },
   ],
 };
 
@@ -88,7 +87,6 @@ const HOME_CATEGORIES = [
     icon: HomeIcon,
     color: 'bg-green-100 text-green-700',
     link: createPageUrl('Shop?category=home_appliances'),
-    image: '',
     match: (p) => p.category === 'home_appliances',
     brands: CATEGORY_BRANDS.home_appliances,
     chipColor: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100',
@@ -99,11 +97,10 @@ const HOME_CATEGORIES = [
  * GuestHome – Dedicated Guest Homepage
  * This is the first page unauthenticated visitors land on.
  * Features: Browse products, search, view details, add to guest cart.
- * Restrictions: Cannot checkout — that requires login.
+ * Restrictions: Cannot checkout, cannot access user-only pages.
  */
 export default function GuestHome() {
-  // FIX: was useState<string | null>(null) — JSX files must NOT use TypeScript generics
-  const [expandedCat, setExpandedCat] = useState(null);
+  const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: appSettings = [] } = useQuery({
@@ -112,8 +109,7 @@ export default function GuestHome() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // FIX: removed TypeScript type annotation from parameter (key: string)
-  const getPromoNotice = (key) => {
+  const getPromoNotice = (key: string) => {
     const raw = appSettings.find(s => s.key === key)?.value;
     if (!raw) return null;
     try { const d = JSON.parse(raw); return d?.active && d?.image_url ? d : null; } catch { return null; }
@@ -140,29 +136,26 @@ export default function GuestHome() {
   // Guest can add to local cart only
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {
-      // FIX: product is typed as any implicitly but works fine in JS — no TS annotation needed
-      guestCart.addItem({
-        id: product.id,
-        product_id: product.id,
-        product_name: product.name,
-        product_image: product.image_url,
-        product_price: product.price,
-        quantity: 1
+      guestCart.addItem({ 
+        id: product.id, 
+        product_id: product.id, 
+        product_name: product.name, 
+        product_image: product.image_url, 
+        product_price: product.price, 
+        quantity: 1 
       });
       toast.success('Added to cart!');
     },
   });
 
-  // FIX: was (p) which triggered TS7006 — fine in .jsx, the issue was TS strict mode
-  // These filter callbacks are all fine as plain JS arrow functions
-  const visibleProducts = products.filter((p) => p.is_visible !== false && !(p.stock != null && p.stock === 0));
+  const visibleProducts = products.filter(p => p.is_visible !== false && !(p.stock != null && p.stock === 0));
 
-  const flashItems    = visibleProducts.filter((p) => p.flash_sale  && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
+  const flashItems    = visibleProducts.filter(p => p.flash_sale  && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
   const flashSaleEndTime = flashItems.length > 0 ? flashItems[0].flash_sale_end : null;
-  const classicoDeals = visibleProducts.filter((p) => p.featured);
-  const donkomiDeals  = visibleProducts.filter((p) => p.donkomi);
-  const newArrivals   = visibleProducts.filter((p) => p.new_arrival);
-  const topSellingFallback = visibleProducts.filter((p) => p.top_selling);
+  const classicoDeals = visibleProducts.filter(p => p.featured);
+  const donkomiDeals  = visibleProducts.filter(p => p.donkomi);
+  const newArrivals   = visibleProducts.filter(p => p.new_arrival);
+  const topSellingFallback = visibleProducts.filter(p => p.top_selling);
 
   return (
     <div className="pb-6 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
@@ -181,10 +174,7 @@ export default function GuestHome() {
         <div className="grid grid-cols-4 gap-3">
           {HOME_CATEGORIES.map(cat => {
             const adminImg = appSettings.find(s => s.key === `cat_img_${cat.id}`)?.value;
-            // FIX: products.find(cat.match) returns a product object, not void
-            // We access .image_url safely with optional chaining
-            const firstMatchProduct = products.find(cat.match);
-            const displayImg = adminImg || cat.image || (firstMatchProduct ? firstMatchProduct.image_url : undefined);
+            const displayImg = adminImg || cat.image || products.find(cat.match)?.image_url;
             const isExpanded = expandedCat === cat.id;
             return (
               <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
@@ -208,14 +198,12 @@ export default function GuestHome() {
             <div className="mt-4 pt-3 border-t border-gray-100">
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Shop {cat.label} by Brand</p>
               <div className="flex flex-wrap gap-2">
-                {/* FIX: b.category is now always defined (we added category: '' to electronics/home_appliances) */}
                 {cat.brands.map(b => (
                   <Link key={b.brand + (b.category || '')} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(b.brand)}&category=${(b.category || '')}`)}
                     className={`text-xs font-semibold border rounded-full px-3 py-1 transition-colors ${cat.chipColor}`}>
                     {b.label}
                   </Link>
                 ))}
-                {/* FIX: cat.link is always defined so Link is always used (no conditional to: undefined) */}
                 <Link to={cat.link} className={`text-xs font-semibold border rounded-full px-3 py-1 transition-colors ${cat.chipColor}`}>
                   All {cat.label} →
                 </Link>
@@ -246,32 +234,10 @@ export default function GuestHome() {
               </div>
               <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
                 {orderedCards.map(card => {
-                  // FIX: was using conditional component type (CardWrapper = card.link ? Link : 'div')
-                  // which caused type error when card.link is undefined (to={undefined} on Link).
-                  // Now always use a div wrapper; if there's a link, wrap with an <a> tag instead.
-                  return card.link ? (
-                    <Link key={card.key} to={card.link}
-                      className="flex-shrink-0 w-[72vw] md:w-72 relative overflow-hidden block"
-                      style={{ minHeight: 130 }}>
-                      <div className={`absolute inset-0 bg-gradient-to-r ${card.gradient || 'from-blue-600 to-blue-400'}`} />
-                      {card.image_url && (
-                        <img src={card.image_url} alt={card.title} className="absolute inset-0 w-full h-full object-cover opacity-60" />
-                      )}
-                      <div className="relative z-10 p-3 h-full flex flex-col justify-between" style={{ minHeight: 130 }}>
-                        <div>
-                          <p className="text-white font-black text-sm leading-tight drop-shadow">{card.title}</p>
-                          {card.subtitle && <p className="text-white/90 text-xs font-bold mt-0.5">{card.subtitle}</p>}
-                          {card.description && <p className="text-white/80 text-[11px] mt-1 leading-snug line-clamp-2">{card.description}</p>}
-                        </div>
-                        {card.cta_text && (
-                          <span className="mt-2 self-start bg-white text-[#2E86C1] text-[11px] font-black px-3 py-1 rounded-full shadow">
-                            {card.cta_text}
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  ) : (
-                    <div key={card.key}
+                  const CardWrapper = card.link ? Link : 'div';
+                  const wrapperProps = card.link ? { to: card.link } : {};
+                  return (
+                    <CardWrapper key={card.key} {...wrapperProps}
                       className="flex-shrink-0 w-[72vw] md:w-72 relative overflow-hidden"
                       style={{ minHeight: 130 }}>
                       <div className={`absolute inset-0 bg-gradient-to-r ${card.gradient || 'from-blue-600 to-blue-400'}`} />
@@ -290,7 +256,7 @@ export default function GuestHome() {
                           </span>
                         )}
                       </div>
-                    </div>
+                    </CardWrapper>
                   );
                 })}
               </div>
@@ -423,8 +389,7 @@ export default function GuestHome() {
                   className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
                   <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
                     {logoSrc
-                      ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain"
-                          onError={(e) => { e.target.style.display = 'none'; }} />
+                      ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
                       : <span className="text-[10px] font-black text-gray-400">{brand.name[0]}</span>}
                   </div>
                   <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
@@ -523,7 +488,7 @@ export default function GuestHome() {
         </div>
       </div>
 
-      {/* Bottom spacer */}
+      {/* Bottom spacer for nav */}
       <div className="h-6" />
     </div>
   );

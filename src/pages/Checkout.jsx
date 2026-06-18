@@ -454,7 +454,7 @@ export default function Checkout() {
                   Processing...
                 </>
               ) : (
-                '💳 Confirm Order & Pay with Hubtel'
+                '💳 Place Order & Pay with Hubtel'
               )}
             </Button>
           </div>

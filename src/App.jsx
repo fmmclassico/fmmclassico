@@ -30,18 +30,27 @@ import AdminAccessControl from './pages/AdminAccessControl';
 import AdminContactSettings from './pages/AdminContactSettings';
 import GuestLayout from '@/components/layouts/GuestLayout';
 import GuestHome from './pages/GuestHome';
+// FIX: Import all custom auth pages so their routes exist in the app
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 const { Pages, Layout, mainPage } = pagesConfig;
-// make Pages accessible in JSX scope for fallback routes
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
 // Protected routes that require authentication
-// NOTE: 'Cart' was removed from this list — guests MUST be able to view/manage
-// their cart. Only Checkout (and the buttons inside Cart.jsx) require login.
-const PROTECTED_ROUTES = new Set(['Checkout', 'Account', 'Orders', 'OrderTracking', 'Notifications', 'Settings', 'Chat', 'AdminReviews', 'AdminProducts', 'AdminCategoryImages', 'AdminAI', 'AdminPromoBanners2', 'AdminBrandLogos', 'AdminAbout', 'AdminPageContent', 'AdminHomeEditor', 'AdminInterfaceControl', 'AdminSMSBroadcast', 'AdminAccessControl', 'AdminContactSettings']);
+const PROTECTED_ROUTES = new Set([
+  'Checkout', 'Account', 'Orders', 'OrderTracking', 'Notifications', 'Settings', 'Chat',
+  'AdminReviews', 'AdminProducts', 'AdminCategoryImages', 'AdminAI', 'AdminPromoBanners2',
+  'AdminBrandLogos', 'AdminAbout', 'AdminPageContent', 'AdminHomeEditor',
+  'AdminInterfaceControl', 'AdminSMSBroadcast', 'AdminAccessControl', 'AdminContactSettings',
+]);
 
-// Helper component for routes that can render in both guest and authenticated modes
+// Routes that are always public (never wrapped in Layout or auth checks)
+const AUTH_ONLY_PATHS = ['Login', 'Register', 'ForgotPassword', 'ResetPassword'];
+
 const LayoutWrapper = ({ children, currentPageName, isAuthenticated }) => {
   const SelectedLayout = isAuthenticated ? Layout : GuestLayout;
   return SelectedLayout ? (
@@ -51,21 +60,21 @@ const LayoutWrapper = ({ children, currentPageName, isAuthenticated }) => {
   );
 };
 
-// Helper component for protected routes
+// FIX: useEffect must be called unconditionally (Rules of Hooks)
 const ProtectedLayout = ({ children, currentPageName, isAuthenticated, navigateToLogin }) => {
-  if (!isAuthenticated) {
-    React.useEffect(() => {
+  React.useEffect(() => {
+    if (!isAuthenticated) {
       navigateToLogin();
-    }, []);
-    return null;
-  }
+    }
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) return null;
   return <LayoutWrapper currentPageName={currentPageName} isAuthenticated={true}>{children}</LayoutWrapper>;
 };
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, authError, navigateToLogin, verifyAdminPassword, isAuthenticated } = useAuth();
 
-  // Show loading spinner only while checking auth
   if (isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -74,7 +83,6 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Handle authentication errors
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
@@ -95,10 +103,9 @@ const AuthenticatedApp = () => {
     }
   }
 
-  // Render the main app
   return (
     <Routes>
-      {/* Home route - conditionally renders GuestHome or authenticated Home */}
+      {/* Home — GuestHome for visitors, authenticated Home for logged-in users */}
       <Route path="/" element={
         isAuthenticated ? (
           <LayoutWrapper currentPageName={mainPageKey} isAuthenticated={true}>
@@ -111,12 +118,27 @@ const AuthenticatedApp = () => {
         )
       } />
 
+      {/* ── CUSTOM AUTH PAGES ──────────────────────────────────────────────────
+          These MUST be explicit routes. Without them, any navigateToLogin() call
+          shows "404: page 'login' could not be found".
+          No Layout wrapper — they use AuthLayout internally.
+      ───────────────────────────────────────────────────────────────────────── */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/Login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/Register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* Payment pages — own header, no layout wrapper */}
       <Route path="/Payment" element={<Payment />} />
       <Route path="/PaymentConfirmed" element={
         <LayoutWrapper currentPageName="PaymentConfirmed" isAuthenticated={isAuthenticated}>
           <PaymentConfirmed />
         </LayoutWrapper>
       } />
+
+      {/* Public pages accessible by guests */}
       <Route path="/BrandProducts" element={
         <LayoutWrapper currentPageName="BrandProducts" isAuthenticated={isAuthenticated}>
           <BrandProducts />
@@ -137,8 +159,6 @@ const AuthenticatedApp = () => {
           <Policies />
         </LayoutWrapper>
       } />
-      
-      {/* Case-insensitive fallback routes for common pages */}
       <Route path="/shop" element={<LayoutWrapper currentPageName="Shop" isAuthenticated={isAuthenticated}><Pages.Shop /></LayoutWrapper>} />
       <Route path="/shop/*" element={<LayoutWrapper currentPageName="Shop" isAuthenticated={isAuthenticated}><Pages.Shop /></LayoutWrapper>} />
 
@@ -209,10 +229,12 @@ const AuthenticatedApp = () => {
         </ProtectedLayout>
       } />
 
-      {/* Dynamic routes - public and protected handled by Pages components */}
+      {/* All other pages from pages.config — protected or public based on PROTECTED_ROUTES */}
       {Object.entries(Pages).map(([path, Page]) => {
+        // Skip pages that already have explicit routes above
+        if ([...AUTH_ONLY_PATHS, 'Payment'].includes(path)) return null;
         const isProtected = PROTECTED_ROUTES.has(path);
-        return path === 'Payment' ? null : (
+        return (
           <Route
             key={path}
             path={`/${path}`}
@@ -236,9 +258,7 @@ const AuthenticatedApp = () => {
   );
 };
 
-
 function App() {
-
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
@@ -249,7 +269,7 @@ function App() {
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>
-  )
+  );
 }
 
-export default App
+export default App;

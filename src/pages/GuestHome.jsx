@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -100,7 +100,7 @@ const HOME_CATEGORIES = [
  * Restrictions: Cannot checkout, cannot access user-only pages.
  */
 export default function GuestHome() {
-  const [expandedCat, setExpandedCat] = useState(null);
+  const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: appSettings = [] } = useQuery({
@@ -109,7 +109,7 @@ export default function GuestHome() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const getPromoNotice = (key) => {
+  const getPromoNotice = (key: string) => {
     const raw = appSettings.find(s => s.key === key)?.value;
     if (!raw) return null;
     try { const d = JSON.parse(raw); return d?.active && d?.image_url ? d : null; } catch { return null; }
@@ -199,7 +199,7 @@ export default function GuestHome() {
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Shop {cat.label} by Brand</p>
               <div className="flex flex-wrap gap-2">
                 {cat.brands.map(b => (
-                  <Link key={b.brand + b.category} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(b.brand)}&category=${b.category}`)}
+                  <Link key={b.brand + (b.category || '')} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(b.brand)}&category=${(b.category || '')}`)}
                     className={`text-xs font-semibold border rounded-full px-3 py-1 transition-colors ${cat.chipColor}`}>
                     {b.label}
                   </Link>
@@ -389,7 +389,7 @@ export default function GuestHome() {
                   className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
                   <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
                     {logoSrc
-                      ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { e.target.style.display='none'; }} />
+                      ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
                       : <span className="text-[10px] font-black text-gray-400">{brand.name[0]}</span>}
                   </div>
                   <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>

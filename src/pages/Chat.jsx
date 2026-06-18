@@ -90,7 +90,7 @@ export default function Chat() {
       - Owner: Fedra Martha, the CEO of FMM CLASSICO
       - Locations: UMAT Main Campus (Tarkwa) and Ashongman Estate (Accra)
       - Phone: 0599676419 | Email: fmmcompanylimited@gmail.com
-      - Payments: Mobile Money, Paystack
+      - Payments: Mobile Money via Hubtel
       
       Our Locations:
       1. Ashongman Estate, Accra (Close to Awo Dede - Purewater / Pure water)

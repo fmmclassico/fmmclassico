@@ -81,12 +81,12 @@ React.useEffect(() => {
 
 ### Issue 2: Exposed API Credentials & Passwords (CRITICAL) ✅
 
-**Problem**: Multiple sensitive credentials were hardcoded in source code and documentation:
-- Hubtel API ID: `pQGpB7y`
-- Hubtel API Key: `14fda6847ee44c8fa910f355675cce73`
-- Merchant Account: `2039285`
-- Admin Password: `0244129908fmm`
-- Contact Info: Email & Phone numbers
+**Problem**: Multiple sensitive credentials were referenced in documentation. These should be stored in a local `.env` file and never committed:
+- Hubtel API ID: `<set in .env>`
+- Hubtel API Key: `<set in .env>`
+- Merchant Account: `<set in .env>`
+- Admin Password: `<set in .env>`
+- Contact Info: Email & Phone numbers (use placeholders in docs)
 
 **Risk Level**: 🔴 CRITICAL
 - Credentials could be used to intercept payments
@@ -98,15 +98,15 @@ React.useEffect(() => {
 #### 1. Created Environment Variables Configuration
 **File**: `.env.example` (NEW)
 ```env
-# HUBTEL PAYMENT GATEWAY
-VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER=2039285
-VITE_HUBTEL_API_ID=pQGpB7y
-VITE_HUBTEL_API_KEY=14fda6847ee44c8fa910f355675cce73
-VITE_HUBTEL_MERCHANT_EMAIL=fmmclassico@gmail.com
-VITE_HUBTEL_MERCHANT_PHONE=0509896035
+# HUBTEL PAYMENT GATEWAY (fill these locally in your .env)
+VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER=<YOUR_MERCHANT_ACCOUNT_NUMBER>
+VITE_HUBTEL_API_ID=<YOUR_HUBTEL_API_ID>
+VITE_HUBTEL_API_KEY=<YOUR_HUBTEL_API_KEY>
+VITE_HUBTEL_MERCHANT_EMAIL=you@example.com
+VITE_HUBTEL_MERCHANT_PHONE=0XXXXXXXXX
 
 # ADMIN AUTHENTICATION
-VITE_ADMIN_PASSWORD=0244129908fmm
+VITE_ADMIN_PASSWORD=<YOUR_ADMIN_PASSWORD>
 ```
 
 #### 2. Updated All Credential References

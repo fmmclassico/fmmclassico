@@ -1,4 +1,3 @@
-cat > /home/claude/fmm-fixes/Payment.jsx << 'ENDOFFILE'
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';

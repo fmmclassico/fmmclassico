@@ -235,8 +235,58 @@ export default function Checkout() {
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Checkout</h1>
         </div>
+        {/* Order Summary (moved to top) */}
+        <div className="mb-6">
+          <Card className="p-5 sm:p-6 shadow-md">
+            <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Order Summary</h2>
 
-      <form onSubmit={handleSubmit}>
+            <div className="space-y-3 mb-3 max-h-56 overflow-y-auto">
+              {cartItems.map((item) => (
+                <div key={item.id} className="flex gap-3">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                    {item.product_image
+                      ? <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
+                      : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No img</div>
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-xs text-gray-800 line-clamp-2 leading-tight">{item.product_name}</p>
+                    <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                    <p className="font-semibold text-[#1B3A6B] text-sm">₵{(item.product_price * item.quantity).toFixed(2)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Separator className="my-4" />
+
+            <div className="space-y-4">
+              <div className="flex justify-between text-base text-gray-600">
+                <span>Subtotal</span>
+                <span>₵{subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between text-base text-gray-600">
+                  <span>Delivery</span>
+                  <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-semibold text-[#1B3A6B]'}>
+                    {shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}
+                  </span>
+                </div>
+                {cartZoneName && (
+                  <p className="text-xs text-gray-500 text-center max-w-full mx-auto leading-tight">{cartZoneName}</p>
+                )}
+              </div>
+              <Separator />
+              <div className="flex justify-between text-lg font-bold text-gray-800">
+                <span>Total</span>
+                <span className="text-[#1B3A6B]">₵{total.toFixed(2)}</span>
+              </div>
+            </div>
+
+          </Card>
+        </div>
+
+        <form onSubmit={handleSubmit}>
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Delivery Info */}
           <div className="lg:col-span-2 space-y-6">
@@ -388,71 +438,25 @@ export default function Checkout() {
             </Card>
           </div>
 
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <Card className="p-5 sm:p-6 shadow-md sticky top-4">
-              <h2 className="text-lg font-bold text-gray-800 mb-5 text-center">Order Summary</h2>
-              
-              <div className="space-y-3 mb-5 max-h-56 overflow-y-auto">
-                {cartItems.map((item) => (
-                  <div key={item.id} className="flex gap-3">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                      {item.product_image
-                        ? <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No img</div>
-                      }
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-xs text-gray-800 line-clamp-2 leading-tight">{item.product_name}</p>
-                      <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                      <p className="font-semibold text-[#1B3A6B] text-sm">₵{(item.product_price * item.quantity).toFixed(2)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          
+        </div>
 
-              <Separator className="my-4" />
-              
-              <div className="space-y-4">
-                <div className="flex justify-between text-base text-gray-600">
-                  <span>Subtotal</span>
-                  <span>₵{subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between text-base text-gray-600">
-                    <span>Delivery</span>
-                    <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-semibold text-[#1B3A6B]'}>
-                      {shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}
-                    </span>
-                  </div>
-                  {cartZoneName && (
-                    <p className="text-xs text-gray-500 text-center max-w-full mx-auto leading-tight">{cartZoneName}</p>
-                  )}
-                </div>
-                <Separator />
-                <div className="flex justify-between text-lg font-bold text-gray-800">
-                  <span>Total</span>
-                  <span className="text-[#1B3A6B]">₵{total.toFixed(2)}</span>
-                </div>
-              </div>
-
-              <div className="flex justify-center mt-6">
-                <Button 
-                  type="submit"
-                  className="w-full bg-[#1B3A6B] hover:bg-[#152f5a] text-white font-bold py-4 text-base"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    '💳 Place Order & Pay with Hubtel'
-                  )}
-                </Button>
-              </div>
-            </Card>
+        <div className="mt-6 flex justify-center">
+          <div className="w-full max-w-2xl">
+            <Button 
+              type="submit"
+              className="w-full bg-[#1B3A6B] hover:bg-[#152f5a] text-white font-bold py-4 text-base"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                '💳 Place Order & Pay with Hubtel'
+              )}
+            </Button>
           </div>
         </div>
       </form>

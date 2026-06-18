@@ -7,15 +7,11 @@ import guestCart from '@/lib/guest-cart';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { 
   Trash2, 
   Plus, 
   Minus, 
-  ArrowRight,
-  ShoppingBag,
-  Truck,
-  ChevronDown
+  ShoppingBag
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -139,176 +135,73 @@ export default function Cart() {
     <div className="w-full max-w-full px-3 py-4 sm:px-4 sm:py-6 mx-auto sm:container">
       <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Shopping Cart</h1>
 
-      <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="space-y-4">
         {/* Cart Items */}
-        <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-          <>
-            {itemsSource.map((item) => (
-              <div key={item.id}>
-                <Card className="p-3 sm:p-4 shadow-sm">
-                  <div className="flex gap-3">
-                    <Link to={createPageUrl(`ProductDetail?id=${item.product_id}`)} className="flex-shrink-0">
-                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
-                        <img
-                         src={item.product_image}
-                         alt={item.product_name}
-                         className="w-full h-full object-cover"
-                         onError={e => { e.target.style.display='none'; }}
-                        />
-                      </div>
-                    </Link>
-                    <div className="flex-1 min-w-0">
-                      <Link to={createPageUrl(`ProductDetail?id=${item.product_id}`)}>
-                        <h3 className="font-medium text-gray-800 hover:text-[#1B3A6B] transition-colors text-xs sm:text-sm leading-tight line-clamp-2">
-                          {item.product_name}
-                        </h3>
-                      </Link>
-                      <p className="text-sm sm:text-base font-bold text-[#1B3A6B] mt-1">
-                        ₵{item.product_price?.toFixed(2)}
-                      </p>
-                      
-                      <div className="flex items-center justify-between mt-2 sm:mt-3">
-                        <div className="flex items-center gap-1 bg-gray-100 rounded-full p-1">
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-7 w-7 rounded-full"
-                            onClick={() => updateQuantityMutation.mutate({ item, delta: -1 })}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-6 text-center font-semibold text-sm">{item.quantity}</span>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-7 w-7 rounded-full"
-                            onClick={() => updateQuantityMutation.mutate({ item, delta: 1 })}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50 px-2 sm:px-3"
-                          onClick={() => removeItemMutation.mutate(item)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="hidden sm:inline ml-1">Remove</span>
-                        </Button>
-                      </div>
-                    </div>
+        <div className="space-y-3 sm:space-y-4">
+          {itemsSource.map((item) => (
+            <Card key={item.id} className="p-3 sm:p-4 shadow-sm">
+              <div className="flex gap-3">
+                <Link to={createPageUrl(`ProductDetail?id=${item.product_id}`)} className="flex-shrink-0">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
+                    {item.product_image ? (
+                      <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" onError={e => { e.target.style.display='none'; }} />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No img</div>
+                    )}
                   </div>
-                </Card>
+                </Link>
+
+                <div className="flex-1 min-w-0">
+                  <Link to={createPageUrl(`ProductDetail?id=${item.product_id}`)}>
+                    <h3 className="font-medium text-gray-800 hover:text-[#1B3A6B] transition-colors text-sm sm:text-base leading-tight line-clamp-2">{item.product_name}</h3>
+                  </Link>
+                  <p className="text-sm sm:text-base font-bold text-[#1B3A6B] mt-1">₵{item.product_price?.toFixed(2)}</p>
+
+                  <div className="flex items-center justify-between mt-2 sm:mt-3">
+                    <div className="flex items-center gap-1 bg-gray-100 rounded-full p-1">
+                      <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full" onClick={() => updateQuantityMutation.mutate({ item, delta: -1 })}>
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-6 text-center font-semibold text-sm">{item.quantity}</span>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full" onClick={() => updateQuantityMutation.mutate({ item, delta: 1 })}>
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+
+                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50 px-2 sm:px-3" onClick={() => removeItemMutation.mutate(item)}>
+                      <Trash2 className="h-4 w-4" />
+                      <span className="hidden sm:inline ml-1">Remove</span>
+                    </Button>
+                  </div>
+                </div>
               </div>
-            ))}
-          </>
+            </Card>
+          ))}
         </div>
 
-        {/* Order Summary */}
-        <div className="lg:col-span-1">
-          <Card className="p-4 sm:p-6 shadow-md lg:sticky lg:top-24">
-            <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Order Summary</h2>
-            
-            <div className="space-y-3">
+        {/* Proceed action */}
+        <div className="flex justify-center">
+          <Card className="p-4 sm:p-6 shadow-md w-full max-w-2xl">
+            <div className="space-y-3 text-center">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal ({itemsSource.length} items)</span>
                 <span>₵{subtotal.toFixed(2)}</span>
               </div>
-
-              {/* Delivery Location Picker */}
-              <div>
-                <div className="flex items-center gap-1 mb-1.5">
-                  <Truck className="h-4 w-4 text-[#1B3A6B]" />
-                  <span className="text-sm font-semibold text-gray-700">Delivery / Pickup</span>
-                </div>
-                <button
-                  onClick={() => setLocationPickerOpen(o => !o)}
-                  className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors text-left"
+              <div className="flex justify-center">
+                <Button
+                  className="w-full max-w-sm mt-2 bg-[#1B3A6B] hover:bg-[#162f58] text-white font-bold py-3"
+                  onClick={() => {
+                    if (!user) { navigateToLogin(); return; }
+                    navigate(createPageUrl('Checkout'));
+                  }}
                 >
-                  <div className="flex-1 min-w-0 pr-2">
-                    {selectedZone ? (
-                      <>
-                        <p className="text-xs sm:text-sm font-semibold text-gray-800 break-words leading-snug">{selectedZone.label}</p>
-                        <p className="text-xs text-[#1B3A6B] mt-0.5">{selectedZone.note}</p>
-                      </>
-                    ) : (
-                      <p className="text-xs sm:text-sm text-[#1B3A6B] font-medium">📍 Tap to pick your location</p>
-                    )}
-                  </div>
-                  <ChevronDown className={`h-4 w-4 text-[#1B3A6B] flex-shrink-0 transition-transform ${locationPickerOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {locationPickerOpen && (
-                  <div className="mt-1 border border-gray-200 rounded-xl shadow-lg bg-white overflow-hidden max-h-60 overflow-y-auto z-10 relative">
-                    {deliveryZones.map(zone => (
-                      <button
-                        key={zone.id}
-                        onClick={() => { setSelectedLocation(zone.id); setLocationPickerOpen(false); }}
-                        className={`w-full flex items-start justify-between px-3 py-2.5 hover:bg-blue-50 text-left border-b border-gray-100 last:border-0 transition-colors ${selectedLocation === zone.id ? 'bg-blue-50 border-l-4 border-l-[#1B3A6B]' : ''}`}
-                      >
-                        <div className="flex-1 min-w-0 pr-2">
-                          <p className="text-xs sm:text-sm font-medium text-gray-800 leading-snug">{zone.label}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{zone.note}</p>
-                        </div>
-                        <span className={`text-xs sm:text-sm font-bold flex-shrink-0 ${zone.fee === 0 ? 'text-green-600' : 'text-[#1B3A6B]'}`}>
-                          {zone.fee === 0 ? 'FREE' : `₵${zone.fee}`}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  Proceed To Checkout
+                </Button>
               </div>
-
-              <div className="flex justify-between text-gray-600">
-                <span>Delivery Fee</span>
-                <span className={selectedZone && shipping === 0 ? 'text-green-600 font-semibold' : ''}>
-                  {selectedZone ? (shipping === 0 ? 'FREE' : `₵${shipping}`) : '—'}
-                </span>
-              </div>
-              
-              <Separator />
-              
-              <div className="flex justify-between text-lg font-bold text-gray-800">
-                <span>Total</span>
-                <span>₵{total.toFixed(2)}</span>
-              </div>
-              {!selectedZone && (
-                <p className="text-xs text-center text-[#1B3A6B]">Select your location above to see final total</p>
-              )}
+              <Link to={createPageUrl('Shop')}>
+                <Button variant="ghost" className="w-full mt-2">Continue Shopping</Button>
+              </Link>
             </div>
-
-            <div className="flex justify-center">
-              <Button 
-                className={`w-full max-w-sm mt-4 sm:mt-6 font-bold py-4 sm:py-6 text-base sm:text-lg ${selectedZone ? 'bg-[#1B3A6B] hover:bg-[#162f58] text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                disabled={!selectedZone}
-                onClick={() => {
-                  if (!selectedZone) {
-                    toast.error('Please select your delivery location first');
-                    return;
-                  }
-                  const params = `?zone=${selectedZone.id}&zoneName=${encodeURIComponent(selectedZone.label)}&fee=${selectedZone.fee}`;
-                  if (!user) {
-                    navigateToLogin();
-                    return;
-                  }
-                  navigate(createPageUrl('Checkout') + params);
-                }}
-              >
-                💳 Place Order & Pay with Hubtel
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </div>
-            {!selectedZone && (
-            <p className="text-xs text-center text-[#1B3A6B] mt-2 font-medium">⚠️ Please select a delivery location to continue</p>
-            )}
-
-            <Link to={createPageUrl('Shop')}>
-              <Button variant="ghost" className="w-full mt-2">
-                Continue Shopping
-              </Button>
-            </Link>
           </Card>
         </div>
       </div>

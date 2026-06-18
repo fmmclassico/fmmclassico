@@ -52,13 +52,16 @@ const LayoutWrapper = ({ children, currentPageName, isAuthenticated }) => {
 };
 
 // Helper component for protected routes
+// FIX: useEffect MUST be called unconditionally (Rules of Hooks).
+// Previously, useEffect was inside an if(!isAuthenticated) block — that is invalid React.
 const ProtectedLayout = ({ children, currentPageName, isAuthenticated, navigateToLogin }) => {
-  if (!isAuthenticated) {
-    React.useEffect(() => {
+  React.useEffect(() => {
+    if (!isAuthenticated) {
       navigateToLogin();
-    }, []);
-    return null;
-  }
+    }
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) return null;
   return <LayoutWrapper currentPageName={currentPageName} isAuthenticated={true}>{children}</LayoutWrapper>;
 };
 

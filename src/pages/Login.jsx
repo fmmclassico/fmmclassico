@@ -7,6 +7,24 @@ import { Label } from "@/components/ui/label";
 import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
+import MicrosoftIcon from "@/components/MicrosoftIcon";
+import FacebookIcon from "@/components/FacebookIcon";
+import AppleIcon from "@/components/AppleIcon";
+
+// After a successful login, send the customer back to wherever they were
+// (e.g. the product they wanted to buy, or the checkout page) instead of
+// always dumping them on the homepage.
+const getReturnUrl = () => {
+  const params = new URLSearchParams(window.location.search);
+  return (
+    params.get("from_url") ||
+    params.get("returnUrl") ||
+    params.get("return_to") ||
+    params.get("redirect") ||
+    params.get("next") ||
+    "/"
+  );
+};
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -20,7 +38,7 @@ export default function Login() {
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
-      window.location.href = "/";
+      window.location.href = getReturnUrl();
     } catch (err) {
       setError(err.message || "Invalid email or password");
     } finally {
@@ -29,7 +47,19 @@ export default function Login() {
   };
 
   const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", "/");
+    base44.auth.loginWithProvider("google", getReturnUrl());
+  };
+
+  const handleMicrosoft = () => {
+    base44.auth.loginWithProvider("microsoft", getReturnUrl());
+  };
+
+  const handleFacebook = () => {
+    base44.auth.loginWithProvider("facebook", getReturnUrl());
+  };
+
+  const handleApple = () => {
+    base44.auth.loginWithProvider("apple", getReturnUrl());
   };
 
   return (
@@ -48,11 +78,38 @@ export default function Login() {
     >
       <Button
         variant="outline"
-        className="w-full h-12 text-sm font-medium mb-6"
+        className="w-full h-12 text-sm font-medium mb-3"
         onClick={handleGoogle}
       >
         <GoogleIcon className="w-5 h-5 mr-2" />
         Continue with Google
+      </Button>
+
+      <Button
+        variant="outline"
+        className="w-full h-12 text-sm font-medium mb-3"
+        onClick={handleMicrosoft}
+      >
+        <MicrosoftIcon className="w-5 h-5 mr-2" />
+        Continue with Microsoft
+      </Button>
+
+      <Button
+        variant="outline"
+        className="w-full h-12 text-sm font-medium mb-3"
+        onClick={handleFacebook}
+      >
+        <FacebookIcon className="w-5 h-5 mr-2" />
+        Continue with Facebook
+      </Button>
+
+      <Button
+        variant="outline"
+        className="w-full h-12 text-sm font-medium mb-6"
+        onClick={handleApple}
+      >
+        <AppleIcon className="w-5 h-5 mr-2" />
+        Continue with Apple
       </Button>
 
       <div className="relative mb-6">

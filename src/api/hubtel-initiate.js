@@ -1,12 +1,18 @@
 import { createClientFromRequest } from "npm:@base44/sdk";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// hubtelInitiate – Base44 backend function
 // Called from the frontend via: base44.functions.invoke('hubtelInitiate', { ... })
-// Required secrets (Base44 → Settings → Secrets/Environment Variables):
-//   HUBTEL_API_ID
-//   HUBTEL_API_KEY
-//   HUBTEL_MERCHANT_ACCOUNT_NUMBER
-//   HUBTEL_CALLBACK_URL  -> paste the public URL Base44 shows you for the
-//                           "hubtelCallback" function once you create it below.
+//
+// REQUIRED SECRETS — set these in Base44 → Project Settings → Secrets:
+//   HUBTEL_API_ID                  →  pQGpB7y         (username)
+//   HUBTEL_API_KEY                 →  14fda6847ee44c8fa910f355675cce73  (password)
+//   HUBTEL_MERCHANT_ACCOUNT_NUMBER →  2039285         (Collection Account)
+//   HUBTEL_CALLBACK_URL            →  (the public URL Base44 gives for hubtelCallback function)
+//
+// ⚠️  NEVER hard-code credentials here. They must live in Base44 Secrets only.
+//     The values above are shown here only so you know which secret names to create.
+// ─────────────────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   try {
@@ -24,6 +30,7 @@ Deno.serve(async (req) => {
       appOrigin,
     } = body || {};
 
+    // Load credentials from environment secrets — NEVER from the request body
     const HUBTEL_API_ID = Deno.env.get("HUBTEL_API_ID");
     const HUBTEL_API_KEY = Deno.env.get("HUBTEL_API_KEY");
     const HUBTEL_MERCHANT_ACCOUNT = Deno.env.get("HUBTEL_MERCHANT_ACCOUNT_NUMBER");
@@ -32,16 +39,22 @@ Deno.serve(async (req) => {
     if (!HUBTEL_API_ID || !HUBTEL_API_KEY || !HUBTEL_MERCHANT_ACCOUNT) {
       return Response.json({
         ok: false,
-        error: "Hubtel is not configured. Add HUBTEL_API_ID, HUBTEL_API_KEY and HUBTEL_MERCHANT_ACCOUNT_NUMBER as secrets in Base44.",
+        error: "Hubtel is not configured. Add HUBTEL_API_ID, HUBTEL_API_KEY and HUBTEL_MERCHANT_ACCOUNT_NUMBER as secrets in Base44 Project Settings → Secrets.",
       });
     }
+
     if (!totalAmount || !clientReference) {
       return Response.json({ ok: false, error: "totalAmount and clientReference are required" });
     }
 
     const origin = (appOrigin || "").replace(/\/$/, "") || "https://fmmclassico.com";
+
+    // returnUrl and cancellationUrl — where Hubtel redirects the customer after payment
     const returnUrl = `${origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber || "")}&amount=${encodeURIComponent(totalAmount)}`;
     const cancellationUrl = `${origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber || "")}&amount=${encodeURIComponent(totalAmount)}&status=cancelled`;
+
+    // callbackUrl — server-to-server webhook where Hubtel sends payment confirmation
+    // This MUST be the public URL of your hubtelCallback function in Base44
     const callbackUrl = HUBTEL_CALLBACK_URL || `${origin}/functions/hubtelCallback`;
 
     const hubtelBody = {
@@ -57,6 +70,7 @@ Deno.serve(async (req) => {
       payeeEmail: payeeEmail || "",
     };
 
+    // Basic auth: base64 encode "API_ID:API_KEY"
     const basicAuth = btoa(`${HUBTEL_API_ID}:${HUBTEL_API_KEY}`);
 
     const resp = await fetch("https://payproxyapi.hubtel.com/items/initiate", {
@@ -65,6 +79,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
         "Accept": "application/json",
         "Authorization": `Basic ${basicAuth}`,
+        "Cache-Control": "no-cache",
       },
       body: JSON.stringify(hubtelBody),
     });
@@ -72,10 +87,17 @@ Deno.serve(async (req) => {
     const data = await resp.json().catch(() => null);
 
     if (!resp.ok) {
-      return Response.json({ ok: false, error: "Hubtel rejected the request", httpStatus: resp.status, detail: data });
+      return Response.json({
+        ok: false,
+        error: "Hubtel rejected the request",
+        httpStatus: resp.status,
+        detail: data,
+      });
     }
 
+    // Pass through full Hubtel response + ok flag
     return Response.json({ ok: true, ...data });
+
   } catch (error) {
     console.error("hubtelInitiate error:", error);
     return Response.json({ ok: false, error: error.message || "Failed to initiate Hubtel checkout" });

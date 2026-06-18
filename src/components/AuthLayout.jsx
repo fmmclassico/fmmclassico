@@ -8,9 +8,8 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
         <div className="text-center mb-8">
           <div className="inline-flex flex-col items-center">
             <h1 className="text-4xl font-black text-white tracking-tight mb-1">
-              FMM <span className="text-yellow-300">CLASSICO</span>
+              FMM <span className="text-white">CLASSICO</span>
             </h1>
-            <p className="text-blue-200 text-sm font-medium">Phone Accessories · Electronics · Home Appliances</p>
           </div>
         </div>
 

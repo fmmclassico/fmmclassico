@@ -38,22 +38,7 @@ Deno.serve(async (req) => {
 
     if (!HUBTEL_API_ID || !HUBTEL_API_KEY || !HUBTEL_MERCHANT_ACCOUNT) {
       return Response.json({
-        ok: false,
-        error: "Hubtel is not configured. Add HUBTEL_API_ID, HUBTEL_API_KEY and HUBTEL_MERCHANT_ACCOUNT_NUMBER as secrets in Base44 Project Settings → Secrets.",
-      });
-    }
-
-    if (!totalAmount || !clientReference) {
-      return Response.json({ ok: false, error: "totalAmount and clientReference are required" });
-    }
-
-    const origin = (appOrigin || "").replace(/\/$/, "") || "https://fmmclassico.com";
-
-    // returnUrl and cancellationUrl — where Hubtel redirects the customer after payment
-    const returnUrl = `${origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber || "")}&amount=${encodeURIComponent(totalAmount)}`;
-    const cancellationUrl = `${origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber || "")}&amount=${encodeURIComponent(totalAmount)}&status=cancelled`;
-
-    // callbackUrl — server-to-server webhook where Hubtel sends payment confirmation
+        ok: false,ation
     // This MUST be the public URL of your hubtelCallback function in Base44
     const callbackUrl = HUBTEL_CALLBACK_URL || `${origin}/functions/hubtelCallback`;
 

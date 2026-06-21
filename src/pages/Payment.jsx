@@ -14,20 +14,22 @@ function formatAmount(num) {
   return n % 1 === 0 ? n.toLocaleString() : n.toFixed(2);
 }
 
-// Generate a unique client reference that never repeats
-function generateClientRef(orderNumber) {
-  const ts = Date.now().toString(36).toUpperCase();
-  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-  const base = `FMM-${ts}-${rand}`;
-  return base.slice(0, 32);
+/**
+ * FIX: Generate a clientReference that:
+ *  1. Is unique and never repeats (includes timestamp + random suffix)
+ *  2. Is at most 32 characters (Hubtel hard limit)
+ *  3. Always starts with "FMM" so it's recognisable in Hubtel dashboard
+ */
+function generateClientRef() {
+  const ts   = Date.now().toString(36).toUpperCase();   // ~8 chars
+  const rand = Math.random().toString(36).substring(2, 7).toUpperCase(); // 5 chars
+  return `FMM-${ts}-${rand}`.slice(0, 32);
 }
 
 // Calls the Base44 backend function that starts Hubtel checkout.
-// Some deployments expose the function with different casing or route conventions.
-// We try several route variants so the frontend can succeed even if the deployment shape differs.
+// Tries several name variants in case the deployment uses different casing.
 async function callHubtelInitiateOnServer(payload) {
   const invokeCandidates = ['hubtelInitiate', 'hubtel-initiate', 'hubtel_initiate'];
-  const fetchCandidates = ['/hubtelInitiate', '/hubtel-initiate', '/hubtel_initiate'];
   let lastError = null;
 
   for (const functionName of invokeCandidates) {
@@ -37,33 +39,8 @@ async function callHubtelInitiateOnServer(payload) {
       if (normalized !== null) return normalized;
     } catch (error) {
       lastError = error;
-      if (error?.response?.status !== 404 && error?.status !== 404) {
-        throw error;
-      }
-    }
-  }
-
-  for (const path of fetchCandidates) {
-    try {
-      const response = await base44.functions.fetch(path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json().catch(() => null);
-      const normalized = normalizeHubtelResult(data);
-      if (normalized !== null) return normalized;
-      if (response.ok) {
-        return data;
-      }
-      if (response.status !== 404) {
-        throw new Error(data?.error || data?.message || `Hubtel endpoint responded with HTTP ${response.status}`);
-      }
-    } catch (error) {
-      lastError = error;
-      if (error?.message && !error.message.includes('404')) {
-        throw error;
-      }
+      const status = error?.response?.status || error?.status;
+      if (status !== 404) throw error;
     }
   }
 
@@ -75,7 +52,7 @@ function normalizeHubtelResult(result) {
   if (typeof result !== 'object') return result;
 
   // Axios-style response wrapper
-  if (result && 'data' in result && 'status' in result && 'config' in result) {
+  if ('data' in result && 'status' in result && 'config' in result) {
     return result.data;
   }
 
@@ -85,7 +62,7 @@ function normalizeHubtelResult(result) {
   }
 
   // Actual Hubtel payload shape
-  if (result.ok === true || result.responseCode || result.checkoutUrl || result.checkoutDirectUrl || result.data?.checkoutUrl || result.data?.checkoutDirectUrl) {
+  if (result.ok === true || result.responseCode || result.checkoutUrl || result.checkoutDirectUrl || result.data?.checkoutUrl) {
     return result;
   }
 
@@ -154,16 +131,31 @@ export default function Payment() {
     const safetyTimer = setTimeout(() => {
       setLoading(false);
       setErrorMsg('Request timed out. Please check your internet connection and try again.');
-    }, 20000);
+    }, 25000);
 
     const customerName = [firstName, lastName].filter(Boolean).join(' ') || 'Customer';
     const normPhone    = normalisePhone(phone);
-    const clientRef    = generateClientRef(orderNumber);
+
+    /**
+     * FIX: Generate clientRef ONCE here, then immediately persist it to
+     * sessionStorage so PaymentConfirmed.jsx can retrieve it for status check
+     * and order lookup — even after the Hubtel redirect clears React state.
+     */
+    const clientRef = generateClientRef();
+
+    // Persist the clientReference alongside the pending order data
+    try {
+      const existing = JSON.parse(sessionStorage.getItem('fmm_pending_order') || '{}');
+      sessionStorage.setItem('fmm_pending_order', JSON.stringify({
+        ...existing,
+        hubtelClientReference: clientRef,
+      }));
+    } catch (_) {}
 
     const requestBody = {
       totalAmount: parseFloat(amount.toFixed(2)),
       description: `FMM CLASSICO Order #${orderNumber}`,
-      clientReference: clientRef,
+      clientReference: clientRef,  // FIX: always use the generated ref
       payeeName: customerName,
       payeeMobileNumber: normPhone,
       payeeEmail: emailVal,
@@ -184,9 +176,11 @@ export default function Payment() {
     try {
       const rawResult = await callHubtelInitiateOnServer(requestBody);
       clearTimeout(safetyTimer);
+
       const result = rawResult && typeof rawResult === 'object' && 'data' in rawResult && !('responseCode' in rawResult) && !('ok' in rawResult)
         ? rawResult.data
         : rawResult;
+
       log.hubtelResponse = result;
       setPayLog(log);
 
@@ -197,12 +191,25 @@ export default function Payment() {
       }
 
       const code = result?.responseCode;
-      const checkoutUrl = result?.data?.checkoutUrl || result?.data?.checkoutDirectUrl || result?.checkoutUrl || result?.checkoutDirectUrl;
+      const checkoutUrl = result?.data?.checkoutUrl
+        || result?.data?.checkoutDirectUrl
+        || result?.checkoutUrl
+        || result?.checkoutDirectUrl;
       log.checkoutUrl = checkoutUrl;
 
       const isSuccess = code === '0000' || code === '00';
 
       if (isSuccess && checkoutUrl) {
+        // FIX: Also persist the exact clientReference returned by the server
+        // (hubtel-initiate.js returns usedClientReference which may be truncated)
+        try {
+          const existing = JSON.parse(sessionStorage.getItem('fmm_pending_order') || '{}');
+          sessionStorage.setItem('fmm_pending_order', JSON.stringify({
+            ...existing,
+            hubtelClientReference: result.usedClientReference || clientRef,
+          }));
+        } catch (_) {}
+
         window.location.href = checkoutUrl;
         return;
       }
@@ -227,8 +234,8 @@ export default function Payment() {
   function interpretHubtelCode(code, msg) {
     if (code === '0000' || code === '00') return '✅ Success';
     if (code === '4000') return `Validation error — check all fields are correct. ${msg}`;
-    if (code === '4070') return `Fees not configured for merchant account. Contact Hubtel support to enable Online Checkout. ${msg}`;
-    if (code === '2001') return `Payment processor error — invalid credentials or account not enabled. ${msg}`;
+    if (code === '4070') return `Fees not configured for this merchant account. Contact Hubtel support to enable Online Checkout for your account. ${msg}`;
+    if (code === '2001') return `Payment processor error — credentials may be wrong or account not yet enabled for Online Checkout. ${msg}`;
     return msg || `Unknown error code ${code}`;
   }
 
@@ -370,7 +377,7 @@ export default function Payment() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone number</label>
-                <Input placeholder="Enter your phone number" value={phone} onChange={e => setPhone(e.target.value)} className="h-11" />
+                <Input placeholder="Enter your phone number (e.g. 0244123456)" value={phone} onChange={e => setPhone(e.target.value)} className="h-11" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Amount</label>

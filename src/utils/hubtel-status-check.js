@@ -1,28 +1,47 @@
 /**
  * HUBTEL TRANSACTION STATUS CHECKER
  * ==================================
- * 
- * This utility checks the status of a payment with Hubtel.
- * 
- * WHY YOU NEED THIS:
- * Hubtel says: "If you don't get payment confirmation after 5 minutes,
- * you MUST check the transaction status yourself"
- * 
- * This utility does that check for you.
+ *
+ * Calls the Base44 backend function `hubtelStatus` to verify payment status.
+ *
+ * FIX: The original version called `/api/hubtel/status` via a plain fetch(),
+ * which is a URL that does NOT exist in a Base44 project. This always failed
+ * silently, meaning payment verification was never completed from the frontend.
+ *
+ * The correct approach is to use base44.functions.invoke() to call the
+ * `hubtelStatus` server function, the same way hubtelInitiate is called.
  */
 
+import { base44 } from '@/api/base44Client';
+
 /**
- * Client-side wrapper that calls the server-side status endpoint.
- * The actual Hubtel status check runs on the server to avoid exposing API credentials.
+ * Check the payment status for a given clientReference.
+ * Returns the normalised response from the hubtelStatus server function.
+ *
+ * @param {string} clientReference - The exact clientReference sent to Hubtel during initiation.
+ * @returns {Promise<{ok: boolean, success: boolean, status: string, transactionId: string|null, amount: number|null, paymentMethod: string|null, raw: object}>}
  */
 export async function checkTransactionStatus(clientReference) {
   if (!clientReference) throw new Error('clientReference is required');
-  const url = `/api/hubtel/status?clientReference=${encodeURIComponent(clientReference)}`;
-  const resp = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
-  const data = await resp.json().catch(() => null);
-  if (!resp.ok) throw new Error(data?.error || 'Status check failed');
-  // Hubtel returns { message, responseCode, data: { status, ... } }
-  return data;
+
+  // Try Base44 function invoke variants (same pattern as Payment.jsx uses for hubtelInitiate)
+  const invokeCandidates = ['hubtelStatus', 'hubtel-status', 'hubtel_status'];
+
+  let lastError = null;
+
+  for (const functionName of invokeCandidates) {
+    try {
+      const result = await base44.functions.invoke(functionName, { clientReference });
+      if (result != null) return result;
+    } catch (error) {
+      lastError = error;
+      // Only skip 404s — any other error (auth, server error) should bubble up
+      const status = error?.response?.status || error?.status;
+      if (status !== 404) throw error;
+    }
+  }
+
+  throw lastError || new Error('Could not reach hubtelStatus function');
 }
 
 export default checkTransactionStatus;

@@ -5,13 +5,12 @@ import { createClientFromRequest } from "npm:@base44/sdk";
 // Called from the frontend via: base44.functions.invoke('hubtelInitiate', { ... })
 //
 // REQUIRED SECRETS — set these in Base44 → Project Settings → Secrets:
-//   HUBTEL_API_ID                  →  pQGpB7y         (username)
-//   HUBTEL_API_KEY                 →  14fda6847ee44c8fa910f355675cce73  (password)
-//   HUBTEL_MERCHANT_ACCOUNT_NUMBER →  2039285         (Collection Account)
-//   HUBTEL_CALLBACK_URL            →  (the public URL Base44 gives for hubtelCallback function)
+//   HUBTEL_API_ID                  →  your API ID (username)
+//   HUBTEL_API_KEY                 →  your API KEY (password)
+//   HUBTEL_MERCHANT_ACCOUNT_NUMBER →  your Collection Account Number
+//   HUBTEL_CALLBACK_URL            →  the public URL Base44 gives for hubtelCallback function
 //
 // ⚠️  NEVER hard-code credentials here. They must live in Base44 Secrets only.
-//     The values above are shown here only so you know which secret names to create.
 // ─────────────────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -47,24 +46,30 @@ Deno.serve(async (req) => {
       return Response.json({ ok: false, error: "totalAmount and clientReference are required" });
     }
 
+    // FIX: clientReference must not exceed 32 characters (Hubtel hard limit).
+    const safeClientRef = String(clientReference).slice(0, 32);
+
     const origin = (appOrigin || "").replace(/\/$/, "") || "https://fmmclassico.com";
 
-    // returnUrl and cancellationUrl — where Hubtel redirects the customer after payment
-    const returnUrl = `${origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber || "")}&amount=${encodeURIComponent(totalAmount)}`;
-    const cancellationUrl = `${origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber || "")}&amount=${encodeURIComponent(totalAmount)}&status=cancelled`;
+    // returnUrl — Hubtel appends ?status=&clientReference=&transactionId= to this URL
+    const returnUrl = `${origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber || "")}`;
+    const cancellationUrl = `${origin}/PaymentConfirmed?orderNumber=${encodeURIComponent(orderNumber || "")}&status=cancelled`;
 
     // callbackUrl — server-to-server webhook where Hubtel sends payment confirmation
-    // This MUST be the public URL of your hubtelCallback function in Base44
+    // HUBTEL_CALLBACK_URL must be the public URL of your hubtelCallback Base44 function.
+    if (!HUBTEL_CALLBACK_URL) {
+      console.warn("HUBTEL_CALLBACK_URL secret is not set. Hubtel will not be able to confirm payments automatically.");
+    }
     const callbackUrl = HUBTEL_CALLBACK_URL || `${origin}/functions/hubtelCallback`;
 
     const hubtelBody = {
       totalAmount: Number(Number(totalAmount).toFixed(2)),
-      description: description || `FMM CLASSICO Order ${clientReference}`,
+      description: description || `FMM CLASSICO Order ${safeClientRef}`,
       callbackUrl,
       returnUrl,
       cancellationUrl,
       merchantAccountNumber: HUBTEL_MERCHANT_ACCOUNT,
-      clientReference,
+      clientReference: safeClientRef,
       payeeName: payeeName || "",
       payeeMobileNumber: payeeMobileNumber || "",
       payeeEmail: payeeEmail || "",
@@ -95,8 +100,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Pass through full Hubtel response + ok flag
-    return Response.json({ ok: true, ...data });
+    // Pass through full Hubtel response + ok flag + the safe client ref used
+    return Response.json({ ok: true, usedClientReference: safeClientRef, ...data });
 
   } catch (error) {
     console.error("hubtelInitiate error:", error);

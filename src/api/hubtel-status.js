@@ -42,15 +42,4 @@ Deno.serve(async (req) => {
 
     return Response.json({
       ok: true,
-      success,
-      status,
-      transactionId: d.transactionId || d.externalTransactionId || null,
-      amount: d.amount ?? null,
-      paymentMethod: d.paymentMethod || null,
-      raw: data,
-    });
-  } catch (error) {
-    console.error("hubtelStatus error:", error);
-    return Response.json({ ok: false, error: error.message || "Status check failed" });
-  }
-});
+      s

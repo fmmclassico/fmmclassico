@@ -47,23 +47,5 @@ Deno.serve(async (req) => {
         tracking_updates: [
           ...(order.tracking_updates || []),
           {
-            status: "Payment Confirmed",
-            message: `Payment of ₵${amount} confirmed via Hubtel`,
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      });
-    } else {
-      await base44.asServiceRole.entities.Order.update(order.id, {
-        payment_status: "failed",
-        hubtel_status: "failed",
-        hubtel_transaction_id: transactionId,
-      });
-    }
 
-    return Response.json({ ResponseCode: "0000", Status: "Success" });
-  } catch (error) {
-    console.error("hubtelCallback error:", error);
-    return Response.json({ ResponseCode: "0001", Status: "Error" });
-  }
 });

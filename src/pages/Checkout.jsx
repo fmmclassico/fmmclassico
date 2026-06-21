@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { 
+import {
   Truck,
   CreditCard,
   Loader2,
@@ -19,6 +19,25 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DeliveryInfoModal from '../components/delivery/DeliveryInfoModal';
+
+// ── DELIVERY ZONES ──────────────────────────────────────────────────────────
+// FIX: This dropdown used to be declared (but never rendered) on the Cart page.
+// It is now the single source of truth for delivery selection, and lives
+// inside the Order Summary card on the Checkout page.
+const DELIVERY_ZONES = [
+  { id: 'umat_pickup', label: '🏫 UMAT Campus – Pickup / Meeting Point', fee: 0, note: 'FREE – collect on campus' },
+  { id: 'umat_doorstep', label: '🏠 UMAT Campus – Doorstep Delivery', fee: 10, note: '₵10 to your door' },
+  { id: 'tarkwa_station', label: '🚌 Tarkwa – Delivery to a Station / Car', fee: 20, note: '₵20 to a station or car' },
+  { id: 'tarkwa', label: '🏘️ Tarkwa (Outside UMAT) – Doorstep', fee: 25, note: '₵25 delivery fee' },
+  { id: 'ashongman', label: '🏠 Ashongman Estate – Pickup Point (Close to Awo Dede – Purewater)', fee: 0, note: 'FREE – pickup from our location' },
+  { id: 'airport', label: '🏠 Airport Residential Area – Pickup Point (Libi Kraal)', fee: 0, note: 'FREE – pickup from our location' },
+  { id: 'accra_station', label: '🚌 Accra – Delivery to a Station / Car', fee: 25, note: '₵25 to a station or car' },
+  { id: 'accra_delivery', label: '🚗 Delivery Within Accra', fee: 25, note: '₵25 delivery fee' },
+  { id: 'yango', label: '🛵 Yango Delivery – Pay on Delivery', fee: 0, note: 'Yango rider fee paid when product arrives' },
+  { id: 'uber', label: '🚗 Uber Delivery – Pay on Delivery', fee: 0, note: 'Uber rider fee paid when product arrives' },
+  { id: 'bolt', label: '⚡ Bolt Delivery – Pay on Delivery', fee: 0, note: 'Bolt rider fee paid when product arrives' },
+  { id: 'other', label: '📦 Outside Accra & Tarkwa', fee: 50, note: '₵50 flat rate' },
+];
 
 export default function Checkout() {
   const [user, setUser] = useState(null);
@@ -28,38 +47,21 @@ export default function Checkout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Read delivery selection passed from Cart via URL params
   const urlParams = new URLSearchParams(window.location.search);
-  const cartZoneId = urlParams.get('zone') || '';
-  const cartZoneName = urlParams.get('zoneName') ? decodeURIComponent(urlParams.get('zoneName')) : '';
-  const cartZoneFee = urlParams.get('fee') !== null ? Number(urlParams.get('fee')) : null;
+  const initialZoneId = urlParams.get('zone') || '';
 
-  const deliveryOptions = [
-    { value: 'pickup', label: 'Pickup', fee: 0 },
-    { value: 'umat_main_campus', label: 'UMaT Main Campus', fee: 10 },
-    { value: 'within_accra', label: 'Within Accra', fee: 30 },
-    { value: 'outside_accra', label: 'Outside Accra', fee: 50 },
-    { value: 'within_tarkwa', label: 'Within Tarkwa', fee: 20 },
-    { value: 'outside_tarkoradi', label: 'Outside Tarkoradi', fee: 50 },
-  ];
-
-  const initialDeliveryOption = deliveryOptions.find(opt => opt.value === cartZoneId)?.value ||
-    (cartZoneFee !== null ? deliveryOptions.find(opt => opt.fee === cartZoneFee)?.value : null) ||
-    'pickup';
-
-  const [selectedDeliveryOption, setSelectedDeliveryOption] = useState(initialDeliveryOption);
+  // FIX: selectedZoneId now lives here — the dropdown is rendered inside the
+  // Order Summary card, directly under the "Delivery" line.
+  const [selectedZoneId, setSelectedZoneId] = useState(initialZoneId);
 
   const [formData, setFormData] = useState({
     customer_name: '',
     customer_phone: '',
     delivery_address: '',
-    city: '',
-    delivery_location: cartZoneId,
     notes: '',
   });
 
   useEffect(() => {
-    // Reset submission state on mount (handles back-navigation)
     setIsSubmitting(false);
     setOrderSubmitted(false);
     base44.auth.me()
@@ -78,8 +80,12 @@ export default function Checkout() {
   });
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
-  const selectedDelivery = deliveryOptions.find(option => option.value === selectedDeliveryOption) || deliveryOptions[0];
-  const shipping = selectedDelivery.fee;
+
+  // FIX: shipping fee now comes purely from the selected dropdown zone —
+  // no more free-text city matching, and no separate "Delivery: ₵X" line
+  // under the City/Town field (that field is gone).
+  const selectedZone = DELIVERY_ZONES.find(z => z.id === selectedZoneId);
+  const shipping = selectedZone ? selectedZone.fee : 0;
   const total = subtotal + shipping;
 
   const handleInputChange = (e) => {
@@ -92,18 +98,13 @@ export default function Checkout() {
       setLocationError('Geolocation is not supported by your browser');
       return;
     }
-    
+
     setLocationError('');
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
         const googleMapsLink = `https://www.google.com/maps?q=${latitude.toFixed(6)},${longitude.toFixed(6)}&z=15`;
-        
-        // Set delivery address to Google Maps link
-        setFormData(prev => ({
-          ...prev,
-          delivery_address: googleMapsLink
-        }));
+        setFormData(prev => ({ ...prev, delivery_address: googleMapsLink }));
         toast.success('📍 Location detected! Google Maps link added to address field.');
       },
       (error) => {
@@ -111,10 +112,8 @@ export default function Checkout() {
         if (error.code === 1) {
           errorMsg = 'Location access denied';
           setLocationError(errorMsg);
-          // Open phone's location settings after a short delay
           setTimeout(() => {
             if (confirm('Location permission is needed to auto-detect your location.\n\nTap OK to open your phone\'s location settings.')) {
-              // Try to open location settings (works on most mobile devices)
               window.open('https://support.google.com/android/answer/3457478?hl=en', '_blank');
             }
           }, 500);
@@ -133,13 +132,13 @@ export default function Checkout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address) {
-      toast.error('Please fill in all required fields');
+
+    // FIX: city field removed from validation — replaced by selectedZoneId requirement
+    if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !selectedZoneId) {
+      toast.error('Please fill in all required fields, including your delivery option.');
       return;
     }
 
-    // Verify total makes sense: subtotal must match cart
     const expectedSubtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
     if (Math.abs(expectedSubtotal - subtotal) > 0.01) {
       toast.error('Cart total mismatch detected. Please go back to your cart and try again.');
@@ -153,10 +152,6 @@ export default function Checkout() {
     setIsSubmitting(true);
 
     const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
-
-    // Do NOT create the order yet — only save all info to sessionStorage.
-    // The order will be created in PaymentConfirmed AFTER Hubtel confirms payment.
-    // This prevents ghost "pending" orders from users who abandon payment.
     const estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
 
@@ -167,8 +162,7 @@ export default function Checkout() {
       customerEmail: user.email,
       customerPhone: formData.customer_phone,
       deliveryAddress: formData.delivery_address,
-      city: formData.city,
-      deliveryOption: selectedDelivery.label,
+      deliveryZone: selectedZone?.label || '',
       deliveryFee: shipping,
       notes: formData.notes,
       estimatedDelivery: estimatedDelivery.toISOString().split('T')[0],
@@ -183,11 +177,8 @@ export default function Checkout() {
     }));
 
     setOrderSubmitted(true);
-    // Navigate immediately — do NOT setIsSubmitting(false) before navigation to avoid flash
     navigate(createPageUrl(`Payment?orderNumber=${orderNumber}&amount=${total.toFixed(2)}&email=${encodeURIComponent(user.email)}`));
   };
-
-
 
   if (!user) {
     return (
@@ -196,8 +187,6 @@ export default function Checkout() {
       </div>
     );
   }
-
-
 
   if (cartItems.length === 0 && !orderSubmitted) {
     return (
@@ -216,7 +205,8 @@ export default function Checkout() {
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Checkout</h1>
         </div>
-        {/* Order Summary (moved to top) */}
+
+        {/* ── ORDER SUMMARY — first thing on the page ── */}
         <div className="mb-6">
           <Card className="p-5 sm:p-6 shadow-md">
             <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Order Summary</h2>
@@ -246,31 +236,38 @@ export default function Checkout() {
                 <span>Subtotal</span>
                 <span>₵{subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between text-base text-gray-600">
-                  <span>Delivery</span>
-                  <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-semibold text-[#1B3A6B]'}>
-                    {shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}
+
+              {/* ── DELIVERY DROPDOWN — moved here, replacing the City/Town free-text field ── */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-base text-gray-600">
+                  <span className="flex items-center gap-1.5">
+                    <Truck className="h-4 w-4 text-[#1B3A6B]" />
+                    Delivery
+                  </span>
+                  <span className={shipping === 0 && selectedZoneId ? 'text-green-600 font-semibold' : 'font-semibold text-[#1B3A6B]'}>
+                    {selectedZoneId ? (shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`) : '—'}
                   </span>
                 </div>
-                <Select value={selectedDeliveryOption} onValueChange={setSelectedDeliveryOption}>
-                  <SelectTrigger className="w-full h-10 text-sm">
-                    <SelectValue placeholder="Choose delivery option" />
+                <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
+                  <SelectTrigger className="h-11 w-full">
+                    <SelectValue placeholder="Select delivery / pickup option *" />
                   </SelectTrigger>
                   <SelectContent>
-                    {deliveryOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label} {option.fee === 0 ? '(Free)' : `(${option.fee} GHS)`}
+                    {DELIVERY_ZONES.map(zone => (
+                      <SelectItem key={zone.id} value={zone.id}>
+                        {zone.label} — {zone.fee === 0 ? 'FREE' : `₵${zone.fee}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {(cartZoneName || selectedDelivery.label) && (
-                  <p className="text-xs text-gray-500 text-center max-w-full mx-auto leading-tight">
-                    {cartZoneName || selectedDelivery.label}
-                  </p>
+                {selectedZone?.note && (
+                  <p className="text-xs text-gray-500 pl-0.5">{selectedZone.note}</p>
+                )}
+                {!selectedZoneId && (
+                  <p className="text-xs text-red-500 pl-0.5">Please choose a delivery option to see your total.</p>
                 )}
               </div>
+
               <Separator />
               <div className="flex justify-between text-lg font-bold text-gray-800">
                 <span>Total</span>
@@ -291,7 +288,7 @@ export default function Checkout() {
                   <Truck className="h-5 w-5 text-[#1B3A6B]" />
                   <h2 className="text-lg font-bold text-gray-800">Delivery Information</h2>
                 </div>
-                <DeliveryInfoModal 
+                <DeliveryInfoModal
                   trigger={
                     <Button variant="outline" size="sm" className="gap-1 text-[#1B3A6B] border-blue-200 hover:bg-blue-50">
                       <Info className="h-4 w-4" />
@@ -300,7 +297,7 @@ export default function Checkout() {
                   }
                 />
               </div>
-              
+
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="customer_name" className="text-sm">Full Name *</Label>
@@ -327,17 +324,6 @@ export default function Checkout() {
                   />
                   <p className="text-xs text-gray-400">We'll call/SMS this number for delivery. Make sure it's switched on and reachable.</p>
                 </div>
-                
-                {/* Cart delivery selection banner */}
-                {cartZoneId && cartZoneName && (
-                  <div className="md:col-span-2 p-3 bg-blue-50 border border-blue-300 rounded-lg flex items-center gap-3">
-                    <span className="text-2xl">🚚</span>
-                    <div>
-                      <p className="text-sm font-bold text-[#1B3A6B]">Delivery selected from cart:</p>
-                      <p className="text-sm text-[#1B3A6B]">{cartZoneName} — <strong>{cartZoneFee === 0 ? 'FREE' : `₵${cartZoneFee}`}</strong></p>
-                    </div>
-                  </div>
-                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="delivery_address" className="text-sm">Delivery Address / Landmark *</Label>
@@ -384,18 +370,12 @@ export default function Checkout() {
                     )}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="text-sm">City / Town *</Label>
-                  <Input
-                    id="city"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    placeholder="e.g. Tarkwa, Accra, Tema, Madina..."
-                    required
-                    className="h-11"
-                  />
-                </div>
+
+                {/* FIX: "City / Town" free-text field REMOVED, along with the
+                    "📍 Delivery: ₵X" line that used to appear beneath it.
+                    Delivery selection (and its price) now lives exclusively
+                    in the Order Summary dropdown above. */}
+
                 <div className="space-y-2">
                   <Label htmlFor="notes" className="text-sm">Order Notes (Optional)</Label>
                   <Input
@@ -415,7 +395,7 @@ export default function Checkout() {
                 <CreditCard className="h-4 w-4 text-[#1B3A6B]" />
                 <h2 className="text-base font-bold text-gray-800">Payment Method</h2>
               </div>
-              
+
               <div className="p-3 border-2 border-[#1B3A6B] rounded-lg bg-blue-50 flex items-center justify-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-[#1B3A6B] flex items-center justify-center flex-shrink-0">
                   <span className="text-white text-base">💳</span>
@@ -427,13 +407,11 @@ export default function Checkout() {
               </div>
             </Card>
           </div>
-
-          
         </div>
 
         <div className="mt-6 flex justify-center">
           <div className="w-full max-w-2xl">
-            <Button 
+            <Button
               type="submit"
               className="w-full bg-[#1B3A6B] hover:bg-[#152f5a] text-white font-bold py-4 text-base"
               disabled={isSubmitting}

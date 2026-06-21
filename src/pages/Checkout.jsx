@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { 
   Truck,
@@ -32,6 +33,21 @@ export default function Checkout() {
   const cartZoneId = urlParams.get('zone') || '';
   const cartZoneName = urlParams.get('zoneName') ? decodeURIComponent(urlParams.get('zoneName')) : '';
   const cartZoneFee = urlParams.get('fee') !== null ? Number(urlParams.get('fee')) : null;
+
+  const deliveryOptions = [
+    { value: 'pickup', label: 'Pickup', fee: 0 },
+    { value: 'umat_main_campus', label: 'UMaT Main Campus', fee: 10 },
+    { value: 'within_accra', label: 'Within Accra', fee: 30 },
+    { value: 'outside_accra', label: 'Outside Accra', fee: 50 },
+    { value: 'within_tarkwa', label: 'Within Tarkwa', fee: 20 },
+    { value: 'outside_tarkoradi', label: 'Outside Tarkoradi', fee: 50 },
+  ];
+
+  const initialDeliveryOption = deliveryOptions.find(opt => opt.value === cartZoneId)?.value ||
+    (cartZoneFee !== null ? deliveryOptions.find(opt => opt.fee === cartZoneFee)?.value : null) ||
+    'pickup';
+
+  const [selectedDeliveryOption, setSelectedDeliveryOption] = useState(initialDeliveryOption);
 
   const [formData, setFormData] = useState({
     customer_name: '',
@@ -62,46 +78,9 @@ export default function Checkout() {
   });
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
-
-  // If cart passed a delivery zone, use that fee directly; otherwise auto-detect from city
-  const getDeliveryFee = () => {
-    if (cartZoneFee !== null && cartZoneId) return cartZoneFee;
-    const city = formData.city?.toLowerCase().trim() || '';
-    if (!city) return 0;
-    if (city.includes('umat')) return 10;
-    if (city.includes('tarkwa')) return subtotal >= 300 ? 0 : 25;
-    const accraAreaFees = [
-      { keywords: ['ashongman'], fee: 0 },
-      { keywords: ['airport residential','airport'], fee: 22 },
-      { keywords: ['east legon'], fee: 30 },
-      { keywords: ['madina'], fee: 30 },
-      { keywords: ['adenta'], fee: 35 },
-      { keywords: ['accra mall'], fee: 25 },
-      { keywords: ['osu'], fee: 30 },
-      { keywords: ['circle'], fee: 30 },
-      { keywords: ['accra station','station'], fee: 35 },
-      { keywords: ['makola'], fee: 35 },
-      { keywords: ['spintex'], fee: 40 },
-      { keywords: ['accra','tema','lapaz','kasoa','teshie','nungua','labone','cantonments','dansoman','dome','pokuase','abeka','weija'], fee: 50 },
-    ];
-    for (const entry of accraAreaFees) {
-      if (entry.keywords.some(k => city.includes(k))) return entry.fee;
-    }
-    return subtotal >= 500 ? 0 : 50;
-  };
-
-  const shipping = getDeliveryFee();
+  const selectedDelivery = deliveryOptions.find(option => option.value === selectedDeliveryOption) || deliveryOptions[0];
+  const shipping = selectedDelivery.fee;
   const total = subtotal + shipping;
-
-  const getShippingDisplayLabel = () => {
-    if (cartZoneId && cartZoneName) {
-      return `${cartZoneName} – ${shipping === 0 ? 'FREE' : `₵${shipping}`}`;
-    }
-    if (!formData.city) return 'Enter city/town to calculate';
-    return shipping === 0 ? 'FREE' : `₵${shipping}`;
-  };
-
-  const getShippingLabel = () => getShippingDisplayLabel();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -155,7 +134,7 @@ export default function Checkout() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !formData.city) {
+    if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -189,6 +168,8 @@ export default function Checkout() {
       customerPhone: formData.customer_phone,
       deliveryAddress: formData.delivery_address,
       city: formData.city,
+      deliveryOption: selectedDelivery.label,
+      deliveryFee: shipping,
       notes: formData.notes,
       estimatedDelivery: estimatedDelivery.toISOString().split('T')[0],
       items: cartItems.map(item => ({
@@ -265,15 +246,29 @@ export default function Checkout() {
                 <span>Subtotal</span>
                 <span>₵{subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-2">
                 <div className="flex justify-between text-base text-gray-600">
                   <span>Delivery</span>
                   <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-semibold text-[#1B3A6B]'}>
                     {shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`}
                   </span>
                 </div>
-                {cartZoneName && (
-                  <p className="text-xs text-gray-500 text-center max-w-full mx-auto leading-tight">{cartZoneName}</p>
+                <Select value={selectedDeliveryOption} onValueChange={setSelectedDeliveryOption}>
+                  <SelectTrigger className="w-full h-10 text-sm">
+                    <SelectValue placeholder="Choose delivery option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {deliveryOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label} {option.fee === 0 ? '(Free)' : `(${option.fee} GHS)`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(cartZoneName || selectedDelivery.label) && (
+                  <p className="text-xs text-gray-500 text-center max-w-full mx-auto leading-tight">
+                    {cartZoneName || selectedDelivery.label}
+                  </p>
                 )}
               </div>
               <Separator />
@@ -400,11 +395,6 @@ export default function Checkout() {
                     required
                     className="h-11"
                   />
-                  {formData.city && (
-                    <p className={`text-xs font-medium mt-1 ${shipping === 0 ? 'text-green-600' : 'text-[#1B3A6B]'}`}>
-                      📍 Delivery: {getShippingLabel()}
-                    </p>
-                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="notes" className="text-sm">Order Notes (Optional)</Label>

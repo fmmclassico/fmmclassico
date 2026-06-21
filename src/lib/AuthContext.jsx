@@ -40,12 +40,9 @@ export const AuthProvider = ({ children }) => {
         .then(data => setAppPublicSettings(data))
         .catch(() => {}); // non-fatal
 
-      const authPromise = appParams.token ? checkUserAuth() : Promise.resolve().then(() => {
-        // No token = not logged in → Guest Mode (no error)
-        setIsLoadingAuth(false);
-        setIsAuthenticated(false);
-        setAuthError(null); // Allow guest browsing - no auth error
-      });
+      // Always verify the current auth state first so we don't briefly render guest UI
+      // for authenticated users whose session is available via the SDK/cookie flow.
+      const authPromise = checkUserAuth();
 
       // Wait for auth only (settings load in background)
       await authPromise;

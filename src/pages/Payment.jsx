@@ -22,10 +22,74 @@ function generateClientRef(orderNumber) {
   return base.slice(0, 32);
 }
 
-// FIXED: calls the Base44 backend function "hubtelInitiate" via base44.functions.invoke.
-// The old fetch('/api/hubtel/initiate') hit nothing — that route does not exist in Base44.
+// Calls the Base44 backend function that starts Hubtel checkout.
+// Some deployments expose the function with different casing or route conventions.
+// We try several route variants so the frontend can succeed even if the deployment shape differs.
 async function callHubtelInitiateOnServer(payload) {
-  return await base44.functions.invoke('hubtelInitiate', payload);
+  const invokeCandidates = ['hubtelInitiate', 'hubtel-initiate', 'hubtel_initiate'];
+  const fetchCandidates = ['/hubtelInitiate', '/hubtel-initiate', '/hubtel_initiate'];
+  let lastError = null;
+
+  for (const functionName of invokeCandidates) {
+    try {
+      const result = await base44.functions.invoke(functionName, payload);
+      const normalized = normalizeHubtelResult(result);
+      if (normalized !== null) return normalized;
+    } catch (error) {
+      lastError = error;
+      if (error?.response?.status !== 404 && error?.status !== 404) {
+        throw error;
+      }
+    }
+  }
+
+  for (const path of fetchCandidates) {
+    try {
+      const response = await base44.functions.fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => null);
+      const normalized = normalizeHubtelResult(data);
+      if (normalized !== null) return normalized;
+      if (response.ok) {
+        return data;
+      }
+      if (response.status !== 404) {
+        throw new Error(data?.error || data?.message || `Hubtel endpoint responded with HTTP ${response.status}`);
+      }
+    } catch (error) {
+      lastError = error;
+      if (error?.message && !error.message.includes('404')) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError || new Error('Failed to reach Hubtel payment endpoint');
+}
+
+function normalizeHubtelResult(result) {
+  if (result == null) return null;
+  if (typeof result !== 'object') return result;
+
+  // Axios-style response wrapper
+  if (result && 'data' in result && 'status' in result && 'config' in result) {
+    return result.data;
+  }
+
+  // Nested response wrapper
+  if (result.response && typeof result.response === 'object' && 'data' in result.response) {
+    return result.response.data;
+  }
+
+  // Actual Hubtel payload shape
+  if (result.ok === true || result.responseCode || result.checkoutUrl || result.checkoutDirectUrl || result.data?.checkoutUrl || result.data?.checkoutDirectUrl) {
+    return result;
+  }
+
+  return null;
 }
 
 export default function Payment() {
@@ -118,19 +182,22 @@ export default function Payment() {
     };
 
     try {
-      const result = await callHubtelInitiateOnServer(requestBody);
+      const rawResult = await callHubtelInitiateOnServer(requestBody);
       clearTimeout(safetyTimer);
+      const result = rawResult && typeof rawResult === 'object' && 'data' in rawResult && !('responseCode' in rawResult) && !('ok' in rawResult)
+        ? rawResult.data
+        : rawResult;
       log.hubtelResponse = result;
       setPayLog(log);
 
       if (!result || result.ok === false) {
-        setErrorMsg(result?.error || 'Hubtel could not be reached. Please try again.');
+        setErrorMsg(result?.error || result?.message || 'Hubtel could not be reached. Please try again.');
         setLoading(false);
         return;
       }
 
       const code = result?.responseCode;
-      const checkoutUrl = result?.data?.checkoutUrl || result?.data?.checkoutDirectUrl;
+      const checkoutUrl = result?.data?.checkoutUrl || result?.data?.checkoutDirectUrl || result?.checkoutUrl || result?.checkoutDirectUrl;
       log.checkoutUrl = checkoutUrl;
 
       const isSuccess = code === '0000' || code === '00';
@@ -146,9 +213,12 @@ export default function Payment() {
 
     } catch (err) {
       clearTimeout(safetyTimer);
+      const status = err?.response?.status || err?.status;
       log.error = err?.message || String(err);
       setPayLog(log);
-      setErrorMsg(`Network error: ${err?.message || 'Could not reach Hubtel. Check your internet connection.'}`);
+      setErrorMsg(
+        `Network error${status ? ` (HTTP ${status})` : ''}: ${err?.message || 'Could not reach Hubtel. Check your internet connection.'}`
+      );
     }
 
     setLoading(false);

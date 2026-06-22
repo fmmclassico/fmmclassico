@@ -470,13 +470,13 @@ export default function Checkout() {
                 <h2 className="text-base font-bold text-gray-800">Payment Method</h2>
               </div>
 
-              <div className="p-3 border-2 border-[#1B3A6B] rounded-lg bg-blue-50 flex items-center justify-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#1B3A6B] flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-base">💳</span>
+              <div className="p-3 border-2 border-[#1B3A6B] rounded-lg bg-blue-50 flex items-center justify-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#1B3A6B] flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-lg">🏦</span>
                 </div>
-                <div className="text-center">
-                  <span className="font-bold text-gray-800 text-sm block">Confirm Your Order</span>
-                  <span className="text-xs text-gray-600">Your order will be reviewed and payment details confirmed shortly.</span>
+                <div className="flex-1">
+                  <span className="font-bold text-gray-800 text-sm block">Hubtel Secure Payment</span>
+                  <span className="text-xs text-gray-600">Mobile Money • Debit Card • Bank Transfer • Wallet</span>
                 </div>
               </div>
             </Card>
@@ -493,10 +493,10 @@ export default function Checkout() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Processing...
+                  Processing Payment...
                 </>
               ) : (
-                '✅ Confirm Order'
+                '💳 Pay with Hubtle'
               )}
             </Button>
             {orderError && (

@@ -132,34 +132,12 @@ export default function HeroBanner() {
     return '/' + link;
   })();
 
-  const gradientStyle = (() => {
-    const value = slide.bg_gradient;
-    if (!value) return {};
-
-    if (value.startsWith('linear-gradient')) {
-      return { backgroundImage: value };
-    }
-
-    const matches = [...value.matchAll(/(?:from|via|to)-\[?(#[A-Fa-f0-9]{3,8})\]?/g)].map(match => match[1]);
-    if (matches.length >= 2) {
-      const stops = matches.map((color, index) => {
-        const position = `${Math.round((index / (matches.length - 1)) * 100)}%`;
-        return `${color} ${position}`;
-      });
-      return { backgroundImage: `linear-gradient(90deg, ${stops.join(', ')})` };
-    }
-
-    return {};
-  })();
-
-  const gradientClass = !gradientStyle.backgroundImage && slide.bg_gradient && !slide.bg_gradient.startsWith('#')
-    ? slide.bg_gradient
-    : NAVY_GRADIENT;
+  const NAVY_BACKGROUND = 'linear-gradient(90deg, #031725 0%, #0A2E60 50%, #102C54 100%)';
 
   return (
     <div
-      className={`relative bg-gradient-to-r ${gradientClass} overflow-hidden transition-all duration-700`}
-      style={gradientStyle}
+      className="relative overflow-hidden transition-all duration-700"
+      style={{ backgroundImage: NAVY_BACKGROUND }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >

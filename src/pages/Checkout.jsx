@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
+import { initiatePayment } from '@/api/hubtelClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -158,13 +159,8 @@ export default function Checkout() {
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
 
     setOrderError('');
-    setIsSubmitting(true);
 
     try {
-      const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
-      const estimatedDelivery = new Date();
-      estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
-
       const orderPayload = {
         order_number: orderNumber,
         items: cartItems.map(item => ({
@@ -198,7 +194,36 @@ export default function Checkout() {
       queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
 
       setCreatedOrderNumber(orderNumber);
-      setOrderSubmitted(true);
+
+      // Initiate Hubtel payment and redirect user to checkout
+      try {
+        const callbackUrl = `${window.location.origin}/api/hubtel/callback`;
+        const returnUrl = `${window.location.origin}/orders/${orderNumber}?status=success`;
+        const cancellationUrl = `${window.location.origin}/orders/${orderNumber}?status=cancelled`;
+
+        const initRes = await initiatePayment({
+          totalAmount: total,
+          description: `Order ${orderNumber}`,
+          callbackUrl,
+          returnUrl,
+          cancellationUrl,
+          clientReference: orderNumber,
+        });
+
+        if (initRes && initRes.data && initRes.data.checkoutUrl) {
+          // Redirect to Hubtel checkout
+          window.location.href = initRes.data.checkoutUrl;
+          return;
+        }
+
+        // Fallback: show submitted order page and instruct user
+        toast.error('Unable to initiate payment. Please follow the instructions on your orders page.');
+        setOrderSubmitted(true);
+      } catch (err) {
+        console.error('Initiate payment error:', err);
+        toast.error('Payment initiation failed. Please try again later.');
+        setOrderSubmitted(true);
+      }
     } catch (error) {
       console.error('Order creation error:', error);
       setOrderError('Unable to place your order right now. Please try again.');

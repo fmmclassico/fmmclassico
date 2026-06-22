@@ -6,10 +6,12 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
   const navigate = useNavigate();
   const handleBack = (e) => {
     if (e) e.preventDefault();
+    if (backHref) {
+      navigate(backHref);
+      return;
+    }
     if (window.history.length > 1) {
       navigate(-1);
-    } else if (backHref) {
-      navigate(backHref);
     }
   };
 
@@ -18,10 +20,10 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
       <div className="w-full max-w-md relative">
         {backHref && (
           <div className="absolute left-4 top-4">
-            <a href={backHref} onClick={handleBack} className="inline-flex items-center gap-2 text-sm font-medium text-white/90 hover:text-white">
+            <button type="button" onClick={handleBack} className="inline-flex items-center gap-2 text-sm font-medium text-white/90 hover:text-white">
               <ArrowLeft className="w-4 h-4" />
               Back
-            </a>
+            </button>
           </div>
         )}
         {/* Brand Header */}
@@ -35,6 +37,11 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
 
         <div className="bg-white rounded-2xl shadow-2xl border border-white/20 p-8">
           <div className="text-center mb-6">
+            {Icon && (
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+                <Icon className="h-6 w-6" />
+              </div>
+            )}
             <h2 className="text-2xl font-bold tracking-tight text-gray-900">{title}</h2>
             {subtitle && <p className="text-gray-500 mt-1 text-sm">{subtitle}</p>}
           </div>

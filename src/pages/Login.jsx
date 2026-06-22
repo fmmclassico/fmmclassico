@@ -30,25 +30,15 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLoginError = (err) => {
-    const message = err?.message || String(err || "Invalid email or password");
-    const expired = /session.*expired|expired.*session|login session.*expired/i.test(message);
-    if (expired) {
-      setIsSessionExpired(true);
-      setError("Your login session has expired or was interrupted. Please try logging in again.");
-    } else {
-      setIsSessionExpired(false);
-      setError(message);
-    }
+    setError(err?.message || String(err || "Invalid email or password"));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setIsSessionExpired(false);
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
@@ -131,15 +121,6 @@ export default function Login() {
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
-          {isSessionExpired && (
-            <p className="mt-2 text-sm text-blue-700">
-              This can happen if you waited too long, closed or reopened the browser, or blocked third-party cookies.
-              <br />
-              <a href="https://app.base44.com/api/auth/login" className="underline">
-                Try Logging In Again
-              </a>
-            </p>
-          )}
         </div>
       )}
 

@@ -18,19 +18,9 @@ import { ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Cart() {
-  const [user, setUser] = useState(null);
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { navigateToLogin } = useAuth();
-
-  useEffect(() => {
-    base44.auth.me()
-      .then(setUser)
-      .catch(() => {
-        // Not authenticated — allow guest cart view
-        setUser(null);
-      });
-  }, []);
 
   const { data: cartItems = [], isLoading } = useQuery({
     queryKey: ['cartItems', user?.email],
@@ -67,7 +57,7 @@ export default function Cart() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+      queryClient.invalidateQueries({ queryKey: ['cartItems', user?.email] });
     }
   });
 
@@ -81,7 +71,7 @@ export default function Cart() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+      queryClient.invalidateQueries({ queryKey: ['cartItems', user?.email] });
       toast.success('Item removed');
     }
   });

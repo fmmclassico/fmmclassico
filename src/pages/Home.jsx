@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Zap, Star, Tag, Home as HomeIcon, Smartphone, Headphones, Tv, ShoppingBag, Gem, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/AuthContext';
 import guestCart from '@/lib/guest-cart';
 import HeroBanner from '../components/home/HeroBanner';
 import FlashSaleTimer from '../components/home/FlashSaleTimer';
@@ -94,7 +95,7 @@ const HOME_CATEGORIES = [
 ];
 
 export default function Home() {
-  const [user, setUser] = useState(null);
+  const { user, isAuthenticated, navigateToLogin } = useAuth();
   const [expandedCat, setExpandedCat] = useState(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -122,10 +123,6 @@ export default function Home() {
 
 
 
-  useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
-  }, []);
-
   const { data: products = [], isLoading, refetch } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list('-created_date', 100),
@@ -140,10 +137,8 @@ export default function Home() {
 
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {
-      if (!user) {
-        // Guest: add to local guest cart
-        guestCart.addItem({ id: product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1 });
-        toast.success('Added to cart!');
+      if (!isAuthenticated || !user) {
+        navigateToLogin();
         return;
       }
       queryClient.setQueryData(['cartItems', user?.email], (old = []) => {
@@ -160,7 +155,7 @@ export default function Home() {
       if (product.stock != null) base44.entities.Product.update(product.id, { stock: Math.max(0, product.stock - 1) });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+      queryClient.invalidateQueries({ queryKey: ['cartItems', user?.email] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
     }
   });

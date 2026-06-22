@@ -32,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from '@/lib/AuthContext';
 import {
   Sheet,
   SheetContent,
@@ -43,9 +44,7 @@ import {
 export default function Layout({ children, currentPageName }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const { user, isAuthenticated, logout } = useAuth();
   const [helpOpen, setHelpOpen] = useState(false);
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -53,21 +52,6 @@ export default function Layout({ children, currentPageName }) {
   const accountRef = useRef(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  // Check authentication status on mount
-  useEffect(() => {
-    Promise.all([
-      base44.auth.isAuthenticated(),
-      base44.auth.me().catch(() => null),
-    ]).then(([authenticated, userData]) => {
-      setIsAuthenticated(authenticated);
-      if (authenticated && userData) setUser(userData);
-      setIsCheckingAuth(false);
-    }).catch(() => {
-      setIsAuthenticated(false);
-      setIsCheckingAuth(false);
-    });
-  }, []);
 
   useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 400);
@@ -127,10 +111,10 @@ export default function Layout({ children, currentPageName }) {
   // LOGOUT: clears session and returns user to Guest Homepage (not /login)
   const handleLogout = async () => {
     try {
-      await base44.auth.logout();
-    } catch (e) {}
-    setUser(null);
-    setIsAuthenticated(false);
+      logout();
+    } catch (e) {
+      console.error('Logout failed', e);
+    }
     queryClient.clear();
     navigate('/');
     window.location.reload(); // force clean state

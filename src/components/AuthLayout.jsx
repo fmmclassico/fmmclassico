@@ -1,11 +1,21 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
-export default function AuthLayout({ icon: Icon, title, subtitle, footer, children }) {
+export default function AuthLayout({ icon: Icon, title, subtitle, footer, children, backHref }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(135deg, #1a4a6e 0%, #2E86C1 60%, #1a4a6e 100%)' }}>
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md relative">
+        {backHref && (
+          <div className="absolute left-4 top-4">
+            <Link to={backHref} className="inline-flex items-center gap-2 text-sm font-medium text-white/90 hover:text-white">
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Link>
+          </div>
+        )}
         {/* Brand Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 pt-10">
           <div className="inline-flex flex-col items-center">
             <h1 className="text-4xl font-black text-white tracking-tight mb-1">
               FMM <span className="text-white">CLASSICO</span>

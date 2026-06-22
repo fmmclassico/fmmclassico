@@ -156,6 +156,7 @@ export default function Register() {
       icon={UserPlus}
       title="Create your account"
       subtitle="Sign up to get started"
+      backHref="/"
       footer={
         <>
           Already have an account?{" "}

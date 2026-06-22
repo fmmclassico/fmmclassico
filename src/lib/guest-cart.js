@@ -106,7 +106,11 @@ export const guestCart = {
    * Notify listeners of cart update
    */
   notifyUpdate: () => {
-    window.dispatchEvent(new Event('fmm-cart-updated'));
+    window.dispatchEvent(new CustomEvent('fmm-cart-updated', {
+      detail: {
+        total: guestCart.getTotal(),
+      },
+    }));
   },
 };
 

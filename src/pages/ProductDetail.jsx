@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/lib/AuthContext';
 import guestCart from '@/lib/guest-cart';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,7 @@ const categoryNames = {
 };
 
 export default function ProductDetail() {
-  const [user, setUser] = useState(null);
+  const { user, isAuthenticated, navigateToLogin } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
@@ -39,17 +40,6 @@ export default function ProductDetail() {
   
   const urlParams = new URLSearchParams(window.location.search);
   const productId = urlParams.get('id');
-
-  useEffect(() => {
-    const getUser = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
-      if (isAuth) {
-        const userData = await base44.auth.me();
-        setUser(userData);
-      }
-    };
-    getUser();
-  }, []);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products'],
@@ -135,7 +125,7 @@ export default function ProductDetail() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+      queryClient.invalidateQueries({ queryKey: ['cartItems', user?.email] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
     }
   });

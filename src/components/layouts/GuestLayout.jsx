@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/lib/AuthContext';
+import guestCart from '@/lib/guest-cart';
 
 export default function GuestLayout({ children, currentPageName }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,12 +26,11 @@ export default function GuestLayout({ children, currentPageName }) {
   const navigate = useNavigate();
   const { navigateToLogin } = useAuth();
 
-  // Load cart count from localStorage for guest mode
+  // Load cart count from guest storage and update on cart changes
   useEffect(() => {
-    const updateCartCount = () => {
+    const updateCartCount = (event) => {
       try {
-        const guestCart = JSON.parse(localStorage.getItem('fmm_guest_cart') || '[]');
-        const count = guestCart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        const count = event?.detail?.total ?? guestCart.getTotal();
         setCartCount(count);
       } catch (e) {
         setCartCount(0);
@@ -39,7 +39,7 @@ export default function GuestLayout({ children, currentPageName }) {
 
     updateCartCount();
     
-    // Listen for storage changes to update cart count
+    // Listen for storage changes and custom cart-update events
     window.addEventListener('storage', updateCartCount);
     window.addEventListener('fmm-cart-updated', updateCartCount);
     

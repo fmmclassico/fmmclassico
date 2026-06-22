@@ -98,35 +98,33 @@ export default async function handler(req, res) {
           ],
         });
 
-        console.log(`[Hubtel Callback] Updated order ${clientReference} to payment_status=${paymentStatus}`);
+        console.log(`[Hubtel Callback] Order ${clientReference} updated. Payment status: ${paymentStatus}`);
+        return res.status(200).json({ success: true, orderId: updatedOrder.id });
       } else {
-        console.warn(`[Hubtel Callback] Order not found for clientReference=${clientReference}`);
+        console.warn(`[Hubtel Callback] No order found for reference: ${clientReference}`);
+        return res.status(200).json({ message: 'No order found (will be retried)' });
       }
     } catch (orderErr) {
-      console.error('[Hubtel Callback] Order update error:', orderErr);
-      // Don't fail callback response; acknowledge receipt anyway
+      console.error(`[Hubtel Callback] Error updating order ${clientReference}:`, orderErr);
+      return res.status(500).json({ error: 'Failed to update order', details: String(orderErr) });
     }
-
-    // Respond with 200 to acknowledge receipt
-    res.status(200).json({ message: 'Callback processed successfully' });
   } catch (err) {
-    console.error('[Hubtel Callback] Handler error:', err);
-    res.status(200).json({ message: 'Callback received (with errors)' });
+    console.error('[Hubtel Callback] Unexpected error:', err);
+    return res.status(500).json({ error: 'Unexpected error', details: String(err) });
   }
 }
 
 async function readReqBody(req) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let data = '';
-    req.on('data', chunk => data += chunk);
+    req.on('data', chunk => (data += chunk));
     req.on('end', () => {
-      try { resolve(JSON.parse(data)); } catch (e) { resolve(data); }
+      try {
+        resolve(JSON.parse(data));
+      } catch (e) {
+        reject(e);
+      }
     });
-    req.on('error', () => resolve(null));
+    req.on('error', reject);
   });
-}
-
-// Export UAT samples for retrieval
-export function getUATSamples() {
-  return UAT_SAMPLES;
 }

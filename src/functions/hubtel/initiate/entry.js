@@ -101,8 +101,3 @@ async function getRawBody(req) {
     req.on('error', reject);
   });
 }
-
-// Export samples for retrieval
-export function getInitSamples() {
-  return UAT_INIT_SAMPLES;
-}

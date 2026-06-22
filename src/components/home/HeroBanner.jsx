@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const NAVY_GRADIENT = 'from-[#031725] via-[#0A2E60] to-[#102C54]';
+
 const DEFAULT_SLIDES = [
   {
     id: 'default-1',
     badge: '🔥 New Arrivals',
     title: 'Phones',
     subtitle: 'Samsung, iPhones & more at unbeatable prices',
-    bg_gradient: 'from-[#031725] via-[#0A2E60] to-[#102C54]',
+    bg_gradient: NAVY_GRADIENT,
     image_url: '',
     cta_link: createPageUrl('Shop?category=phones'),
     cta_text: 'Shop Now',
@@ -22,7 +24,7 @@ const DEFAULT_SLIDES = [
     badge: '🔥 Classico Deals',
     title: 'Phone Accessories',
     subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
-    bg_gradient: 'from-[#071A3D] via-[#0E315B] to-[#112B54]',
+    bg_gradient: NAVY_GRADIENT,
     image_url: '',
     cta_link: createPageUrl('Categories'),
     cta_text: 'Shop Now',
@@ -32,7 +34,7 @@ const DEFAULT_SLIDES = [
     badge: '⚡ Best Deals',
     title: 'Electronic Appliances',
     subtitle: 'Top quality electronics for your everyday needs',
-    bg_gradient: 'from-[#031725] via-[#0A2E60] to-[#102C54]',
+    bg_gradient: NAVY_GRADIENT,
     image_url: '',
     cta_link: createPageUrl('Shop?category=electronic_appliances'),
     cta_text: 'Shop Now',
@@ -42,7 +44,7 @@ const DEFAULT_SLIDES = [
     badge: '🏡 Home Deals',
     title: 'Home Appliances',
     subtitle: 'Quality home appliances delivered to your door',
-    bg_gradient: 'from-[#031725] via-[#0A2E60] to-[#102C54]',
+    bg_gradient: NAVY_GRADIENT,
     image_url: '',
     cta_link: createPageUrl('Shop?category=home_appliances'),
     cta_text: 'Shop Now',
@@ -52,7 +54,7 @@ const DEFAULT_SLIDES = [
     badge: '📱 Top Brands',
     title: 'Samsung & Apple',
     subtitle: 'Genuine Samsung & Apple products at great prices',
-    bg_gradient: 'from-[#031725] via-[#0A2E60] to-[#102C54]',
+    bg_gradient: NAVY_GRADIENT,
     image_url: '',
     cta_link: createPageUrl('BrandProducts?brand=Samsung'),
     cta_text: 'Shop Brands',
@@ -62,7 +64,7 @@ const DEFAULT_SLIDES = [
     badge: '🎧 Accessories',
     title: 'Earphones & Speakers',
     subtitle: 'Premium sound at affordable prices — Oraimo, JBL & more',
-    bg_gradient: 'from-[#031725] via-[#0A2E60] to-[#102C54]',
+    bg_gradient: NAVY_GRADIENT,
     image_url: '',
     cta_link: createPageUrl('Shop?category=earphones'),
     cta_text: 'Shop Now',
@@ -72,7 +74,7 @@ const DEFAULT_SLIDES = [
     badge: '⌚ Smart Wear',
     title: 'Smart Watches',
     subtitle: 'Stay connected with the latest smartwatches',
-    bg_gradient: 'from-[#031725] via-[#0A2E60] to-[#102C54]',
+    bg_gradient: NAVY_GRADIENT,
     image_url: '',
     cta_link: createPageUrl('Shop?category=smart_watches'),
     cta_text: 'Shop Now',
@@ -152,7 +154,7 @@ export default function HeroBanner() {
 
   const gradientClass = !gradientStyle.backgroundImage && slide.bg_gradient && !slide.bg_gradient.startsWith('#')
     ? slide.bg_gradient
-    : 'from-[#031725] via-[#0A2E60] to-[#102C54]';
+    : NAVY_GRADIENT;
 
   return (
     <div

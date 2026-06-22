@@ -184,13 +184,15 @@ export default function AdminProducts() {
       const sections = home_sections || [];
       const finalBrand = rest.brand === 'Other (type below)' ? (custom_brand || 'Other') : rest.brand;
       const finalSubcategory = rest.subcategory === '__custom__' ? (custom_subcategory || '') : rest.subcategory;
+      const stockValue = typeof data.stock === 'string' ? data.stock.trim() : data.stock;
+      const stockNumber = stockValue === '' ? undefined : parseInt(stockValue, 10);
       const payload = {
         ...rest,
         brand: finalBrand,
         subcategory: finalSubcategory,
         price: parseFloat(data.price) || 0,
         original_price: data.original_price ? parseFloat(data.original_price) : undefined,
-        stock: data.stock !== '' ? parseInt(data.stock) : undefined,
+        stock: stockValue === '' ? undefined : Number.isNaN(stockNumber) ? undefined : stockNumber,
         rating: data.rating ? parseFloat(data.rating) : undefined,
         reviews_count: data.reviews_count ? parseInt(data.reviews_count) : undefined,
         is_visible: data.is_visible !== false,

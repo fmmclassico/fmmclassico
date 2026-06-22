@@ -6,7 +6,6 @@ import {
   Info, 
   ShoppingCart,
   User,
-  ChevronRight,
   ChevronUp,
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -273,17 +272,6 @@ export default function GuestLayout({ children, currentPageName }) {
 
       {/* Main Content */}
       <main className="min-h-[calc(100vh-4rem)]">
-        {currentPageName !== 'Home' && (
-          <div className="container mx-auto px-4 pt-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors group"
-            >
-              <ChevronRight className="h-4 w-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
-              <span>Back</span>
-            </button>
-          </div>
-        )}
         {children}
       </main>
 

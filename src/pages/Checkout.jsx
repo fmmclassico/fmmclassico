@@ -198,9 +198,11 @@ export default function Checkout() {
       // Initiate Hubtel payment and redirect user to checkout
       try {
         const callbackUrl = `${window.location.origin}/api/hubtel/callback`;
-        const returnUrl = `${window.location.origin}/orders/${orderNumber}?status=success`;
-        const cancellationUrl = `${window.location.origin}/orders/${orderNumber}?status=cancelled`;
+        const returnUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=success`;
+        const cancellationUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=cancelled`;
 
+        console.log('[Checkout] Initiating payment for order:', orderNumber);
+        
         const initRes = await initiatePayment({
           totalAmount: total,
           description: `Order ${orderNumber}`,
@@ -210,19 +212,25 @@ export default function Checkout() {
           clientReference: orderNumber,
         });
 
+        console.log('[Checkout] Hubtel response:', initRes);
+
         if (initRes && initRes.data && initRes.data.checkoutUrl) {
-          // Redirect to Hubtel checkout
+          console.log('[Checkout] Redirecting to Hubtel:', initRes.data.checkoutUrl);
+          // Success! Redirect to Hubtel checkout immediately
+          toast.success('Redirecting to Hubtel payment page...');
           window.location.href = initRes.data.checkoutUrl;
           return;
         }
 
-        // Fallback: show submitted order page and instruct user
-        toast.error('Unable to initiate payment. Please follow the instructions on your orders page.');
-        setOrderSubmitted(true);
+        // Payment initiation failed - show error but keep form visible
+        const errorMsg = initRes?.error || 'Unable to connect to payment gateway. Please try again.';
+        console.error('[Checkout] Payment initiation failed:', initRes);
+        setOrderError(`Payment Error: ${errorMsg}. Your order #${orderNumber} has been created. Please try the payment again or contact support.`);
+        toast.error('Payment initiation failed. Please try again.');
       } catch (err) {
-        console.error('Initiate payment error:', err);
-        toast.error('Payment initiation failed. Please try again later.');
-        setOrderSubmitted(true);
+        console.error('[Checkout] Payment initiation error:', err);
+        setOrderError(`Payment Error: ${err.message || 'Unknown error'}. Your order #${orderNumber} has been created. Please try again or contact support.`);
+        toast.error('Payment initiation failed. Please try again.');
       }
     } catch (error) {
       console.error('Order creation error:', error);

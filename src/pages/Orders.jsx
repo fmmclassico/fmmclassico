@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
+import { checkPaymentStatus } from '@/api/hubtelClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -48,6 +49,7 @@ export default function Orders() {
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [cancellingOrder, setCancellingOrder] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -55,6 +57,55 @@ export default function Orders() {
       .then(setUser)
       .catch(() => base44.auth.redirectToLogin(createPageUrl('Home')));
   }, []);
+
+  // Check payment status if returning from Hubtel
+  useEffect(() => {
+    const orderNumber = searchParams.get('order');
+    const status = searchParams.get('status');
+
+    if (orderNumber) {
+      console.log('[Orders] Checking payment status for order:', orderNumber, 'Status:', status);
+      
+      checkPaymentStatus(orderNumber)
+        .then(result => {
+          console.log('[Orders] Payment status result:', result);
+          
+          if (result?.data?.status) {
+            const paymentStatus = result.data.status.toLowerCase() === 'paid' ? 'paid' : 'pending_payment';
+            
+            // Update the order with payment status
+            base44.entities.Order.filter({ order_number: orderNumber })
+              .then(orders => {
+                if (orders && orders.length > 0) {
+                  const order = orders[0];
+                  base44.entities.Order.update(order.id, {
+                    payment_status: paymentStatus,
+                    tracking_updates: [
+                      ...(order.tracking_updates || []),
+                      {
+                        status: 'Payment Status Verified',
+                        message: `Payment status verified: ${result.data.status}`,
+                        timestamp: new Date().toISOString(),
+                      }
+                    ]
+                  }).then(() => {
+                    queryClient.invalidateQueries({ queryKey: ['orders'] });
+                    if (paymentStatus === 'paid') {
+                      toast.success('✅ Payment confirmed! Your order has been received.');
+                    } else {
+                      toast.info('Payment status checked. Please complete payment if needed.');
+                    }
+                  });
+                }
+              });
+          }
+        })
+        .catch(err => {
+          console.error('[Orders] Payment status check error:', err);
+        });
+    }
+  }, [searchParams, queryClient]);
+
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', user?.email],

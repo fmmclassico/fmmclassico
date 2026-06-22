@@ -12,8 +12,8 @@ const steps = [
   { step: '2', title: 'Add to Cart', desc: 'Tap "Add to Cart" on any product you want to buy.' },
   { step: '3', title: 'Checkout', desc: 'Go to your Cart, select a delivery zone, then tap Checkout.' },
   { step: '4', title: 'Fill Delivery Info', desc: 'Enter your name, active phone number and delivery address.' },
-  { step: '5', title: 'Pay with Hubtel', desc: 'Complete payment via Mobile Money, Card, or Bank Transfer on Hubtel.' },
-  { step: '6', title: 'Track Your Order', desc: 'After payment, track your order status in real-time from "My Orders" page.' },
+  { step: '5', title: 'Confirm Order', desc: 'Review and confirm your order. We will contact you for payment.' },
+  { step: '6', title: 'Track Your Order', desc: 'After payment confirmation, track your order status in real-time from "My Orders" page.' },
 ];
 
 export default function HowToUse() {

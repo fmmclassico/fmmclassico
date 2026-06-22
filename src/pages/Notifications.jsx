@@ -211,7 +211,7 @@ export default function Notifications() {
               Payment Alert! {paymentAlerts.length} customer{paymentAlerts.length > 1 ? 's' : ''} clicked "Payment Completed"
             </p>
             <p className="text-sm text-red-600 mt-1">
-              Check Hubtel payment and confirm in{' '}
+              Check payment status in{' '}
               <Link to={createPageUrl('AdminOrders')} className="underline font-bold">Admin Orders</Link>.
             </p>
             <div className="mt-2 space-y-1">

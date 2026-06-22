@@ -44,7 +44,7 @@
         "refunded"
       ],
       "default": "pending_payment",
-      "description": "Payment status. CRITICAL: Controlled ONLY by Hubtel verification (callback or status check). NEVER set to 'paid' without Hubtel confirmation. Orders with payment_status='pending_payment' must NOT be processed/shipped."
+      "description": "Payment status. Initially pending_payment - update to 'paid' when payment is confirmed."
     },
     "status": {
       "type": "string",
@@ -101,7 +101,8 @@
       }
     },
     "hubtel_transaction_id": {
-      "type": "string"
+      "type": "string",
+      "description": "(Deprecated - for legacy reference only)"
     },
     "hubtel_status": {
       "type": "string",
@@ -111,11 +112,12 @@
         "successful",
         "failed"
       ],
-      "default": "initiated"
+      "default": "initiated",
+      "description": "(Deprecated - for legacy reference only)"
     },
     "payment_reference": {
       "type": "string",
-      "description": "Unique Hubtel reference used for verification"
+      "description": "(Deprecated - for legacy reference only)"
     }
   },
   "required": [

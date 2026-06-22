@@ -11,8 +11,6 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { useLocation } from 'react-router-dom';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AdminAuthModal from '@/components/AdminAuthModal';
-import Payment from './pages/Payment';
-import PaymentConfirmed from './pages/PaymentConfirmed';
 import AdminReviews from './pages/AdminReviews';
 import AdminProducts from './pages/AdminProducts';
 import BrandProducts from './pages/BrandProducts';
@@ -123,12 +121,7 @@ const AuthenticatedApp = () => {
         )
       } />
 
-      <Route path="/Payment" element={<Payment />} />
-      <Route path="/PaymentConfirmed" element={
-        <LayoutWrapper currentPageName="PaymentConfirmed" isAuthenticated={isAuthenticated}>
-          <PaymentConfirmed />
-        </LayoutWrapper>
-      } />
+
       <Route path="/BrandProducts" element={
         <LayoutWrapper currentPageName="BrandProducts" isAuthenticated={isAuthenticated}>
           <BrandProducts />

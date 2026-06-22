@@ -64,8 +64,6 @@ import HowToUse from './pages/HowToUse';
 import Notifications from './pages/Notifications';
 import OrderTracking from './pages/OrderTracking';
 import Orders from './pages/Orders';
-import Payment from './pages/Payment';
-import PaymentConfirmed from './pages/PaymentConfirmed';
 import ProductDetail from './pages/ProductDetail';
 import Settings from './pages/Settings';
 import Shop from './pages/Shop';
@@ -90,8 +88,6 @@ export const PAGES = {
     "Notifications": Notifications,
     "OrderTracking": OrderTracking,
     "Orders": Orders,
-    "Payment": Payment,
-    "PaymentConfirmed": PaymentConfirmed,
     "ProductDetail": ProductDetail,
     "Settings": Settings,
     "Shop": Shop,

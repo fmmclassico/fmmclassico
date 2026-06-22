@@ -43,6 +43,8 @@ export default function Checkout() {
   const [user, setUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSubmitted, setOrderSubmitted] = useState(false);
+  const [createdOrderNumber, setCreatedOrderNumber] = useState('');
+  const [orderError, setOrderError] = useState('');
   const [locationError, setLocationError] = useState('');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -155,29 +157,54 @@ export default function Checkout() {
     const estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
 
-    sessionStorage.setItem('fmm_pending_order', JSON.stringify({
-      orderNumber,
-      amount: total,
-      customerName: formData.customer_name,
-      customerEmail: user.email,
-      customerPhone: formData.customer_phone,
-      deliveryAddress: formData.delivery_address,
-      deliveryZone: selectedZone?.label || '',
-      deliveryFee: shipping,
-      notes: formData.notes,
-      estimatedDelivery: estimatedDelivery.toISOString().split('T')[0],
-      items: cartItems.map(item => ({
-        product_id: item.product_id,
-        product_name: item.product_name,
-        product_image: item.product_image,
-        price: item.product_price,
-        quantity: item.quantity,
-        cart_item_id: item.id,
-      })),
-    }));
+    setOrderError('');
+    setIsSubmitting(true);
 
-    setOrderSubmitted(true);
-    navigate(createPageUrl(`Payment?orderNumber=${orderNumber}&amount=${total.toFixed(2)}&email=${encodeURIComponent(user.email)}`));
+    try {
+      const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
+      const estimatedDelivery = new Date();
+      estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
+
+      const orderPayload = {
+        order_number: orderNumber,
+        items: cartItems.map(item => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          product_image: item.product_image,
+          price: item.product_price,
+          quantity: item.quantity,
+        })),
+        total_amount: total,
+        payment_status: 'pending_payment',
+        status: 'confirmed',
+        customer_name: formData.customer_name,
+        customer_email: user.email,
+        customer_phone: formData.customer_phone,
+        delivery_address: formData.delivery_address,
+        notes: formData.notes,
+        estimated_delivery: estimatedDelivery.toISOString().split('T')[0],
+        tracking_updates: [
+          {
+            status: 'Order Placed',
+            message: 'Order created and waiting for payment confirmation.',
+            timestamp: new Date().toISOString(),
+          }
+        ],
+      };
+
+      await base44.entities.Order.create(orderPayload);
+      await Promise.all(cartItems.map(item => base44.entities.CartItem.delete(item.id).catch(() => {})));
+      queryClient.invalidateQueries({ queryKey: ['cartItems', user.email] });
+      queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+
+      setCreatedOrderNumber(orderNumber);
+      setOrderSubmitted(true);
+    } catch (error) {
+      console.error('Order creation error:', error);
+      setOrderError('Unable to place your order right now. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!user) {
@@ -188,7 +215,29 @@ export default function Checkout() {
     );
   }
 
-  if (cartItems.length === 0 && !orderSubmitted) {
+  if (orderSubmitted) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-2xl mx-auto">
+          <div className="rounded-3xl border border-blue-200 bg-white p-8 shadow-lg text-center">
+            <h1 className="text-3xl font-bold text-gray-800 mb-3">Order Submitted</h1>
+            <p className="text-gray-600 mb-6">Thank you! Your order <span className="font-semibold">#{createdOrderNumber}</span> has been placed successfully.</p>
+            <p className="text-sm text-gray-500 mb-6">We will review your order and follow up with payment instructions shortly.</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button onClick={() => navigate(createPageUrl('Orders'))} className="w-full rounded-xl bg-blue-800 px-4 py-3 text-white font-semibold hover:bg-blue-900">
+                View My Orders
+              </button>
+              <button onClick={() => navigate(createPageUrl('Home'))} className="w-full rounded-xl border border-blue-200 px-4 py-3 text-blue-800 font-semibold hover:bg-blue-50">
+                Continue Shopping
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (cartItems.length === 0) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Your cart is empty</h2>
@@ -401,8 +450,8 @@ export default function Checkout() {
                   <span className="text-white text-base">💳</span>
                 </div>
                 <div className="text-center">
-                  <span className="font-bold text-gray-800 text-sm block">Pay with Hubtel</span>
-                  <span className="text-xs text-gray-600">Mobile Money, Card & Bank Transfer – secure checkout</span>
+                  <span className="font-bold text-gray-800 text-sm block">Confirm Your Order</span>
+                  <span className="text-xs text-gray-600">Your order will be reviewed and payment details confirmed shortly.</span>
                 </div>
               </div>
             </Card>
@@ -422,9 +471,12 @@ export default function Checkout() {
                   Processing...
                 </>
               ) : (
-                '💳 Confirm Order & Pay with Hubtel'
+                '✅ Confirm Order'
               )}
             </Button>
+            {orderError && (
+              <p className="mt-3 text-sm text-red-600">{orderError}</p>
+            )}
           </div>
         </div>
       </form>

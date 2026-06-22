@@ -353,7 +353,7 @@ export default function AdminBroadcast() {
           <Card className="p-4 bg-green-50 border-green-200">
             <p className="text-sm font-semibold text-green-800 mb-1">💡 For actual SMS delivery</p>
             <p className="text-xs text-gray-600">
-              For real SMS (GSM), use WhatsApp Broadcast or a local SMS gateway like <strong>mNotify</strong> or <strong>Hubtel</strong> in Ghana. Export phone numbers below and paste into those platforms.
+              For real SMS (GSM), use WhatsApp Broadcast or a local SMS gateway like <strong>mNotify</strong> in Ghana. Export phone numbers below and paste into those platforms.
             </p>
             <div className="mt-3 p-2 bg-white rounded-lg border text-xs font-mono text-gray-600 max-h-24 overflow-y-auto break-all">
               {uniquePhones.map(c => c.phone).join(', ') || 'No phone numbers yet'}

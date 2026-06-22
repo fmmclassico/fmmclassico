@@ -113,7 +113,13 @@ export default function HeroBanner() {
     if (Math.abs(diff) > 40) { diff > 0 ? next() : prev(); }
     setTouchStart(null);
   };
-  const slide = slides[current] || DEFAULT_SLIDES[0];
+  const slide = slides.length > 0 ? slides[current % slides.length] : DEFAULT_SLIDES[0];
+
+  useEffect(() => {
+    if (slides.length > 0) {
+      setCurrent(0);
+    }
+  }, [slides.length]);
 
   // Normalize cta_link: could be a full URL, an absolute path (/Shop), or a relative page name (Shop?category=phones)
   const ctaHref = (() => {
@@ -124,14 +130,34 @@ export default function HeroBanner() {
     return '/' + link;
   })();
 
-  // Use bg_gradient class if it's a Tailwind class, else fallback inline style
-  const gradientClass = slide.bg_gradient && !slide.bg_gradient.startsWith('#')
+  const gradientStyle = (() => {
+    const value = slide.bg_gradient;
+    if (!value) return {};
+
+    if (value.startsWith('linear-gradient')) {
+      return { backgroundImage: value };
+    }
+
+    const matches = [...value.matchAll(/(?:from|via|to)-\[?(#[A-Fa-f0-9]{3,8})\]?/g)].map(match => match[1]);
+    if (matches.length >= 2) {
+      const stops = matches.map((color, index) => {
+        const position = `${Math.round((index / (matches.length - 1)) * 100)}%`;
+        return `${color} ${position}`;
+      });
+      return { backgroundImage: `linear-gradient(90deg, ${stops.join(', ')})` };
+    }
+
+    return {};
+  })();
+
+  const gradientClass = !gradientStyle.backgroundImage && slide.bg_gradient && !slide.bg_gradient.startsWith('#')
     ? slide.bg_gradient
     : 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]';
 
   return (
     <div
       className={`relative bg-gradient-to-r ${gradientClass} overflow-hidden transition-all duration-700`}
+      style={gradientStyle}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >

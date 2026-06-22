@@ -73,8 +73,21 @@ const AuthenticatedApp = () => {
   const { isLoadingAuth, authError, navigateToLogin, verifyAdminPassword, isAuthenticated } = useAuth();
   const location = useLocation();
   const isAdminPath = location.pathname.toLowerCase().startsWith('/admin');
+  const isAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname.toLowerCase());
 
-  // Show loading spinner only while checking auth
+  // Show auth routes immediately while auth initialization is still running.
+  if (isLoadingAuth && isAuthRoute) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+      </Routes>
+    );
+  }
+
+  // Show loading spinner only while checking auth for non-auth routes
   if (isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">

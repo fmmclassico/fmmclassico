@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
-export default function AuthLayout({ icon: Icon, title, subtitle, footer, children, backHref }) {
+export default function AuthLayout({ title, subtitle, footer, children, backHref }) {
   const navigate = useNavigate();
   const handleBack = (e) => {
     if (e) e.preventDefault();
@@ -37,11 +37,6 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
 
         <div className="bg-white rounded-2xl shadow-2xl border border-white/20 p-8">
           <div className="text-center mb-6">
-            {Icon && (
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-700">
-                <Icon className="h-6 w-6" />
-              </div>
-            )}
             <h2 className="text-2xl font-bold tracking-tight text-gray-900">{title}</h2>
             {subtitle && <p className="text-gray-500 mt-1 text-sm">{subtitle}</p>}
           </div>

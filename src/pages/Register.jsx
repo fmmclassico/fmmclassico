@@ -4,7 +4,7 @@ import { base44, redirectLoginWithProvider } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
+import { Mail, Lock, Loader2 } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
@@ -145,7 +145,6 @@ export default function Register() {
 
   return (
     <AuthLayout
-      icon={UserPlus}
       title="Create your account"
       subtitle="Sign up to get started"
       backHref="/"

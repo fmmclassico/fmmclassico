@@ -136,7 +136,7 @@ export default function HeroBanner() {
 
   return (
     <div
-      className="relative overflow-hidden transition-all duration-700"
+      className="relative overflow-hidden"
       style={{ backgroundImage: NAVY_BACKGROUND }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}

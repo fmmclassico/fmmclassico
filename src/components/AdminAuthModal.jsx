@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
-const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || '0599676419fmm';
+const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || null;
 
 export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }) {
   const [password, setPassword] = useState('');

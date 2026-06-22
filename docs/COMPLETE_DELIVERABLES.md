@@ -203,13 +203,13 @@ Everything has been built and documented for you. You have:
 
 ### Merchant Account
 ```
-2039285
+<YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER>
 ```
 
 ### API Credentials
 ```
-ID: pQGpB7y
-Key: 14fda6847ee44c8fa910f355675cce73
+ID: <YOUR_HUBTEL_API_ID>
+Key: <YOUR_HUBTEL_API_KEY>
 ```
 
 ### URLs
@@ -217,7 +217,7 @@ Key: 14fda6847ee44c8fa910f355675cce73
 Website:    https://www.fmmclassico.com
 Admin:      https://www.fmmclassico.com/AdminOrders
 Payment:    https://payproxyapi.hubtel.com/items/initiate
-Status:     https://api-txnstatus.hubtel.com/transactions/2039285/status
+Status:     https://api-txnstatus.hubtel.com/transactions/<YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER>/status
 Callback:   https://www.fmmclassico.com/api/hubtel/callback
 ```
 

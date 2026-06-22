@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { base44, redirectLoginWithProvider } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,21 +60,13 @@ export default function Login() {
     }
   };
 
-  const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", getReturnUrl());
-  };
+  const handleGoogle = () => redirectLoginWithProvider("google", getReturnUrl());
 
-  const handleMicrosoft = () => {
-    base44.auth.loginWithProvider("microsoft", getReturnUrl());
-  };
+  const handleMicrosoft = () => redirectLoginWithProvider("microsoft", getReturnUrl());
 
-  const handleFacebook = () => {
-    base44.auth.loginWithProvider("facebook", getReturnUrl());
-  };
+  const handleFacebook = () => redirectLoginWithProvider("facebook", getReturnUrl());
 
-  const handleApple = () => {
-    base44.auth.loginWithProvider("apple", getReturnUrl());
-  };
+  const handleApple = () => redirectLoginWithProvider("apple", getReturnUrl());
 
   return (
     <AuthLayout

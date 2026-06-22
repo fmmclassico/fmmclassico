@@ -21,6 +21,8 @@ export default function Chat() {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef(null);
+  const merchantPhone = import.meta.env.VITE_MERCHANT_PHONE || '059XXXXXXX';
+  const merchantEmail = import.meta.env.VITE_MERCHANT_EMAIL || 'merchant@example.com';
 
   const { data: products = [] } = useQuery({
     queryKey: ['products-chat'],
@@ -89,7 +91,7 @@ export default function Chat() {
       - Developer/Designer: Fedra Martha, the CEO of FMM CLASSICO
       - Owner: Fedra Martha, the CEO of FMM CLASSICO
       - Locations: UMAT Main Campus (Tarkwa) and Ashongman Estate (Accra)
-      - Phone: 0599676419 | Email: fmmcompanylimited@gmail.com
+      - Phone: ${merchantPhone} | Email: ${merchantEmail}
       - Payments: Contact us for payment options
       
       Our Locations:

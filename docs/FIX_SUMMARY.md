@@ -115,11 +115,11 @@ VITE_ADMIN_PASSWORD=<YOUR_ADMIN_PASSWORD>
 ```javascript
 // BEFORE (Hardcoded)
 export const HUBTEL_CONFIG = {
-  merchantAccountNumber: '2039285',
-  apiId: 'pQGpB7y',
-  apiKey: '14fda6847ee44c8fa910f355675cce73',
-  merchantEmail: 'fmmclassico@gmail.com',
-  merchantPhone: '0509896035',
+  merchantAccountNumber: 'YOUR_MERCHANT_ACCOUNT_NUMBER',
+  apiId: 'YOUR_HUBTEL_API_ID',
+  apiKey: 'YOUR_HUBTEL_API_KEY',
+  merchantEmail: 'merchant@example.com',
+  merchantPhone: '<YOUR_HUBTEL_MERCHANT_PHONE>',
 };
 
 // AFTER (Environment Variables)
@@ -141,8 +141,8 @@ export const HUBTEL_CONFIG = {
 **File**: `src/pages/Payment.jsx` (UPDATED)
 ```javascript
 // BEFORE
-const HUBTEL_API_ID  = 'pQGpB7y';
-const HUBTEL_API_KEY = '14fda6847ee44c8fa910f355675cce73';
+const HUBTEL_API_ID  = '<YOUR_HUBTEL_API_ID>';
+const HUBTEL_API_KEY = '<YOUR_HUBTEL_API_KEY>';
 
 // AFTER
 const HUBTEL_API_ID  = import.meta.env.VITE_HUBTEL_API_ID;
@@ -152,7 +152,7 @@ const HUBTEL_API_KEY = import.meta.env.VITE_HUBTEL_API_KEY;
 **File**: `src/components/AdminAuthModal.jsx` (UPDATED)
 ```javascript
 // BEFORE
-const ADMIN_PASSWORD = '0244129908fmm';
+const ADMIN_PASSWORD = '<YOUR_ADMIN_PASSWORD>';
 
 // AFTER
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;

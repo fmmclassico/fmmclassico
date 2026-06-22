@@ -3,7 +3,8 @@
 // Logs status responses for UAT documentation.
 
 const HUBTEL_API_KEY = process.env.HUBTEL_API_KEY || '';
-const MERCHANT_ACCOUNT_NUMBER = process.env.HUBTEL_MERCHANT_ACCOUNT_NUMBER || '2039285';
+const MERCHANT_ACCOUNT_NUMBER = process.env.HUBTEL_MERCHANT_ACCOUNT_NUMBER || '';
+if (!MERCHANT_ACCOUNT_NUMBER) console.warn('HUBTEL merchant account number not configured (HUBTEL_MERCHANT_ACCOUNT_NUMBER)');
 
 // In-memory sample storage for UAT
 const UAT_STATUS_SAMPLES = [];

@@ -111,7 +111,7 @@ Please provide test payment methods for:
 2. Failed payment (phone number or test card)
 3. Cancelled payment scenario
 
-Merchant Account: 2039285
+Merchant Account: <YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER>
 
 Thank you!
 ```
@@ -120,7 +120,7 @@ They will respond with something like:
 ```
 Test Phone for Success: 0500000001
 Test Phone for Failure: 0500000002
-Test Card: 4111111111111111
+Test Card: <YOUR_TEST_CARD_NUMBER>
 ```
 
 ### Step 3: Test Different Scenarios (Takes 1 hour)
@@ -201,7 +201,7 @@ WHAT WE'VE BUILT:
 - Admin order management
 - Transaction tracking
 
-MERCHANT ACCOUNT: 2039285
+MERCHANT ACCOUNT: <YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER>
 LIVE WEBSITE: https://www.fmmclassico.com
 ADMIN DASHBOARD: https://www.fmmclassico.com/AdminOrders
 
@@ -221,8 +221,8 @@ Please confirm receipt and let us know next steps.
 
 Thank you,
 FMM CLASSICO Development Team
-Phone: 0509896035
-Email: fmmclassico@gmail.com
+Phone: <YOUR_SUPPORT_PHONE>
+Email: <YOUR_SUPPORT_EMAIL>
 ```
 
 ---
@@ -235,7 +235,7 @@ Think of it as your **bank account** but for receiving payments through Hubtel.
 - Customers send money TO this account
 - You receive money FROM this account
 
-**Your account:** 2039285
+**Your account:** <YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER>
 
 ### What is "API"?
 
@@ -277,7 +277,7 @@ Sometimes Hubtel's message gets lost.
 
 1. **NEVER share** your Hubtel API credentials
    - They're like your password
-   - Currently: pQGpB7y and 14fda6847ee44c8fa910f355675cce73
+   - Currently: <YOUR_HUBTEL_API_ID> and <YOUR_HUBTEL_API_KEY>
    - Keep them SECRET
 
 2. **ALWAYS use HTTPS** (not HTTP)
@@ -355,8 +355,8 @@ Sometimes Hubtel's message gets lost.
 - Email: support@hubtel.com
 
 **Your Business:**
-- FMM CLASSICO: fmmclassico@gmail.com
-- Phone: 0509896035
+- FMM CLASSICO: <YOUR_SUPPORT_EMAIL>
+- Phone: <YOUR_SUPPORT_PHONE>
 
 ---
 
@@ -415,7 +415,7 @@ You now have a complete **online payment system**!
 
 ## 💡 QUICK REFERENCE
 
-**Merchant Account:** 2039285  
+**Merchant Account:** <YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER>  
 **API Status:** ✅ Connected  
 **Test Status:** ⏳ Awaiting Hubtel test credentials  
 **UAT Status:** ⏳ Ready to schedule  

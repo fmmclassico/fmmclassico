@@ -42,10 +42,10 @@ See: `docs/FIX_SUMMARY.md` (Product Visibility section)
 ✅ **YES - FULLY SECURED**
 
 What was hidden:
-- ✅ Hubtel API ID (pQGpB7y)
-- ✅ Hubtel API Key (14fda6847ee44c8fa910f355675cce73)
-- ✅ Merchant Account (2039285)
-- ✅ Admin Password (0244129908fmm)
+- ✅ Hubtel API ID (<YOUR_HUBTEL_API_ID>)
+- ✅ Hubtel API Key (<YOUR_HUBTEL_API_KEY>)
+- ✅ Merchant Account (<YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER>)
+- ✅ Admin Password (<YOUR_ADMIN_PASSWORD>)
 
 Where they are now:
 - `.env` file (not committed to git) ✅

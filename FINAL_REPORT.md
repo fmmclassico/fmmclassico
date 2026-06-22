@@ -30,7 +30,7 @@
   description: "FMM CLASSICO Order #123",  // ✅
   callbackUrl: "https://...",              // ✅
   returnUrl: "https://...",                // ✅
-  merchantAccountNumber: "2039285",        // ✅ (from .env)
+  merchantAccountNumber: "<YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER>",        // ✅ (from .env)
   cancellationUrl: "https://...",          // ✅
   clientReference: "FMM-ABC-123",          // ✅
   payeeName: "Customer Name",              // ✅
@@ -168,10 +168,11 @@ Search performed on entire `src/` folder:
 
 #### 1. `.env` File (ACTUAL Credentials)
 ```env
-VITE_HUBTEL_API_ID=pQGpB7y
-VITE_HUBTEL_API_KEY=14fda6847ee44c8fa910f355675cce73
-VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER=2039285
-VITE_ADMIN_PASSWORD=0244129908fmm
+# Your actual secrets live only in the local `.env` file and are NOT committed.
+VITE_HUBTEL_API_ID=YOUR_HUBTEL_API_ID
+VITE_HUBTEL_API_KEY=YOUR_HUBTEL_API_KEY
+VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER=YOUR_MERCHANT_ACCOUNT_NUMBER
+VITE_ADMIN_PASSWORD=YOUR_ADMIN_PASSWORD
 ```
 
 ✅ **Protected**:
@@ -182,10 +183,11 @@ VITE_ADMIN_PASSWORD=0244129908fmm
 
 #### 2. `.env.example` (TEMPLATE - Safe)
 ```env
-VITE_HUBTEL_API_ID=pQGpB7y         # ✅ Safe (just template)
-VITE_HUBTEL_API_KEY=14fda6847...   # ✅ Safe (just template)
-VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER=2039285  # ✅ Safe
-VITE_ADMIN_PASSWORD=0244129908fmm  # ✅ Safe (just template)
+# Template placeholders only — do not contain real secrets
+VITE_HUBTEL_API_ID=YOUR_HUBTEL_API_ID
+VITE_HUBTEL_API_KEY=YOUR_HUBTEL_API_KEY
+VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER=YOUR_MERCHANT_ACCOUNT_NUMBER
+VITE_ADMIN_PASSWORD=YOUR_ADMIN_PASSWORD
 ```
 
 ✅ **Committed to git** (safe because template only)

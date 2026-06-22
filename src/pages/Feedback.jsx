@@ -97,8 +97,9 @@ export default function Feedback() {
       const imageLines = uploadedImages.length > 0
         ? `\n\nAttached images:\n${uploadedImages.join('\n')}`
         : '';
+      const feedbackEmail = import.meta.env.VITE_FEEDBACK_EMAIL || import.meta.env.VITE_MERCHANT_EMAIL || 'merchant@example.com';
       await base44.integrations.Core.SendEmail({
-        to: 'fmmclassico@gmail.com',
+        to: feedbackEmail,
         subject: `📩 New Feedback: ${data.type?.toUpperCase()} – ${data.subject || 'No subject'}`,
         body: `New customer feedback received:\n\nName: ${data.customer_name}\nEmail: ${data.customer_email}\nPhone: ${data.customer_phone || 'N/A'}\nType: ${data.type}\nSubject: ${data.subject || 'N/A'}\nOrder #: ${data.order_number || 'N/A'}\n\nMessage:\n${data.message}${imageLines}`,
       });

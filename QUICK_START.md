@@ -1,1 +1,71 @@
-# ⚡ QUICK START - Implement Fixes\n\n## 🚀 What Was Fixed\n\n### Issue 1: Products Not Showing Up ✅\n**Problem**: Products created in admin weren't visible to users/guests\n**Solution**: Optimized product query refresh - now updates every 30 seconds + on tab switch\n\n### Issue 2: Exposed Credentials ✅  \n**Problem**: API keys, merchant account, admin password hardcoded in source\n**Solution**: Moved all credentials to environment variables (.env file)\n\n---\n\n## 🔧 Setup in 3 Steps\n\n### Step 1: Create `.env` File\n```bash\ncp .env.example .env\n```\n\n### Step 2: Open `.env` and Add Your Real Credentials\n```env\nVITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER=2039285\nVITE_HUBTEL_API_ID=pQGpB7y\nVITE_HUBTEL_API_KEY=14fda6847ee44c8fa910f355675cce73\nVITE_HUBTEL_MERCHANT_EMAIL=fmmclassico@gmail.com\nVITE_HUBTEL_MERCHANT_PHONE=0509896035\nVITE_ADMIN_PASSWORD=0244129908fmm\n```\n\n### Step 3: Restart Dev Server\n```bash\nnpm run dev\n```\n\n---\n\n## ✅ Verify Everything Works\n\n### Test Product Visibility\n1. Admin creates new product\n2. User navigates to Shop → ✅ Should see it\n3. Guest visits site → ✅ Should see it\n\n### Test Credentials Are Working\n1. Complete payment flow → ✅ Should work\n2. Try admin login → ✅ Should work\n\n---\n\n## 📋 Key Changes\n\n**Files Modified**:\n- `src/config/hubtel.config.js` - Reads from env\n- `src/pages/Payment.jsx` - Reads from env\n- `src/components/AdminAuthModal.jsx` - Reads from env\n- `src/pages/Home.jsx` - Better product refresh\n- `src/pages/Shop.jsx` - Better product refresh\n\n**Files Created**:\n- `.env.example` - Template for environment variables\n- `docs/SECURITY_CONFIGURATION.md` - Security guide\n- `docs/FIX_SUMMARY.md` - Detailed fix summary\n\n---\n\n## ⚠️ Important\n\n✅ **DO NOT commit `.env` file** - it's in `.gitignore`\n✅ **NEVER share your `.env` file** - contains secrets\n✅ **Each developer needs their own `.env`** - copied from `.env.example`\n✅ **Keep credentials secure** - treat like passwords\n\n---\n\n## 🆘 Troubleshooting\n\n**\"API credentials not working\"**\n- [ ] Restart dev server: `npm run dev`\n- [ ] Check `.env` file exists in project root\n- [ ] Verify no spaces around `=`: `KEY=value` ✅\n- [ ] Ensure credentials match your Hubtel account\n\n**\"Products not showing up\"**\n- [ ] Refresh page\n- [ ] Wait 30 seconds\n- [ ] Check admin product has `is_visible` enabled\n- [ ] Open browser DevTools → check for errors\n\n**\"Admin login not working\"**\n- [ ] Check `VITE_ADMIN_PASSWORD` matches exactly\n- [ ] Passwords are case-sensitive\n- [ ] Restart dev server\n\n---\n\n## 📚 Full Guides\n\n- **Security Setup**: `docs/SECURITY_CONFIGURATION.md`\n- **What Was Fixed**: `docs/FIX_SUMMARY.md`\n- **Project Structure**: `docs/README.md`\n\n---\n\n**Status**: 🟢 READY TO USE\n\nCreate `.env` file and you're done! 🎉\n"
+# ⚡ QUICK START - Implement Fixes
+
+## 🚀 What Was Fixed
+
+### Issue 1: Products Not Showing Up ✅
+**Problem**: Products created in admin weren't visible to users/guests
+**Solution**: Optimized product query refresh - now updates every 30 seconds + on tab switch
+
+### Issue 2: Secrets & Configuration ✅
+**Problem**: Credentials or sensitive values embedded in source or docs
+**Solution**: Moved all credentials to environment variables (.env file). Removed example secrets from documentation.
+
+---
+
+## 🔧 Setup in 3 Steps
+
+### Step 1: Create `.env` File
+```bash
+cp .env.example .env
+```
+
+### Step 2: Open `.env` and Add Your Real Credentials
+```env
+# Put your real credentials in a local .env file. DO NOT commit this file.
+# Replace the placeholders below with your real values:
+VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER=YOUR_MERCHANT_ACCOUNT_NUMBER
+VITE_HUBTEL_API_ID=YOUR_HUBTEL_API_ID
+VITE_HUBTEL_API_KEY=YOUR_HUBTEL_API_KEY
+VITE_HUBTEL_MERCHANT_EMAIL=merchant@example.com
+VITE_HUBTEL_MERCHANT_PHONE=+233XXXXXXXXX
+VITE_ADMIN_PASSWORD=YOUR_ADMIN_PASSWORD
+```
+
+### Step 3: Restart Dev Server
+```bash
+npm run dev
+```
+
+---
+
+## ✅ Verify Everything Works
+
+### Test Product Visibility
+1. Admin creates new product
+2. User navigates to Shop → ✅ Should see it
+3. Guest visits site → ✅ Should see it
+
+### Test Credentials Are Working
+1. Complete payment flow → ✅ Should work (with correct env values configured)
+2. Try admin login → ✅ Should work
+
+---
+
+## ⚠️ Important
+
+- DO NOT commit your `.env` file — it contains secrets and should remain local.
+- Replace all placeholders in `.env` with your actual credentials before running.
+
+---
+
+## 📚 Full Guides
+
+- **Security Setup**: `docs/SECURITY_CONFIGURATION.md`
+- **What Was Fixed**: `docs/FIX_SUMMARY.md`
+- **Project Structure**: `docs/README.md`
+
+---
+
+**Status**: 🟢 READY TO USE
+
+Create `.env` file and you're done! 🎉

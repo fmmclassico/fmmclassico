@@ -98,10 +98,10 @@ is_visible: true,                   // ✅ Default visible
 **Evidence - No Credentials in Source Code**:
 ```bash
 # Search for all hardcoded values in src/
-❌ pQGpB7y (API ID)               → 0 matches ✅
-❌ 14fda6847ee44c8fa910f355675cce73 (API Key) → 0 matches ✅
-❌ 2039285 (Merchant Account)     → 0 matches ✅
-❌ 0244129908fmm (Admin Password) → 0 matches ✅
+❌ <YOUR_HUBTEL_API_ID> (API ID)               → 0 matches ✅
+❌ <YOUR_HUBTEL_API_KEY> (API Key) → 0 matches ✅
+❌ <YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER> (Merchant Account)     → 0 matches ✅
+❌ <YOUR_ADMIN_PASSWORD> (Admin Password) → 0 matches ✅
 ```
 
 **Where Credentials Are Now**:

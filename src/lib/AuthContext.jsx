@@ -76,8 +76,11 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
 
-      const ADMIN_EMAILS = ['fmmcompanylimited@gmail.com', 'mensahfedramartha@gmail.com', 'marthamensahfedra@gmail.com'];
-      const isAdminEmail = ADMIN_EMAILS.includes(currentUser.email?.toLowerCase());
+      const envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || '';
+      const ADMIN_EMAILS = envAdminEmails
+        ? envAdminEmails.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+        : [];
+      const isAdminEmail = ADMIN_EMAILS.includes((currentUser.email || '').toLowerCase());
 
       if (currentUser.role === 'admin' && isAdminEmail) {
         const adminVerified = sessionStorage.getItem(`admin_verified_${currentUser.email}`);

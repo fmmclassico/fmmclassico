@@ -53,7 +53,7 @@ POST to: https://payproxyapi.hubtel.com/items/initiate
       "returnUrl": "/orders?order=FMMMQPCQYNT&status=success",
       "cancellationUrl": "/orders?order=FMMMQPCQYNT&status=cancelled",
       "clientReference": "FMMMQPCQYNT",
-      "merchantAccountNumber": "2039285"
+      "merchantAccountNumber": "<YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER>"
     }
     ↓
 Hubtel Responds
@@ -127,7 +127,7 @@ useEffect detects order parameter
 Calls: checkPaymentStatus('FMMMQPCQYNT')
     ↓
 GET request to Hubtel Status API:
-  https://api-txnstatus.hubtel.com/transactions/2039285/status?clientReference=FMMMQPCQYNT
+  https://api-txnstatus.hubtel.com/transactions/<YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER>/status?clientReference=FMMMQPCQYNT
     ↓
 Hubtel responds with transaction status
     ↓
@@ -169,7 +169,7 @@ Customer sees their order
 **How It Works:**
 ```javascript
 // Creates Basic Auth header
-const apiKey = '14fda6847ee44c8fa910f355675cce73';
+const apiKey = '<YOUR_HUBTEL_API_KEY>';
 const auth = btoa(`${apiKey}:`);
 
 // POSTs to Hubtel API

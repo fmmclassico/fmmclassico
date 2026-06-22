@@ -45,8 +45,8 @@ const DEFAULTS = {
   about_location1_addr: 'UMAT Main Campus, Tarkwa',
   about_location2_title: 'Accra Location',
   about_location2_addr: 'Ashongman Estate, Accra',
-  about_phone: '0599676419',
-  about_email: 'fmmcompanylimited@gmail.com',
+  about_phone: import.meta.env.VITE_MERCHANT_PHONE || '059XXXXXXX',
+  about_email: import.meta.env.VITE_MERCHANT_EMAIL || 'merchant@example.com',
   about_cta_title: 'Ready to Shop?',
   about_cta_subtitle: 'Explore our wide range of Phones & Accessories, Home Appliances and Electronics.',
 };

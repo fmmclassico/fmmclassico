@@ -18,7 +18,7 @@ This document outlines the security vulnerabilities that were fixed and how to p
 
 ### 2. **Hardcoded Admin Password (FIXED)**
 - **Status**: ✅ RESOLVED
-- **Previous Issue**: Admin password `0244129908fmm` was hardcoded in `AdminAuthModal.jsx`
+- **Previous Issue**: Admin password `<YOUR_ADMIN_PASSWORD>` was referenced in `AdminAuthModal.jsx`
 - **Fix Applied**: Moved to environment variable `VITE_ADMIN_PASSWORD`
 - **File Updated**: `src/components/AdminAuthModal.jsx`
 
@@ -54,7 +54,7 @@ VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER=YOUR_MERCHANT_ACCOUNT_NUMBER
 VITE_HUBTEL_API_ID=YOUR_API_ID
 VITE_HUBTEL_API_KEY=YOUR_API_KEY
 VITE_HUBTEL_MERCHANT_EMAIL=your-email@example.com
-VITE_HUBTEL_MERCHANT_PHONE=0509896035
+VITE_HUBTEL_MERCHANT_PHONE=<YOUR_HUBTEL_MERCHANT_PHONE>
 
 # ADMIN AUTHENTICATION
 VITE_ADMIN_PASSWORD=YOUR_SECURE_PASSWORD_HERE

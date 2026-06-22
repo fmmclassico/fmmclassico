@@ -35,18 +35,14 @@ export default function AdminAccessControl() {
   const [sentCodeEmail, setSentCodeEmail] = useState('');
   const queryClient = useQueryClient();
 
-  const MASTER_ADMIN_EMAIL = 'fmmclassico@gmail.com';
-  const VERIFICATION_EMAILS = ['fmmclassico@gmail.com', 'mensahfedramartha@gmail.com'];
-  
-  const ALLOWED_EMAILS = [
-    'fmmclassico@gmail.com',
-    'fmmcompanylimited@gmail.com',
-    'mensahfedramartha@gmail.com',
-    'marthamensahfedra@gmail.com',
-    'lovelyfedra@gmail.com'
-  ];
+  const MASTER_ADMIN_EMAIL = import.meta.env.VITE_MASTER_ADMIN_EMAIL || 'admin@example.com';
+  const VERIFICATION_EMAILS = (import.meta.env.VITE_VERIFICATION_EMAILS || MASTER_ADMIN_EMAIL)
+    .split(',').map(e => e.trim()).filter(Boolean);
 
-  const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || '0599676419fmm';
+  const ALLOWED_EMAILS = (import.meta.env.VITE_ALLOWED_ADMIN_EMAILS || MASTER_ADMIN_EMAIL)
+    .split(',').map(e => e.trim()).filter(Boolean);
+
+  const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || null;
 
   useEffect(() => {
     const checkMasterAdmin = async () => {
@@ -60,8 +56,8 @@ export default function AdminAccessControl() {
         toast.error('Admin access required');
         return;
       }
-      if (userData.email !== MASTER_ADMIN_EMAIL) {
-        toast.error('Only fmmclassico@gmail.com can access this page');
+      if ((userData.email || '').toLowerCase() !== (MASTER_ADMIN_EMAIL || '').toLowerCase()) {
+        toast.error(`Only ${MASTER_ADMIN_EMAIL} can access this page`);
         return;
       }
       setUser(userData);
@@ -418,7 +414,7 @@ export default function AdminAccessControl() {
           <div className="text-sm text-yellow-800">
             <p className="font-semibold mb-1">Important Notes:</p>
             <ul className="list-disc list-inside space-y-1 text-xs">
-              <li>Only <strong>fmmclassico@gmail.com</strong> can access this page</li>
+              <li>Only <strong>{MASTER_ADMIN_EMAIL}</strong> can access this page</li>
               <li>Only the {ALLOWED_EMAILS.length} authorized emails listed above can be granted admin access</li>
             </ul>
           </div>

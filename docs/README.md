@@ -185,7 +185,7 @@ Callback: https://fmmclassico.com/api/hubtel/callback
 // src/config/hubtel.config.js
 import { HUBTEL_CONFIG } from '@/config/hubtel.config';
 
-console.log(HUBTEL_CONFIG.merchantAccountNumber); // 2039285
+console.log(HUBTEL_CONFIG.merchantAccountNumber); // <YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER>
 ```
 
 ### Status Checking

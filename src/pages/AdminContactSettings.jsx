@@ -25,7 +25,7 @@ export default function AdminContactSettings() {
   const [editValue, setEditValue] = useState('');
   const queryClient = useQueryClient();
 
-  const MASTER_ADMIN_EMAIL = 'fmmclassico@gmail.com';
+  const MASTER_ADMIN_EMAIL = import.meta.env.VITE_MASTER_ADMIN_EMAIL || 'admin@example.com';
 
   useEffect(() => {
     const checkAdmin = async () => {

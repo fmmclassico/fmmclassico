@@ -128,7 +128,7 @@ Status: ✅ ALL CRITICAL ISSUES FIXED
 ✅ Payment Initiation
    → Customer clicks Pay
    → Sent to Hubtel checkout
-   → Uses correct merchant account (2039285)
+   → Uses correct merchant account (<YOUR_HUBTEL_MERCHANT_ACCOUNT_NUMBER>)
 
 ✅ Payment Verification  
    → Calls Hubtel status check API

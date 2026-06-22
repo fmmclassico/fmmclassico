@@ -32,9 +32,9 @@ All server functions use standardized patterns:
 - [ ] Add the following environment variables:
 
 ```
-HUBTEL_AP_ID = pQGpB7y
-HUBTEL_API_KEY = 14fda6847ee44c8fa910f355675cce73
-HUBTEL_MERCHANT_ACCOUNT_NUMBER = 2039285
+HUBTEL_AP_ID = YOUR_HUBTEL_API_ID
+HUBTEL_API_KEY = YOUR_HUBTEL_API_KEY
+HUBTEL_MERCHANT_ACCOUNT_NUMBER = YOUR_MERCHANT_ACCOUNT_NUMBER
 BASE44_SERVER_TOKEN = <your-base44-server-token>
 ```
 

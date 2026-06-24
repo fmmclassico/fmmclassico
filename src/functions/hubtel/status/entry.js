@@ -2,7 +2,8 @@
 // Usage: GET /api/hubtel/status?clientReference=inv0012
 // Logs status responses for UAT documentation.
 
-const HUBTEL_API_KEY = process.env.HUBTEL_API_KEY || '';
+const HUBTEL_CLIENT_ID = process.env.HUBTEL_CLIENT_ID || '';
+const HUBTEL_CLIENT_SECRET = process.env.HUBTEL_CLIENT_SECRET || '';
 const MERCHANT_ACCOUNT_NUMBER = process.env.HUBTEL_MERCHANT_ACCOUNT_NUMBER || '';
 if (!MERCHANT_ACCOUNT_NUMBER) console.warn('HUBTEL merchant account number not configured (HUBTEL_MERCHANT_ACCOUNT_NUMBER)');
 
@@ -25,7 +26,9 @@ export default async function handler(req, res) {
 
   if (!clientReference) return res.status(400).json({ error: 'Missing clientReference' });
 
-  const auth = Buffer.from(HUBTEL_API_KEY || '').toString('base64');
+ const auth = Buffer
+  .from(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`)
+  .toString('base64');
 
   try {
     const endpoint = `https://api-txnstatus.hubtel.com/transactions/${MERCHANT_ACCOUNT_NUMBER}/status?clientReference=${encodeURIComponent(clientReference)}`;

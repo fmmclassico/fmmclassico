@@ -1,9 +1,9 @@
 /* eslint-disable */
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { ChevronRight, Zap, Star, Tag, Home as HomeIcon, Smartphone, Headphones, Tv, ShoppingBag, Gem, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import guestCart from '@/lib/guest-cart';
@@ -104,7 +104,6 @@ const HOME_CATEGORIES = [
 export default function GuestHome() {
   // FIX: was useState<string | null>(null) — JSX files must NOT use TypeScript generics
   const [expandedCat, setExpandedCat] = useState(null);
-  const queryClient = useQueryClient();
 
   const { data: appSettings = [] } = useQuery({
     queryKey: ['appSettings'],
@@ -113,12 +112,6 @@ export default function GuestHome() {
   });
 
   // FIX: removed TypeScript type annotation from parameter (key: string)
-  const getPromoNotice = (key) => {
-    const raw = appSettings.find(s => s.key === key)?.value;
-    if (!raw) return null;
-    try { const d = JSON.parse(raw); return d?.active && d?.image_url ? d : null; } catch { return null; }
-  };
-
   const showBrandSection = appSettings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
 
   const flashSaleSettings = appSettings.find(s => s.key === 'flash_sale_config');
@@ -126,17 +119,13 @@ export default function GuestHome() {
   const showFlashTimer = flashConfig.show_timer !== false;
   const flashTimerEndTime = flashConfig.end_time || null;
 
-  const { data: products = [], isLoading, refetch } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => base44.entities.Product.list('-created_date', 100),
-    staleTime: 30000,
-    refetchOnWindowFocus: true,
-  });
-
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
-
+const { data: products = [], isLoading } = useQuery({
+  queryKey: ['products'],
+  queryFn: () => base44.entities.Product.list('-created_date', 100),
+  staleTime: 30000,
+  refetchOnWindowFocus: true,
+});
+  
   // Guest can add to local cart only
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {
@@ -158,7 +147,6 @@ export default function GuestHome() {
   const visibleProducts = products.filter((p) => p.is_visible !== false && !(p.stock != null && p.stock === 0));
 
   const flashItems    = visibleProducts.filter((p) => p.flash_sale  && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
-  const flashSaleEndTime = flashItems.length > 0 ? flashItems[0].flash_sale_end : null;
   const classicoDeals = visibleProducts.filter((p) => p.featured);
   const donkomiDeals  = visibleProducts.filter((p) => p.donkomi);
   const newArrivals   = visibleProducts.filter((p) => p.new_arrival);

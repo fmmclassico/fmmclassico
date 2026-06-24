@@ -122,12 +122,30 @@ export default function GuestHome() {
 });
 
   // FIX: removed TypeScript type annotation from parameter (key: string)
-  const showBrandSection = appSettings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
+  // Make sure appSettings is always an array
+const settings = Array.isArray(appSettings) ? appSettings : [];
 
-  const flashSaleSettings = appSettings.find(s => s.key === 'flash_sale_config');
-  const flashConfig = flashSaleSettings?.value ? (() => { try { return JSON.parse(flashSaleSettings.value); } catch { return {}; } })() : {};
-  const showFlashTimer = flashConfig.show_timer !== false;
-  const flashTimerEndTime = flashConfig.end_time || null;
+// Shop by Brand visibility
+const showBrandSection =
+  settings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
+
+// Flash Sale settings
+const flashSaleSettings = settings.find(
+  s => s.key === 'flash_sale_config'
+);
+
+const flashConfig = flashSaleSettings?.value
+  ? (() => {
+      try {
+        return JSON.parse(flashSaleSettings.value);
+      } catch {
+        return {};
+      }
+    })()
+  : {};
+
+const showFlashTimer = flashConfig.show_timer !== false;
+const flashTimerEndTime = flashConfig.end_time || null;
 
 const { data: products = [], isLoading } = useQuery({
   queryKey: ['products'],
@@ -188,7 +206,7 @@ const { data: products = [], isLoading } = useQuery({
         </div>
         <div className="grid grid-cols-4 gap-3">
           {HOME_CATEGORIES.map(cat => {
-            const adminImg = appSettings.find(s => s.key === `cat_img_${cat.id}`)?.value;
+            const adminImg = Settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
             // FIX: products.find(cat.match) returns a product object, not void
             // We access .image_url safely with optional chaining
             const firstMatchProduct = products.find(cat.match);
@@ -237,7 +255,7 @@ const { data: products = [], isLoading } = useQuery({
       {(() => {
         const PROMO_KEYS = ['promo_card_1','promo_card_2','promo_card_3','promo_card_4','promo_card_5','promo_card_6'];
         const allCards = PROMO_KEYS.map(k => {
-          const raw = appSettings.find(s => s.key === k)?.value;
+          const raw = Settings.find(s => s.key === k)?.value;
           if (!raw) return null;
           try { const d = JSON.parse(raw); return d?.active ? { ...d, key: k } : null; } catch { return null; }
         }).filter(Boolean);
@@ -424,7 +442,7 @@ const { data: products = [], isLoading } = useQuery({
               { name: 'Sony', fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
               { name: 'JBL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
             ].map(brand => {
-              const uploadedLogo = appSettings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
+              const uploadedLogo = Settings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
               const logoSrc = uploadedLogo || brand.fallback;
               return (
                 <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}

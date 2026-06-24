@@ -1,0 +1,834 @@
+# Query: Settings
+# ContextLines: 1
+
+259 results - 31 files
+
+ADMIN_QUERYKEY_ANALYSIS.md:
+    4  
+    5: **18 Admin Pages** exist in the codebase with **9 shared queryKeys** between admin and non-admin operations. The main risk is **`['appSettings']`** which is modified by 10+ admin pages and read by 5+ non-admin pages, causing immediate UI updates across the entire application.
+    6  
+
+   18  **QueryKeys Modified:**
+   19: - `['appSettings']` - Saves hero config, section visibility
+   20  - `['promoBanners']` - Manages promo banner configuration
+
+  101  - `['adminReviews']` - Pending reviews list
+  102: - `['appSettings']` - Auto-approve toggle setting
+  103  - `['products']` - When toggling review_enabled on products ⚠️ SHARED
+
+  111  
+  112: **Impact:** Toggling review settings invalidates `['products']`, affecting ProductDetail and other pages displaying products.
+  113  
+
+  140  - Control visibility of interface sections (Shop by Brand, etc.)
+  141: - Configure flash sale settings (end time, show timer)
+  142  - Control which features are visible to users
+
+  144  **QueryKeys Modified:**
+  145: - `['appSettings']` - ⚠️ SHARED - All visibility toggles stored here
+  146  
+
+  150  
+  151: **Impact:** HIGH - Every interface toggle immediately updates all pages reading `['appSettings']`.
+  152  
+
+  174  
+  175: ### 1.9 AdminContactSettings.jsx
+  176  **Main Operations:**
+
+  178  - Toggle contact channel active/inactive
+  179: - Manage contact settings
+  180  
+  181  **QueryKeys Modified:**
+  182: - `['contactSettings']` - ✅ Admin-only, isolated
+  183  
+
+  187  
+  188: **Impact:** Isolated - contact settings are likely read during checkout or contact page.
+  189  
+
+  216  **QueryKeys Modified:**
+  217: - `['appSettings']` - Category configurations stored here
+  218  
+
+  226  **QueryKeys Modified:**
+  227: - `['appSettings']` - ⚠️ SHARED - Logo URLs stored in appSettings
+  228  
+
+  231  
+  232: **Impact:** Invalidates `['appSettings']`, affecting all pages using it.
+  233  
+
+  241  **QueryKeys Modified:**
+  242: - `['appSettings']` - ⚠️ SHARED - About content stored here
+  243  
+
+  246  
+  247: **Impact:** Updates propagate to About page and any other pages reading appSettings.
+  248  
+
+  256  **QueryKeys Modified:**
+  257: - `['appSettings']` - ⚠️ SHARED - Category image URLs stored here
+  258  
+
+  261  
+  262: **Impact:** Invalidates `['appSettings']`.
+  263  
+
+  267  **Main Operations:**
+  268: - Configure promo banner settings globally
+  269  - Manage banner display configurations
+
+  271  **QueryKeys Modified:**
+  272: - `['appSettings']` - ⚠️ SHARED - Promo banner configs stored here
+  273  
+
+  276  
+  277: **Impact:** Invalidates `['appSettings']`.
+  278  
+
+  285  **QueryKeys Modified:**
+  286: - `['appSettings']` - ⚠️ SHARED - Page content stored in appSettings
+  287  
+
+  294  - Manage SMS contacts
+  295: - Configure SMS broadcast settings
+  296  
+
+  333  |----------|---|---|---|---|
+  334: | **['appSettings']** | Home, Categories, ReviewSection, ProductDetail | AdminHomeEditor, AdminInterfaceControl, AdminBrandLogos, AdminAbout, AdminCategoryImages, AdminPromoBanners2, AdminContactSettings, AdminReviews | YES - 5+ pages | 🔴 HIGH |
+  335  | **['products']** | Shop, BrandProducts, ProductDetail | AdminProducts, AdminReviews | YES - 3+ pages | 🟠 MEDIUM |
+
+  340  | **['products-admin']** | AdminProducts (admin view) | AdminProducts | NO - admin-only | ✅ SAFE |
+  341: | **['contactSettings']** | AdminContactSettings | AdminContactSettings | NO - admin-only | ✅ SAFE |
+  342  | **['allUsers']** | AdminAccessControl | AdminAccessControl | NO - admin-only | ✅ SAFE |
+
+  352  
+  353: ### 🔴 CRITICAL: `['appSettings']` - 10+ Modifications
+  354  
+
+  356  1. Admin changes ANY setting in 8 different admin pages
+  357: 2. `['appSettings']` queryKey is invalidated
+  358: 3. ALL pages reading appSettings refetch immediately:
+  359     - Home.jsx (hero, sections, feature configs)
+  360     - Categories.jsx (category visibility, ordering)
+  361:    - ReviewSection.jsx (auto-approve settings)
+  362:    - ProductDetail.jsx (review settings display)
+  363     - And any other page using AppSetting
+
+  367  - ⚠️ **CONCERN**: Rapid cascading updates if multiple admin changes
+  368: - ⚠️ **CONCERN**: Users on Home page will see immediate refreshes if admin changes settings
+  369: - ⚠️ **CONCERN**: Not obvious that Home page updates when admin changes interface settings
+  370  
+  371: **Admin Pages Modifying appSettings:**
+  372  1. AdminHomeEditor (hero, sections, custom categories)
+
+  377  6. AdminPromoBanners2 (banner configs)
+  378: 7. AdminContactSettings (contact info - maybe)
+  379  8. AdminReviews (auto-approve setting)
+
+  449  
+  450: 5. **['contactSettings']** - AdminContactSettings only
+  451     - Fetch-only, not shared ✅ SAFE
+
+  468  
+  469: ### Issue #1: `['appSettings']` Over-Sharing
+  470  
+
+  474  ```javascript
+  475: // OPTION A: Break appSettings into smaller domains
+  476: queryClient.invalidateQueries({ queryKey: ['appSettings', 'display'] });
+  477: queryClient.invalidateQueries({ queryKey: ['appSettings', 'brands'] });
+  478: queryClient.invalidateQueries({ queryKey: ['appSettings', 'about'] });
+  479  
+
+  529  2. Admin updates brand logos via AdminBrandLogos
+  530: 3. `['appSettings']` invalidated
+  531  4. Customer's Home page refetches and updates
+
+  535  - Consider stale-while-revalidate pattern
+  536: - Use `staleTime` on appSettings queries
+  537  - Notify admins that changes affect live users
+
+  556  ```
+  557: App Settings:       ['appSettings']               - Shared! Modified by 8+ admin pages
+  558  Products:           ['products']                  - Shared! Modified by 2 admin pages
+
+  566  |---|---|---|---|
+  567: | **High Risk (Multi-Admin Modify)** | 1 | `['appSettings']` | 🔴 HIGH |
+  568  | **Medium Risk (Multi-Source)** | 2 | `['products']`, `['promoBanners']` | 🟠 MEDIUM |
+
+  578  - Guest views are read-only (Shop, Products, Categories)
+  579: - Admin changes to `['appSettings']` + `['products']` affect guest product visibility
+  580  
+  581  ### 🟠 Direct Impact on AUTHENTICATED Users
+  582: - **appSettings changes** → Home, Categories, ProductDetail pages refresh
+  583  - **Product visibility** → Shop, ProductDetail pages refresh
+  584: - **Review settings** → ProductDetail review section updates
+  585  - **Notifications** → User notifications refresh
+
+  598  2. ✅ **Good Isolation**: Most admin operations use admin-specific queryKeys
+  599: 3. 🔴 **Main Risk**: `['appSettings']` shared by 10+ admin operations and 5+ user pages
+  600  4. 🟠 **Secondary Risk**: `['products']` shared between admin/user views
+
+  605  **Recommended Next Steps:**
+  606: - Consider segmenting `['appSettings']` by domain (display, content, brands, etc.)
+  607  - Update AdminMessages to use scoped notification invalidation
+  608  - Document admin operations that affect live users
+  609: - Consider stale-while-revalidate caching for appSettings
+
+eslint.config.js:
+  26      },
+  27:     settings: {
+  28        react: {
+
+SETUP_GUIDE.md:
+   30  3. Base44 will generate a public URL for the `hubtelCallback` function
+   31: 4. In your Hubtel Dashboard → Settings → Callback URL → Paste that URL
+   32  5. Update `.env` with: `HUBTEL_CALLBACK_URL=<the-url-base44-gave-you>`
+
+  171  → Verify checkoutUrl is returned from initiate endpoint
+  172: → Check CORS settings if using custom proxy
+  173  → Verify returnUrl is accessible from internet
+
+docs/COMPLETE_DELIVERABLES.md:
+   88     - Endpoints
+   89:    - Settings
+   90  
+
+  193  |------|---------|--------|
+  194: | config/hubtel.config.js | Settings | ✅ Created |
+  195  | utils/hubtel-status-check.js | Status checker | ✅ Created |
+
+docs/GUEST_MODE_IMPLEMENTATION.md:
+   61  - Cart
+   62: - Account / Settings
+   63  - Orders
+
+  235  - Checkout
+  236: - Account / Settings
+  237  - My Orders
+
+docs/GUEST_MODE_SUMMARY.md:
+  128  **Protected Routes** (redirect to auth if not logged in):
+  129: - Checkout, Cart, Account, Settings
+  130  - Orders, OrderTracking, Notifications, Chat
+
+docs/HUBTEL_DEPLOYMENT_CHECKLIST.md:
+  54  - [ ] Log in to Hubtel merchant dashboard
+  55: - [ ] Navigate to Settings → Webhooks
+  56  - [ ] Add callback webhook:
+
+docs/README.md:
+  146  ├── config/
+  147: │   └── hubtel.config.js                     ← Hubtel settings
+  148  ├── pages/
+
+docs/SECURITY_CONFIGURATION.md:
+  163  **Vercel (recommended for React apps):**
+  164: - Dashboard → Project → Settings → Environment Variables
+  165  - Add your secrets there, they're encrypted and managed by Vercel
+
+  167  **Netlify:**
+  168: - Site Settings → Build & Deploy → Environment
+  169  - Add secrets, never commit them locally
+
+src/App.jsx:
+  34  import AdminAccessControl from './pages/AdminAccessControl';
+  35: import AdminContactSettings from './pages/AdminContactSettings';
+  36  
+
+  62    'Notifications',
+  63:   'Settings',
+  64    'Chat',
+
+  78    'AdminAccessControl',
+  79:   'AdminContactSettings'
+  80  ]);
+
+src/Layout.jsx:
+   14    Info, 
+   15:   Settings, 
+   16    Grid3X3, 
+
+  141      { icon: Info, label: 'About Us', page: 'About' },
+  142:     { icon: Settings, label: 'Settings', page: 'Settings' },
+  143      ...(isAdmin ? [
+  144:       { icon: Settings, label: 'Admin Orders', page: 'AdminOrders' },
+  145        { icon: MessageCircle, label: 'Customer Messages', page: 'AdminMessages' },
+  146:       { icon: Settings, label: 'Invoices', page: 'AdminInvoice' },
+  147        { icon: Bell, label: 'Promo Banners', page: 'AdminBanners' },
+
+  150        { icon: Star, label: 'Manage Reviews', page: 'AdminReviews' },
+  151:       { icon: Settings, label: 'Manage Products', page: 'AdminProducts' },
+  152:       { icon: Settings, label: 'Category Images', page: 'AdminCategoryImages' },
+  153        { icon: Bell, label: 'Promo Banner Cards', page: 'AdminPromoBanners2' },
+
+  155        { icon: Info, label: 'Edit About Page', page: 'AdminAbout' },
+  156:       { icon: Settings, label: 'Edit Page Content', page: 'AdminPageContent' },
+  157        { icon: Home, label: 'Edit Home & Categories', page: 'AdminHomeEditor' },
+  158:       { icon: Settings, label: 'Interface Control', page: 'AdminInterfaceControl' },
+  159        { icon: Bot, label: 'AI Assistant', page: 'AdminAI' },
+  160        { icon: Shield, label: 'Admin Access Control', page: 'AdminAccessControl' },
+  161:       { icon: Settings, label: 'Contact Settings', page: 'AdminContactSettings' },
+  162      ] : []),
+
+  570              </Link>
+  571:             <Link to={createPageUrl('Settings')} className={`flex flex-col items-center p-2 ${currentPageName === 'Settings' ? 'text-gray-800' : 'text-gray-400'}`}>
+  572                <User className="h-5 w-5" />
+
+src/pages.config.js:
+  13   *   import Dashboard from './pages/Dashboard';
+  14:  *   import Settings from './pages/Settings';
+  15   *   
+
+  18   *       "Dashboard": Dashboard,
+  19:  *       "Settings": Settings,
+  20   *   }
+
+  29   *   import Home from './pages/Home';
+  30:  *   import Settings from './pages/Settings';
+  31   *   import __Layout from './Layout.jsx';
+
+  34   *       "Home": Home,
+  35:  *       "Settings": Settings,
+  36   *   }
+
+  67  import ProductDetail from './pages/ProductDetail';
+  68: import Settings from './pages/Settings';
+  69  import Shop from './pages/Shop';
+
+  91      "ProductDetail": ProductDetail,
+  92:     "Settings": Settings,
+  93      "Shop": Shop,
+
+src/components/products/ReviewSection.jsx:
+  22  
+  23:   const { data: settings = [] } = useQuery({
+  24:     queryKey: ['appSettings'],
+  25      queryFn: () => base44.entities.AppSetting.list(),
+
+  27  
+  28:   const autoApprove = settings.find(s => s.key === 'auto_approve_reviews')?.value === 'true';
+  29  
+
+src/pages/About.jsx:
+  54  export default function About() {
+  55:   const { data: settings = [] } = useQuery({
+  56:     queryKey: ['appSettings'],
+  57      queryFn: () => base44.entities.AppSetting.list(),
+
+  60  
+  61:   const g = (key) => settings.find(s => s.key === key)?.value || DEFAULTS[key] || '';
+  62  
+
+src/pages/AdminAbout.jsx:
+  146  
+  147:   const { data: settings = [] } = useQuery({
+  148:     queryKey: ['appSettings'],
+  149      queryFn: () => base44.entities.AppSetting.list(),
+
+  154      if (localValues[key] !== undefined) return localValues[key];
+  155:     return settings.find(s => s.key === key)?.value ?? DEFAULTS[key] ?? '';
+  156    };
+
+  166      for (const key of dirtyKeys) {
+  167:       const existing = settings.find(s => s.key === key);
+  168        if (existing) {
+
+  173      }
+  174:     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+  175      setLocalValues({});
+
+src/pages/AdminAccessControl.jsx:
+   15    Mail,
+   16:   Settings
+   17  } from 'lucide-react';
+
+  313            >
+  314:             <Settings className="h-4 w-4 mr-2" />
+  315              Change Admin Password
+
+src/pages/AdminAI.jsx:
+  320  
+  321:         {/* Watermark settings */}
+  322            <div className="p-3 border-b bg-gray-50 flex gap-2 items-center">
+
+src/pages/AdminBrandLogos.jsx:
+  24  
+  25:   const { data: settings = [] } = useQuery({
+  26:     queryKey: ['appSettings'],
+  27      queryFn: () => base44.entities.AppSetting.list(),
+
+  32      mutationFn: async ({ key, value }) => {
+  33:       const existing = settings.find(s => s.key === key);
+  34        if (existing) return base44.entities.AppSetting.update(existing.id, { value });
+
+  36      },
+  37:     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['appSettings'] }),
+  38    });
+
+  40    // Custom brands stored in AppSetting
+  41:   const customBrandsRaw = settings.find(s => s.key === CUSTOM_BRANDS_KEY)?.value || '[]';
+  42    const customBrands = (() => { try { return JSON.parse(customBrandsRaw); } catch { return []; } })();
+
+  46  
+  47:   const getLogo = (brand) => settings.find(s => s.key === `brand_logo_${brand.toLowerCase().replace(/ /g,'_')}`)?.value || '';
+  48  
+
+src/pages/AdminCategoryImages.jsx:
+   17  // history stored as JSON array in AppSetting key: cat_img_history_<key>
+   18: function CategoryCard({ catKey, label, desc, settings, saveMutation, queryClient }) {
+   19    const [uploading, setUploading] = useState(false);
+   20  
+   21:   const getVal = (k) => settings.find(s => s.key === k)?.value || '';
+   22    const getHistory = (k) => {
+
+   30    const saveHistory = async (newHistory) => {
+   31:     const existing = settings.find(s => s.key === `cat_img_history_${catKey}`);
+   32      const value = JSON.stringify(newHistory);
+
+   46      ]);
+   47:     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+   48      setUploading(false);
+
+   60      ]);
+   61:     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+   62      toast.success('Restored previous image.');
+
+   71      ]);
+   72:     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+   73      toast.success('Image removed.');
+
+  127  
+  128:   const { data: settings = [] } = useQuery({
+  129:     queryKey: ['appSettings'],
+  130      queryFn: () => base44.entities.AppSetting.list(),
+
+  135      mutationFn: async ({ key, value }) => {
+  136:       const existing = settings.find(s => s.key === key);
+  137        if (existing) return base44.entities.AppSetting.update(existing.id, { value });
+
+  156              desc={desc}
+  157:             settings={settings}
+  158              saveMutation={saveMutation}
+
+src/pages/AdminContactSettings.jsx:
+   15    AlertCircle,
+   16:   Settings
+   17  } from 'lucide-react';
+
+   21  
+   22: export default function AdminContactSettings() {
+   23    const [user, setUser] = useState(null);
+
+   46  
+   47:   const { data: contactSettings = [], isLoading } = useQuery({
+   48:     queryKey: ['contactSettings'],
+   49      queryFn: () => base44.entities.ContactSetting.list(),
+
+   57      onSuccess: () => {
+   58:       queryClient.invalidateQueries({ queryKey: ['contactSettings'] });
+   59        setEditingKey(null);
+
+   82      onSuccess: () => {
+   83:       queryClient.invalidateQueries({ queryKey: ['contactSettings'] });
+   84        toast.success('✅ Setting updated!');
+
+  111      if (key.includes('whatsapp')) return <MessageCircle className="h-5 w-5 text-green-500" />;
+  112:     return <Settings className="h-5 w-5 text-gray-600" />;
+  113    };
+
+  127          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-3">
+  128:           <Settings className="h-8 w-8 text-blue-800" />
+  129          </div>
+  130:         <h1 className="text-2xl font-black text-gray-800 mb-1">Contact Settings</h1>
+  131          <p className="text-gray-500 text-sm">Manage where customer messages and notifications are sent</p>
+
+  136            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-800" />
+  137:           <p className="text-gray-600">Loading settings...</p>
+  138          </Card>
+
+  140          <div className="space-y-4">
+  141:           {contactSettings.map((setting) => (
+  142              <Card key={setting.id} className={`p-6 shadow-md border-2 ${setting.is_active ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+
+  241                <li>Update phone numbers for SMS and WhatsApp communications</li>
+  242:               <li>Toggle settings on/off to control which contact methods are active</li>
+  243                <li>All changes take effect immediately across the app</li>
+  244:               <li>Only admins can modify these settings</li>
+  245              </ul>
+
+src/pages/AdminHomeEditor.jsx:
+   28    const [user, setUser] = useState(null);
+   29:   const [localSettings, setLocalSettings] = useState({});
+   30    const [saving, setSaving] = useState({});
+
+   43  
+   44:   const { data: settings = [] } = useQuery({
+   45:     queryKey: ['appSettings'],
+   46      queryFn: () => base44.entities.AppSetting.list(),
+
+   53  
+   54:   // Load custom categories from settings
+   55    useEffect(() => {
+   56:     const cats = settings.filter(s => s.key.startsWith('custom_cat_'));
+   57      if (cats.length > 0) {
+
+   66      }
+   67:   }, [settings]);
+   68  
+
+   70      const map = {};
+   71:     settings.forEach(s => { map[s.key] = s.value; });
+   72:     setLocalSettings(map);
+   73:   }, [settings]);
+   74  
+   75:   const getSetting = (key) => localSettings[key] ?? '';
+   76  
+
+   79      try {
+   80:       const existing = settings.find(s => s.key === key);
+   81        if (existing) {
+
+   85        }
+   86:       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+   87        toast.success('Saved!');
+
+   97        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+   98:       setLocalSettings(l => ({ ...l, [key]: file_url }));
+   99        await saveSetting(key, file_url);
+
+  106    const handleRemoveImage = async (key) => {
+  107:     setLocalSettings(l => ({ ...l, [key]: '' }));
+  108      await saveSetting(key, '');
+
+  141      await base44.entities.AppSetting.create({ key, value: JSON.stringify(newCat) });
+  142:     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+  143      setCustomCategories([...customCategories, newCat]);
+
+  150      const key = `custom_cat_${cat.id}`;
+  151:     const existing = settings.find(s => s.key === key);
+  152      if (existing) {
+
+  154      }
+  155:     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+  156      setCustomCategories(customCategories.map(c => c.id === cat.id ? updated : c));
+
+  161      const key = `custom_cat_${catId}`;
+  162:     const existing = settings.find(s => s.key === key);
+  163      if (existing) {
+
+  165      }
+  166:     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+  167      setCustomCategories(customCategories.filter(c => c.id !== catId));
+
+  177      });
+  178:     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+  179      setNewSectionTitle('');
+
+  197        const key = `custom_section_${idx}`;
+  198:       const existing = settings.find(s => s.key === key);
+  199        if (existing) {
+
+  203        }
+  204:       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+  205      }
+
+  210      const key = `custom_section_${idx}`;
+  211:     const existing = settings.find(s => s.key === key);
+  212      if (existing) {
+  213        await base44.entities.AppSetting.delete(existing.id);
+  214:       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+  215        toast.success('Removed!');
+
+  258                      value={getSetting(key)}
+  259:                     onChange={v => setLocalSettings(l => ({ ...l, [key]: v }))}
+  260                      onSave={() => saveSetting(key, getSetting(key))}
+
+  303                              value={getSetting(`home_${sec.id}_title`) || sec.name}
+  304:                             onChange={v => setLocalSettings(l => ({ ...l, [`home_${sec.id}_title`]: v }))}
+  305                              onSave={() => saveSetting(`home_${sec.id}_title`, getSetting(`home_${sec.id}_title`) || sec.name)}
+
+  312                {/* Custom sections */}
+  313:               {settings.filter(s => s.key.startsWith('custom_section_')).length > 0 && (
+  314                  <div className="space-y-3 pt-4 border-t">
+  315                    <p className="text-sm font-semibold text-gray-700">Custom Sections</p>
+  316:                   {settings.filter(s => s.key.startsWith('custom_section_')).map(sec => (
+  317                      <div key={sec.id} className="p-3 bg-blue-50 rounded-lg flex gap-2">
+
+  490                            value={getSetting(nameKey) || cat.name}
+  491:                           onChange={v => setLocalSettings(l => ({ ...l, [nameKey]: v }))}
+  492                            onSave={() => saveSetting(nameKey, getSetting(nameKey) || cat.name)}
+
+  497                            value={getSetting(descKey)}
+  498:                           onChange={v => setLocalSettings(l => ({ ...l, [descKey]: v }))}
+  499                            onSave={() => saveSetting(descKey, getSetting(descKey))}
+
+src/pages/AdminInterfaceControl.jsx:
+    7  import { Badge } from "@/components/ui/badge";
+    8: import { Loader2, Eye, EyeOff, Settings, Layers, Zap } from 'lucide-react';
+    9  import { Input } from "@/components/ui/input";
+
+   21  
+   22:   const { data: settings = [] } = useQuery({
+   23:     queryKey: ['appSettings'],
+   24      queryFn: () => base44.entities.AppSetting.list(),
+
+   28    useEffect(() => {
+   29:     const flashSaleConfig = settings.find(s => s.key === 'flash_sale_config')?.value;
+   30      if (flashSaleConfig) {
+
+   36      }
+   37:   }, [settings]);
+   38  
+   39    const getSetting = (key) => {
+   40:     const val = settings.find(s => s.key === key)?.value;
+   41      if (key.endsWith('_visible')) return val !== 'false';
+
+   47      try {
+   48:       const existing = settings.find(s => s.key === key);
+   49        if (existing) {
+
+   53        }
+   54:       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+   55        toast.success('Updated!');
+
+   65        const config = { end_time: flashEndTime, show_timer: showFlashTimer };
+   66:       const existing = settings.find(s => s.key === 'flash_sale_config');
+   67        if (existing) {
+
+   71        }
+   72:       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+   73:       toast.success('Flash sale settings updated!');
+   74      } catch {
+
+   88          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-600 flex items-center justify-center">
+   89:           <Settings className="h-5 w-5 text-white" />
+   90          </div>
+
+   92            <h1 className="text-2xl font-black text-gray-900">Interface Control</h1>
+   93:           <p className="text-gray-500 text-sm">Command AI or control app visibility settings</p>
+   94          </div>
+
+  172                {saving['flash_sale'] && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+  173:               Save Flash Sale Settings
+  174              </Button>
+
+src/pages/AdminPageContent.jsx:
+   34  
+   35:   const { data: settings = [], refetch: refetchSettings } = useQuery({
+   36:     queryKey: ['appSettings'],
+   37      queryFn: () => base44.entities.AppSetting.list(),
+
+   40  
+   41:   const videoSetting = settings.find(s => s.key === 'tutorial_video');
+   42    const videoUrl = videoSetting?.value || null;
+
+   46      const fetchSteps = async () => {
+   47:       const stepsSetting = settings.find(s => s.key === 'howto_steps');
+   48        if (stepsSetting?.value) {
+
+   57      };
+   58:     if (settings.length) fetchSteps();
+   59:   }, [settings]);
+   60  
+
+   84        }
+   85:       refetchSettings();
+   86        toast.success('Video uploaded successfully!');
+
+  100    const handleSaveSteps = async () => {
+  101:     const stepsSetting = settings.find(s => s.key === 'howto_steps');
+  102      if (stepsSetting?.id) {
+
+  106      }
+  107:     refetchSettings();
+  108      toast.success('Steps saved! Changes are now live.');
+
+src/pages/AdminProducts.jsx:
+  715  
+  716:             {/* Other Settings */}
+  717              <div className="md:col-span-2">
+  718:               <Label className="font-semibold block mb-2">Other Settings</Label>
+  719                <div className="flex flex-wrap gap-3">
+
+src/pages/AdminPromoBanners2.jsx:
+  49  
+  50:   const { data: settings = [] } = useQuery({
+  51:     queryKey: ['appSettings'],
+  52      queryFn: () => base44.entities.AppSetting.list(),
+
+  56    const getVal = (key) => {
+  57:     const raw = settings.find(s => s.key === key)?.value;
+  58      if (!raw) return defaultBanner();
+
+  61  
+  62:   // Sync localData from settings when loaded
+  63    useEffect(() => {
+  64:     if (!settings.length) return;
+  65      const init = {};
+
+  67      setLocalData(init);
+  68:   }, [settings]);
+  69  
+
+  71      mutationFn: async ({ key, value }) => {
+  72:       const existing = settings.find(s => s.key === key);
+  73        const serialized = JSON.stringify(value);
+
+  76      },
+  77:     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['appSettings'] }),
+  78    });
+
+src/pages/AdminReviews.jsx:
+  24  
+  25:   const { data: settings = [] } = useQuery({
+  26:     queryKey: ['appSettings'],
+  27      queryFn: () => base44.entities.AppSetting.list(),
+
+  32    useEffect(() => {
+  33:     const setting = settings.find(s => s.key === 'auto_approve_reviews');
+  34      setAutoApprove(setting?.value === 'true');
+  35:   }, [settings]);
+  36  
+
+  38      mutationFn: async (enabled) => {
+  39:       const existing = settings.find(s => s.key === 'auto_approve_reviews');
+  40        if (existing) return base44.entities.AppSetting.update(existing.id, { value: String(enabled) });
+
+  42      },
+  43:     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['appSettings'] }),
+  44    });
+
+src/pages/Categories.jsx:
+    4  import { motion, AnimatePresence } from 'framer-motion';
+    5: import { ChevronDown, Settings, Upload, X, Loader2 } from 'lucide-react';
+    6  import { base44 } from '@/api/base44Client';
+
+  119  
+  120:   const { data: settings = [] } = useQuery({
+  121:     queryKey: ['appSettings'],
+  122      queryFn: () => base44.entities.AppSetting.list(),
+
+  128    const getCatImage = (catId) => {
+  129:     const s = settings.find(x => x.key === `cat_bg_${catId}`);
+  130      return s?.value || null;
+
+  133    const getCatText = (catId, field, fallback) => {
+  134:     const s = settings.find(x => x.key === `cat_text_${catId}_${field}`);
+  135      return s?.value || fallback;
+
+  138    const saveSetting = async (key, value) => {
+  139:     const existing = settings.find(s => s.key === key);
+  140      if (existing) {
+
+  144      }
+  145:     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+  146    };
+
+  161      await saveSetting(`cat_bg_${catId}`, '');
+  162:     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+  163      toast.success('Image removed');
+
+  203            >
+  204:             <Settings className="h-3.5 w-3.5" />
+  205              {editMode ? 'Done Editing' : 'Edit Page'}
+
+src/pages/GuestHome.jsx:
+  107  
+  108:   const { data: appSettings = [] } = useQuery({
+  109:   queryKey: ['appSettings'],
+  110    queryFn: async () => {
+
+  112  
+  113:     console.log("SETTINGS:", result);
+  114  
+
+  124    // FIX: removed TypeScript type annotation from parameter (key: string)
+  125:   // Make sure appSettings is always an array
+  126: const settings = Array.isArray(appSettings) ? appSettings : [];
+  127  
+
+  129  const showBrandSection =
+  130:   settings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
+  131  
+  132: // Flash Sale settings
+  133: const flashSaleSettings = settings.find(
+  134    s => s.key === 'flash_sale_config'
+
+  136  
+  137: const flashConfig = flashSaleSettings?.value
+  138    ? (() => {
+  139        try {
+  140:         return JSON.parse(flashSaleSettings.value);
+  141        } catch {
+
+  208            {HOME_CATEGORIES.map(cat => {
+  209:             const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
+  210              // FIX: products.find(cat.match) returns a product object, not void
+
+  257          const allCards = PROMO_KEYS.map(k => {
+  258:           const raw = settings.find(s => s.key === k)?.value;
+  259            if (!raw) return null;
+
+  444              ].map(brand => {
+  445:               const uploadedLogo = settings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
+  446                const logoSrc = uploadedLogo || brand.fallback;
+
+src/pages/Home.jsx:
+  100  
+  101:   const { data: appSettings = [] } = useQuery({
+  102:     queryKey: ['appSettings'],
+  103      queryFn: () => base44.entities.AppSetting.list(),
+
+  107    const getPromoNotice = (key) => {
+  108:     const raw = settings.find(s => s.key === key)?.value;
+  109      if (!raw) return null;
+
+  114  
+  115:   const showBrandSection = settings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
+  116  
+  117:   const flashSaleSettings = settings.find(s => s.key === 'flash_sale_config');
+  118:   const flashConfig = flashSaleSettings?.value ? (() => { try { return JSON.parse(flashSaleSettings.value); } catch { return {}; } })() : {};
+  119    const showFlashTimer = flashConfig.show_timer !== false;
+
+  187            {HOME_CATEGORIES.map(cat => {
+  188:             const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
+  189              const displayImg = adminImg || cat.image || products.find(cat.match)?.image_url;
+
+  231          const allCards = PROMO_KEYS.map(k => {
+  232:           const raw = settings.find(s => s.key === k)?.value;
+  233            if (!raw) return null;
+
+  396              ].map(brand => {
+  397:               const uploadedLogo = settings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
+  398                const logoSrc = uploadedLogo || brand.fallback;
+
+src/pages/HowToUse.jsx:
+  36  
+  37:   const { data: settings = [], refetch } = useQuery({
+  38:     queryKey: ['appSettings', 'tutorial_video'],
+  39      queryFn: () => base44.entities.AppSetting.filter({ key: 'tutorial_video' }),
+
+  41  
+  42:   const videoUrl = settings?.[0]?.value || null;
+  43  
+
+  53      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+  54:     if (settings?.[0]?.id) {
+  55:       await base44.entities.AppSetting.update(settings[0].id, { value: file_url });
+  56      } else {
+
+src/pages/Settings.jsx:
+   24  
+   25: export default function Settings() {
+   26    const { logout } = useAuth();
+
+   74      setIsSaving(false);
+   75:     toast.success('Settings saved successfully!');
+   76    };
+
+  105      <div className="container mx-auto px-4 py-6 max-w-2xl">
+  106:       <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Account Settings</h1>
+  107  

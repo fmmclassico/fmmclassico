@@ -9,13 +9,11 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import FacebookIcon from "@/components/FacebookIcon";
 
-// Get redirect URL after login
 const getReturnUrl = () => {
   const params = new URLSearchParams(window.location.search);
   return (
     params.get("from_url") ||
     params.get("returnUrl") ||
-    params.get("return_to") ||
     params.get("redirect") ||
     params.get("next") ||
     "/"
@@ -28,11 +26,6 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLoginError = (err) => {
-    setError(err?.message || "Invalid email or password");
-  };
-
-  // EMAIL LOGIN (Supabase)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -48,13 +41,12 @@ export default function Login() {
 
       window.location.href = getReturnUrl();
     } catch (err) {
-      handleLoginError(err);
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
-  // GOOGLE LOGIN
   const handleGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -64,7 +56,6 @@ export default function Login() {
     });
   };
 
-  // FACEBOOK LOGIN
   const handleFacebook = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "facebook",
@@ -88,10 +79,9 @@ export default function Login() {
         </>
       }
     >
-      {/* SOCIAL LOGIN */}
       <Button
+        className="w-full h-12 mb-3"
         variant="outline"
-        className="w-full h-12 text-sm font-medium mb-3"
         onClick={handleGoogle}
       >
         <GoogleIcon className="w-5 h-5 mr-2" />
@@ -99,74 +89,55 @@ export default function Login() {
       </Button>
 
       <Button
+        className="w-full h-12 mb-6"
         variant="outline"
-        className="w-full h-12 text-sm font-medium mb-6"
         onClick={handleFacebook}
       >
         <FacebookIcon className="w-5 h-5 mr-2" />
         Continue with Facebook
       </Button>
 
-      {/* Divider */}
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-3 text-muted-foreground">or</span>
-        </div>
-      </div>
+      <div className="text-center mb-4 text-sm text-gray-500">or</div>
 
-      {/* ERROR */}
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+        <div className="mb-3 p-3 bg-red-100 text-red-600 rounded">
           {error}
         </div>
       )}
 
-      {/* EMAIL LOGIN */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+
+        <div>
+          <Label>Email</Label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Mail className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
             <Input
-              id="email"
               type="email"
-              autoComplete="email"
               placeholder="you@example.com"
+              className="pl-10 h-12"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-10 h-12"
               required
             />
           </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Link to="/forgot-password" className="text-xs text-primary hover:underline">
-              Forgot password?
-            </Link>
-          </div>
-
+        <div>
+          <Label>Password</Label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Lock className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
             <Input
-              id="password"
               type="password"
-              autoComplete="current-password"
               placeholder="••••••••"
+              className="pl-10 h-12"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 h-12"
               required
             />
           </div>
         </div>
 
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
+        <Button type="submit" className="w-full h-12" disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

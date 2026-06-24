@@ -106,10 +106,20 @@ export default function GuestHome() {
   const [expandedCat, setExpandedCat] = useState(null);
 
   const { data: appSettings = [] } = useQuery({
-    queryKey: ['appSettings'],
-    queryFn: () => base44.entities.AppSetting.list(),
-    staleTime: 5 * 60 * 1000,
-  });
+  queryKey: ['appSettings'],
+  queryFn: async () => {
+    const result = await base44.entities.AppSetting.list();
+
+    console.log("SETTINGS:", result);
+
+    return Array.isArray(result)
+      ? result
+      : Array.isArray(result?.data)
+      ? result.data
+      : [];
+  },
+  staleTime: 5 * 60 * 1000,
+});
 
   // FIX: removed TypeScript type annotation from parameter (key: string)
   const showBrandSection = appSettings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
@@ -121,7 +131,17 @@ export default function GuestHome() {
 
 const { data: products = [], isLoading } = useQuery({
   queryKey: ['products'],
-  queryFn: () => base44.entities.Product.list('-created_date', 100),
+  queryFn: async () => {
+    const result = await base44.entities.Product.list('-created_date', 100);
+
+    console.log("PRODUCTS:", result);
+
+    return Array.isArray(result)
+      ? result
+      : Array.isArray(result?.data)
+      ? result.data
+      : [];
+  },
   staleTime: 30000,
   refetchOnWindowFocus: true,
 });

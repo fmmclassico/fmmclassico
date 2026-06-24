@@ -1,16 +1,24 @@
 import React from 'react';
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
-import { QueryClientProvider } from '@tanstack/react-query'
-import { queryClientInstance } from '@/lib/query-client'
-import NavigationTracker from '@/lib/NavigationTracker'
-import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClientInstance } from '@/lib/query-client';
+import NavigationTracker from '@/lib/NavigationTracker';
+import { pagesConfig } from './pages.config';
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate,
+  useLocation
+} from 'react-router-dom';
+
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import { useLocation } from 'react-router-dom';
+
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AdminAuthModal from '@/components/AdminAuthModal';
+
 import AdminReviews from './pages/AdminReviews';
 import AdminProducts from './pages/AdminProducts';
 import BrandProducts from './pages/BrandProducts';
@@ -22,60 +30,116 @@ import AdminAbout from './pages/AdminAbout';
 import AdminPageContent from './pages/AdminPageContent';
 import AdminHomeEditor from './pages/AdminHomeEditor';
 import AdminInterfaceControl from './pages/AdminInterfaceControl';
-import MobileAppGuide from './pages/MobileAppGuide';
-import DownloadApp from './pages/DownloadApp';
-import Policies from './pages/Policies';
 import AdminSMSBroadcast from './pages/AdminSMSBroadcast';
 import AdminAccessControl from './pages/AdminAccessControl';
 import AdminContactSettings from './pages/AdminContactSettings';
+
+import MobileAppGuide from './pages/MobileAppGuide';
+import DownloadApp from './pages/DownloadApp';
+import Policies from './pages/Policies';
+
 import GuestLayout from '@/components/layouts/GuestLayout';
 import GuestHome from './pages/GuestHome';
+
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 
 const { Pages, Layout, mainPage } = pagesConfig;
-// make Pages accessible in JSX scope for fallback routes
+
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
-const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
+const MainPage = mainPageKey ? Pages[mainPageKey] : () => null;
 
-// Protected routes that require authentication
-// NOTE: 'Cart' was removed from this list — guests MUST be able to view/manage
-// their cart. Only Checkout (and the buttons inside Cart.jsx) require login.
-const PROTECTED_ROUTES = new Set(['Checkout', 'Account', 'Orders', 'OrderTracking', 'Notifications', 'Settings', 'Chat', 'AdminReviews', 'AdminProducts', 'AdminCategoryImages', 'AdminAI', 'AdminPromoBanners2', 'AdminBrandLogos', 'AdminAbout', 'AdminPageContent', 'AdminHomeEditor', 'AdminInterfaceControl', 'AdminSMSBroadcast', 'AdminAccessControl', 'AdminContactSettings']);
+/**
+ * PAGES THAT REQUIRE LOGIN
+ */
+const PROTECTED_ROUTES = new Set([
+  'Checkout',
+  'Account',
+  'Orders',
+  'OrderTracking',
+  'Notifications',
+  'Settings',
+  'Chat',
 
-// Helper component for routes that can render in both guest and authenticated modes
+  // ADMIN PAGES (IMPORTANT — ALL INCLUDED)
+  'AdminReviews',
+  'AdminProducts',
+  'AdminCategoryImages',
+  'AdminAI',
+  'AdminPromoBanners2',
+  'AdminBrandLogos',
+  'AdminAbout',
+  'AdminPageContent',
+  'AdminHomeEditor',
+  'AdminInterfaceControl',
+  'AdminSMSBroadcast',
+  'AdminAccessControl',
+  'AdminContactSettings'
+]);
+
+/**
+ * Layout wrapper
+ */
 const LayoutWrapper = ({ children, currentPageName, isAuthenticated }) => {
   const SelectedLayout = isAuthenticated ? Layout : GuestLayout;
+
   return SelectedLayout ? (
-    <SelectedLayout currentPageName={currentPageName}>{children}</SelectedLayout>
+    <SelectedLayout currentPageName={currentPageName}>
+      {children}
+    </SelectedLayout>
   ) : (
     <>{children}</>
   );
 };
 
-// Helper component for protected routes
-// FIX: useEffect MUST be called unconditionally (Rules of Hooks).
-// Previously, useEffect was inside an if(!isAuthenticated) block — that is invalid React.
-const ProtectedLayout = ({ children, currentPageName, isAuthenticated, navigateToLogin }) => {
+/**
+ * Protected route wrapper (FIXED SAFE VERSION)
+ */
+const ProtectedLayout = ({
+  children,
+  currentPageName,
+  isAuthenticated,
+  navigateToLogin
+}) => {
   React.useEffect(() => {
     if (!isAuthenticated) {
       navigateToLogin();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigateToLogin]);
 
   if (!isAuthenticated) return null;
-  return <LayoutWrapper currentPageName={currentPageName} isAuthenticated={true}>{children}</LayoutWrapper>;
+
+  return (
+    <LayoutWrapper
+      currentPageName={currentPageName}
+      isAuthenticated={true}
+    >
+      {children}
+    </LayoutWrapper>
+  );
 };
 
+/**
+ * MAIN APP ROUTER
+ */
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, authError, navigateToLogin, verifyAdminPassword, isAuthenticated } = useAuth();
-  const location = useLocation();
-  const isAdminPath = location.pathname.toLowerCase().startsWith('/admin');
-  const isAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname.toLowerCase());
+  const {
+    isLoadingAuth,
+    authError,
+    navigateToLogin,
+    verifyAdminPassword,
+    isAuthenticated
+  } = useAuth();
 
-  // Show auth routes immediately while auth initialization is still running.
+  const location = useLocation();
+
+  const isAdminPath = location.pathname.toLowerCase().startsWith('/admin');
+  const isAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password']
+    .includes(location.pathname.toLowerCase());
+
+  // AUTH PAGES (safe render during loading)
   if (isLoadingAuth && isAuthRoute) {
     return (
       <Routes>
@@ -87,160 +151,216 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Show loading spinner only while checking auth for non-auth routes
+  // LOADING SCREEN
   if (isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
       </div>
     );
   }
 
-  // Handle authentication errors
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'admin_verification_required' && isAdminPath) {
-      // Only require admin verification when trying to access admin routes
-      return (
-        <>
-          <AdminAuthModal
-            isOpen={true}
-            onClose={() => navigateToLogin()}
-            onSuccess={verifyAdminPassword}
-            userEmail={authError.email}
-          />
-          <Routes>
-            <Route path="*" element={<div />} />
-          </Routes>
-        </>
-      );
-    }
+  // AUTH ERROR HANDLING
+  if (authError?.type === 'user_not_registered') {
+    return <UserNotRegisteredError />;
   }
 
-  // Render the main app
+  if (authError?.type === 'admin_verification_required' && isAdminPath) {
+    return (
+      <>
+        <AdminAuthModal
+          isOpen={true}
+          onClose={() => navigateToLogin()}
+          onSuccess={verifyAdminPassword}
+          userEmail={authError.email}
+        />
+        <Routes>
+          <Route path="*" element={<div />} />
+        </Routes>
+      </>
+    );
+  }
+
   return (
     <Routes>
-      {/* Home route - conditionally renders GuestHome or authenticated Home */}
-      <Route path="/" element={
-        isAuthenticated ? (
-          <LayoutWrapper currentPageName={mainPageKey} isAuthenticated={true}>
-            <MainPage />
-          </LayoutWrapper>
-        ) : (
-          <GuestLayout currentPageName="GuestHome">
-            <GuestHome />
-          </GuestLayout>
-        )
-      } />
 
+      {/* HOME */}
+      <Route
+        path="/"
+        element={
+          isAuthenticated ? (
+            <LayoutWrapper
+              currentPageName={mainPageKey}
+              isAuthenticated={true}
+            >
+              <MainPage />
+            </LayoutWrapper>
+          ) : (
+            <GuestLayout currentPageName="GuestHome">
+              <GuestHome />
+            </GuestLayout>
+          )
+        }
+      />
 
-      <Route path="/BrandProducts" element={
-        <LayoutWrapper currentPageName="BrandProducts" isAuthenticated={isAuthenticated}>
-          <BrandProducts />
-        </LayoutWrapper>
-      } />
-      <Route path="/MobileAppGuide" element={
-        <LayoutWrapper currentPageName="MobileAppGuide" isAuthenticated={isAuthenticated}>
-          <MobileAppGuide />
-        </LayoutWrapper>
-      } />
-      <Route path="/DownloadApp" element={
-        <LayoutWrapper currentPageName="DownloadApp" isAuthenticated={isAuthenticated}>
-          <DownloadApp />
-        </LayoutWrapper>
-      } />
-      <Route path="/Policies" element={
-        <LayoutWrapper currentPageName="Policies" isAuthenticated={isAuthenticated}>
-          <Policies />
-        </LayoutWrapper>
-      } />
-      
-      {/* Case-insensitive fallback routes for common pages */}
-      <Route path="/shop" element={<LayoutWrapper currentPageName="Shop" isAuthenticated={isAuthenticated}><Pages.Shop /></LayoutWrapper>} />
-      <Route path="/shop/*" element={<LayoutWrapper currentPageName="Shop" isAuthenticated={isAuthenticated}><Pages.Shop /></LayoutWrapper>} />
+      {/* STATIC PAGES */}
+      <Route path="/BrandProducts" element={<BrandProducts />} />
+      <Route path="/MobileAppGuide" element={<MobileAppGuide />} />
+      <Route path="/DownloadApp" element={<DownloadApp />} />
+      <Route path="/Policies" element={<Policies />} />
 
-      {/* Protected admin routes */}
-      <Route path="/AdminReviews" element={
-        <ProtectedLayout currentPageName="AdminReviews" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminReviews />
-        </ProtectedLayout>
-      } />
-      <Route path="/AdminProducts" element={
-        <ProtectedLayout currentPageName="AdminProducts" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminProducts />
-        </ProtectedLayout>
-      } />
-      <Route path="/AdminCategoryImages" element={
-        <ProtectedLayout currentPageName="AdminCategoryImages" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminCategoryImages />
-        </ProtectedLayout>
-      } />
-      <Route path="/AdminAI" element={
-        <ProtectedLayout currentPageName="AdminAI" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminAI />
-        </ProtectedLayout>
-      } />
-      <Route path="/AdminPromoBanners2" element={
-        <ProtectedLayout currentPageName="AdminPromoBanners2" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminPromoBanners2 />
-        </ProtectedLayout>
-      } />
-      <Route path="/AdminBrandLogos" element={
-        <ProtectedLayout currentPageName="AdminBrandLogos" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminBrandLogos />
-        </ProtectedLayout>
-      } />
-      <Route path="/AdminAbout" element={
-        <ProtectedLayout currentPageName="AdminAbout" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminAbout />
-        </ProtectedLayout>
-      } />
-      <Route path="/AdminPageContent" element={
-        <ProtectedLayout currentPageName="AdminPageContent" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminPageContent />
-        </ProtectedLayout>
-      } />
-      <Route path="/AdminHomeEditor" element={
-        <ProtectedLayout currentPageName="AdminHomeEditor" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminHomeEditor />
-        </ProtectedLayout>
-      } />
-      <Route path="/AdminInterfaceControl" element={
-        <ProtectedLayout currentPageName="AdminInterfaceControl" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminInterfaceControl />
-        </ProtectedLayout>
-      } />
-      <Route path="/AdminSMSBroadcast" element={
-        <ProtectedLayout currentPageName="AdminSMSBroadcast" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminSMSBroadcast />
-        </ProtectedLayout>
-      } />
-      <Route path="/AdminAccessControl" element={
-        <ProtectedLayout currentPageName="AdminAccessControl" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminAccessControl />
-        </ProtectedLayout>
-      } />
-      <Route path="/AdminContactSettings" element={
-        <ProtectedLayout currentPageName="AdminContactSettings" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-          <AdminContactSettings />
-        </ProtectedLayout>
-      } />
+      {/* AUTH PAGES (FIXED — ALWAYS ACCESSIBLE) */}
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/" /> : <Login />}
+      />
+      <Route
+        path="/register"
+        element={isAuthenticated ? <Navigate to="/" /> : <Register />}
+      />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* Dynamic routes - public and protected handled by Pages components */}
+      {/* ADMIN PAGES (EXPLICIT SAFE ROUTES) */}
+      <Route
+        path="/AdminProducts"
+        element={
+          <ProtectedLayout
+            currentPageName="AdminProducts"
+            isAuthenticated={isAuthenticated}
+            navigateToLogin={navigateToLogin}
+          >
+            <AdminProducts />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/AdminReviews"
+        element={
+          <ProtectedLayout
+            currentPageName="AdminReviews"
+            isAuthenticated={isAuthenticated}
+            navigateToLogin={navigateToLogin}
+          >
+            <AdminReviews />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/AdminCategoryImages"
+        element={
+          <ProtectedLayout
+            currentPageName="AdminCategoryImages"
+            isAuthenticated={isAuthenticated}
+            navigateToLogin={navigateToLogin}
+          >
+            <AdminCategoryImages />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/AdminAI"
+        element={
+          <ProtectedLayout
+            currentPageName="AdminAI"
+            isAuthenticated={isAuthenticated}
+            navigateToLogin={navigateToLogin}
+          >
+            <AdminAI />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/AdminPromoBanners2"
+        element={
+          <ProtectedLayout
+            currentPageName="AdminPromoBanners2"
+            isAuthenticated={isAuthenticated}
+            navigateToLogin={navigateToLogin}
+          >
+            <AdminPromoBanners2 />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/AdminBrandLogos"
+        element={
+          <ProtectedLayout
+            currentPageName="AdminBrandLogos"
+            isAuthenticated={isAuthenticated}
+            navigateToLogin={navigateToLogin}
+          >
+            <AdminBrandLogos />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/AdminAbout"
+        element={
+          <ProtectedLayout
+            currentPageName="AdminAbout"
+            isAuthenticated={isAuthenticated}
+            navigateToLogin={navigateToLogin}
+          >
+            <AdminAbout />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/AdminHomeEditor"
+        element={
+          <ProtectedLayout
+            currentPageName="AdminHomeEditor"
+            isAuthenticated={isAuthenticated}
+            navigateToLogin={navigateToLogin}
+          >
+            <AdminHomeEditor />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/AdminAccessControl"
+        element={
+          <ProtectedLayout
+            currentPageName="AdminAccessControl"
+            isAuthenticated={isAuthenticated}
+            navigateToLogin={navigateToLogin}
+          >
+            <AdminAccessControl />
+          </ProtectedLayout>
+        }
+      />
+
+      {/* DYNAMIC PAGES */}
       {Object.entries(Pages).map(([path, Page]) => {
         const isProtected = PROTECTED_ROUTES.has(path);
-        return path === 'Payment' ? null : (
+
+        return (
           <Route
             key={path}
             path={`/${path}`}
             element={
               isProtected ? (
-                <ProtectedLayout currentPageName={path} isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+                <ProtectedLayout
+                  currentPageName={path}
+                  isAuthenticated={isAuthenticated}
+                  navigateToLogin={navigateToLogin}
+                >
                   <Page />
                 </ProtectedLayout>
               ) : (
-                <LayoutWrapper currentPageName={path} isAuthenticated={isAuthenticated}>
+                <LayoutWrapper
+                  currentPageName={path}
+                  isAuthenticated={isAuthenticated}
+                >
                   <Page />
                 </LayoutWrapper>
               )
@@ -249,24 +369,16 @@ const AuthenticatedApp = () => {
         );
       })}
 
-      {/* Auth pages — these are the customer's actual sign-in / sign-up screens.
-          They must be public (reachable whether or not authError is set) and
-          must NOT be wrapped in Layout/GuestLayout since AuthLayout already
-          provides its own full-screen chrome. If already logged in, bounce
-          straight to the homepage instead of showing the form again. */}
-      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-
+      {/* FALLBACK */}
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
 };
 
-
-function App() {
-
+/**
+ * ROOT APP
+ */
+export default function App() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
@@ -274,11 +386,10 @@ function App() {
           <NavigationTracker />
           <AuthenticatedApp />
         </Router>
+
         <Toaster />
         <SonnerToaster />
       </QueryClientProvider>
     </AuthProvider>
-  )
+  );
 }
-
-export default App

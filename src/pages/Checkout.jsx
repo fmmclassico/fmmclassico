@@ -5,19 +5,11 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/AuthContext';
 import { initiatePayment } from '@/api/hubtelClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Button,
-  Card,
-  Input,
-  Label,
-  Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Separator
-} from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { Truck, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -28,7 +20,7 @@ const DELIVERY_ZONES = [
   { id: 'umat_pickup', label: '🏫 UMAT Campus – Pickup', fee: 0, note: 'FREE' },
   { id: 'umat_doorstep', label: '🏠 UMAT Doorstep', fee: 10 },
   { id: 'tarkwa_station', label: '🚌 Tarkwa Station', fee: 20 },
-  { id: 'tarkwa', label: '🏘️ Tarkwa Doorstep', fee: 25 },
+  { id: 'tarkwa', label: '🏘️ Tarkwa Doorstep', fee: 20 },
   { id: 'ashongman', label: '🏠 Ashongman Pickup', fee: 0 },
   { id: 'airport', label: '🏠 Airport Pickup', fee: 0 },
   { id: 'accra_station', label: '🚌 Accra Station', fee: 25 },

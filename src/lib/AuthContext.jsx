@@ -1,8 +1,6 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import guestCart from '@/lib/guest-cart';
-import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+import React, { createContext, useState, useContext, useEffect } from "react";
+import { supabase } from "@/api/supabaseClient";
+import guestCart from "@/lib/guest-cart";
 
 const AuthContext = createContext();
 
@@ -10,164 +8,77 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
   const [authError, setAuthError] = useState(null);
-  const [appPublicSettings, setAppPublicSettings] = useState(null);
 
+  // Load user on app start
   useEffect(() => {
-    checkAppState();
+    checkUser();
   }, []);
 
-  const checkAppState = async () => {
-    setAuthError(null);
-
-    // Safety timeout — never block the user more than 5s
-    const loadingTimeout = setTimeout(() => {
-      setIsLoadingPublicSettings(false);
-      setIsLoadingAuth(false);
-    }, 5000);
+  const checkUser = async () => {
+    setIsLoadingAuth(true);
 
     try {
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: { 'X-App-Id': appParams.appId },
-        token: appParams.token,
-        interceptResponses: true,
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsLoadingAuth(false);
+        return;
+      }
+
+      // ADMIN CHECK (from Vercel env)
+      const envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || "";
+      const ADMIN_EMAILS = envAdminEmails
+        .split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+
+      const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase());
+
+      setUser({
+        ...user,
+        isAdmin,
       });
 
-      // Fetch public settings and auth in parallel for maximum speed
-      const settingsPromise = appClient.get(`/prod/public-settings/by-id/${appParams.appId}`)
-        .then(data => setAppPublicSettings(data))
-        .catch(() => {}); // non-fatal
-
-      // Always verify the current auth state first so we don't briefly render guest UI
-      // for authenticated users whose session is available via the SDK/cookie flow.
-      const authPromise = checkUserAuth();
-
-      // Wait for auth only (settings load in background)
-      await authPromise;
-      settingsPromise.finally(() => setIsLoadingPublicSettings(false));
-
-    } catch (error) {
-      console.error('checkAppState error:', error);
-
-      if (error?.status === 403 && error?.data?.extra_data?.reason) {
-        const reason = error.data.extra_data.reason;
-        if (reason === 'auth_required') {
-          setAuthError({ type: 'auth_required', message: 'Authentication required' });
-          setIsLoadingAuth(false);
-        } else if (reason === 'user_not_registered') {
-          setAuthError({ type: 'user_not_registered', message: 'User not registered for this app' });
-        } else {
-          setAuthError({ type: reason, message: error.message });
-        }
-      } else {
-        // Network/unknown error — don't force logout, just unblock rendering
-        setIsLoadingAuth(false);
-      }
-      setIsLoadingPublicSettings(false);
-    } finally {
-      clearTimeout(loadingTimeout);
-    }
-  };
-
-  const checkUserAuth = async () => {
-    try {
-      setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
-
-      const envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || '';
-      const ADMIN_EMAILS = envAdminEmails
-        ? envAdminEmails.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
-        : [];
-      const isAdminEmail = ADMIN_EMAILS.includes((currentUser.email || '').toLowerCase());
-
-      if (currentUser.role === 'admin' && isAdminEmail) {
-        const adminVerified = sessionStorage.getItem(`admin_verified_${currentUser.email}`);
-        if (!adminVerified) {
-          setUser(currentUser);
-          setIsAuthenticated(true);
-          setAuthError({
-            type: 'admin_verification_required',
-            email: currentUser.email,
-            message: 'Admin password verification required',
-          });
-          setIsLoadingAuth(false);
-          return;
-        }
-      }
-
-      setUser(currentUser);
       setIsAuthenticated(true);
-      setIsLoadingAuth(false);
-
-      // Merge any guest cart items into the authenticated user's cart in background
-      (async function mergeGuestCart() {
-        try {
-          const items = guestCart.getItems();
-          if (!items || items.length === 0) return;
-          for (const item of items) {
-            const productId = item.product_id || item.id;
-            if (!productId) continue;
-            const existing = await base44.entities.CartItem.filter({ user_email: currentUser.email, product_id: productId });
-            const qtyToAdd = item.quantity || 1;
-            if (existing.length > 0) {
-              await base44.entities.CartItem.update(existing[0].id, { quantity: existing[0].quantity + qtyToAdd });
-            } else {
-              await base44.entities.CartItem.create({ product_id: productId, product_name: item.product_name || item.name || '', product_image: item.product_image || item.image_url || '', product_price: item.product_price || item.price || 0, quantity: qtyToAdd, user_email: currentUser.email });
-            }
-          }
-          guestCart.clear();
-        } catch (e) {
-          console.error('Failed to merge guest cart:', e);
-        }
-      })();
-    } catch (error) {
-      console.error('User auth check failed:', error);
-      setIsLoadingAuth(false);
+    } catch (err) {
+      console.error("Auth error:", err);
+      setUser(null);
       setIsAuthenticated(false);
-      if (error?.status === 401 || error?.status === 403) {
-        setAuthError({ type: 'auth_required', message: 'Authentication required' });
-      }
-      // Silently ignore other errors — don't force logout
+    } finally {
+      setIsLoadingAuth(false);
     }
   };
 
-  const verifyAdminPassword = () => {
-    if (user?.email) {
-      sessionStorage.setItem(`admin_verified_${user.email}`, 'true');
-      setAuthError(null);
-    }
-  };
-
-  const logout = (redirectToGuest = true) => {
+  // LOGOUT
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     setIsAuthenticated(false);
-    setAuthError(null);
-    // Always redirect to guest homepage after logout
-    base44.auth.logout();
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 500);
+
+    window.location.href = "/";
   };
 
-  const navigateToLogin = () => {
-    base44.auth.redirectToLogin(window.location.href);
+  // REFRESH USER (useful after login)
+  const refreshUser = () => {
+    checkUser();
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated,
-      isLoadingAuth,
-      isLoadingPublicSettings,
-      authError,
-      appPublicSettings,
-      logout,
-      navigateToLogin,
-      checkAppState,
-      verifyAdminPassword,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        isLoadingAuth,
+        authError,
+        logout,
+        refreshUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -176,7 +87,7 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 };

@@ -66,18 +66,22 @@ export default function Checkout() {
 
   // ── CART ───────────────────────────────────────────────
   const { data: cartItems = [] } = useQuery({
-    queryKey: ['cart', user?.email],
-    enabled: !!user?.email,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cart_items')
-        .select('*')
-        .eq('user_email', user.email);
+  queryKey: ['cart', user?.email],
+  enabled: !!user?.email,
 
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  queryFn: async () => {
+    if (!user?.email) return [];
+
+    const { data, error } = await supabase
+      .from('cart_items')
+      .select('*')
+      .eq('user_email', user.email);
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
 
   // ── TOTAL CALC ─────────────────────────────────────────
   const subtotal = cartItems.reduce(

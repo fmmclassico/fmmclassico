@@ -19,9 +19,7 @@ export const AuthProvider = ({ children }) => {
     setIsLoadingAuth(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
         setUser(null);

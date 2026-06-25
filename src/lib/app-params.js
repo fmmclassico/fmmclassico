@@ -53,3 +53,6 @@ export const appParams = {
 	...getAppParams()
 }
 console.log("APP PARAMS:", appParams);
+console.log("VITE_BASE44_APP_ID =", import.meta.env.VITE_BASE44_APP_ID);
+console.log("VITE_BASE44_FUNCTIONS_VERSION =", import.meta.env.VITE_BASE44_FUNCTIONS_VERSION);
+console.log("VITE_BASE44_APP_BASE_URL =", import.meta.env.VITE_BASE44_APP_BASE_URL);

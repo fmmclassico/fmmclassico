@@ -97,8 +97,8 @@ export default function Layout({ children, currentPageName }) {
     return unsubscribe;
   }, [user?.email, isAuthenticated, queryClient]);
 
-  const cartCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-  const unreadNotifCount = userNotifications.filter(n => !n.is_read).length;
+  const cartCount = Array.isArray(cartItems) ? cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0) : 0;
+  const unreadNotifCount = Array.isArray(userNotifications) ? userNotifications.filter(n => !n.is_read).length : 0;
 
   const handleSearch = (e) => {
     e.preventDefault();

@@ -98,35 +98,65 @@ export default function Home() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
+  // FIX: extract .data from axios response; base44 SDK returns full axios response object
   const { data: appSettings = [] } = useQuery({
     queryKey: ['appSettings'],
-    queryFn: () => base44.entities.AppSetting.list(),
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.AppSetting.list();
+        return Array.isArray(result)
+          ? result
+          : Array.isArray(result?.data)
+          ? result.data
+          : [];
+      } catch (err) {
+        console.error('Failed to load app settings:', err);
+        return [];
+      }
+    },
     staleTime: 5 * 60 * 1000,
   });
 
+  // Ensure appSettings is always an array before any .find()/.filter() calls
+  const settings = Array.isArray(appSettings) ? appSettings : [];
+
   const getPromoNotice = (key) => {
-    const raw = appSettings.find(s => s.key === key)?.value;
+    const raw = settings.find(s => s.key === key)?.value;
     if (!raw) return null;
     try { const d = JSON.parse(raw); return d?.active && d?.image_url ? d : null; } catch { return null; }
   };
   const notice1 = getPromoNotice('promo_notice_1');
   const notice2 = getPromoNotice('promo_notice_2');
 
-  const showBrandSection = appSettings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
+  const showBrandSection = settings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
 
-  const flashSaleSettings = appSettings.find(s => s.key === 'flash_sale_config');
+  const flashSaleSettings = settings.find(s => s.key === 'flash_sale_config');
   const flashConfig = flashSaleSettings?.value ? (() => { try { return JSON.parse(flashSaleSettings.value); } catch { return {}; } })() : {};
   const showFlashTimer = flashConfig.show_timer !== false;
   const flashTimerEndTime = flashConfig.end_time || null;
 
-
-
+  // FIX: extract .data from axios response for products too
   const { data: products = [], isLoading, refetch } = useQuery({
     queryKey: ['products'],
-    queryFn: () => base44.entities.Product.list('-created_date', 100),
-    staleTime: 30000, // Reduced from 60000 to 30s for faster updates
-    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.Product.list('-created_date', 100);
+        return Array.isArray(result)
+          ? result
+          : Array.isArray(result?.data)
+          ? result.data
+          : [];
+      } catch (err) {
+        console.error('Failed to load products:', err);
+        return [];
+      }
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
   });
+
+  // Ensure products is always an array
+  const safeProducts = Array.isArray(products) ? products : [];
 
   // Refetch products when component mounts to ensure fresh data
   useEffect(() => {
@@ -140,11 +170,13 @@ export default function Home() {
         return;
       }
       queryClient.setQueryData(['cartItems', user?.email], (old = []) => {
-        const existing = old.find(i => i.product_id === product.id);
-        if (existing) return old.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
-        return [...old, { id: 'optimistic-' + product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1, user_email: user.email }];
+        const safeOld = Array.isArray(old) ? old : [];
+        const existing = safeOld.find(i => i.product_id === product.id);
+        if (existing) return safeOld.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+        return [...safeOld, { id: 'optimistic-' + product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1, user_email: user.email }];
       });
-      const existingItems = await base44.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
+      const rawExisting = await base44.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
+      const existingItems = Array.isArray(rawExisting) ? rawExisting : Array.isArray(rawExisting?.data) ? rawExisting.data : [];
       if (existingItems.length > 0) {
         await base44.entities.CartItem.update(existingItems[0].id, { quantity: existingItems[0].quantity + 1 });
       } else {
@@ -159,7 +191,7 @@ export default function Home() {
   });
 
   // Filter out hidden and out-of-stock (stock === 0) products for public display
-  const visibleProducts = products.filter(p => p.is_visible !== false && !(p.stock != null && p.stock === 0));
+  const visibleProducts = safeProducts.filter(p => p.is_visible !== false && !(p.stock != null && p.stock === 0));
 
   // Product buckets — STRICT: only show products explicitly assigned to each section by admin
   const flashItems    = visibleProducts.filter(p => p.flash_sale  && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
@@ -185,8 +217,8 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-4 gap-3">
           {HOME_CATEGORIES.map(cat => {
-            const adminImg = appSettings.find(s => s.key === `cat_img_${cat.id}`)?.value;
-            const displayImg = adminImg || cat.image || products.find(cat.match)?.image_url;
+            const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
+            const displayImg = adminImg || cat.image || safeProducts.find(cat.match)?.image_url;
             const isExpanded = expandedCat === cat.id;
             return (
               <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
@@ -225,11 +257,11 @@ export default function Home() {
         })()}
       </div>
 
-      {/* ── PROMO CARDS SCROLL (same design as category cards) ── */}
+      {/* ── PROMO CARDS SCROLL ── */}
       {(() => {
         const PROMO_KEYS = ['promo_card_1','promo_card_2','promo_card_3','promo_card_4','promo_card_5','promo_card_6'];
         const allCards = PROMO_KEYS.map(k => {
-          const raw = appSettings.find(s => s.key === k)?.value;
+          const raw = settings.find(s => s.key === k)?.value;
           if (!raw) return null;
           try { const d = JSON.parse(raw); return d?.active ? { ...d, key: k } : null; } catch { return null; }
         }).filter(Boolean);
@@ -394,7 +426,7 @@ export default function Home() {
               { name: 'Sony', fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
               { name: 'JBL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
             ].map(brand => {
-              const uploadedLogo = appSettings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
+              const uploadedLogo = settings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
               const logoSrc = uploadedLogo || brand.fallback;
               return (
                 <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}

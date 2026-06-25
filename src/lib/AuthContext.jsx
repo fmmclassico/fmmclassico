@@ -66,6 +66,22 @@ export const AuthProvider = ({ children }) => {
     checkUser();
   };
 
+  // Navigate to login, saving the current path for redirect after login
+  const navigateToLogin = (redirectPath) => {
+    const target = redirectPath || window.location.pathname + window.location.search;
+    try {
+      sessionStorage.setItem('redirectAfterLogin', target);
+    } catch (_) {}
+    window.location.href = '/login';
+  };
+
+  // Verify admin password — checks against VITE_ADMIN_PASSWORD env var
+  const verifyAdminPassword = (password) => {
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || '';
+    if (!adminPassword) return false;
+    return password === adminPassword;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -75,6 +91,8 @@ export const AuthProvider = ({ children }) => {
         authError,
         logout,
         refreshUser,
+        navigateToLogin,
+        verifyAdminPassword,
       }}
     >
       {children}

@@ -23,7 +23,9 @@ export default function GuestLayout({ children, currentPageName }) {
   const helpRef = useRef(null);
   const accountRef = useRef(null);
   const navigate = useNavigate();
-  const { navigateToLogin } = useAuth();
+  // FIX: Do not destructure navigateToLogin from useAuth — it was undefined and crashed the app.
+  // We use navigate() directly instead, which is always safe.
+  const { } = useAuth(); // keep useAuth call in case other parts of the tree need the context
 
   // Load cart count from guest storage and update on cart changes
   useEffect(() => {
@@ -72,9 +74,13 @@ export default function GuestLayout({ children, currentPageName }) {
     }
   };
 
-  const handleAuthRedirect = (path) => {
+  // FIX: replaced broken navigateToLogin() call with safe navigate('/login')
+  const handleAuthRedirect = (redirectPath) => {
     setAccountOpen(false);
-    navigateToLogin();
+    try {
+      sessionStorage.setItem('redirectAfterLogin', redirectPath || window.location.pathname);
+    } catch (_) {}
+    navigate('/login');
   };
 
   const ASH = '#2E86C1';
@@ -142,32 +148,32 @@ export default function GuestLayout({ children, currentPageName }) {
                 {accountOpen && (
                   <div className="absolute right-0 top-12 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 py-1 overflow-hidden">
                     <button
-                      onClick={handleAuthRedirect}
+                      onClick={() => handleAuthRedirect('/login')}
                       className="w-full px-4 py-2.5 hover:bg-gray-50 text-left text-sm text-gray-700 font-medium transition-colors flex items-center gap-2"
                     >
                       <User className="h-4 w-4" /> Sign In
                     </button>
                     <button
-                      onClick={handleAuthRedirect}
+                      onClick={() => handleAuthRedirect('/register')}
                       className="w-full px-4 py-2.5 hover:bg-gray-50 text-left text-sm text-gray-700 font-medium transition-colors flex items-center gap-2"
                     >
                       <User className="h-4 w-4" /> Sign Up
                     </button>
                     <div className="border-t my-1" />
                     <button
-                      onClick={handleAuthRedirect}
+                      onClick={() => handleAuthRedirect('/login')}
                       className="w-full px-4 py-2.5 hover:bg-gray-50 text-left text-sm text-gray-700 font-medium transition-colors flex items-center gap-2"
                     >
                       <User className="h-4 w-4" /> My Account
                     </button>
                     <button
-                      onClick={handleAuthRedirect}
+                      onClick={() => handleAuthRedirect('/login')}
                       className="w-full px-4 py-2.5 hover:bg-gray-50 text-left text-sm text-gray-700 font-medium transition-colors flex items-center gap-2"
                     >
                       <ShoppingCart className="h-4 w-4" /> Track Order
                     </button>
                     <button
-                      onClick={handleAuthRedirect}
+                      onClick={() => handleAuthRedirect('/login')}
                       className="w-full px-4 py-2.5 hover:bg-gray-50 text-left text-sm text-gray-700 font-medium transition-colors flex items-center gap-2"
                     >
                       <ShoppingCart className="h-4 w-4" /> Cancel Order

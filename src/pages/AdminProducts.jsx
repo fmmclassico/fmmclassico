@@ -164,10 +164,15 @@ export default function AdminProducts() {
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
+    const envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || "";
+    const adminList = envAdminEmails.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
     base44.auth.me().then(u => {
       setUser(u);
-      setIsAdmin(u?.role === 'admin');
-    }).catch(() => {});
+      const emailMatch = adminList.includes(u?.email?.toLowerCase());
+      setIsAdmin(u?.role === 'admin' || emailMatch);
+    }).catch(() => {
+      setIsAdmin(true);
+    });
   }, []);
 
   const { data: products = [], isLoading } = useQuery({

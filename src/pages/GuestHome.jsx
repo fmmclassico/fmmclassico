@@ -147,21 +147,23 @@ const flashConfig = flashSaleSettings?.value
 const showFlashTimer = flashConfig.show_timer !== false;
 const flashTimerEndTime = flashConfig.end_time || null;
 
-const { data: products = [], isLoading } = useQuery({
-  queryKey: ['products'],
+const { data: appSettings = [] } = useQuery({
+  queryKey: ['appSettings'],
   queryFn: async () => {
-    const result = await base44.entities.Product.list('-created_date', 100);
+    try {
+      const result = await base44.entities.AppSetting.list();
 
-    console.log("PRODUCTS:", result);
+      if (!Array.isArray(result)) {
+        console.error('Settings returned:', result);
+        return [];
+      }
 
-    return Array.isArray(result)
-      ? result
-      : Array.isArray(result?.data)
-      ? result.data
-      : [];
+      return result;
+    } catch (err) {
+      console.error(err);
+      return [];
+    }
   },
-  staleTime: 30000,
-  refetchOnWindowFocus: true,
 });
   
   // Guest can add to local cart only

@@ -102,94 +102,89 @@ const HOME_CATEGORIES = [
  * Restrictions: Cannot checkout — that requires login.
  */
 export default function GuestHome() {
-  // FIX: was useState<string | null>(null) — JSX files must NOT use TypeScript generics
   const [expandedCat, setExpandedCat] = useState(null);
 
+  // FIX 1: Single useQuery for appSettings (was duplicated — second declaration
+  // caused "appSettings already declared" crash at module parse time)
   const { data: appSettings = [] } = useQuery({
-  queryKey: ['appSettings'],
-  queryFn: async () => {
-    const result = await base44.entities.AppSetting.list();
-
-    console.log("SETTINGS:", result);
-
-    return Array.isArray(result)
-      ? result
-      : Array.isArray(result?.data)
-      ? result.data
-      : [];
-  },
-  staleTime: 5 * 60 * 1000,
-});
-
-  // FIX: removed TypeScript type annotation from parameter (key: string)
-  // Make sure appSettings is always an array
-const settings = Array.isArray(appSettings) ? appSettings : [];
-
-// Shop by Brand visibility
-const showBrandSection =
-  settings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
-
-// Flash Sale settings
-const flashSaleSettings = settings.find(
-  s => s.key === 'flash_sale_config'
-);
-
-const flashConfig = flashSaleSettings?.value
-  ? (() => {
+    queryKey: ['appSettings'],
+    queryFn: async () => {
       try {
-        return JSON.parse(flashSaleSettings.value);
-      } catch {
-        return {};
-      }
-    })()
-  : {};
-
-const showFlashTimer = flashConfig.show_timer !== false;
-const flashTimerEndTime = flashConfig.end_time || null;
-
-const { data: appSettings = [] } = useQuery({
-  queryKey: ['appSettings'],
-  queryFn: async () => {
-    try {
-      const result = await base44.entities.AppSetting.list();
-
-      if (!Array.isArray(result)) {
-        console.error('Settings returned:', result);
+        const result = await base44.entities.AppSetting.list();
+        return Array.isArray(result)
+          ? result
+          : Array.isArray(result?.data)
+          ? result.data
+          : [];
+      } catch (err) {
+        console.error('Failed to load settings:', err);
         return [];
       }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-      return result;
-    } catch (err) {
-      console.error(err);
-      return [];
-    }
-  },
-});
-  
+  // FIX 2: Added the missing products useQuery — `products` and `isLoading`
+  // were used throughout the JSX but never defined, causing ReferenceError crashes.
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.Product.list();
+        return Array.isArray(result)
+          ? result
+          : Array.isArray(result?.data)
+          ? result.data
+          : [];
+      } catch (err) {
+        console.error('Failed to load products:', err);
+        return [];
+      }
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // FIX 3: All derived constants moved here — after hooks, before mutations/filters
+  const settings = Array.isArray(appSettings) ? appSettings : [];
+
+  // Shop by Brand visibility
+  const showBrandSection =
+    settings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
+
+  // Flash Sale settings
+  const flashSaleSettings = settings.find(s => s.key === 'flash_sale_config');
+  const flashConfig = flashSaleSettings?.value
+    ? (() => {
+        try { return JSON.parse(flashSaleSettings.value); }
+        catch { return {}; }
+      })()
+    : {};
+  const showFlashTimer = flashConfig.show_timer !== false;
+  const flashTimerEndTime = flashConfig.end_time || null;
+
   // Guest can add to local cart only
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {
-      // FIX: product is typed as any implicitly but works fine in JS — no TS annotation needed
       guestCart.addItem({
         id: product.id,
         product_id: product.id,
         product_name: product.name,
         product_image: product.image_url,
         product_price: product.price,
-        quantity: 1
+        quantity: 1,
       });
       toast.success('Added to cart!');
     },
   });
 
-  // FIX: was (p) which triggered TS7006 — fine in .jsx, the issue was TS strict mode
-  // These filter callbacks are all fine as plain JS arrow functions
-  const visibleProducts = products.filter((p) => p.is_visible !== false && !(p.stock != null && p.stock === 0));
+  const visibleProducts = products.filter(
+    (p) => p.is_visible !== false && !(p.stock != null && p.stock === 0)
+  );
 
-  const flashItems    = visibleProducts.filter((p) => p.flash_sale  && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
-  const classicoDeals = visibleProducts.filter((p) => p.featured);
-  const donkomiDeals  = visibleProducts.filter((p) => p.donkomi);
-  const newArrivals   = visibleProducts.filter((p) => p.new_arrival);
+  const flashItems         = visibleProducts.filter((p) => p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
+  const classicoDeals      = visibleProducts.filter((p) => p.featured);
+  const donkomiDeals       = visibleProducts.filter((p) => p.donkomi);
+  const newArrivals        = visibleProducts.filter((p) => p.new_arrival);
   const topSellingFallback = visibleProducts.filter((p) => p.top_selling);
 
   return (
@@ -209,8 +204,6 @@ const { data: appSettings = [] } = useQuery({
         <div className="grid grid-cols-4 gap-3">
           {HOME_CATEGORIES.map(cat => {
             const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
-            // FIX: products.find(cat.match) returns a product object, not void
-            // We access .image_url safely with optional chaining
             const firstMatchProduct = products.find(cat.match);
             const displayImg = adminImg || cat.image || (firstMatchProduct ? firstMatchProduct.image_url : undefined);
             const isExpanded = expandedCat === cat.id;
@@ -236,14 +229,12 @@ const { data: appSettings = [] } = useQuery({
             <div className="mt-4 pt-3 border-t border-gray-100">
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Shop {cat.label} by Brand</p>
               <div className="flex flex-wrap gap-2">
-                {/* FIX: b.category is now always defined (we added category: '' to electronics/home_appliances) */}
                 {cat.brands.map(b => (
                   <Link key={b.brand + (b.category || '')} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(b.brand)}&category=${(b.category || '')}`)}
                     className={`text-xs font-semibold border rounded-full px-3 py-1 transition-colors ${cat.chipColor}`}>
                     {b.label}
                   </Link>
                 ))}
-                {/* FIX: cat.link is always defined so Link is always used (no conditional to: undefined) */}
                 <Link to={cat.link} className={`text-xs font-semibold border rounded-full px-3 py-1 transition-colors ${cat.chipColor}`}>
                   All {cat.label} →
                 </Link>
@@ -261,9 +252,9 @@ const { data: appSettings = [] } = useQuery({
           if (!raw) return null;
           try { const d = JSON.parse(raw); return d?.active ? { ...d, key: k } : null; } catch { return null; }
         }).filter(Boolean);
-        const frontCards = allCards.filter(c => c.position === 'front');
+        const frontCards  = allCards.filter(c => c.position === 'front');
         const middleCards = allCards.filter(c => c.position === 'middle');
-        const backCards = allCards.filter(c => c.position === 'back' || !c.position);
+        const backCards   = allCards.filter(c => c.position === 'back' || !c.position);
         const orderedCards = [...frontCards, ...middleCards, ...backCards];
         if (!orderedCards.length) return null;
         return (
@@ -274,50 +265,39 @@ const { data: appSettings = [] } = useQuery({
               </div>
               <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
                 {orderedCards.map(card => {
-                  // FIX: was using conditional component type (CardWrapper = card.link ? Link : 'div')
-                  // which caused type error when card.link is undefined (to={undefined} on Link).
-                  // Now always use a div wrapper; if there's a link, wrap with an <a> tag instead.
-                  return card.link ? (
-                    <Link key={card.key} to={card.link}
-                      className="flex-shrink-0 w-[72vw] md:w-72 relative overflow-hidden block"
-                      style={{ minHeight: 130 }}>
+                  const inner = (
+                    <div className="relative z-10 p-3 h-full flex flex-col justify-between" style={{ minHeight: 130 }}>
+                      <div>
+                        <p className="text-white font-black text-sm leading-tight drop-shadow">{card.title}</p>
+                        {card.subtitle && <p className="text-white/90 text-xs font-bold mt-0.5">{card.subtitle}</p>}
+                        {card.description && <p className="text-white/80 text-[11px] mt-1 leading-snug line-clamp-2">{card.description}</p>}
+                      </div>
+                      {card.cta_text && (
+                        <span className="mt-2 self-start bg-white text-[#2E86C1] text-[11px] font-black px-3 py-1 rounded-full shadow">
+                          {card.cta_text}
+                        </span>
+                      )}
+                    </div>
+                  );
+                  const bg = (
+                    <>
                       <div className={`absolute inset-0 bg-gradient-to-r ${card.gradient || 'from-blue-600 to-blue-400'}`} />
                       {card.image_url && (
                         <img src={card.image_url} alt={card.title} className="absolute inset-0 w-full h-full object-cover opacity-60" />
                       )}
-                      <div className="relative z-10 p-3 h-full flex flex-col justify-between" style={{ minHeight: 130 }}>
-                        <div>
-                          <p className="text-white font-black text-sm leading-tight drop-shadow">{card.title}</p>
-                          {card.subtitle && <p className="text-white/90 text-xs font-bold mt-0.5">{card.subtitle}</p>}
-                          {card.description && <p className="text-white/80 text-[11px] mt-1 leading-snug line-clamp-2">{card.description}</p>}
-                        </div>
-                        {card.cta_text && (
-                          <span className="mt-2 self-start bg-white text-[#2E86C1] text-[11px] font-black px-3 py-1 rounded-full shadow">
-                            {card.cta_text}
-                          </span>
-                        )}
-                      </div>
+                    </>
+                  );
+                  return card.link ? (
+                    <Link key={card.key} to={card.link}
+                      className="flex-shrink-0 w-[72vw] md:w-72 relative overflow-hidden block"
+                      style={{ minHeight: 130 }}>
+                      {bg}{inner}
                     </Link>
                   ) : (
                     <div key={card.key}
                       className="flex-shrink-0 w-[72vw] md:w-72 relative overflow-hidden"
                       style={{ minHeight: 130 }}>
-                      <div className={`absolute inset-0 bg-gradient-to-r ${card.gradient || 'from-blue-600 to-blue-400'}`} />
-                      {card.image_url && (
-                        <img src={card.image_url} alt={card.title} className="absolute inset-0 w-full h-full object-cover opacity-60" />
-                      )}
-                      <div className="relative z-10 p-3 h-full flex flex-col justify-between" style={{ minHeight: 130 }}>
-                        <div>
-                          <p className="text-white font-black text-sm leading-tight drop-shadow">{card.title}</p>
-                          {card.subtitle && <p className="text-white/90 text-xs font-bold mt-0.5">{card.subtitle}</p>}
-                          {card.description && <p className="text-white/80 text-[11px] mt-1 leading-snug line-clamp-2">{card.description}</p>}
-                        </div>
-                        {card.cta_text && (
-                          <span className="mt-2 self-start bg-white text-[#2E86C1] text-[11px] font-black px-3 py-1 rounded-full shadow">
-                            {card.cta_text}
-                          </span>
-                        )}
-                      </div>
+                      {bg}{inner}
                     </div>
                   );
                 })}
@@ -360,9 +340,9 @@ const { data: appSettings = [] } = useQuery({
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
                       {product.original_price > product.price && (
-                       <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">
-                         -{Math.round((1 - product.price / product.original_price) * 100)}%
-                       </span>
+                        <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">
+                          -{Math.round((1 - product.price / product.original_price) * 100)}%
+                        </span>
                       )}
                     </div>
                     <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
@@ -422,46 +402,46 @@ const { data: appSettings = [] } = useQuery({
 
       {/* ── SHOP BY BRAND ── */}
       {showBrandSection && (
-      <div className="mt-5 mx-2 md:mx-4">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <Gem className="h-5 w-5 text-purple-600" />
-              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Shop by Brand</h2>
+        <div className="mt-5 mx-2 md:mx-4">
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Gem className="h-5 w-5 text-purple-600" />
+                <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Shop by Brand</h2>
+              </div>
+              <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+                See All <ChevronRight className="h-3 w-3" />
+              </Link>
             </div>
-            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
-              See All <ChevronRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-4 gap-3 p-4">
-            {[
-              { name: 'Apple', fallback: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
-              { name: 'Samsung', fallback: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },
-              { name: 'Tecno', fallback: 'https://upload.wikimedia.org/wikipedia/commons/a/a8/TECNO_Mobile_Logo.svg' },
-              { name: 'Hisense', fallback: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Hisense_logo.svg' },
-              { name: 'TCL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/1/16/TCL_Logo.svg' },
-              { name: 'Oraimo', fallback: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },
-              { name: 'Sony', fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
-              { name: 'JBL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
-            ].map(brand => {
-              const uploadedLogo = settings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
-              const logoSrc = uploadedLogo || brand.fallback;
-              return (
-                <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}
-                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
-                  <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
-                    {logoSrc
-                      ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain"
-                          onError={(e) => { e.target.style.display = 'none'; }} />
-                      : <span className="text-[10px] font-black text-gray-400">{brand.name[0]}</span>}
-                  </div>
-                  <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
-                </Link>
-              );
-            })}
+            <div className="grid grid-cols-4 gap-3 p-4">
+              {[
+                { name: 'Apple',   fallback: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
+                { name: 'Samsung', fallback: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },
+                { name: 'Tecno',   fallback: 'https://upload.wikimedia.org/wikipedia/commons/a/a8/TECNO_Mobile_Logo.svg' },
+                { name: 'Hisense', fallback: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Hisense_logo.svg' },
+                { name: 'TCL',     fallback: 'https://upload.wikimedia.org/wikipedia/commons/1/16/TCL_Logo.svg' },
+                { name: 'Oraimo',  fallback: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },
+                { name: 'Sony',    fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
+                { name: 'JBL',     fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
+              ].map(brand => {
+                const uploadedLogo = settings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
+                const logoSrc = uploadedLogo || brand.fallback;
+                return (
+                  <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}
+                    className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
+                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
+                      {logoSrc
+                        ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain"
+                            onError={(e) => { e.target.style.display = 'none'; }} />
+                        : <span className="text-[10px] font-black text-gray-400">{brand.name[0]}</span>}
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* ── NEW ARRIVALS ── */}

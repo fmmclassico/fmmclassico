@@ -72,7 +72,7 @@ export default function Layout({ children, currentPageName }) {
   // Cart count — only for authenticated users
   const { data: cartItems = [] } = useQuery({
     queryKey: ['cartItems', user?.email],
-    queryFn: async () => { try { const r = await base44.entities.CartItem.filter({ user_email: user?.email }); return Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : []; } catch(e) { console.error('Cart load failed:', e); return []; } },
+   queryFn: async () => { try { const r = await base44.entities.CartItem.filter({ user_email: user?.email }); return Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : []; } catch(e) { return []; } }, return Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : []; } catch(e) { console.error('Cart load failed:', e); return []; } },
     enabled: !!user?.email && isAuthenticated,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,

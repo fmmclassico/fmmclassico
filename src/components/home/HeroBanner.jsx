@@ -87,14 +87,14 @@ export default function HeroBanner() {
   const [touchStart, setTouchStart] = useState(null);
 
   useEffect(() => {
-    // Load any active promo banners from admin
     base44.entities.PromoBanner.filter({ is_active: true }, 'order', 20)
-      .then(data => {
+      .then(result => {
+        const data = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : null;
         if (data && data.length > 0) {
           setSlides(data);
         }
       })
-      .catch(() => {}); // fallback to default slides on error
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -123,7 +123,6 @@ export default function HeroBanner() {
     }
   }, [slides.length]);
 
-  // Normalize cta_link: could be a full URL, an absolute path (/Shop), or a relative page name (Shop?category=phones)
   const ctaHref = (() => {
     const link = slide.cta_link;
     if (!link) return createPageUrl('Shop');
@@ -180,7 +179,7 @@ export default function HeroBanner() {
         </motion.div>
       </AnimatePresence>
 
-      {slides.length > 1 && (
+      {Array.isArray(slides) && slides.length > 1 && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
           {slides.map((_, i) => (
             <button

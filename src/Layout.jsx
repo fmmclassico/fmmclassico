@@ -124,7 +124,7 @@ export default function Layout({ children, currentPageName }) {
   const handleLogout = async () => {
     try {
       logout();
-    } catch (e) {<<<<<<< HEAD
+    } catch (e) {
       console.error('Logout failed', e);
     }
     queryClient.clear();

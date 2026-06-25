@@ -81,7 +81,7 @@ export default function Layout({ children, currentPageName }) {
   // Notifications — only for authenticated users
   const { data: userNotifications = [] } = useQuery({
     queryKey: ['notifications', user?.email],
-    queryFn: async () => { try { const r = await base44.entities.Notification.filter({ user_email: user?.email }, '-created_date', 50); return Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : []; } catch(e) { return []; } },
+    
  return Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : []; } catch(e) { console.error('Notifications load failed:', e); return []; } },
     enabled: !!user?.email && isAuthenticated,
     staleTime: 20000,

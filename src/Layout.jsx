@@ -138,7 +138,7 @@ export default function Layout({ children, currentPageName }) {
     navigate('/login');
   };
 
-  const isAdmin = user?.role === 'admin';
+ const isAdmin = user?.isAdmin === true;
 
   // Authenticated menu items (hamburger menu)
   const authenticatedMenuItems = [

@@ -210,7 +210,7 @@ export default function Layout({ children, currentPageName }) {
         "@context": "https://schema.org",
         "@type": "OnlineStore",
         "name": "FMM CLASSICO",
-        "alternateName": ["FMMCLASSICO", "FMMClassico", "FMM" "Classico", "fmm", "classico", "fmmclassico"],
+        "alternateName": ["FMMCLASSICO", "FMMClassico", "FMM", "Classico", "fmm", "classico", "fmmclassico"],
         "description": "FMM Classico is a trusted online and physical retail and wholesale store specializing in premium phones & accessories, quality electronics, and home appliances in Ghana.",
         "url": window.location.origin,
         "logo": { "@type": "ImageObject", "url": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg", "width": 1200, "height": 1200 },

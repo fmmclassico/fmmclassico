@@ -176,7 +176,7 @@ export default function Orders() {
       await base44.entities.Notification.create({
         user_email: order.customer_email,
         title: '❌ Order Cancelled',
-        message: `Your order #${order.order_number} has been cancelled. If you paid, contact us on WhatsApp: 0509 896 035 for a refund.`,
+        message: `Your order #${order.order_number} has been cancelled. If you paid, contact us on WhatsApp: 0208207543 for a refund.`,
         type: 'order_cancelled',
         order_id: order.id,
         order_number: order.order_number,

@@ -180,7 +180,7 @@ export default function Checkout() {
       setCreatedOrderNumber(orderNumber);
 
       try {
-        const callbackUrl = `${window.location.origin}/api/hubtel/callback`;
+        const callbackUrl = `https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback`;
         const returnUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=success`;
         const cancellationUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=cancelled`;
 

@@ -176,9 +176,9 @@ export default function Layout({ children, currentPageName }) {
 
   // SEO meta tags
   useEffect(() => {
-    const merchantPhone = import.meta.env.VITE_MERCHANT_PHONE || '+233208207543';
+    const merchantPhone = '0208207543';
     const merchantEmail = import.meta.env.VITE_MERCHANT_EMAIL || 'merchant@example.com';
-    const merchantWhatsapp = import.meta.env.VITE_MERCHANT_WHATSAPP_URL || `https://wa.me/233208207543`;
+    const merchantWhatsapp = 'https://wa.me/233208207543';
     document.title = 'FMM CLASSICO – Phone Accessories, Electronics & Home Appliances in Ghana | FMMCLASSICO';
     const setMeta = (attr, key, content) => {
       let el = document.querySelector(`meta[${attr}="${key}"]`);

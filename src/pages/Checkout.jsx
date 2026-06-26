@@ -121,6 +121,9 @@ export default function Checkout() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Prevent double-clicks
+    if (isSubmitting) return;
+
     if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !selectedZoneId) {
       toast.error('Please fill in all required fields, including your delivery option.');
       return;
@@ -156,7 +159,7 @@ export default function Checkout() {
         })),
         total_amount: total,
         payment_status: 'pending_payment',
-        status: 'confirmed',
+        status: 'processing',
         customer_name: formData.customer_name,
         customer_email: user.email,
         customer_phone: formData.customer_phone,
@@ -173,7 +176,6 @@ export default function Checkout() {
       };
 
       await base44.entities.Order.create(orderPayload);
-      // Don't delete cart items yet - they'll be cleared after payment confirms
       queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
 
       setCreatedOrderNumber(orderNumber);
@@ -182,8 +184,6 @@ export default function Checkout() {
         const callbackUrl = `https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback`;
         const returnUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=success`;
         const cancellationUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=cancelled`;
-
-        console.log('[Checkout] Initiating payment for order:', orderNumber);
 
         const initRes = await initiatePayment({
           totalAmount: total,
@@ -194,17 +194,13 @@ export default function Checkout() {
           clientReference: orderNumber,
         });
 
-        console.log('[Checkout] Hubtel response:', initRes);
-
         if (initRes && initRes.data && initRes.data.checkoutUrl) {
-          console.log('[Checkout] Redirecting to Hubtel:', initRes.data.checkoutUrl);
           toast.success('Redirecting to Hubtel payment page...');
           window.location.href = initRes.data.checkoutUrl;
           return;
         }
 
         const errorMsg = initRes?.error || 'Unable to connect to payment gateway. Please try again.';
-        console.error('[Checkout] Payment initiation failed:', initRes);
         setOrderError(`Payment Error: ${errorMsg}. Your order #${orderNumber} has been created. Please try the payment again or contact support.`);
         toast.error('Payment initiation failed. Please try again.');
       } catch (err) {

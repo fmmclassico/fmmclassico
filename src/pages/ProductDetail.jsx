@@ -98,7 +98,7 @@ export default function ProductDetail() {
           product_price: product.price,
           quantity
         });
-        toast.success('Added to cart!');
+       
         return;
       }
       // Authenticated: Optimistic update + backend persistence

@@ -16,7 +16,6 @@ export async function initiatePayment({ totalAmount, description, callbackUrl, r
         clientReference,
       }),
     });
-
     const result = await response.json();
     return result;
   } catch (error) {

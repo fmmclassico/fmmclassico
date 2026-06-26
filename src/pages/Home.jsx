@@ -53,7 +53,6 @@ const HOME_CATEGORIES = [
     icon: Smartphone,
     color: 'bg-blue-100 text-blue-700',
     link: createPageUrl('Shop?category=phones'),
-    image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
     match: (p) => p.category === 'phones',
     brands: CATEGORY_BRANDS.phones,
     chipColor: 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100',
@@ -64,7 +63,6 @@ const HOME_CATEGORIES = [
     icon: Headphones,
     color: 'bg-[#0093A6]/10 text-[#0093A6]',
     link: createPageUrl('Shop?category=phone_cases'),
-    image: 'https://mate.net.in/public/uploads/all/UsReqZvujmEjMUb27qlTtRcCG8Pf18SyULO4HW7U.jpg',
     match: (p) => ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category),
     brands: CATEGORY_BRANDS.phone_accessories,
     chipColor: 'text-[#0093A6] bg-[#0093A6]/5 border-[#0093A6]/30 hover:bg-[#0093A6]/10',
@@ -75,7 +73,6 @@ const HOME_CATEGORIES = [
     icon: Tv,
     color: 'bg-purple-100 text-purple-700',
     link: createPageUrl('Shop?category=electronic_appliances'),
-    image: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=400&q=90',
     match: (p) => ['electronic_appliances','smart_watches'].includes(p.category),
     brands: CATEGORY_BRANDS.electronics,
     chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100',
@@ -224,9 +221,9 @@ export default function Home() {
               <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
 <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 flex items-center justify-center">
   {adminImg
-    ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
+   ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover brightness-125" />
     : displayImg
-      ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover brightness-110 contrast-105" />
+      ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover brightness-125" />
 </div>
                 <span className="text-xs md:text-sm font-bold text-gray-800 text-center leading-tight">{cat.label}</span>
               </button>

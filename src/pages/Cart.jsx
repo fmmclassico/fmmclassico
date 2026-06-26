@@ -182,7 +182,7 @@ export default function Cart() {
                 <Button
                   className="w-full max-w-sm mt-2 bg-[#1B3A6B] hover:bg-[#162f58] text-white font-bold py-3"
                   onClick={() => {
-                    if (!user) { navigateToLogin(); return; }
+                    if (!user) { navigate(createPageUrl('Login')); return; }vigateToLogin(); return; }
                     navigate(createPageUrl('Checkout'));
                   }}
                 >

@@ -10,7 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [authError, setAuthError] = useState(null);
 
-  // Load user on app start
   useEffect(() => {
     checkUser();
   }, []);
@@ -28,7 +27,6 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // ADMIN CHECK (from Vercel env)
       const envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || "";
       const ADMIN_EMAILS = envAdminEmails
         .split(",")
@@ -52,21 +50,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // LOGOUT
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setIsAuthenticated(false);
-
     window.location.href = "/";
   };
 
-  // REFRESH USER (useful after login)
   const refreshUser = () => {
     checkUser();
   };
 
-  // Navigate to login, saving the current path for redirect after login
   const navigateToLogin = (redirectPath) => {
     const target = redirectPath || window.location.pathname + window.location.search;
     try {
@@ -75,11 +69,17 @@ export const AuthProvider = ({ children }) => {
     window.location.href = '/login';
   };
 
-  // Verify admin password — checks against VITE_ADMIN_PASSWORD env var
-  const verifyAdminPassword = (password) => {
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || '';
-    if (!adminPassword) return false;
-    return password === adminPassword;
+  // Admin password verified server-side via Supabase RPC
+  const verifyAdminPassword = async (password) => {
+    try {
+      const { data, error } = await supabase.rpc('verify_admin_password', {
+        input_password: password
+      });
+      if (error) return false;
+      return data === true;
+    } catch {
+      return false;
+    }
   };
 
   return (

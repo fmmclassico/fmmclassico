@@ -16,18 +16,18 @@ import { toast } from 'sonner';
 import DeliveryInfoModal from '../components/delivery/DeliveryInfoModal';
 
 const DELIVERY_ZONES = [
-  { id: 'umat_pickup', label: '🏫 UMAT Campus – Pickup / Meeting Point', fee: 0, note: 'FREE – collect on campus' },
-  { id: 'umat_doorstep', label: '🏠 UMAT Campus – Doorstep Delivery', fee: 10, note: '₵10 to your door' },
-  { id: 'tarkwa_station', label: '🚌 Tarkwa – Delivery to a Station / Car', fee: 20, note: '₵20 to a station or car' },
-  { id: 'tarkwa', label: '🏘️ Tarkwa (Outside UMAT) – Doorstep', fee: 25, note: '₵25 delivery fee' },
-  { id: 'ashongman', label: '🏠 Ashongman Estate – Pickup Point (Close to Awo Dede – Purewater)', fee: 0, note: 'FREE – pickup from our location' },
-  { id: 'airport', label: '🏠 Airport Residential Area – Pickup Point (Libi Kraal)', fee: 0, note: 'FREE – pickup from our location' },
-  { id: 'accra_station', label: '🚌 Accra – Delivery to a Station / Car', fee: 25, note: '₵25 to a station or car' },
-  { id: 'accra_delivery', label: '🚗 Delivery Within Accra', fee: 25, note: '₵25 delivery fee' },
-  { id: 'yango', label: '🛵 Yango Delivery – Pay on Delivery', fee: 0, note: 'Yango rider fee paid when product arrives' },
-  { id: 'uber', label: '🚗 Uber Delivery – Pay on Delivery', fee: 0, note: 'Uber rider fee paid when product arrives' },
-  { id: 'bolt', label: '⚡ Bolt Delivery – Pay on Delivery', fee: 0, note: 'Bolt rider fee paid when product arrives' },
-  { id: 'other', label: '📦 Outside Accra & Tarkwa', fee: 50, note: '₵50 flat rate' },
+  { id: 'umat_pickup', label: 'UMAT Campus - Pickup / Meeting Point', fee: 0, note: 'FREE - collect on campus' },
+  { id: 'umat_doorstep', label: 'UMAT Campus - Doorstep Delivery', fee: 10, note: 'GHS 10 to your door' },
+  { id: 'tarkwa_station', label: 'Tarkwa - Delivery to a Station / Car', fee: 20, note: 'GHS 20 to a station or car' },
+  { id: 'tarkwa', label: 'Tarkwa (Outside UMAT) - Doorstep', fee: 25, note: 'GHS 25 delivery fee' },
+  { id: 'ashongman', label: 'Ashongman Estate - Pickup Point (Close to Awo Dede - Purewater)', fee: 0, note: 'FREE - pickup from our location' },
+  { id: 'airport', label: 'Airport Residential Area - Pickup Point (Libi Kraal)', fee: 0, note: 'FREE - pickup from our location' },
+  { id: 'accra_station', label: 'Accra - Delivery to a Station / Car', fee: 25, note: 'GHS 25 to a station or car' },
+  { id: 'accra_delivery', label: 'Delivery Within Accra', fee: 25, note: 'GHS 25 delivery fee' },
+  { id: 'yango', label: 'Yango Delivery - Pay on Delivery', fee: 0, note: 'Yango rider fee paid when product arrives' },
+  { id: 'uber', label: 'Uber Delivery - Pay on Delivery', fee: 0, note: 'Uber rider fee paid when product arrives' },
+  { id: 'bolt', label: 'Bolt Delivery - Pay on Delivery', fee: 0, note: 'Bolt rider fee paid when product arrives' },
+  { id: 'other', label: 'Outside Accra and Tarkwa', fee: 50, note: 'GHS 50 flat rate' },
 ];
 
 export default function Checkout() {
@@ -52,36 +52,36 @@ export default function Checkout() {
     notes: '',
   });
 
-  useEffect(() => {
+  useEffect(function() {
     setIsSubmitting(false);
     setOrderSubmitted(false);
     base44.auth.me()
-      .then(userData => {
+      .then(function(userData) {
         setUser(userData);
-        setFormData(prev => ({ ...prev, customer_name: userData.full_name || '' }));
+        setFormData(function(prev) { return Object.assign({}, prev, { customer_name: userData.full_name || '' }); });
       })
-      .catch(() => base44.auth.redirectToLogin(createPageUrl('Home')));
+      .catch(function() { base44.auth.redirectToLogin(createPageUrl('Home')); });
   }, []);
 
   const { data: cartItems = [] } = useQuery({
     queryKey: ['cartItems', user?.email],
-    queryFn: () => base44.entities.CartItem.filter({ user_email: user?.email }),
+    queryFn: function() { return base44.entities.CartItem.filter({ user_email: user?.email }); },
     enabled: !!user?.email,
     staleTime: 30000,
   });
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
+  var subtotal = cartItems.reduce(function(sum, item) { return sum + (item.product_price * item.quantity); }, 0);
+  var selectedZone = DELIVERY_ZONES.find(function(z) { return z.id === selectedZoneId; });
+  var shipping = selectedZone ? selectedZone.fee : 0;
+  var total = subtotal + shipping;
 
-  const selectedZone = DELIVERY_ZONES.find(z => z.id === selectedZoneId);
-  const shipping = selectedZone ? selectedZone.fee : 0;
-  const total = subtotal + shipping;
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  var handleInputChange = function(e) {
+    var name = e.target.name;
+    var value = e.target.value;
+    setFormData(function(prev) { var obj = {}; obj[name] = value; return Object.assign({}, prev, obj); });
   };
 
-  const getCurrentLocation = () => {
+  var getCurrentLocation = function() {
     if (!navigator.geolocation) {
       setLocationError('Geolocation is not supported by your browser');
       return;
@@ -89,39 +89,30 @@ export default function Checkout() {
 
     setLocationError('');
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const googleMapsLink = `https://www.google.com/maps?q=${latitude.toFixed(6)},${longitude.toFixed(6)}&z=15`;
-        setFormData(prev => ({ ...prev, delivery_address: googleMapsLink }));
-        toast.success('📍 Location detected! Google Maps link added to address field.');
+      function(position) {
+        var lat = position.coords.latitude.toFixed(6);
+        var lng = position.coords.longitude.toFixed(6);
+        var googleMapsLink = 'https://www.google.com/maps?q=' + lat + ',' + lng + '&z=15';
+        setFormData(function(prev) { return Object.assign({}, prev, { delivery_address: googleMapsLink }); });
+        toast.success('Location detected! Google Maps link added.');
       },
-      (error) => {
-        let errorMsg = 'Unable to get your location';
+      function(error) {
+        var errorMsg = 'Unable to get your location';
         if (error.code === 1) {
-          errorMsg = 'Location access denied';
-          setLocationError(errorMsg);
-          setTimeout(() => {
-            if (confirm('Location permission is needed to auto-detect your location.\n\nTap OK to open your phone\'s location settings.')) {
-              window.open('https://support.google.com/android/answer/3457478?hl=en', '_blank');
-            }
-          }, 500);
+          errorMsg = 'Location access denied. Please enable location in your phone settings.';
         } else if (error.code === 2) {
           errorMsg = 'Location service unavailable';
-          setLocationError(errorMsg);
         } else if (error.code === 3) {
           errorMsg = 'Location request timed out';
-          setLocationError(errorMsg);
         }
-        toast.error(errorMsg);
+        setLocationError(errorMsg);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
-  const handleSubmit = async (e) => {
+  var handleSubmit = async function(e) {
     e.preventDefault();
-
-    // Prevent double-clicks
     if (isSubmitting) return;
 
     if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !selectedZoneId) {
@@ -129,34 +120,36 @@ export default function Checkout() {
       return;
     }
 
-    const expectedSubtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
+    var expectedSubtotal = cartItems.reduce(function(sum, item) { return sum + (item.product_price * item.quantity); }, 0);
     if (Math.abs(expectedSubtotal - subtotal) > 0.01) {
-      toast.error('Cart total mismatch detected. Please go back to your cart and try again.');
+      toast.error('Cart total mismatch. Go back to cart and try again.');
       return;
     }
     if (total <= 0 || isNaN(total)) {
-      toast.error('Order total is invalid. Please check your cart and delivery details.');
+      toast.error('Order total is invalid. Check your cart and delivery details.');
       return;
     }
 
     setIsSubmitting(true);
 
-    const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
-    const estimatedDelivery = new Date();
+    var orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
+    var estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
 
     setOrderError('');
 
     try {
-      const orderPayload = {
+      var orderPayload = {
         order_number: orderNumber,
-        items: cartItems.map(item => ({
-          product_id: item.product_id,
-          product_name: item.product_name,
-          product_image: item.product_image,
-          price: item.product_price,
-          quantity: item.quantity,
-        })),
+        items: cartItems.map(function(item) {
+          return {
+            product_id: item.product_id,
+            product_name: item.product_name,
+            product_image: item.product_image,
+            price: item.product_price,
+            quantity: item.quantity,
+          };
+        }),
         total_amount: total,
         payment_status: 'pending_payment',
         status: 'processing',
@@ -177,36 +170,32 @@ export default function Checkout() {
 
       await base44.entities.Order.create(orderPayload);
       queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
-
       setCreatedOrderNumber(orderNumber);
 
       try {
-        const callbackUrl = `https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback`;
-        const returnUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=success`;
-        const cancellationUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=cancelled`;
+        var callbackUrl = 'https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback';
+        var returnUrl = window.location.origin + createPageUrl('Orders') + '?order=' + orderNumber + '&status=success';
+        var cancellationUrl = window.location.origin + createPageUrl('Orders') + '?order=' + orderNumber + '&status=cancelled';
 
-        const initRes = await initiatePayment({
+        var initRes = await initiatePayment({
           totalAmount: total,
-          description: `Order ${orderNumber}`,
-          callbackUrl,
-          returnUrl,
-          cancellationUrl,
+          description: 'Order ' + orderNumber,
+          callbackUrl: callbackUrl,
+          returnUrl: returnUrl,
+          cancellationUrl: cancellationUrl,
           clientReference: orderNumber,
         });
 
         if (initRes && initRes.data && initRes.data.checkoutUrl) {
-          toast.success('Redirecting to Hubtel payment page...');
           window.location.href = initRes.data.checkoutUrl;
           return;
         }
 
-        const errorMsg = initRes?.error || 'Unable to connect to payment gateway. Please try again.';
-        setOrderError(`Payment Error: ${errorMsg}. Your order #${orderNumber} has been created. Please try the payment again or contact support.`);
-        toast.error('Payment initiation failed. Please try again.');
+        var errorMsg = (initRes && initRes.error) || 'Unable to connect to payment gateway.';
+        setOrderError('Payment Error: ' + errorMsg + '. Your order #' + orderNumber + ' has been created. Please try again or contact support.');
       } catch (err) {
-        console.error('[Checkout] Payment initiation error:', err);
-        setOrderError(`Payment Error: ${err.message || 'Unknown error'}. Your order #${orderNumber} has been created. Please try again or contact support.`);
-        toast.error('Payment initiation failed. Please try again.');
+        console.error('[Checkout] Payment error:', err);
+        setOrderError('Payment Error: ' + (err.message || 'Unknown error') + '. Order #' + orderNumber + ' created. Try again or contact support.');
       }
     } catch (error) {
       console.error('Order creation error:', error);
@@ -218,272 +207,176 @@ export default function Checkout() {
 
   if (!user) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <p className="text-gray-500">Loading...</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
   if (orderSubmitted) {
     return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-2xl mx-auto">
-          <div className="rounded-3xl border border-blue-200 bg-white p-8 shadow-lg text-center">
-            <h1 className="text-3xl font-bold text-gray-800 mb-3">Order Submitted</h1>
-            <p className="text-gray-600 mb-6">Thank you! Your order <span className="font-semibold">#{createdOrderNumber}</span> has been placed successfully.</p>
-            <p className="text-sm text-gray-500 mb-6">We will review your order and follow up with payment instructions shortly.</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <button onClick={() => navigate(createPageUrl('Orders'))} className="w-full rounded-xl bg-blue-800 px-4 py-3 text-white font-semibold hover:bg-blue-900">
-                View My Orders
-              </button>
-              <button onClick={() => navigate(createPageUrl('Home'))} className="w-full rounded-xl border border-blue-200 px-4 py-3 text-blue-800 font-semibold hover:bg-blue-50">
-                Continue Shopping
-              </button>
-            </div>
-          </div>
-        </div>
+      <div className="p-4 max-w-md mx-auto">
+        <Card className="p-6 text-center">
+          <p className="text-xl font-bold mb-2">Order Submitted</p>
+          <p className="text-sm text-gray-600 mb-4">Your order #{createdOrderNumber} has been placed successfully.</p>
+          <Button onClick={function() { navigate(createPageUrl('Orders')); }} className="w-full rounded-xl bg-blue-800 mb-2">
+            View My Orders
+          </Button>
+          <Button variant="outline" onClick={function() { navigate(createPageUrl('Home')); }} className="w-full rounded-xl">
+            Continue Shopping
+          </Button>
+        </Card>
       </div>
     );
   }
 
   if (cartItems.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Your cart is empty</h2>
-        <button onClick={() => navigate(createPageUrl('Cart'))} className="text-blue-600 font-semibold hover:underline">
-          ← Back to Cart
+      <div className="p-4 text-center">
+        <p className="text-gray-600">Your cart is empty</p>
+        <button onClick={function() { navigate(createPageUrl('Cart')); }} className="text-blue-600 font-semibold mt-2">
+          Back to Cart
         </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-8">
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Checkout</h1>
-        </div>
+    <div className="p-3 pb-24 max-w-lg mx-auto">
+      <h1 className="text-xl font-bold mb-4">Checkout</h1>
 
-        <div className="mb-6">
-          <Card className="p-5 sm:p-6 shadow-md">
-            <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Order Summary</h2>
-
-            <div className="space-y-3 mb-3 max-h-56 overflow-y-auto">
-              {cartItems.map((item) => (
-                <div key={item.id} className="flex gap-3">
+      <form onSubmit={handleSubmit}>
+        {/* Order Summary */}
+        <Card className="p-4 mb-4">
+          <h2 className="font-semibold mb-3">Order Summary</h2>
+          <div className="space-y-2">
+            {cartItems.map(function(item) {
+              return (
+                <div key={item.id} className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                     {item.product_image
-                      ? <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No img</div>
+                      ? <img src={item.product_image} alt="" className="w-full h-full object-cover" />
+                      : <span className="text-xs text-gray-400 flex items-center justify-center h-full">No img</span>
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-xs text-gray-800 line-clamp-2 leading-tight">{item.product_name}</p>
+                    <p className="text-sm font-medium truncate">{item.product_name}</p>
                     <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                    <p className="font-semibold text-[#1B3A6B] text-sm">₵{(item.product_price * item.quantity).toFixed(2)}</p>
                   </div>
+                  <p className="text-sm font-semibold">{'\u20B5'}{(item.product_price * item.quantity).toFixed(2)}</p>
                 </div>
-              ))}
-            </div>
-
-            <Separator className="my-4" />
-
-            <div className="space-y-4">
-              <div className="flex justify-between text-base text-gray-600">
-                <span>Subtotal</span>
-                <span>₵{subtotal.toFixed(2)}</span>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center text-base text-gray-600">
-                  <span className="flex items-center gap-1.5">
-                    <Truck className="h-4 w-4 text-[#1B3A6B]" />
-                    Delivery
-                  </span>
-                  <span className={shipping === 0 && selectedZoneId ? 'text-green-600 font-semibold' : 'font-semibold text-[#1B3A6B]'}>
-                    {selectedZoneId ? (shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`) : '—'}
-                  </span>
-                </div>
-                <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
-                  <SelectTrigger className="h-11 w-full">
-                    <SelectValue placeholder="Select delivery / pickup option *" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DELIVERY_ZONES.map(zone => (
-                      <SelectItem key={zone.id} value={zone.id}>
-                        {zone.label} — {zone.fee === 0 ? 'FREE' : `₵${zone.fee}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedZone?.note && (
-                  <p className="text-xs text-gray-500 pl-0.5">{selectedZone.note}</p>
-                )}
-                {!selectedZoneId && (
-                  <p className="text-xs text-red-500 pl-0.5">Please choose a delivery option to see your total.</p>
-                )}
-              </div>
-
-              <Separator />
-              <div className="flex justify-between text-lg font-bold text-gray-800">
-                <span>Total</span>
-                <span className="text-[#1B3A6B]">₵{total.toFixed(2)}</span>
-              </div>
-            </div>
-
-          </Card>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="p-5 sm:p-6 shadow-md">
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-[#1B3A6B]" />
-                  <h2 className="text-lg font-bold text-gray-800">Delivery Information</h2>
-                </div>
-                <DeliveryInfoModal
-                  trigger={
-                    <Button variant="outline" size="sm" className="gap-1 text-[#1B3A6B] border-blue-200 hover:bg-blue-50">
-                      <Info className="h-4 w-4" />
-                      Delivery Rates
-                    </Button>
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customer_name" className="text-sm">Full Name *</Label>
-                  <Input
-                    id="customer_name"
-                    name="customer_name"
-                    value={formData.customer_name}
-                    onChange={handleInputChange}
-                    placeholder="Enter your full name"
-                    required
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="customer_phone" className="text-sm">Active Phone Number * <span className="text-xs text-[#1B3A6B] font-normal">(must be reachable)</span></Label>
-                  <Input
-                    id="customer_phone"
-                    name="customer_phone"
-                    value={formData.customer_phone}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 0244123456 – must be active"
-                    required
-                    className="h-11"
-                  />
-                  <p className="text-xs text-gray-400">We'll call/SMS this number for delivery. Make sure it's switched on and reachable.</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="delivery_address" className="text-sm">Delivery Address / Landmark *</Label>
-                  <Textarea
-                    id="delivery_address"
-                    name="delivery_address"
-                    value={formData.delivery_address}
-                    onChange={handleInputChange}
-                    placeholder="Enter your full delivery address or landmark"
-                    rows={3}
-                    required
-                    className="resize-y"
-                  />
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-                      <span className="text-lg">📍</span>
-                      <div className="flex-1 text-xs text-blue-700">
-                        <span className="font-semibold">Auto-detect your current location</span>
-                      </div>
-                      <button
-                        <Button
-  type="button"
-  variant="outline"
-  size="sm"
-  onClick={getCurrentLocation}
-  className="text-xs"
->
-  Get Location
-</Button>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Click to automatically detect and add your GPS location to the address field. If permission is denied, you'll be guided to enable location services.
-                    </p>
-                    {locationError && (
-                      <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-xs text-red-700 font-medium mb-1">⚠️ {locationError}</p>
-                        <button
-                          onClick={() => {
-                            window.open('https://support.google.com/android/answer/3457478?hl=en', '_blank');
-                          }}
-                          className="text-xs text-blue-600 underline font-medium hover:text-blue-800"
-                        >
-                          📱 Tap here to open Location Settings guide
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="notes" className="text-sm">Order Notes (Optional)</Label>
-                  <Input
-                    id="notes"
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleInputChange}
-                    placeholder="Any special instructions"
-                    className="h-11"
-                  />
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-4 shadow-md">
-              <div className="flex items-center gap-2 mb-3">
-                <CreditCard className="h-4 w-4 text-[#1B3A6B]" />
-                <h2 className="text-base font-bold text-gray-800">Payment Method</h2>
-              </div>
-
-              <div className="p-3 border-2 border-[#1B3A6B] rounded-lg bg-blue-50 flex items-center justify-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#1B3A6B] flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-lg">🏦</span>
-                </div>
-                <div className="flex-1">
-                  <span className="font-bold text-gray-800 text-sm block">Hubtel Secure Payment</span>
-                  <span className="text-xs text-gray-600">Mobile Money • Debit Card • Bank Transfer • Wallet</span>
-                </div>
-              </div>
-            </Card>
+              );
+            })}
           </div>
-        </div>
 
-        <div className="mt-6 flex justify-center">
-          <div className="w-full max-w-2xl">
-            <Button
-              type="submit"
-              className="w-full bg-[#1B3A6B] hover:bg-[#152f5a] text-white font-bold py-4 text-base"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Processing Payment...
-                </>
-              ) : (
-                '💳 Pay with Hubtel'
+          <Separator className="my-3" />
+
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>{'\u20B5'}{subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Delivery</span>
+              <span>{selectedZoneId ? (shipping === 0 ? 'FREE' : '\u20B5' + shipping.toFixed(2)) : '\u2014'}</span>
+            </div>
+
+            {/* Delivery zone selector */}
+            <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
+              <SelectTrigger className="w-full mt-2">
+                <SelectValue placeholder="Select delivery option" />
+              </SelectTrigger>
+              <SelectContent>
+                {DELIVERY_ZONES.map(function(zone) {
+                  return (
+                    <SelectItem key={zone.id} value={zone.id}>
+                      {zone.label} {zone.fee === 0 ? '(FREE)' : '(GHS ' + zone.fee + ')'}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            {selectedZone?.note && <p className="text-xs text-gray-500">{selectedZone.note}</p>}
+            {!selectedZoneId && <p className="text-xs text-orange-600">Please choose a delivery option.</p>}
+
+            <Separator className="my-2" />
+            <div className="flex justify-between font-bold text-base">
+              <span>Total</span>
+              <span>{'\u20B5'}{total.toFixed(2)}</span>
+            </div>
+          </div>
+        </Card>
+
+        {/* Delivery Information */}
+        <Card className="p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold">Delivery Information</h2>
+            <DeliveryInfoModal trigger={<Button type="button" variant="ghost" size="sm" className="text-xs"><Info className="w-3 h-3 mr-1" />Delivery Rates</Button>} />
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm">Full Name *</Label>
+              <Input name="customer_name" value={formData.customer_name} onChange={handleInputChange} placeholder="Your full name" required />
+            </div>
+
+            <div>
+              <Label className="text-sm">Active Phone Number * (must be reachable)</Label>
+              <Input name="customer_phone" value={formData.customer_phone} onChange={handleInputChange} placeholder="0XX XXX XXXX" required />
+              <p className="text-[10px] text-gray-500 mt-0.5">We will call/SMS this number for delivery.</p>
+            </div>
+
+            <div>
+              <Label className="text-sm">Delivery Address / Landmark *</Label>
+              <Textarea name="delivery_address" value={formData.delivery_address} onChange={handleInputChange} placeholder="Enter your address or use Get Location below" rows={2} required />
+
+              <div className="mt-2 flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" className="text-xs" onClick={getCurrentLocation}>
+                  Get Location
+                </Button>
+                <span className="text-[10px] text-gray-500">Auto-detect your GPS location</span>
+              </div>
+
+              {locationError && (
+                <p className="text-xs text-red-600 mt-1">{locationError}</p>
               )}
-            </Button>
-            {orderError && (
-              <p className="mt-3 text-sm text-red-600">{orderError}</p>
-            )}
+            </div>
+
+            <div>
+              <Label className="text-sm">Order Notes (Optional)</Label>
+              <Textarea name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Any special instructions..." rows={2} />
+            </div>
           </div>
-        </div>
+        </Card>
+
+        {/* Payment Method */}
+        <Card className="p-4 mb-4">
+          <h2 className="font-semibold mb-3">Payment Method</h2>
+          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
+            <CreditCard className="w-6 h-6 text-blue-700" />
+            <div>
+              <p className="text-sm font-semibold text-blue-900">Hubtel Secure Payment</p>
+              <p className="text-xs text-blue-700">Mobile Money, Debit Card, Bank Transfer, Wallet</p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Submit */}
+        <Button type="submit" className="w-full rounded-xl bg-blue-800 hover:bg-blue-900 h-12 text-base font-semibold" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Processing Payment...
+            </span>
+          ) : (
+            'Pay with Hubtel'
+          )}
+        </Button>
+
+        {orderError && (
+          <p className="text-sm text-red-600 mt-2 text-center">{orderError}</p>
+        )}
       </form>
-      </div>
     </div>
   );
 }

@@ -74,33 +74,7 @@ export default function Cart() {
     }
   });
 
-  const [selectedLocation, setSelectedLocation] = useState(null);
-  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
-
   const itemsSource = user ? cartItems : guestItems;
-  const subtotal = itemsSource.reduce(
-    (sum, item) => sum + ((item.product_price || 0) * (item.quantity || 1)),
-    0
-  );
-
-  const deliveryZones = [
-    { id: 'umat_pickup', label: '🏫 UMAT Campus – Pickup / Meeting Point', fee: 0, note: 'FREE – collect on campus' },
-    { id: 'umat_doorstep', label: '🏠 UMAT Campus – Doorstep Delivery', fee: 10, note: '₵10 to your door' },
-    { id: 'tarkwa_station', label: '🚌 Tarkwa – Delivery to a Station / Car', fee: 20, note: '₵20 to a station or car' },
-    { id: 'tarkwa', label: '🏘️ Tarkwa (Outside UMAT) – Doorstep', fee: 25, note: '₵25 delivery fee' },
-    { id: 'ashongman', label: '🏠 Ashongman Estate – Pickup Point (Close to Awo Dede – Purewater)', fee: 0, note: 'FREE – pickup from our location' },
-    { id: 'airport', label: '🏠 Airport Residential Area – Pickup Point (Libi Kraal)', fee: 0, note: 'FREE – pickup from our location' },
-    { id: 'accra_station', label: '🚌 Accra – Delivery to a Station / Car', fee: 25, note: '₵25 to a station or car' },
-    { id: 'accra_delivery', label: '🚗 Delivery Within Accra', fee: 25, note: '₵25 delivery fee' },
-    { id: 'yango', label: '🛵 Yango Delivery – Pay on Delivery', fee: 0, note: 'Yango rider fee paid when product arrives' },
-    { id: 'uber', label: '🚗 Uber Delivery – Pay on Delivery', fee: 0, note: 'Uber rider fee paid when product arrives' },
-    { id: 'bolt', label: '⚡ Bolt Delivery – Pay on Delivery', fee: 0, note: 'Bolt rider fee paid when product arrives' },
-    { id: 'other', label: '📦 Outside Accra & Tarkwa', fee: 50, note: '₵50 flat rate' },
-  ];
-
-  const selectedZone = deliveryZones.find(z => z.id === selectedLocation);
-  const shipping = selectedZone ? selectedZone.fee : 0;
-  const total = subtotal + shipping;
 
   if (itemsSource.length === 0 && !isLoading) {
     return (
@@ -168,66 +142,22 @@ export default function Cart() {
           ))}
         </div>
 
-        {/* Delivery Zone Picker */}
-        <Card className="p-4 sm:p-6 shadow-md w-full max-w-2xl mx-auto">
-          <h2 className="font-bold text-gray-800 mb-3 text-base sm:text-lg">Select Delivery Location</h2>
-          <button
-            className="w-full text-left border rounded-lg p-3 text-sm sm:text-base text-gray-700 bg-gray-50 hover:bg-gray-100 transition"
-            onClick={() => setLocationPickerOpen(!locationPickerOpen)}
-          >
-            {selectedZone ? selectedZone.label : 'Choose your delivery zone...'}
-          </button>
-          {locationPickerOpen && (
-            <div className="mt-2 border rounded-lg overflow-hidden max-h-60 overflow-y-auto">
-              {deliveryZones.map((zone) => (
-                <button
-                  key={zone.id}
-                  className={`w-full text-left px-4 py-3 text-sm hover:bg-blue-50 transition border-b last:border-b-0 ${selectedLocation === zone.id ? 'bg-blue-50 font-semibold' : ''}`}
-                  onClick={() => {
-                    setSelectedLocation(zone.id);
-                    setLocationPickerOpen(false);
-                  }}
-                >
-                  <span>{zone.label}</span>
-                  <span className="block text-xs text-gray-500 mt-0.5">{zone.note}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        {/* Order Summary & Proceed */}
+        {/* Proceed to Checkout */}
         <div className="flex justify-center">
-          <Card className="p-4 sm:p-6 shadow-md w-full max-w-2xl">
-            <div className="space-y-3 text-center">
-              <div className="flex justify-between text-gray-600">
-                <span>Subtotal ({itemsSource.length} items)</span>
-                <span>₵{subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Shipping</span>
-                <span>{selectedZone ? `₵${shipping.toFixed(2)}` : 'Select location'}</span>
-              </div>
-              <div className="flex justify-between font-bold text-gray-800 text-lg border-t pt-2">
-                <span>Total</span>
-                <span>₵{total.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-center">
-                <Button
-                  className="w-full max-w-sm mt-2 bg-[#1B3A6B] hover:bg-[#162f58] text-white font-bold py-3"
-                  onClick={() => {
-                    if (!user) { navigate(createPageUrl('Login')); return; }
-                    navigate(createPageUrl('Checkout'));
-                  }}
-                >
-                  Proceed To Checkout
-                </Button>
-              </div>
-              <Link to={createPageUrl('Shop')}>
-                <Button variant="ghost" className="w-full mt-2">Continue Shopping</Button>
-              </Link>
-            </div>
-          </Card>
+          <div className="w-full max-w-2xl space-y-3">
+            <Button
+              className="w-full bg-[#1B3A6B] hover:bg-[#162f58] text-white font-bold py-3"
+              onClick={() => {
+                if (!user) { navigate(createPageUrl('Login')); return; }
+                navigate(createPageUrl('Checkout'));
+              }}
+            >
+              Proceed To Checkout
+            </Button>
+            <Link to={createPageUrl('Shop')}>
+              <Button variant="ghost" className="w-full mt-2">Continue Shopping</Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

@@ -222,8 +222,8 @@ export default function Home() {
             const isExpanded = expandedCat === cat.id;
             return (
               <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
-<div className="w-20 h-20 rounded-2xl overflow-hidden shadow-sm border-2 group-hover:scale-105 transition-transform ${isExpanded ? 'border-[#2E86C1]' : 'border-white'} ${cat.color} flex items-center justify-center`}>
-                  {adminImg
+<div className="w-20 h-20 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 flex items-center justify-center">
+
                     ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
                     : displayImg
                       ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />

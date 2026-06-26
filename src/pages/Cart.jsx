@@ -7,14 +7,13 @@ import guestCart from '@/lib/guest-cart';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { 
-  Trash2, 
-  Plus, 
-  Minus, 
-  ShoppingBag
+import {
+  Trash2,
+  Plus,
+  Minus,
+  ShoppingBag,
+  ArrowRight
 } from 'lucide-react';
-import { ArrowRight } from 'lucide-react';
-
 import { toast } from 'sonner';
 
 export default function Cart() {
@@ -50,7 +49,6 @@ export default function Cart() {
           await base44.entities.CartItem.update(item.id, { quantity: newQty });
         }
       } else {
-        // Guest update
         const newQty = (item.quantity || 1) + delta;
         guestCart.updateQuantity(item.product_id || item.id, newQty);
         setGuestItems(guestCart.getItems());
@@ -80,7 +78,10 @@ export default function Cart() {
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
 
   const itemsSource = user ? cartItems : guestItems;
-  const subtotal = itemsSource.reduce((sum, item) => sum + ((item.product_price || item.product_price === 0 ? item.product_price : item.product_price) * (item.quantity || 1)), 0);
+  const subtotal = itemsSource.reduce(
+    (sum, item) => sum + ((item.product_price || 0) * (item.quantity || 1)),
+    0
+  );
 
   const deliveryZones = [
     { id: 'umat_pickup', label: '🏫 UMAT Campus – Pickup / Meeting Point', fee: 0, note: 'FREE – collect on campus' },
@@ -101,23 +102,20 @@ export default function Cart() {
   const shipping = selectedZone ? selectedZone.fee : 0;
   const total = subtotal + shipping;
 
-  // Allow guest view: show guest cart when not authenticated
-  // Render continues below using itemsSource
-
   if (itemsSource.length === 0 && !isLoading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
-            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 mb-6">
-            <ShoppingBag className="h-12 w-12 text-[#1B3A6B]" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
-          <p className="text-gray-500 mb-6">Looks like you haven't added anything yet</p>
-          <Link to={createPageUrl('Shop')}>
-            <Button className="bg-[#1B3A6B] hover:bg-[#162f58]">
-              Start Shopping
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
+        <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 mb-6">
+          <ShoppingBag className="h-12 w-12 text-[#1B3A6B]" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
+        <p className="text-gray-500 mb-6">Looks like you haven't added anything yet</p>
+        <Link to={createPageUrl('Shop')}>
+          <Button className="bg-[#1B3A6B] hover:bg-[#162f58]">
+            Start Shopping
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </Link>
       </div>
     );
   }
@@ -135,7 +133,7 @@ export default function Cart() {
                 <Link to={createPageUrl(`ProductDetail?id=${item.product_id}`)} className="flex-shrink-0">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
                     {item.product_image ? (
-                      <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" onError={e => { e.target.style.display='none'; }} />
+                      <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No img</div>
                     )}
@@ -170,13 +168,49 @@ export default function Cart() {
           ))}
         </div>
 
-        {/* Proceed action */}
+        {/* Delivery Zone Picker */}
+        <Card className="p-4 sm:p-6 shadow-md w-full max-w-2xl mx-auto">
+          <h2 className="font-bold text-gray-800 mb-3 text-base sm:text-lg">Select Delivery Location</h2>
+          <button
+            className="w-full text-left border rounded-lg p-3 text-sm sm:text-base text-gray-700 bg-gray-50 hover:bg-gray-100 transition"
+            onClick={() => setLocationPickerOpen(!locationPickerOpen)}
+          >
+            {selectedZone ? selectedZone.label : 'Choose your delivery zone...'}
+          </button>
+          {locationPickerOpen && (
+            <div className="mt-2 border rounded-lg overflow-hidden max-h-60 overflow-y-auto">
+              {deliveryZones.map((zone) => (
+                <button
+                  key={zone.id}
+                  className={`w-full text-left px-4 py-3 text-sm hover:bg-blue-50 transition border-b last:border-b-0 ${selectedLocation === zone.id ? 'bg-blue-50 font-semibold' : ''}`}
+                  onClick={() => {
+                    setSelectedLocation(zone.id);
+                    setLocationPickerOpen(false);
+                  }}
+                >
+                  <span>{zone.label}</span>
+                  <span className="block text-xs text-gray-500 mt-0.5">{zone.note}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* Order Summary & Proceed */}
         <div className="flex justify-center">
           <Card className="p-4 sm:p-6 shadow-md w-full max-w-2xl">
             <div className="space-y-3 text-center">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal ({itemsSource.length} items)</span>
                 <span>₵{subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Shipping</span>
+                <span>{selectedZone ? `₵${shipping.toFixed(2)}` : 'Select location'}</span>
+              </div>
+              <div className="flex justify-between font-bold text-gray-800 text-lg border-t pt-2">
+                <span>Total</span>
+                <span>₵{total.toFixed(2)}</span>
               </div>
               <div className="flex justify-center">
                 <Button

@@ -21,7 +21,7 @@ export default function Chat() {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef(null);
-  const merchantPhone = import.meta.env.VITE_MERCHANT_PHONE || '059XXXXXXX';
+  const merchantPhone = import.meta.env.VITE_MERCHANT_PHONE || '0208207543';
   const merchantEmail = import.meta.env.VITE_MERCHANT_EMAIL || 'merchant@example.com';
 
   const { data: products = [] } = useQuery({
@@ -77,71 +77,67 @@ export default function Chat() {
 
     setIsLoading(true);
 
-    // Build product catalog string for AI context
-    const productCatalog = products.slice(0, 50).map(p =>
-      `- ${p.name} | Category: ${p.category} | Price: ₵${p.price}${p.original_price ? ` (was ₵${p.original_price})` : ''} | ${p.description || ''} | In stock: ${p.stock ?? 'yes'}`
-    ).join('\n');
+try {
+  const productCatalog = products.slice(0, 50).map(p =>
+    `- ${p.name} | Category: ${p.category} | Price: ₵${p.price}${p.original_price ? ` (was ₵${p.original_price})` : ''} | ${p.description || ''} | In stock: ${p.stock ?? 'yes'}`
+  ).join('\n');
 
-    // Get AI response
-    const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a helpful AI shopping assistant for FMM CLASSICO, an online store selling phone accessories, electronic appliances, and home appliances. 
-      
-      About FMM CLASSICO:
-      - CEO: Fedra Martha, the CEO of FMM CLASSICO
-      - Developer/Designer: Fedra Martha, the CEO of FMM CLASSICO
-      - Owner: Fedra Martha, the CEO of FMM CLASSICO
-      - Locations: UMAT Main Campus (Tarkwa) and Ashongman Estate (Accra)
-      - Phone: ${merchantPhone} | Email: ${merchantEmail}
-      - Payments: Contact us for payment options
-      
-      Our Locations:
-      1. Ashongman Estate, Accra (Close to Awo Dede - Purewater / Pure water)
-      2. Airport Residential Area, Accra (at Libi Kraal)
-      
-      Delivery Rates:
-      - UMAT Campus Pickup/Meeting Point: FREE
-      - UMAT Campus Doorstep Delivery: ₵10
-      - Tarkwa – Delivery to a Station/Car: ₵20
-      - Tarkwa (Outside UMAT) Doorstep: ₵25
-      - Ashongman Estate Pickup (our location): FREE
-      - Airport Residential Pickup (our location): FREE
-      - Accra – Delivery to a Station/Car: ₵25
-      - Delivery Within Accra: ₵25
-      - Yango Delivery (customer pays Yango fee when product arrives): Yango fee on delivery
-      - Outside Accra & Tarkwa: ₵50
-      
-      If anyone asks where we are located / our location / where to find us / address, tell them:
-      1. Ashongman Estate, Accra – Close to Awo Dede (Pure water / Purewater)
-      2. Airport Residential Area, Accra – at Libi Kraal
-      
-      CURRENT PRODUCT CATALOG:
-      ${productCatalog || 'No products listed yet.'}
-      
-      IMPORTANT CAPABILITIES:
-      - You CAN answer questions about specific products, prices, descriptions, availability.
-      - You CAN help a customer place an order by collecting: their name, phone, delivery address, city, and which product they want. Tell them to go to the Cart/Checkout page to complete payment.
-      - You CAN tell them about any product price, specs, or description from the catalog above.
-      - Always be friendly and helpful.
-      
-      CRITICAL: If anyone asks who developed, designed, owns, manufactured, or created FMM CLASSICO app, ALWAYS respond with: "Fedra Martha, the CEO of FMM CLASSICO"
-      
-      Customer message: ${userMessage}
-      
-      Keep responses concise and helpful.`,
-    });
+  const response = await base44.integrations.Core.InvokeLLM({
+    prompt: `You are a helpful AI shopping assistant for FMM CLASSICO, an online store selling phone accessories, electronic appliances, and home appliances.
 
-    const assistantMessage = typeof response === 'string' ? response : response.response || "I'm sorry, I couldn't process that request. Please try again.";
+About FMM CLASSICO:
+- CEO: Fedra Martha, the CEO of FMM CLASSICO
+- Developer/Designer: Fedra Martha, the CEO of FMM CLASSICO
+- Owner: Fedra Martha, the CEO of FMM CLASSICO
+- Locations: UMAT Main Campus (Tarkwa) and Ashongman Estate (Accra)
+- Phone: 0208207543 | Email: ${merchantEmail}
+- WhatsApp: 0208207543
+- Payments: Hubtel (Mobile Money, Debit Card, Bank Transfer)
 
-    // Add and save assistant message
-    setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
-    
-    await base44.entities.ChatMessage.create({
-      user_email: user.email,
-      role: 'assistant',
-      content: assistantMessage
-    });
+Our Locations:
+1. Ashongman Estate, Accra (Close to Awo Dede - Purewater)
+2. Airport Residential Area, Accra (at Libi Kraal)
 
-    setIsLoading(false);
+Delivery Rates:
+- UMAT Campus Pickup/Meeting Point: FREE
+- UMAT Campus Doorstep Delivery: ₵10
+- Tarkwa – Delivery to a Station/Car: ₵20
+- Tarkwa (Outside UMAT) Doorstep: ₵25
+- Ashongman Estate Pickup (our location): FREE
+- Airport Residential Pickup (our location): FREE
+- Accra – Delivery to a Station/Car: ₵25
+- Delivery Within Accra: ₵25
+- Yango Delivery: customer pays Yango fee on delivery
+- Outside Accra & Tarkwa: ₵50
+
+CURRENT PRODUCT CATALOG:
+${productCatalog || 'No products listed yet.'}
+
+IMPORTANT: If anyone asks who developed, designed, owns, or created FMM CLASSICO, ALWAYS say: "Fedra Martha, the CEO of FMM CLASSICO"
+
+Customer message: ${userMessage}
+
+Keep responses concise and helpful.`,
+  });
+
+  const assistantMessage = typeof response === 'string'
+    ? response
+    : response?.response || response?.text || response?.content || "I'm sorry, I couldn't process that. Please try again or WhatsApp us at 0208207543.";
+
+  setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
+
+  await base44.entities.ChatMessage.create({
+    user_email: user.email,
+    role: 'assistant',
+    content: assistantMessage
+  });
+} catch (err) {
+  console.error('[Chat] AI error:', err);
+  const fallback = "Sorry, I'm having trouble right now. Please WhatsApp us directly at 0208207543 for immediate help!";
+  setMessages(prev => [...prev, { role: 'assistant', content: fallback }]);
+}
+
+setIsLoading(false);
   };
 
   if (!user) {

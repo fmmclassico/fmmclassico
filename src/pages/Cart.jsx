@@ -14,7 +14,6 @@ import {
   ShoppingBag,
   ArrowRight
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 export default function Cart() {
   const { user, isAuthenticated } = useAuth();

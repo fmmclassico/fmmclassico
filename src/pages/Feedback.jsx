@@ -91,26 +91,34 @@ export default function Feedback() {
   };
 
   const submitMutation = useMutation({
-    mutationFn: async (data) => {
-      const feedback = await base44.entities.Feedback.create(data);
-      // Notify admin
+  mutationFn: async (data) => {
+    // Save feedback first (this is what matters)
+    const feedback = await base44.entities.Feedback.create(data);
+
+    // Try to send email notification to admin (non-blocking)
+    try {
       const imageLines = uploadedImages.length > 0
         ? `\n\nAttached images:\n${uploadedImages.join('\n')}`
         : '';
-      const feedbackEmail = import.meta.env.VITE_FEEDBACK_EMAIL || import.meta.env.VITE_MERCHANT_EMAIL || 'merchant@example.com';
       await base44.integrations.Core.SendEmail({
-        to: feedbackEmail,
+        to: 'fmmclassico@gmail.com',
         subject: `📩 New Feedback: ${data.type?.toUpperCase()} – ${data.subject || 'No subject'}`,
-        body: `New customer feedback received:\n\nName: ${data.customer_name}\nEmail: ${data.customer_email}\nPhone: ${data.customer_phone || 'N/A'}\nType: ${data.type}\nSubject: ${data.subject || 'N/A'}\nOrder #: ${data.order_number || 'N/A'}\n\nMessage:\n${data.message}${imageLines}`,
+        body: `New customer feedback:\n\nName: ${data.customer_name}\nEmail: ${data.customer_email}\nPhone: ${data.customer_phone || 'N/A'}\nType: ${data.type}\nSubject: ${data.subject || 'N/A'}\nOrder #: ${data.order_number || 'N/A'}\n\nMessage:\n${data.message}${imageLines}`,
       });
-      return feedback;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['myFeedbacks'] });
-      setSubmitted(true);
-    },
-    onError: () => toast.error('Failed to submit. Try again.'),
-  });
+    } catch (emailErr) {
+      console.warn('[Feedback] Email notification failed (feedback still saved):', emailErr);
+    }
+
+    return feedback;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['myFeedbacks'] });
+    setSubmitted(true);
+  },
+  onError: (err) => {
+    console.error('[Feedback] Submit error:', err);
+  },
+});
 
   const respondMutation = useMutation({
     mutationFn: ({ id, response, status }) =>

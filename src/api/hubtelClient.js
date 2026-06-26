@@ -6,7 +6,6 @@ export async function initiatePayment({ totalAmount, description, callbackUrl, r
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'}`,
       },
       body: JSON.stringify({
         totalAmount,
@@ -25,13 +24,13 @@ export async function initiatePayment({ totalAmount, description, callbackUrl, r
     return { error: error.message };
   }
 }
+
 export async function checkPaymentStatus(clientReference) {
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/hubtel-checkout?clientReference=${clientReference}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'}`,
       },
     });
     const result = await response.json();

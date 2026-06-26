@@ -237,9 +237,23 @@ export default function Layout({ children, currentPageName }) {
           "@type": "SearchAction",
           "target": { "@type": "EntryPoint", "urlTemplate": `${window.location.origin}?page=Shop&search={search_term_string}` },
           "query-input": "required name=search_term_string"
-        }
-      }
-    ]);
+         }
+},
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Fedra Mensah Martha",
+  "alternateName": ["Fedra Martha", "Fedra Mensah", "Miss Fedra Mensah Martha"],
+  "jobTitle": "CEO & Founder",
+  "worksFor": {
+    "@type": "Organization",
+    "name": "FMM CLASSICO",
+    "url": window.location.origin
+  },
+  "description": "Fedra Mensah Martha is the CEO and Founder of FMM CLASSICO, a trusted retail and wholesale store in Ghana specializing in phones, phone accessories, electronics, and home appliances.",
+  "nationality": "Ghanaian"
+}
+]);
   }, []);
 
   const ASH = '#2E86C1';

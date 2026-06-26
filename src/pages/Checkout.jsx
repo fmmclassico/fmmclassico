@@ -173,8 +173,7 @@ export default function Checkout() {
       };
 
       await base44.entities.Order.create(orderPayload);
-      await Promise.all(cartItems.map(item => base44.entities.CartItem.delete(item.id).catch(() => {})));
-      queryClient.invalidateQueries({ queryKey: ['cartItems', user.email] });
+      // Don't delete cart items yet - they'll be cleared after payment confirms
       queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
 
       setCreatedOrderNumber(orderNumber);

@@ -223,10 +223,12 @@ export default function Home() {
             return (
               <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
 <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 flex items-center justify-center">
-                    : displayImg
-                      ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
-                      : <cat.icon className="h-10 w-10 opacity-70" />}
-                </div>
+  {adminImg
+    ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
+    : displayImg
+      ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
+      : <cat.icon className="h-10 w-10 opacity-70" />}
+</div>
                 <span className="text-xs md:text-sm font-bold text-gray-800 text-center leading-tight">{cat.label}</span>
               </button>
             );

@@ -6,137 +6,56 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const NAVY_GRADIENT = 'from-[#031725] via-[#0A2E60] to-[#102C54]';
-
-const DEFAULT_SLIDES = [
-  {
-    id: 'default-1',
-    badge: '🔥 New Arrivals',
-    title: 'Phones',
-    subtitle: 'Samsung, iPhones & more at unbeatable prices',
-    bg_gradient: NAVY_GRADIENT,
-    image_url: '',
-    cta_link: createPageUrl('Shop?category=phones'),
-    cta_text: 'Shop Now',
-  },
-  {
-    id: 'default-1b',
-    badge: '🔥 Classico Deals',
-    title: 'Phone Accessories',
-    subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
-    bg_gradient: NAVY_GRADIENT,
-    image_url: '',
-    cta_link: createPageUrl('Categories'),
-    cta_text: 'Shop Now',
-  },
-  {
-    id: 'default-2',
-    badge: '⚡ Best Deals',
-    title: 'Electronic Appliances',
-    subtitle: 'Top quality electronics for your everyday needs',
-    bg_gradient: NAVY_GRADIENT,
-    image_url: '',
-    cta_link: createPageUrl('Shop?category=electronic_appliances'),
-    cta_text: 'Shop Now',
-  },
-  {
-    id: 'default-3',
-    badge: '🏡 Home Deals',
-    title: 'Home Appliances',
-    subtitle: 'Quality home appliances delivered to your door',
-    bg_gradient: NAVY_GRADIENT,
-    image_url: '',
-    cta_link: createPageUrl('Shop?category=home_appliances'),
-    cta_text: 'Shop Now',
-  },
-  {
-    id: 'default-4',
-    badge: '📱 Top Brands',
-    title: 'Samsung & Apple',
-    subtitle: 'Genuine Samsung & Apple products at great prices',
-    bg_gradient: NAVY_GRADIENT,
-    image_url: '',
-    cta_link: createPageUrl('BrandProducts?brand=Samsung'),
-    cta_text: 'Shop Brands',
-  },
-  {
-    id: 'default-5',
-    badge: '🎧 Accessories',
-    title: 'Earphones & Speakers',
-    subtitle: 'Premium sound at affordable prices — Oraimo, JBL & more',
-    bg_gradient: NAVY_GRADIENT,
-    image_url: '',
-    cta_link: createPageUrl('Shop?category=earphones'),
-    cta_text: 'Shop Now',
-  },
-  {
-    id: 'default-6',
-    badge: '⌚ Smart Wear',
-    title: 'Smart Watches',
-    subtitle: 'Stay connected with the latest smartwatches',
-    bg_gradient: NAVY_GRADIENT,
-    image_url: '',
-    cta_link: createPageUrl('Shop?category=smart_watches'),
-    cta_text: 'Shop Now',
-  },
-];
-
 export default function HeroBanner() {
   const [current, setCurrent] = useState(0);
-  const [slides, setSlides] = useState(DEFAULT_SLIDES);
+  const [slides, setSlides] = useState([]);
   const [touchStart, setTouchStart] = useState(null);
 
-  useEffect(() => {
+  useEffect(function() {
     base44.entities.PromoBanner.filter({ is_active: true }, 'order', 20)
-      .then(result => {
-        const data = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : null;
-        if (data && data.length > 0) {
-          setSlides(data);
-        }
+      .then(function(result) {
+        var data = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
+        setSlides(data);
       })
-      .catch(() => {});
+      .catch(function() { setSlides([]); });
   }, []);
 
-  useEffect(() => {
+  useEffect(function() {
     if (slides.length <= 1) return;
-    const timer = setInterval(() => {
-      setCurrent(prev => (prev + 1) % slides.length);
+    var timer = setInterval(function() {
+      setCurrent(function(prev) { return (prev + 1) % slides.length; });
     }, 7000);
-    return () => clearInterval(timer);
+    return function() { clearInterval(timer); };
   }, [slides.length]);
 
-  const prev = () => setCurrent(prev => (prev - 1 + slides.length) % slides.length);
-  const next = () => setCurrent(prev => (prev + 1) % slides.length);
+  var goToPrev = function() { setCurrent(function(prev) { return (prev - 1 + slides.length) % slides.length; }); };
+  var goToNext = function() { setCurrent(function(prev) { return (prev + 1) % slides.length; }); };
 
-  const handleTouchStart = (e) => setTouchStart(e.touches[0].clientX);
-  const handleTouchEnd = (e) => {
+  var handleTouchStart = function(e) { setTouchStart(e.touches[0].clientX); };
+  var handleTouchEnd = function(e) {
     if (touchStart === null) return;
-    const diff = touchStart - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 40) { diff > 0 ? next() : prev(); }
+    var diff = touchStart - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) { diff > 0 ? goToNext() : goToPrev(); }
     setTouchStart(null);
   };
-  const slide = slides.length > 0 ? slides[current % slides.length] : DEFAULT_SLIDES[0];
 
-  useEffect(() => {
-    if (slides.length > 0) {
-      setCurrent(0);
-    }
-  }, [slides.length]);
+  // Don't render anything if no admin slides
+  if (slides.length === 0) return null;
 
-  const ctaHref = (() => {
-    const link = slide.cta_link;
+  var slide = slides[current % slides.length];
+
+  var ctaHref = (function() {
+    var link = slide.cta_link;
     if (!link) return createPageUrl('Shop');
     if (link.startsWith('http')) return link;
     if (link.startsWith('/')) return link;
     return '/' + link;
   })();
 
-  const NAVY_BACKGROUND = 'linear-gradient(90deg, #031725 0%, #0A2E60 50%, #102C54 100%)';
-
   return (
     <div
-      className="relative overflow-hidden"
-      style={{ backgroundImage: NAVY_BACKGROUND }}
+      className="relative w-full overflow-hidden rounded-none md:rounded-2xl"
+      style={{ background: 'linear-gradient(90deg, #031725 0%, #0A2E60 50%, #102C54 100%)' }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -149,45 +68,53 @@ export default function HeroBanner() {
           transition={{ duration: 0.4 }}
           className="flex items-center min-h-[200px] md:min-h-[280px]"
         >
-          <div className="container mx-auto px-6 sm:px-8 md:px-10 py-8 md:py-12 flex items-center justify-between gap-4">
-            <div className="flex-1 max-w-md">
-              {slide.badge && (
-                <span className="inline-block bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full mb-3">
-                  {slide.badge}
-                </span>
-              )}
-              <h1 className="text-xl md:text-3xl font-black text-white mb-2 leading-tight">
-                {slide.title}
-              </h1>
-              {slide.subtitle && (
-                <p className="text-sm md:text-base text-white/90 mb-4">
-                  {slide.subtitle}
-                </p>
-              )}
-              <Link to={ctaHref}>
-                <Button size="sm" className="bg-white font-bold shadow-lg text-sm" style={{ color: '#0093A6' }}>
-                  {slide.cta_text || 'Shop Now'} <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-            {slide.image_url && (
-              <div className="w-32 h-32 md:w-56 md:h-48 flex-shrink-0 rounded-2xl overflow-hidden shadow-2xl">
-                <img src={slide.image_url} alt={slide.title} className="w-full h-full object-cover" />
-              </div>
+          {/* Left side: text */}
+          <div className="flex-1 p-5 md:p-8 z-10">
+            {slide.badge && (
+              <span className="inline-block bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full mb-2">
+                {slide.badge}
+              </span>
             )}
+            <h2 className="text-white text-xl md:text-3xl font-black leading-tight mb-1">
+              {slide.title}
+            </h2>
+            {slide.subtitle && (
+              <p className="text-white/80 text-xs md:text-sm mb-3 max-w-[240px]">
+                {slide.subtitle}
+              </p>
+            )}
+            <Link to={ctaHref}>
+              <Button size="sm" className="bg-white text-[#0A2E60] hover:bg-gray-100 font-bold rounded-full px-4 text-xs">
+                {slide.cta_text || 'Shop Now'} <ArrowRight className="w-3 h-3 ml-1" />
+              </Button>
+            </Link>
           </div>
+
+          {/* Right side: image in rounded rectangle */}
+          {slide.image_url && (
+            <div className="w-[140px] h-[160px] md:w-[200px] md:h-[220px] mr-4 md:mr-8 flex-shrink-0 rounded-2xl overflow-hidden shadow-lg">
+              <img
+                src={slide.image_url}
+                alt={slide.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
 
-      {Array.isArray(slides) && slides.length > 1 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrent(i)}
-              className={`rounded-full transition-all ${i === current ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/50'}`}
-            />
-          ))}
+      {/* Dots */}
+      {slides.length > 1 && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+          {slides.map(function(_, i) {
+            return (
+              <button
+                key={i}
+                onClick={function() { setCurrent(i); }}
+                className={i === current ? 'w-6 h-2 rounded-full bg-white transition-all' : 'w-2 h-2 rounded-full bg-white/50 transition-all'}
+              />
+            );
+          })}
         </div>
       )}
     </div>

@@ -226,8 +226,7 @@ export default function Home() {
   {adminImg
     ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
     : displayImg
-      ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
-      : <cat.icon className="h-10 w-10 opacity-70" />}
+      ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover brightness-110 contrast-105" />
 </div>
                 <span className="text-xs md:text-sm font-bold text-gray-800 text-center leading-tight">{cat.label}</span>
               </button>

@@ -91,7 +91,10 @@ export default function Orders() {
                   }).then(() => {
                     queryClient.invalidateQueries({ queryKey: ['orders'] });
                     if (paymentStatus === 'paid') {
-                      toast.success('✅ Payment confirmed! Your order has been received.');
+                      toast.success('✅ Payment confirmed! Your order has been received.'); base44.entities.CartItem.filter({ user_email: user.email }).then(items => {
+  items.forEach(item => base44.entities.CartItem.delete(item.id).catch(() => {}));
+  queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+});
                     } else {
                       toast.info('Payment status checked. Please complete payment if needed.');
                     }

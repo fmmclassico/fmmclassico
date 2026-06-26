@@ -330,12 +330,30 @@ export default function Checkout() {
               <Label className="text-sm">Delivery Address / Landmark *</Label>
               <Textarea name="delivery_address" value={formData.delivery_address} onChange={handleInputChange} placeholder="Enter your address or use Get Location below" rows={2} required />
 
-              <div className="mt-2 flex items-center gap-2">
-                <Button type="button" variant="outline" size="sm" className="text-xs" onClick={getCurrentLocation}>
-                  Get Location
-                </Button>
-                <span className="text-[10px] text-gray-500">Auto-detect your GPS location</span>
-              </div>
+              <div className="mt-2 p-3 bg-blue-50 rounded-xl border border-blue-100">
+  <div className="flex items-center gap-2 mb-2">
+    <span>📍</span>
+    <span className="text-xs font-semibold text-blue-800">Auto-detect your current location</span>
+  </div>
+  <Button type="button" variant="outline" size="sm" onClick={getCurrentLocation} className="w-full text-xs font-semibold">
+    Get Location
+  </Button>
+  <p className="text-[10px] text-gray-500 mt-1">
+    Click to automatically detect and add your GPS location to the address field.
+  </p>
+  {locationError && (
+    <div className="mt-2">
+      <p className="text-xs text-red-600">{locationError}</p>
+      <button
+        type="button"
+        onClick={function() { window.open('https://support.google.com/android/answer/3457478?hl=en', '_blank'); }}
+        className="text-xs text-blue-600 underline font-medium hover:text-blue-800 mt-1"
+      >
+        Tap here to open Location Settings guide
+      </button>
+    </div>
+  )}
+</div>
 
               {locationError && (
                 <p className="text-xs text-red-600 mt-1">{locationError}</p>

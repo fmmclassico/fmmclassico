@@ -1,33 +1,27 @@
-// Frontend Hubtel client — forwards requests to server-side endpoints to avoid exposing secrets in the browser
+const SUPABASE_URL = "https://kptlejtauwqvaapsrjfx.supabase.co";
 
-export async function initiatePayment(payload) {
+export async function initiatePayment({ totalAmount, description, callbackUrl, returnUrl, cancellationUrl, clientReference }) {
   try {
-    // Forward to server-side function which holds the real Hubtel credentials
-    const response = await fetch('/api/hubtel/initiate', {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/hubtel-checkout`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'}`,
+      },
+      body: JSON.stringify({
+        totalAmount,
+        description,
+        callbackUrl,
+        returnUrl,
+        cancellationUrl,
+        clientReference,
+      }),
     });
 
-    const data = await response.json();
-    if (!response.ok) {
-      return { error: data.message || data.error || `HTTP ${response.status}`, details: data };
-    }
-    return data;
-  } catch (err) {
-    console.error('[HubtelClient] Network error:', err);
-    return { error: err.message || 'Network error - cannot reach server', details: String(err) };
-  }
-}
-
-export async function checkPaymentStatus(clientReference) {
-  try {
-    const response = await fetch(`/api/hubtel/status?clientReference=${encodeURIComponent(clientReference)}`);
-    const data = await response.json();
-    if (!response.ok) return { error: data.message || data.error || `HTTP ${response.status}`, details: data };
-    return data;
-  } catch (err) {
-    console.error('[HubtelClient] Status check error:', err);
-    return { error: err.message || 'Failed to check payment status', details: String(err) };
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('[HubtelClient] Error:', error);
+    return { error: error.message };
   }
 }

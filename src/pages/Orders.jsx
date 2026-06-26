@@ -318,12 +318,14 @@ export default function Orders() {
                       const s = order.status;
                       const ORDER_RANK = { confirmed: 1, processing: 2, packed: 3, shipped: 4, out_for_delivery: 5, in_transit: 5, delivered: 6 };
                       const rank = ORDER_RANK[s] || 0;
-                      const steps = [
-                        { label: 'Payment Confirmed', done: true },
-                        { label: 'Processing', done: rank >= 2 },
-                        { label: 'Shipped', done: rank >= 4 },
-                        { label: 'Delivered', done: rank >= 6 },
-                      ];
+                      const isPaid = order.payment_status === 'paid';
+const steps = [
+  { label: 'Order Placed', done: true },
+  { label: 'Payment Confirmed', done: isPaid },
+  { label: 'Processing', done: isPaid && rank >= 2 },
+  { label: 'Shipped', done: isPaid && rank >= 4 },
+  { label: 'Delivered', done: isPaid && rank >= 6 },
+];
                       return (
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                           {steps.map((step, i) => (

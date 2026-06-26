@@ -55,8 +55,8 @@ export default function Cart() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cartItems', user?.email] });
-    }
+ queryClient.invalidateQueries({ queryKey: ['cartItems', user?.email] });
+}
   });
 
   const removeItemMutation = useMutation({

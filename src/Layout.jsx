@@ -185,20 +185,20 @@ export default function Layout({ children, currentPageName }) {
       if (!el) { el = document.createElement('meta'); el.setAttribute(attr, key); document.head.appendChild(el); }
       el.setAttribute('content', content);
     };
-    setMeta('name', 'description', 'FMM CLASSICO (FMMCLASSICO) – Your trusted online store for premium phone accessories, electronic appliances and home appliances in Ghana. Shop chargers, earphones, phone cases, smart watches and more. Fast delivery to Tarkwa (UMAT Campus), Accra (Ashongman Estate) and across Ghana.');
-    setMeta('name', 'keywords', 'FMMCLASSICO, FMM CLASSICO, fmmclassico, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Ashongman Estate, online shopping Ghana');
+    setMeta('name', 'description', 'FMM CLASSICO – Your trusted destination phones & accessories, home appliances and Electronics in Ghana. Explore a wide range of premium phone accessories, quality electronics and essential home appliances at unbeatable prices. Fast delivery across Ghana.');
+    setMeta('name', 'keywords', 'FMMCLASSICO, FMM CLASSICO, fmmclassico, fmm, classico,  phone accessories Ghana, buy Phones Ghana, buy phone accessories Ghana, Buy Electronics Ghana, buy home appliances Ghana, Phone accessories Ghana, Electronics Ghana, smart watches Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa shop, University of Mines and Technology shop, Accra phones shop, Kumasi, Accra, Ghana, phones shop, Phone Accessories, Accra, Kumasi, Tarkwa, Knust, Legon , Shops in Umat, Umat, Knust Shops, Shops in Knust, Shops in University of Ghana, University of Ghana, Shops in Ghana, Popular Shop in Ghana, Chargers, Charger, Cable, Phones, Games, Speakers, Watches, wholesale shop in Ghana, Retail shop in Ghana, Best quality premium goods shop, shops that sells quality products, online shopping Ghana');
     setMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
     setMeta('name', 'googlebot', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
     setMeta('name', 'author', 'FMM CLASSICO');
     setMeta('property', 'og:type', 'website');
     setMeta('property', 'og:site_name', 'FMM CLASSICO');
-    setMeta('property', 'og:title', 'FMM CLASSICO – Phone Accessories, Electronics & Home Appliances in Ghana');
-    setMeta('property', 'og:description', 'Shop premium phone accessories, electronics and home appliances at FMM CLASSICO. Fast delivery across Ghana.');
+    setMeta('property', 'og:title', 'FMM CLASSICO – Phones & Accessories, Electronics & Home Appliances in Ghana');
+    setMeta('property', 'og:description', 'FMM Classico is a trusted online and physical retail and wholesale store specializing in premium phones & accessories, quality electronics, and home appliances. We are committed to providing authentic products at competitive prices to both individual customers and businesses. Whether you shop online or visit our physical store, you’ll enjoy a seamless shopping experience with secure payments, fast and reliable delivery, and exceptional customer service. At FMM Classico, our mission is to make quality technology and home essentials accessible, affordable, and convenient for everyone. Shop with confidence and experience quality you can trust.');
     setMeta('property', 'og:image', 'https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg');
     setMeta('property', 'og:url', window.location.origin);
     setMeta('name', 'twitter:card', 'summary_large_image');
-    setMeta('name', 'twitter:title', 'FMM CLASSICO – Phone Accessories & Electronics Ghana');
-    setMeta('name', 'twitter:description', 'Premium phone accessories, electronics & home appliances. Fast delivery across Ghana. Shop FMMCLASSICO now!');
+    setMeta('name', 'twitter:title', 'FMM CLASSICO – Phones & Accessories, Electronics and Home appliances in Ghana');
+    setMeta('name', 'twitter:description', 'Premium phones & accessories, electronics and home appliances. Fast delivery across Ghana. Shop FMMCLASSICO now!');
     setMeta('name', 'twitter:image', 'https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg');
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical); }
@@ -210,8 +210,8 @@ export default function Layout({ children, currentPageName }) {
         "@context": "https://schema.org",
         "@type": "OnlineStore",
         "name": "FMM CLASSICO",
-        "alternateName": ["FMMCLASSICO", "FMMClassico", "fmmclassico"],
-        "description": "FMM CLASSICO is an online store for premium phone accessories, electronic appliances and home appliances in Ghana.",
+        "alternateName": ["FMMCLASSICO", "FMMClassico", "FMM" "Classico", "fmm", "classico", "fmmclassico"],
+        "description": "FMM Classico is a trusted online and physical retail and wholesale store specializing in premium phones & accessories, quality electronics, and home appliances in Ghana.",
         "url": window.location.origin,
         "logo": { "@type": "ImageObject", "url": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg", "width": 1200, "height": 1200 },
         "image": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg",

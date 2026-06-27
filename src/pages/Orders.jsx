@@ -43,38 +43,6 @@ const paymentStatusConfig = {
   refunded: { color: 'bg-blue-100 text-blue-700', label: '↩️ Refunded' },
 };
 
-// Helper to send notification to both customer and admin
-async function sendNotification({ userEmail, adminEmails, title, message, type, orderNumber, orderId }) {
-  // Notify customer
-  await supabase.from('notifications').insert({
-    user_email: userEmail,
-    title,
-    message,
-    type,
-    order_number: orderNumber,
-    order_id: orderId,
-    is_read: false,
-  });
-  // Notify all admins
-  if (adminEmails && adminEmails.length > 0) {
-    const adminNotifs = adminEmails.map(email => ({
-      user_email: email,
-      title: `[ADMIN] ${title}`,
-      message: `Customer (${userEmail}): ${message}`,
-      type,
-      order_number: orderNumber,
-      order_id: orderId,
-      is_read: false,
-    }));
-    await supabase.from('notifications').insert(adminNotifs);
-  }
-}
-
-function getAdminEmails() {
-  const envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || '';
-  return envAdminEmails.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-}
-
 export default function Orders() {
   const [user, setUser] = useState(null);
   const [selectedOrders, setSelectedOrders] = useState([]);
@@ -121,21 +89,9 @@ export default function Orders() {
           .eq('order_number', orderNumber)
           .limit(1);
 
-        if (fetchError || !orders || orders.length === 0) {
-          console.error('[Orders] Could not find order:', orderNumber);
-          return;
-        }
+        if (fetchError || !orders || orders.length === 0) return;
 
         const order = orders[0];
-
-        // Only update if status actually changed
-        if (order.payment_status === paymentStatus) {
-          if (paymentStatus === 'paid') {
-            toast.success('✅ Payment already confirmed!');
-          }
-          return;
-        }
-
         const trackingUpdates = order.tracking_updates || [];
         trackingUpdates.push({
           status: paymentStatus === 'paid' ? 'Payment Confirmed' : 'Payment Pending',
@@ -151,38 +107,43 @@ export default function Orders() {
           })
           .eq('id', order.id);
 
-        // Send notifications to customer AND admin
-        const adminEmails = getAdminEmails();
+        // Create notification for customer
         if (paymentStatus === 'paid') {
-          await sendNotification({
-            userEmail: user.email,
-            adminEmails,
+          await supabase.from('notifications').insert({
+            user_email: order.customer_email,
             title: '✅ Payment Confirmed',
-            message: `Payment for order #${orderNumber} (₵${order.total_amount?.toFixed(2)}) has been confirmed successfully!`,
+            message: `Payment for order #${order.order_number} has been confirmed. Your order is now being processed.`,
             type: 'payment_confirmed',
-            orderNumber: orderNumber,
-            orderId: order.id,
+            order_id: order.id,
+            order_number: order.order_number,
+            is_read: false,
+            created_date: new Date().toISOString(),
           });
 
-          toast.success('✅ Payment confirmed! Your order has been received.');
+          // Create notification for admin
+          const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+          for (const adminEmail of adminEmails) {
+            await supabase.from('notifications').insert({
+              user_email: adminEmail,
+              title: '💰 New Payment Received',
+              message: `Order #${order.order_number} by ${order.customer_name} (₵${order.total_amount?.toFixed(2)}) - Payment confirmed via Hubtel.`,
+              type: 'payment_confirmed',
+              order_id: order.id,
+              order_number: order.order_number,
+              is_read: false,
+              created_date: new Date().toISOString(),
+            });
+          }
 
           // Clear cart
           await supabase.from('cart_items').delete().eq('user_email', user.email);
           queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+
+          toast.success('✅ Payment confirmed! Your order has been received.');
         } else {
-          await sendNotification({
-            userEmail: user.email,
-            adminEmails,
-            title: '⏳ Payment Pending',
-            message: `Payment for order #${orderNumber} is still being processed. We'll notify you once confirmed.`,
-            type: 'payment_pending',
-            orderNumber: orderNumber,
-            orderId: order.id,
-          });
           toast.info('Payment is being processed. It may take a moment to confirm.');
         }
 
-        // Force refresh
         queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
         queryClient.refetchQueries({ queryKey: ['orders', user.email] });
         queryClient.invalidateQueries({ queryKey: ['notifications', user.email] });
@@ -192,26 +153,22 @@ export default function Orders() {
         if (status === 'success') {
           const { data: orders } = await supabase
             .from('orders')
-            .select('id, total_amount')
+            .select('*')
             .eq('order_number', orderNumber)
             .limit(1);
           if (orders && orders.length > 0) {
             await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', orders[0].id);
-
-            const adminEmails = getAdminEmails();
-            await sendNotification({
-              userEmail: user.email,
-              adminEmails,
+            await supabase.from('notifications').insert({
+              user_email: user.email,
               title: '✅ Payment Confirmed',
-              message: `Payment for order #${orderNumber} (₵${orders[0].total_amount?.toFixed(2)}) has been confirmed!`,
+              message: `Payment for order #${orderNumber} has been confirmed.`,
               type: 'payment_confirmed',
-              orderNumber: orderNumber,
-              orderId: orders[0].id,
+              order_number: orderNumber,
+              is_read: false,
+              created_date: new Date().toISOString(),
             });
-
             queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
             queryClient.refetchQueries({ queryKey: ['orders', user.email] });
-            queryClient.invalidateQueries({ queryKey: ['notifications', user.email] });
             toast.success('✅ Payment confirmed!');
           }
         }
@@ -230,7 +187,7 @@ export default function Orders() {
         .eq('customer_email', user.email)
         .order('created_date', { ascending: false })
         .limit(200);
-      if (error) { console.error('Fetch orders error:', error); return []; }
+      if (error) return [];
       return data || [];
     },
     enabled: !!user?.email,
@@ -240,9 +197,7 @@ export default function Orders() {
 
   const deleteOrdersMutation = useMutation({
     mutationFn: async (orderIds) => {
-      await Promise.all(orderIds.map(async (id) => {
-        await supabase.from('orders').delete().eq('id', id);
-      }));
+      await Promise.all(orderIds.map(id => supabase.from('orders').delete().eq('id', id)));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -253,9 +208,7 @@ export default function Orders() {
 
   const handleToggleSelect = (orderId) => {
     setSelectedOrders(prev =>
-      prev.includes(orderId)
-        ? prev.filter(id => id !== orderId)
-        : [...prev, orderId]
+      prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
     );
   };
 
@@ -271,24 +224,36 @@ export default function Orders() {
     mutationFn: async ({ order, reason }) => {
       const newTracking = [
         ...(order.tracking_updates || []),
-        {
-          status: 'Cancelled',
-          message: `Order cancelled by customer. Reason: ${reason || 'No reason given'}`,
-          timestamp: new Date().toISOString()
-        }
+        { status: 'Cancelled', message: `Order cancelled by customer. Reason: ${reason || 'No reason given'}`, timestamp: new Date().toISOString() }
       ];
       await supabase.from('orders').update({ status: 'cancelled', tracking_updates: newTracking }).eq('id', order.id);
 
-      const adminEmails = getAdminEmails();
-      await sendNotification({
-        userEmail: order.customer_email,
-        adminEmails,
+      // Notify customer
+      await supabase.from('notifications').insert({
+        user_email: order.customer_email,
         title: '❌ Order Cancelled',
-        message: `Order #${order.order_number} has been cancelled. ${reason ? `Reason: ${reason}` : ''} If paid, contact WhatsApp: 0509 896 035 for a refund.`,
+        message: `Your order #${order.order_number} has been cancelled. If you paid, please contact us on WhatsApp: 0509 896 035 for a refund.`,
         type: 'order_cancelled',
-        orderNumber: order.order_number,
-        orderId: order.id,
+        order_id: order.id,
+        order_number: order.order_number,
+        is_read: false,
+        created_date: new Date().toISOString(),
       });
+
+      // Notify admin
+      const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+      for (const adminEmail of adminEmails) {
+        await supabase.from('notifications').insert({
+          user_email: adminEmail,
+          title: '❌ Order Cancelled by Customer',
+          message: `Order #${order.order_number} by ${order.customer_name} has been cancelled. Reason: ${reason || 'No reason given'}`,
+          type: 'order_cancelled',
+          order_id: order.id,
+          order_number: order.order_number,
+          is_read: false,
+          created_date: new Date().toISOString(),
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -336,13 +301,11 @@ export default function Orders() {
           <h1 className="text-2xl font-bold text-gray-900">My Orders</h1>
           <p className="text-sm text-gray-500">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
         </div>
-
         {selectedOrders.length > 0 && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">{selectedOrders.length} selected</span>
             <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
-              <Trash2 className="w-4 h-4 mr-1" />
-              Delete
+              <Trash2 className="w-4 h-4 mr-1" />Delete
             </Button>
           </div>
         )}
@@ -350,37 +313,22 @@ export default function Orders() {
 
       {orders.length > 0 && (
         <div className="flex items-center gap-2 mb-3">
-          <input
-            type="checkbox"
-            checked={selectedOrders.length > 0}
-            onChange={handleSelectAll}
-            className="w-4 h-4 cursor-pointer"
-          />
-          <span className="text-sm text-gray-600">
-            Select All ({selectedOrders.length}/{orders.length})
-          </span>
+          <input type="checkbox" checked={selectedOrders.length > 0} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer" />
+          <span className="text-sm text-gray-600">Select All ({selectedOrders.length}/{orders.length})</span>
         </div>
       )}
 
       <div className="space-y-4">
         {isLoading ? (
-          Array(3).fill(0).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-xl" />
-          ))
+          Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)
         ) : (
           orders.map((order) => {
             const isSelected = selectedOrders.includes(order.id);
-
             return (
               <Card key={order.id} className={`p-4 rounded-xl border ${isSelected ? 'border-blue-400 bg-blue-50/30' : ''}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => handleToggleSelect(order.id)}
-                      className="w-4 h-4 cursor-pointer"
-                    />
+                    <input type="checkbox" checked={isSelected} onChange={() => handleToggleSelect(order.id)} className="w-4 h-4 cursor-pointer" />
                     <div>
                       <span className="font-bold text-sm">{order.order_number}</span>
                       <p className="text-xs text-gray-500">{format(new Date(order.created_date), 'MMM d, yyyy')}</p>
@@ -405,9 +353,7 @@ export default function Orders() {
                   <div className="flex flex-wrap gap-2">
                     {order.items?.map((item, idx) => (
                       <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2 flex-1 min-w-[200px]">
-                        {item.product_image && (
-                          <img src={item.product_image} alt={item.product_name} className="w-10 h-10 rounded object-cover" />
-                        )}
+                        {item.product_image && <img src={item.product_image} alt={item.product_name} className="w-10 h-10 rounded object-cover" />}
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium truncate">{item.product_name}</p>
                           <p className="text-xs text-gray-500">x{item.quantity} · ₵{(item.price * item.quantity).toFixed(2)}</p>
@@ -451,19 +397,11 @@ export default function Orders() {
                 </div>
                 <div className="flex gap-2">
                   <Link to={`${createPageUrl('OrderTracking')}?order=${order.order_number}`} className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full text-xs rounded-lg">
-                      Track Order
-                    </Button>
+                    <Button variant="outline" size="sm" className="w-full text-xs rounded-lg">Track Order</Button>
                   </Link>
                   {CANCELLABLE_STATUSES.includes(order.status) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-red-600"
-                      onClick={() => { setCancellingOrder(order); setCancelReason(''); }}
-                    >
-                      <XCircle className="w-3 h-3 mr-1" />
-                      Cancel Order
+                    <Button variant="ghost" size="sm" className="text-xs text-red-600" onClick={() => { setCancellingOrder(order); setCancelReason(''); }}>
+                      <XCircle className="w-3 h-3 mr-1" />Cancel Order
                     </Button>
                   )}
                 </div>
@@ -477,15 +415,12 @@ export default function Orders() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <Card className="w-full max-w-md p-6 rounded-2xl">
             <div className="flex items-start gap-3 mb-4">
-              <div className="p-2 bg-red-100 rounded-full">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
-              </div>
+              <div className="p-2 bg-red-100 rounded-full"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
               <div>
                 <h3 className="font-bold text-lg">Cancel Order</h3>
                 <p className="text-sm text-gray-500">#{cancellingOrder.order_number}</p>
               </div>
             </div>
-
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-xs text-yellow-800">
               <p className="font-semibold mb-1">📋 Cancellation Policy</p>
               <ul className="list-disc pl-4 space-y-1">
@@ -496,31 +431,13 @@ export default function Orders() {
                 <li>Custom or special orders may not be eligible for cancellation.</li>
               </ul>
             </div>
-
             <div className="mb-4">
               <label className="text-sm font-medium text-gray-700">Reason for cancellation (optional)</label>
-              <textarea
-                className="w-full mt-1 p-2 border rounded-lg text-sm"
-                rows={3}
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-              />
+              <textarea className="w-full mt-1 p-2 border rounded-lg text-sm" rows={3} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
             </div>
-
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => { setCancellingOrder(null); setCancelReason(''); }}
-              >
-                Keep Order
-              </Button>
-              <Button
-                variant="destructive"
-                className="flex-1"
-                onClick={() => cancelOrderMutation.mutate({ order: cancellingOrder, reason: cancelReason })}
-                disabled={cancelOrderMutation.isPending}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => { setCancellingOrder(null); setCancelReason(''); }}>Keep Order</Button>
+              <Button variant="destructive" className="flex-1" onClick={() => cancelOrderMutation.mutate({ order: cancellingOrder, reason: cancelReason })} disabled={cancelOrderMutation.isPending}>
                 {cancelOrderMutation.isPending ? 'Cancelling...' : 'Confirm Cancel'}
               </Button>
             </div>

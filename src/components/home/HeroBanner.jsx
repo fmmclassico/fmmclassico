@@ -7,10 +7,10 @@ import { ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 var PERMANENT_SLIDES = [
-  { id: 'perm-1', badge: 'New Arrivals', title: 'Phones', subtitle: 'Samsung, iPhones & more at unbeatable prices', cta_link: '/Shop?category=phones', cta_text: 'Shop Now', image_url: '' },
-  { id: 'perm-2', badge: 'Classico Deals', title: 'Phone Accessories', subtitle: 'Cases, chargers, earphones & more at great prices', cta_link: '/Shop?category=phone_cases', cta_text: 'Shop Now', image_url: '' },
-  { id: 'perm-3', badge: 'Best Deals', title: 'Electronics', subtitle: 'Top quality electronics for your everyday needs', cta_link: '/Shop?category=electronic_appliances', cta_text: 'Shop Now', image_url: '' },
-  { id: 'perm-4', badge: 'Home Deals', title: 'Home Appliances', subtitle: 'Quality home appliances delivered to your door', cta_link: '/Shop?category=home_appliances', cta_text: 'Shop Now', image_url: '' },
+  { id: 'perm-1', badge: 'New Arrivals', title: 'Phones', subtitle: 'Samsung, iPhones & more at unbeatable prices', cta_link: '/Shop?category=phones', cta_text: 'Shop Now', image_url: 'https://images.unsplash.com/photo-1591337676887-a217a6c6205f?w=400&q=80' },
+  { id: 'perm-2', badge: 'Classico Deals', title: 'Phone Accessories', subtitle: 'Cases, chargers, earphones & more at great prices', cta_link: '/Shop?category=phone_cases', cta_text: 'Shop Now', image_url: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&q=80' },
+  { id: 'perm-3', badge: 'Best Deals', title: 'Electronics', subtitle: 'Top quality electronics for your everyday needs', cta_link: '/Shop?category=electronic_appliances', cta_text: 'Shop Now', image_url: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=400&q=80' },
+  { id: 'perm-4', badge: 'Home Deals', title: 'Home Appliances', subtitle: 'Quality home appliances delivered to your door', cta_link: '/Shop?category=home_appliances', cta_text: 'Shop Now', image_url: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=80' },
 ];
 
 export default function HeroBanner() {
@@ -27,7 +27,6 @@ export default function HeroBanner() {
       .catch(function() { setAdminSlides([]); });
   }, []);
 
-  // 4 permanent slides always show first, then admin slides after
   var slides = PERMANENT_SLIDES.concat(adminSlides);
 
   useEffect(function() {
@@ -97,7 +96,7 @@ export default function HeroBanner() {
           </div>
 
           {slide.image_url && (
-            <div className="w-[140px] h-[160px] md:w-[200px] md:h-[220px] mr-4 md:mr-8 flex-shrink-0 rounded-2xl overflow-hidden shadow-lg">
+            <div className="w-[140px] h-[160px] md:w-[200px] md:h-[220px] mr-4 md:mr-8 flex-shrink-0 rounded-2xl overflow-hidden shadow-lg bg-white">
               <img src={slide.image_url} alt={slide.title} className="w-full h-full object-cover" />
             </div>
           )}

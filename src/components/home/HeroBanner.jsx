@@ -32,7 +32,7 @@ const DEFAULT_SLIDES = [
   {
     id: 'default-2',
     badge: '⚡ Best Deals',
-    title: 'Electronics',
+    title: 'Electronic Appliances',
     subtitle: 'Top quality electronics for your everyday needs',
     bg_gradient: NAVY_GRADIENT,
     image_url: '',
@@ -49,6 +49,36 @@ const DEFAULT_SLIDES = [
     cta_link: createPageUrl('Shop?category=home_appliances'),
     cta_text: 'Shop Now',
   },
+  {
+    id: 'default-4',
+    badge: '📱 Top Brands',
+    title: 'Samsung & Apple',
+    subtitle: 'Genuine Samsung & Apple products at great prices',
+    bg_gradient: NAVY_GRADIENT,
+    image_url: '',
+    cta_link: createPageUrl('BrandProducts?brand=Samsung'),
+    cta_text: 'Shop Brands',
+  },
+  {
+    id: 'default-5',
+    badge: '🎧 Accessories',
+    title: 'Earphones & Speakers',
+    subtitle: 'Premium sound at affordable prices — Oraimo, JBL & more',
+    bg_gradient: NAVY_GRADIENT,
+    image_url: '',
+    cta_link: createPageUrl('Shop?category=earphones'),
+    cta_text: 'Shop Now',
+  },
+  {
+    id: 'default-6',
+    badge: '⌚ Smart Wear',
+    title: 'Smart Watches',
+    subtitle: 'Stay connected with the latest smartwatches',
+    bg_gradient: NAVY_GRADIENT,
+    image_url: '',
+    cta_link: createPageUrl('Shop?category=smart_watches'),
+    cta_text: 'Shop Now',
+  },
 ];
 
 export default function HeroBanner() {
@@ -57,14 +87,14 @@ export default function HeroBanner() {
   const [touchStart, setTouchStart] = useState(null);
 
   useEffect(() => {
+    // Load any active promo banners from admin
     base44.entities.PromoBanner.filter({ is_active: true }, 'order', 20)
-      .then(result => {
-        const data = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : null;
+      .then(data => {
         if (data && data.length > 0) {
-          setSlides([...DEFAULT_SLIDES, ...data]);
+          setSlides(data);
         }
       })
-      .catch(() => {});
+      .catch(() => {}); // fallback to default slides on error
   }, []);
 
   useEffect(() => {
@@ -87,6 +117,13 @@ export default function HeroBanner() {
   };
   const slide = slides.length > 0 ? slides[current % slides.length] : DEFAULT_SLIDES[0];
 
+  useEffect(() => {
+    if (slides.length > 0) {
+      setCurrent(0);
+    }
+  }, [slides.length]);
+
+  // Normalize cta_link: could be a full URL, an absolute path (/Shop), or a relative page name (Shop?category=phones)
   const ctaHref = (() => {
     const link = slide.cta_link;
     if (!link) return createPageUrl('Shop');
@@ -143,7 +180,7 @@ export default function HeroBanner() {
         </motion.div>
       </AnimatePresence>
 
-      {Array.isArray(slides) && slides.length > 1 && (
+      {slides.length > 1 && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
           {slides.map((_, i) => (
             <button

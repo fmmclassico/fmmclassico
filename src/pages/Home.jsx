@@ -8,7 +8,8 @@ import { useAuth } from '@/lib/AuthContext';
 import HeroBanner from '../components/home/HeroBanner';
 import FlashSaleTimer from '../components/home/FlashSaleTimer';
 
-var CATEGORY_BRANDS = {
+// Brands per category
+const CATEGORY_BRANDS = {
   phones: [
     { label: 'Apple (iPhone)', brand: 'Apple', category: 'phones' },
     { label: 'Samsung', brand: 'Samsung', category: 'phones' },
@@ -44,13 +45,16 @@ var CATEGORY_BRANDS = {
   ],
 };
 
-var HOME_CATEGORIES = [
+// Main categories shown on home page
+const HOME_CATEGORIES = [
   {
     id: 'phones',
     label: 'Phones',
     icon: Smartphone,
+    color: 'bg-blue-100 text-blue-700',
     link: createPageUrl('Shop?category=phones'),
-    match: function(p) { return p.category === 'phones'; },
+    image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
+    match: (p) => p.category === 'phones',
     brands: CATEGORY_BRANDS.phones,
     chipColor: 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100',
   },
@@ -58,17 +62,21 @@ var HOME_CATEGORIES = [
     id: 'phone_accessories',
     label: 'Phone Accessories',
     icon: Headphones,
+    color: 'bg-[#0093A6]/10 text-[#0093A6]',
     link: createPageUrl('Shop?category=phone_cases'),
-    match: function(p) { return ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category); },
+    image: 'https://mate.net.in/public/uploads/all/UsReqZvujmEjMUb27qlTtRcCG8Pf18SyULO4HW7U.jpg',
+    match: (p) => ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category),
     brands: CATEGORY_BRANDS.phone_accessories,
-    chipColor: 'text-teal-700 bg-teal-50 border-teal-200 hover:bg-teal-100',
+    chipColor: 'text-[#0093A6] bg-[#0093A6]/5 border-[#0093A6]/30 hover:bg-[#0093A6]/10',
   },
   {
     id: 'electronics',
     label: 'Electronics',
     icon: Tv,
+    color: 'bg-purple-100 text-purple-700',
     link: createPageUrl('Shop?category=electronic_appliances'),
-    match: function(p) { return ['electronic_appliances','smart_watches'].includes(p.category); },
+    image: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=400&q=90',
+    match: (p) => ['electronic_appliances','smart_watches'].includes(p.category),
     brands: CATEGORY_BRANDS.electronics,
     chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100',
   },
@@ -76,59 +84,122 @@ var HOME_CATEGORIES = [
     id: 'home_appliances',
     label: 'Home Appliances',
     icon: HomeIcon,
+    color: 'bg-green-100 text-green-700',
     link: createPageUrl('Shop?category=home_appliances'),
-    match: function(p) { return p.category === 'home_appliances'; },
+    match: (p) => p.category === 'home_appliances',
     brands: CATEGORY_BRANDS.home_appliances,
     chipColor: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100',
   },
 ];
 
 export default function Home() {
-  var auth = useAuth();
-  var user = auth.user;
-  var isAuthenticated = auth.isAuthenticated;
-  var navigateToLogin = auth.navigateToLogin;
-  var [expandedCat, setExpandedCat] = useState(null);
-  var queryClient = useQueryClient();
-  var navigate = useNavigate();
+  const { user, isAuthenticated, navigateToLogin } = useAuth();
+  const [expandedCat, setExpandedCat] = useState(null);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  var { data: appSettings = [] } = useQuery({
+  // FIX: extract .data from axios response; base44 SDK returns full axios response object
+  const { data: appSettings = [] } = useQuery({
     queryKey: ['appSettings'],
-    queryFn: async function() {
+    queryFn: async () => {
       try {
-        var result = await base44.entities.AppSetting.list();
-        return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
-      } catch (err) { return []; }
+        const result = await base44.entities.AppSetting.list();
+        return Array.isArray(result)
+          ? result
+          : Array.isArray(result?.data)
+          ? result.data
+          : [];
+      } catch (err) {
+        console.error('Failed to load app settings:', err);
+        return [];
+      }
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  var settings = Array.isArray(appSettings) ? appSettings : [];
+  // Ensure appSettings is always an array before any .find()/.filter() calls
+  const settings = Array.isArray(appSettings) ? appSettings : [];
 
-  var showBrandSection = settings.find(function(s) { return s.key === 'shop_by_brand_visible'; })?.value !== 'false';
+  const getPromoNotice = (key) => {
+    const raw = settings.find(s => s.key === key)?.value;
+    if (!raw) return null;
+    try { const d = JSON.parse(raw); return d?.active && d?.image_url ? d : null; } catch { return null; }
+  };
+  const notice1 = getPromoNotice('promo_notice_1');
+  const notice2 = getPromoNotice('promo_notice_2');
 
-  var { data: products = [], isLoading, refetch } = useQuery({
+  const showBrandSection = settings.find(s => s.key === 'shop_by_brand_visible')?.value !== 'false';
+
+  const flashSaleSettings = settings.find(s => s.key === 'flash_sale_config');
+  const flashConfig = flashSaleSettings?.value ? (() => { try { return JSON.parse(flashSaleSettings.value); } catch { return {}; } })() : {};
+  const showFlashTimer = flashConfig.show_timer !== false;
+  const flashTimerEndTime = flashConfig.end_time || null;
+
+  // FIX: extract .data from axios response for products too
+  const { data: products = [], isLoading, refetch } = useQuery({
     queryKey: ['products'],
-    queryFn: async function() {
+    queryFn: async () => {
       try {
-        var result = await base44.entities.Product.list('-created_date', 100);
-        return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
-      } catch (err) { return []; }
+        const result = await base44.entities.Product.list('-created_date', 100);
+        return Array.isArray(result)
+          ? result
+          : Array.isArray(result?.data)
+          ? result.data
+          : [];
+      } catch (err) {
+        console.error('Failed to load products:', err);
+        return [];
+      }
     },
     staleTime: 30000,
     refetchOnWindowFocus: true,
   });
 
-  var safeProducts = Array.isArray(products) ? products : [];
+  // Ensure products is always an array
+  const safeProducts = Array.isArray(products) ? products : [];
 
-  useEffect(function() { refetch(); }, [refetch]);
+  // Refetch products when component mounts to ensure fresh data
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
-  var visibleProducts = safeProducts.filter(function(p) { return p.is_visible !== false && !(p.stock != null && p.stock === 0); });
+  const addToCartMutation = useMutation({
+    mutationFn: async (product) => {
+      if (!isAuthenticated || !user) {
+        navigateToLogin();
+        return;
+      }
+      queryClient.setQueryData(['cartItems', user?.email], (old = []) => {
+        const safeOld = Array.isArray(old) ? old : [];
+        const existing = safeOld.find(i => i.product_id === product.id);
+        if (existing) return safeOld.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+        return [...safeOld, { id: 'optimistic-' + product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1, user_email: user.email }];
+      });
+      const rawExisting = await base44.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
+      const existingItems = Array.isArray(rawExisting) ? rawExisting : Array.isArray(rawExisting?.data) ? rawExisting.data : [];
+      if (existingItems.length > 0) {
+        await base44.entities.CartItem.update(existingItems[0].id, { quantity: existingItems[0].quantity + 1 });
+      } else {
+        await base44.entities.CartItem.create({ product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1, user_email: user.email });
+      }
+      if (product.stock != null) base44.entities.Product.update(product.id, { stock: Math.max(0, product.stock - 1) });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cartItems', user?.email] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    }
+  });
 
-  var flashItems = visibleProducts.filter(function(p) { return p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()); });
-  var donkomiDeals = visibleProducts.filter(function(p) { return p.donkomi; });
-  var newArrivals = visibleProducts.filter(function(p) { return p.new_arrival; });
-  var topSellingFallback = visibleProducts.filter(function(p) { return p.top_selling; });
+  // Filter out hidden and out-of-stock (stock === 0) products for public display
+  const visibleProducts = safeProducts.filter(p => p.is_visible !== false && !(p.stock != null && p.stock === 0));
+
+  // Product buckets — STRICT: only show products explicitly assigned to each section by admin
+  const flashItems    = visibleProducts.filter(p => p.flash_sale  && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()));
+  const flashSaleEndTime = flashItems.length > 0 ? flashItems[0].flash_sale_end : null;
+  const classicoDeals = visibleProducts.filter(p => p.featured);
+  const donkomiDeals  = visibleProducts.filter(p => p.donkomi);
+  const newArrivals   = visibleProducts.filter(p => p.new_arrival);
+  const topSellingFallback = visibleProducts.filter(p => p.top_selling);
 
   return (
     <div className="pb-6 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
@@ -136,7 +207,7 @@ export default function Home() {
       {/* Hero Slider */}
       <HeroBanner />
 
-      {/* CATEGORIES */}
+      {/* ── CATEGORIES ── */}
       <div className="bg-white mt-3 mx-2 md:mx-4 rounded-2xl shadow-sm p-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-black text-gray-900 text-base">Shop by Category</h2>
@@ -145,40 +216,40 @@ export default function Home() {
           </Link>
         </div>
         <div className="grid grid-cols-4 gap-3">
-          {HOME_CATEGORIES.map(function(cat) {
-            var adminImg = settings.find(function(s) { return s.key === 'cat_img_' + cat.id; })?.value;
-            var isExpanded = expandedCat === cat.id;
+          {HOME_CATEGORIES.map(cat => {
+            const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
+            const displayImg = adminImg || cat.image || safeProducts.find(cat.match)?.image_url;
+            const isExpanded = expandedCat === cat.id;
             return (
-              <button key={cat.id} onClick={function() { setExpandedCat(isExpanded ? null : cat.id); }} className="flex flex-col items-center gap-2 group">
-                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 flex items-center justify-center">
-                  {adminImg
-                    ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover brightness-125" />
-                    : <cat.icon className="h-10 w-10 text-gray-400" />
-                  }
-                </div>
+              <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
+<div className="w-20 h-20 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 flex items-center justify-center">
+  {adminImg
+    ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
+    : displayImg
+      ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
+      : <cat.icon className="h-10 w-10 opacity-70" />}
+</div>
                 <span className="text-xs md:text-sm font-bold text-gray-800 text-center leading-tight">{cat.label}</span>
               </button>
             );
           })}
         </div>
-        {/* Brands on click */}
-        {expandedCat && (function() {
-          var cat = HOME_CATEGORIES.find(function(c) { return c.id === expandedCat; });
+        {/* Brands — shown on click */}
+        {expandedCat && (() => {
+          const cat = HOME_CATEGORIES.find(c => c.id === expandedCat);
           if (!cat?.brands) return null;
           return (
             <div className="mt-4 pt-3 border-t border-gray-100">
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Shop {cat.label} by Brand</p>
               <div className="flex flex-wrap gap-2">
-                {cat.brands.map(function(b) {
-                  return (
-                    <Link key={b.brand + b.category} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + b.category)}
-                      className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>
-                      {b.label}
-                    </Link>
-                  );
-                })}
-                <Link to={cat.link} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>
-                  All {cat.label}
+                {cat.brands.map(b => (
+                  <Link key={b.brand + b.category} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(b.brand)}&category=${b.category}`)}
+                    className={`text-xs font-semibold border rounded-full px-3 py-1 transition-colors ${cat.chipColor}`}>
+                    {b.label}
+                  </Link>
+                ))}
+                <Link to={cat.link} className={`text-xs font-semibold border rounded-full px-3 py-1 transition-colors ${cat.chipColor}`}>
+                  All {cat.label} →
                 </Link>
               </div>
             </div>
@@ -186,35 +257,48 @@ export default function Home() {
         })()}
       </div>
 
-      {/* PROMO CARDS */}
-      {(function() {
-        var PROMO_KEYS = ['promo_card_1','promo_card_2','promo_card_3','promo_card_4','promo_card_5','promo_card_6'];
-        var allCards = PROMO_KEYS.map(function(k) {
-          var raw = settings.find(function(s) { return s.key === k; })?.value;
+      {/* ── PROMO CARDS SCROLL ── */}
+      {(() => {
+        const PROMO_KEYS = ['promo_card_1','promo_card_2','promo_card_3','promo_card_4','promo_card_5','promo_card_6'];
+        const allCards = PROMO_KEYS.map(k => {
+          const raw = settings.find(s => s.key === k)?.value;
           if (!raw) return null;
-          try { var d = JSON.parse(raw); return d?.active ? Object.assign({}, d, { key: k }) : null; } catch(e) { return null; }
+          try { const d = JSON.parse(raw); return d?.active ? { ...d, key: k } : null; } catch { return null; }
         }).filter(Boolean);
-        if (!allCards.length) return null;
+        const frontCards = allCards.filter(c => c.position === 'front');
+        const middleCards = allCards.filter(c => c.position === 'middle');
+        const backCards = allCards.filter(c => c.position === 'back' || !c.position);
+        const orderedCards = [...frontCards, ...middleCards, ...backCards];
+        if (!orderedCards.length) return null;
         return (
           <div className="mt-3 mx-2 md:mx-4">
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
-                <h2 className="font-black text-gray-900 text-sm uppercase tracking-wide">Promotions</h2>
+                <h2 className="font-black text-gray-900 text-sm uppercase tracking-wide">🎉 Promotions</h2>
               </div>
               <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
-                {allCards.map(function(card) {
-                  var CardWrapper = card.link ? Link : 'div';
-                  var wrapperProps = card.link ? { to: card.link } : {};
+                {orderedCards.map(card => {
+                  const CardWrapper = card.link ? Link : 'div';
+                  const wrapperProps = card.link ? { to: card.link } : {};
                   return (
-                    <CardWrapper key={card.key} {...wrapperProps} className="flex-shrink-0 w-[72vw] md:w-72 relative overflow-hidden" style={{ minHeight: 130 }}>
-                      <div className={'absolute inset-0 bg-gradient-to-r ' + (card.gradient || 'from-blue-600 to-blue-400')} />
-                      {card.image_url && <img src={card.image_url} alt={card.title} className="absolute inset-0 w-full h-full object-cover opacity-60" />}
+                    <CardWrapper key={card.key} {...wrapperProps}
+                      className="flex-shrink-0 w-[72vw] md:w-72 relative overflow-hidden"
+                      style={{ minHeight: 130 }}>
+                      <div className={`absolute inset-0 bg-gradient-to-r ${card.gradient || 'from-blue-600 to-blue-400'}`} />
+                      {card.image_url && (
+                        <img src={card.image_url} alt={card.title} className="absolute inset-0 w-full h-full object-cover opacity-60" />
+                      )}
                       <div className="relative z-10 p-3 h-full flex flex-col justify-between" style={{ minHeight: 130 }}>
                         <div>
                           <p className="text-white font-black text-sm leading-tight drop-shadow">{card.title}</p>
                           {card.subtitle && <p className="text-white/90 text-xs font-bold mt-0.5">{card.subtitle}</p>}
+                          {card.description && <p className="text-white/80 text-[11px] mt-1 leading-snug line-clamp-2">{card.description}</p>}
                         </div>
-                        {card.cta_text && <span className="text-white text-xs font-bold underline">{card.cta_text}</span>}
+                        {card.cta_text && (
+                          <span className="mt-2 self-start bg-white text-[#2E86C1] text-[11px] font-black px-3 py-1 rounded-full shadow">
+                            {card.cta_text}
+                          </span>
+                        )}
                       </div>
                     </CardWrapper>
                   );
@@ -225,88 +309,113 @@ export default function Home() {
         );
       })()}
 
-      {/* CLASSICO DEALS (Flash Sale) */}
-      <div className="mt-3 mx-2 md:mx-4 bg-white rounded-2xl shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-yellow-500" />
-            <h2 className="font-black text-gray-900 text-sm">CLASSICO Deals</h2>
-            <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full">Flash Sale</span>
+      {/* ── CLASSICO DEALS (Flash Sale) ── */}
+      <div className="mt-4 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Zap className="h-5 w-5 text-[#2E86C1] fill-[#2E86C1]" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">CLASSICO Deals</h2>
+              <span className="bg-blue-100 text-[#2E86C1] text-[10px] font-bold px-2 py-0.5 rounded-full">Flash Sale</span>
+              <FlashSaleTimer endTime={flashTimerEndTime} isVisible={showFlashTimer} />
+            </div>
+            <Link to={createPageUrl('Shop?featured=true')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
           </div>
-          <Link to={createPageUrl('Shop?featured=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-          {isLoading
-            ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-36 h-48 bg-gray-100 rounded-xl animate-pulse" />; })
-            : flashItems.length === 0
-              ? <p className="text-xs text-gray-400">No products assigned to this section yet.</p>
-              : flashItems.map(function(product) {
-                return (
-                  <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-36">
-                    <div className="relative h-36 bg-gray-50 rounded-xl overflow-hidden mb-1">
+          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+            {isLoading
+              ? Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  </div>
+                ))
+              : flashItems.length === 0
+                ? <div className="px-6 py-8 text-gray-400 text-sm">No products assigned to this section yet.</div>
+                : flashItems.map(product => (
+                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <ShoppingBag className="w-8 h-8 text-gray-300 absolute inset-0 m-auto" />}
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
                       {product.original_price > product.price && (
-                        <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                          -{Math.round((1 - product.price / product.original_price) * 100)}%
-                        </span>
+                       <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">
+                         -{Math.round((1 - product.price / product.original_price) * 100)}%
+                       </span>
                       )}
                     </div>
-                    <p className="text-xs font-medium truncate">{product.name}</p>
-                    <p className="text-sm font-bold text-gray-900">{"₵"}{product.price?.toLocaleString()}</p>
-                    {product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">{"₵"}{product.original_price?.toLocaleString()}</p>}
+                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                    <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && (
+                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                    )}
                   </Link>
-                );
-              })
-          }
+                ))}
+          </div>
         </div>
       </div>
 
-      {/* DONKOMI DEALS */}
-      <div className="mt-3 mx-2 md:mx-4 bg-white rounded-2xl shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-orange-500" />
-            <h2 className="font-black text-gray-900 text-sm">Donkomi Deals</h2>
-            <span className="text-[10px] bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full">Best Prices</span>
+      {/* ── DONKOMI DEALS ── */}
+      <div className="mt-5 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-green-600" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Donkomi Deals</h2>
+              <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full">Best Prices</span>
+            </div>
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
           </div>
-          <Link to={createPageUrl('Shop')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-          {isLoading
-            ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-36 h-48 bg-gray-100 rounded-xl animate-pulse" />; })
-            : donkomiDeals.length === 0
-              ? <p className="text-xs text-gray-400">No products assigned to this section yet.</p>
-              : donkomiDeals.map(function(product) {
-                return (
-                  <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-36">
-                    <div className="relative h-36 bg-gray-50 rounded-xl overflow-hidden mb-1">
+          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+            {isLoading
+              ? Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  </div>
+                ))
+              : donkomiDeals.length === 0
+                ? <div className="px-6 py-8 text-gray-400 text-sm">No products assigned to this section yet.</div>
+                : donkomiDeals.map(product => (
+                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-green-50 transition-colors p-1.5">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <ShoppingBag className="w-8 h-8 text-gray-300 absolute inset-0 m-auto" />}
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                      <span className="absolute top-1 left-1 bg-green-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full">🔥</span>
                     </div>
-                    <p className="text-xs font-medium truncate">{product.name}</p>
-                    <p className="text-sm font-bold text-gray-900">{"₵"}{product.price?.toLocaleString()}</p>
-                    {product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">{"₵"}{product.original_price?.toLocaleString()}</p>}
+                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                    <p className="text-xs font-black text-green-700">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && (
+                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                    )}
                   </Link>
-                );
-              })
-          }
+                ))}
+          </div>
         </div>
       </div>
 
-      {/* SHOP BY BRAND */}
+      {/* ── SHOP BY BRAND ── */}
       {showBrandSection && (
-        <div className="mt-3 mx-2 md:mx-4 bg-white rounded-2xl shadow-sm p-4">
-          <div className="flex items-center justify-between mb-3">
+      <div className="mt-5 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <Gem className="w-4 h-4 text-blue-500" />
-              <h2 className="font-black text-gray-900 text-sm">Shop by Brand</h2>
+              <Gem className="h-5 w-5 text-purple-600" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Shop by Brand</h2>
             </div>
-            <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+          <div className="grid grid-cols-4 gap-3 p-4">
             {[
               { name: 'Apple', fallback: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
               { name: 'Samsung', fallback: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },
@@ -316,91 +425,115 @@ export default function Home() {
               { name: 'Oraimo', fallback: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },
               { name: 'Sony', fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
               { name: 'JBL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
-            ].map(function(brand) {
-              var uploadedLogo = settings.find(function(s) { return s.key === 'brand_logo_' + brand.name.toLowerCase().replace(/ /g,'_'); })?.value;
-              var logoSrc = uploadedLogo || brand.fallback;
+            ].map(brand => {
+              const uploadedLogo = settings.find(s => s.key === `brand_logo_${brand.name.toLowerCase().replace(/ /g,'_')}`)?.value;
+              const logoSrc = uploadedLogo || brand.fallback;
               return (
-                <Link key={brand.name} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.name))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16">
-                  <div className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2">
+                <Link key={brand.name} to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.name)}`)}
+                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all gap-1.5">
+                  <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
                     {logoSrc
-                      ? <img src={logoSrc} alt={brand.name} className="w-full h-full object-contain" onError={function(e) { e.target.style.display='none'; }} />
-                      : <span className="text-lg font-bold text-gray-400">{brand.name[0]}</span>}
+                      ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={e => { e.target.style.display='none'; }} />
+                      : <span className="text-[10px] font-black text-gray-400">{brand.name[0]}</span>}
                   </div>
-                  <span className="text-[10px] font-semibold text-gray-700 text-center">{brand.name}</span>
+                  <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>
                 </Link>
               );
             })}
           </div>
         </div>
+      </div>
       )}
 
-      {/* NEW ARRIVALS */}
-      <div className="mt-3 mx-2 md:mx-4 bg-white rounded-2xl shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Star className="w-4 h-4 text-yellow-500" />
-            <h2 className="font-black text-gray-900 text-sm">New Arrivals</h2>
+      {/* ── NEW ARRIVALS ── */}
+      <div className="mt-5 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500 fill-yellow-400" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">New Arrivals</h2>
+            </div>
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
           </div>
-          <Link to={createPageUrl('Shop')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-          {isLoading
-            ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-36 h-48 bg-gray-100 rounded-xl animate-pulse" />; })
-            : newArrivals.length === 0
-              ? <p className="text-xs text-gray-400">No products assigned to this section yet.</p>
-              : newArrivals.map(function(product) {
-                return (
-                  <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-36">
-                    <div className="relative h-36 bg-gray-50 rounded-xl overflow-hidden mb-1">
+          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+            {isLoading
+              ? Array(6).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  </div>
+                ))
+              : newArrivals.length === 0
+                ? <div className="px-6 py-8 text-gray-400 text-sm">No products assigned to this section yet.</div>
+                : newArrivals.map(product => (
+                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <ShoppingBag className="w-8 h-8 text-gray-300 absolute inset-0 m-auto" />}
-                      <span className="absolute top-1 left-1 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">NEW</span>
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                      <span className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[8px] font-black px-1 py-0.5 rounded-full">NEW</span>
                     </div>
-                    <p className="text-xs font-medium truncate">{product.name}</p>
-                    <p className="text-sm font-bold text-gray-900">{"₵"}{product.price?.toLocaleString()}</p>
-                    {product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">{"₵"}{product.original_price?.toLocaleString()}</p>}
+                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                    <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && (
+                      <p className="text-[9px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
+                    )}
                   </Link>
-                );
-              })
-          }
+                ))}
+          </div>
         </div>
       </div>
 
-      {/* TOP SELLING */}
-      <div className="mt-3 mx-2 md:mx-4 bg-white rounded-2xl shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-red-500" />
-            <h2 className="font-black text-gray-900 text-sm">Top Selling</h2>
+      {/* ── TOP SELLING ── */}
+      <div className="mt-5 mx-2 md:mx-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-[#2E86C1]" />
+              <h2 className="font-black text-gray-900 text-base uppercase tracking-wide">Top Selling</h2>
+              <span className="bg-blue-100 text-[#2E86C1] text-[10px] font-bold px-2 py-0.5 rounded-full">🔥 Hot</span>
+            </div>
+            <Link to={createPageUrl('Shop')} className="flex items-center gap-1 text-[#2E86C1] text-xs font-bold border border-[#2E86C1] rounded-full px-3 py-1 hover:bg-blue-50 transition-colors">
+              See All <ChevronRight className="h-3 w-3" />
+            </Link>
           </div>
-          <Link to={createPageUrl('Shop')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-          {isLoading
-            ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-36 h-48 bg-gray-100 rounded-xl animate-pulse" />; })
-            : topSellingFallback.length === 0
-              ? <p className="text-xs text-gray-400">No products assigned to this section yet.</p>
-              : topSellingFallback.map(function(product, idx) {
-                return (
-                  <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-36">
-                    <div className="relative h-36 bg-gray-50 rounded-xl overflow-hidden mb-1">
+          <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+            {isLoading
+              ? Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex-shrink-0 w-[40vw] md:w-40 bg-white p-2 space-y-2">
+                    <div className="aspect-square bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  </div>
+                ))
+              : topSellingFallback.length === 0
+                ? <div className="px-6 py-8 text-gray-400 text-sm">No products assigned to this section yet.</div>
+                : topSellingFallback.map((product, idx) => (
+                  <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                    className="flex-shrink-0 w-[40vw] md:w-40 bg-white hover:bg-blue-50 transition-colors p-1.5">
+                    <div className="relative aspect-square rounded-lg overflow-hidden mb-1.5 bg-gray-50">
                       {product.image_url
                         ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        : <ShoppingBag className="w-8 h-8 text-gray-300 absolute inset-0 m-auto" />}
-                      <span className="absolute top-1 left-1 bg-gray-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">#{idx + 1}</span>
+                        : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-6 w-6 text-gray-300" /></div>}
+                      <span className="absolute top-1 left-1 bg-[#2E86C1] text-white text-[8px] font-black px-1 py-0.5 rounded-full">#{idx + 1}</span>
                     </div>
-                    <p className="text-xs font-medium truncate">{product.name}</p>
-                    <p className="text-sm font-bold text-gray-900">{"₵"}{product.price?.toLocaleString()}</p>
+                    <p className="text-[11px] font-semibold text-gray-800 line-clamp-2 leading-tight mb-0.5">{product.name}</p>
+                    <p className="text-xs font-black text-[#2E86C1]">₵{product.price?.toLocaleString()}</p>
+                    {product.reviews_count > 0 && (
+                      <p className="text-[10px] text-yellow-600 font-bold">⭐ {product.reviews_count} sold</p>
+                    )}
                   </Link>
-                );
-              })
-          }
+                ))}
+          </div>
         </div>
       </div>
 
-      {/* Bottom spacer */}
-      <div className="h-20" />
+      {/* Bottom spacer for nav */}
+      <div className="h-6" />
     </div>
   );
 }

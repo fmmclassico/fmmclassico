@@ -1,5 +1,6 @@
 /* eslint-disable */
 import { supabaseNotifications } from '@/lib/supabaseNotifications';
+import { supabaseNotifications } from '@/lib/supabaseNotifications';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';

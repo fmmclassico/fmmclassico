@@ -222,13 +222,13 @@ export default function Home() {
             const isExpanded = expandedCat === cat.id;
             return (
               <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
-<div className="w-20 h-20 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 flex items-center justify-center">
-  {adminImg
-    ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
-    : displayImg
-      ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
-      : <cat.icon className="h-10 w-10 opacity-70" />}
-</div>
+                <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden shadow-sm border-2 group-hover:scale-105 transition-transform ${isExpanded ? 'border-[#2E86C1]' : 'border-white'} ${cat.color} flex items-center justify-center`}>
+                  {adminImg
+                    ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
+                    : displayImg
+                      ? <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" />
+                      : <cat.icon className="h-10 w-10 opacity-70" />}
+                </div>
                 <span className="text-xs md:text-sm font-bold text-gray-800 text-center leading-tight">{cat.label}</span>
               </button>
             );

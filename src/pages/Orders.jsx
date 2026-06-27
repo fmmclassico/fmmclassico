@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { checkPaymentStatus } from '@/api/hubtelClient';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -44,6 +45,39 @@ export default function Orders() {
       .then(setUser)
       .catch(() => base44.auth.redirectToLogin(createPageUrl('Home')));
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const orderChannel = supabase
+      .channel('orders-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'orders'
+      }, (payload) => {
+        console.log('[Realtime] Order updated:', payload.new);
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
+      })
+      .subscribe();
+
+    const notifChannel = supabase
+      .channel('notifications-realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications'
+      }, (payload) => {
+        console.log('[Realtime] New notification:', payload.new);
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(orderChannel);
+      supabase.removeChannel(notifChannel);
+    };
+  }, [user, queryClient]);
 
   useEffect(() => {
     const orderNumber = searchParams.get('order');

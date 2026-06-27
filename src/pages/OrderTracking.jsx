@@ -43,7 +43,7 @@ export default function OrderTracking() {
     enabled: !!user?.email
   });
 
-  const order = orders.find(o => o.id === orderId);
+  const order = orders.find(o => String(o.id) === String(orderId));
   const isCancelled = order?.status === 'cancelled';
 
   if (isLoading || !user) {

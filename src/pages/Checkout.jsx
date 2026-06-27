@@ -11,8 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Truck, CreditCard, Loader2, Info } from 'lucide-react';
-import { toast } from 'sonner';
+import { Truck, Loader2, Info } from 'lucide-react';
 import DeliveryInfoModal from '../components/delivery/DeliveryInfoModal';
 
 const DELIVERY_ZONES = [
@@ -33,8 +32,6 @@ const DELIVERY_ZONES = [
 export default function Checkout() {
   const [user, setUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [orderSubmitted, setOrderSubmitted] = useState(false);
-  const [createdOrderNumber, setCreatedOrderNumber] = useState('');
   const [orderError, setOrderError] = useState('');
   const [locationError, setLocationError] = useState('');
   const navigate = useNavigate();
@@ -42,7 +39,6 @@ export default function Checkout() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const initialZoneId = urlParams.get('zone') || '';
-
   const [selectedZoneId, setSelectedZoneId] = useState(initialZoneId);
 
   const [formData, setFormData] = useState({
@@ -54,7 +50,6 @@ export default function Checkout() {
 
   useEffect(() => {
     setIsSubmitting(false);
-    setOrderSubmitted(false);
     base44.auth.me()
       .then(userData => {
         setUser(userData);
@@ -71,7 +66,6 @@ export default function Checkout() {
   });
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
-
   const selectedZone = DELIVERY_ZONES.find(z => z.id === selectedZoneId);
   const shipping = selectedZone ? selectedZone.fee : 0;
   const total = subtotal + shipping;
@@ -82,166 +76,98 @@ export default function Checkout() {
   };
 
   const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by your browser');
-      return;
-    }
-
+    if (!navigator.geolocation) { setLocationError('Geolocation not supported'); return; }
     setLocationError('');
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const googleMapsLink = `https://www.google.com/maps?q=${latitude.toFixed(6)},${longitude.toFixed(6)}&z=15`;
-        setFormData(prev => ({ ...prev, delivery_address: googleMapsLink }));
-        toast.success('📍 Location detected! Google Maps link added to address field.');
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setFormData(prev => ({ ...prev, delivery_address: `https://www.google.com/maps?q=${latitude.toFixed(6)},${longitude.toFixed(6)}&z=15` }));
       },
-      (error) => {
-        let errorMsg = 'Unable to get your location';
-        if (error.code === 1) {
-          errorMsg = 'Location access denied';
-          setLocationError(errorMsg);
-          setTimeout(() => {
-            if (confirm('Location permission is needed to auto-detect your location.\n\nTap OK to open your phone\'s location settings.')) {
-              window.open('https://support.google.com/android/answer/3457478?hl=en', '_blank');
-            }
-          }, 500);
-        } else if (error.code === 2) {
-          errorMsg = 'Location service unavailable';
-          setLocationError(errorMsg);
-        } else if (error.code === 3) {
-          errorMsg = 'Location request timed out';
-          setLocationError(errorMsg);
-        }
-        toast.error(errorMsg);
+      (err) => {
+        if (err.code === 1) setLocationError('Location access denied');
+        else if (err.code === 2) setLocationError('Location unavailable');
+        else setLocationError('Location timed out');
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    if (isSubmitting) return;
 
-  if (isSubmitting) return;
-
-  if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !selectedZoneId) {
-    toast.error('Please fill in all required fields, including your delivery option.');
-    return;
-  }
-
-  const expectedSubtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
-  if (Math.abs(expectedSubtotal - subtotal) > 0.01) {
-    toast.error('Cart total mismatch detected. Please go back to your cart and try again.');
-    return;
-  }
-  if (total <= 0 || isNaN(total)) {
-    toast.error('Order total is invalid. Please check your cart and delivery details.');
-    return;
-  }
-
-  setIsSubmitting(true);
-  setOrderError('');
-
-  const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
-
-  try {
-    // STEP 1: Try to initiate payment FIRST (before creating order)
-    const callbackUrl = `https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback`;
-    const returnUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=success`;
-    const cancellationUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=cancelled`;
-
-    const initRes = await initiatePayment({
-      totalAmount: total,
-      description: `Order ${orderNumber}`,
-      callbackUrl,
-      returnUrl,
-      cancellationUrl,
-      clientReference: orderNumber,
-    });
-
-    // If payment initiation failed, DON'T create the order
-    if (!initRes || !initRes.data || !initRes.data.checkoutUrl) {
-      const errorMsg = initRes?.error || 'Unable to connect to payment gateway.';
-      setOrderError(`Payment failed: ${errorMsg}`);
-      toast.error('Payment could not be initiated. No order was created. Please try again.');
-      setIsSubmitting(false);
+    if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !selectedZoneId) {
+      setOrderError('Please fill in all required fields including delivery option.');
+      return;
+    }
+    if (total <= 0 || isNaN(total)) {
+      setOrderError('Order total is invalid.');
       return;
     }
 
-    // STEP 2: Payment initiation succeeded, NOW create the order
-    const orderPayload = {
-      order_number: orderNumber,
-      items: cartItems.map(item => ({
-        product_id: item.product_id,
-        product_name: item.product_name,
-        product_image: item.product_image,
-        price: item.product_price,
-        quantity: item.quantity,
-      })),
-      total_amount: total,
-      payment_status: 'pending_payment',
-      status: 'processing',
-      customer_name: formData.customer_name,
-      customer_email: user.email,
-      customer_phone: formData.customer_phone,
-      delivery_address: formData.delivery_address,
-      notes: formData.notes,
-      tracking_updates: [
-        {
-          status: 'Order Placed',
-          message: 'Order created. Redirecting to payment.',
-          timestamp: new Date().toISOString(),
-        }
-      ],
-    };
+    setIsSubmitting(true);
+    setOrderError('');
 
-    await base44.entities.Order.create(orderPayload);
-    queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+    const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
 
-    // STEP 3: Redirect to Hubtel payment page
-    toast.success('Redirecting to Hubtel payment page...');
-    window.location.href = initRes.data.checkoutUrl;
+    try {
+      // Save order data to localStorage (NOT to DB yet)
+      // Order only gets created in DB after payment is confirmed
+      const pendingOrder = {
+        order_number: orderNumber,
+        items: cartItems.map(item => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          product_image: item.product_image,
+          price: item.product_price,
+          quantity: item.quantity,
+        })),
+        total_amount: total,
+        customer_name: formData.customer_name,
+        customer_email: user.email,
+        customer_phone: formData.customer_phone,
+        delivery_address: formData.delivery_address,
+        notes: formData.notes,
+      };
+      localStorage.setItem('pendingOrder', JSON.stringify(pendingOrder));
 
-  } catch (error) {
-    console.error('Checkout error:', error);
-    setOrderError('Something went wrong. Please try again.');
-    toast.error('An error occurred. Please try again.');
-    setIsSubmitting(false);
-  }
-};
+      // Initiate payment
+      const callbackUrl = `https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback`;
+      const returnUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=success`;
+      const cancellationUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=cancelled`;
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500">Loading...</p>
-      </div>
-    );
-  }
+      const initRes = await initiatePayment({
+        totalAmount: total,
+        description: `Order ${orderNumber}`,
+        callbackUrl,
+        returnUrl,
+        cancellationUrl,
+        clientReference: orderNumber,
+      });
 
-  if (orderSubmitted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-md w-full p-8 text-center space-y-4">
-          <h2 className="text-xl font-bold">Order Submitted</h2>
-          <p className="text-gray-600">Thank you! Your order #{createdOrderNumber} has been placed successfully.</p>
-          <p className="text-gray-500 text-sm">We will review your order and follow up with payment instructions shortly.</p>
-          <Button onClick={() => navigate(createPageUrl('Orders'))} className="w-full rounded-xl bg-blue-800 px-4 py-3 text-white font-semibold hover:bg-blue-900">
-            View My Orders
-          </Button>
-          <Button onClick={() => navigate(createPageUrl('Home'))} className="w-full rounded-xl border border-blue-200 px-4 py-3 text-blue-800 font-semibold hover:bg-blue-50">
-            Continue Shopping
-          </Button>
-        </Card>
-      </div>
-    );
-  }
+      if (initRes?.data?.checkoutUrl) {
+        window.location.href = initRes.data.checkoutUrl;
+        return;
+      }
+
+      // Payment initiation failed - remove pending order
+      localStorage.removeItem('pendingOrder');
+      setOrderError(initRes?.error || 'Payment could not be initiated. Please try again.');
+    } catch (error) {
+      localStorage.removeItem('pendingOrder');
+      setOrderError('Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!user) return <div className="flex items-center justify-center min-h-screen"><p className="text-gray-500">Loading...</p></div>;
 
   if (cartItems.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <p className="text-gray-500 mb-4">Your cart is empty</p>
-        <button onClick={() => navigate(createPageUrl('Cart'))} className="text-blue-600 font-semibold hover:underline">
-          ← Back to Cart
-        </button>
+        <button onClick={() => navigate(createPageUrl('Cart'))} className="text-blue-600 font-semibold hover:underline">← Back to Cart</button>
       </div>
     );
   }
@@ -249,20 +175,15 @@ export default function Checkout() {
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
       <div className="max-w-lg mx-auto p-4 space-y-4">
-
         <h1 className="text-xl font-bold text-center">Checkout</h1>
 
         <Card className="p-4">
           <h2 className="font-semibold text-base mb-3">Order Summary</h2>
-
           <div className="space-y-3">
             {cartItems.map((item) => (
               <div key={item.id} className="flex items-center gap-3">
                 <div className="w-14 h-14 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                  {item.product_image
-                    ? <img src={item.product_image} alt="" className="w-full h-full object-cover" />
-                    : <span className="text-xs text-gray-400 flex items-center justify-center h-full">No img</span>
-                  }
+                  {item.product_image ? <img src={item.product_image} alt="" className="w-full h-full object-cover" /> : <span className="text-xs text-gray-400 flex items-center justify-center h-full">No img</span>}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{item.product_name}</p>
@@ -272,51 +193,22 @@ export default function Checkout() {
               </div>
             ))}
           </div>
-
           <Separator className="my-4" />
-
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-medium">₵{subtotal.toFixed(2)}</span>
-            </div>
-
+            <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span className="font-medium">₵{subtotal.toFixed(2)}</span></div>
             <div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 flex items-center gap-1">
-                  <Truck className="w-4 h-4" />
-                  Delivery
-                </span>
-                <span className="font-medium">
-                  {selectedZoneId ? (shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`) : '—'}
-                </span>
+                <span className="text-gray-600 flex items-center gap-1"><Truck className="w-4 h-4" />Delivery</span>
+                <span className="font-medium">{selectedZoneId ? (shipping === 0 ? 'FREE' : `₵${shipping.toFixed(2)}`) : '—'}</span>
               </div>
-
               <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Select delivery option" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DELIVERY_ZONES.map(zone => (
-                    <SelectItem key={zone.id} value={zone.id}>
-                      {zone.label} — {zone.fee === 0 ? 'FREE' : `₵${zone.fee}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectTrigger className="mt-2"><SelectValue placeholder="Select delivery option" /></SelectTrigger>
+                <SelectContent>{DELIVERY_ZONES.map(zone => (<SelectItem key={zone.id} value={zone.id}>{zone.label} — {zone.fee === 0 ? 'FREE' : `₵${zone.fee}`}</SelectItem>))}</SelectContent>
               </Select>
-              {selectedZone?.note && (
-                <p className="text-xs text-gray-500 mt-1">{selectedZone.note}</p>
-              )}
-              {!selectedZoneId && (
-                <p className="text-xs text-orange-500 mt-1">Please choose a delivery option to see your total.</p>
-              )}
+              {selectedZone?.note && <p className="text-xs text-gray-500 mt-1">{selectedZone.note}</p>}
             </div>
-
             <Separator className="my-2" />
-            <div className="flex justify-between text-base font-bold">
-              <span>Total</span>
-              <span>₵{total.toFixed(2)}</span>
-            </div>
+            <div className="flex justify-between text-base font-bold"><span>Total</span><span>₵{total.toFixed(2)}</span></div>
           </div>
         </Card>
 
@@ -324,92 +216,34 @@ export default function Checkout() {
           <Card className="p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-base">Delivery Information</h2>
-              <DeliveryInfoModal
-                trigger={
-                  <Button variant="ghost" size="sm" className="text-blue-600 text-xs">
-                    <Info className="w-4 h-4 mr-1" />
-                    Delivery Rates
-                  </Button>
-                }
-              />
+              <DeliveryInfoModal trigger={<Button variant="ghost" size="sm" className="text-blue-600 text-xs"><Info className="w-4 h-4 mr-1" />Delivery Rates</Button>} />
             </div>
-
+            <div><Label>Full Name *</Label><Input name="customer_name" value={formData.customer_name} onChange={handleInputChange} required /></div>
+            <div><Label>Phone Number *</Label><Input name="customer_phone" value={formData.customer_phone} onChange={handleInputChange} type="tel" required /></div>
             <div>
-              <Label>Full Name *</Label>
-              <Input name="customer_name" value={formData.customer_name} onChange={handleInputChange} required />
-            </div>
-
-            <div>
-              <Label>Active Phone Number * (must be reachable)</Label>
-              <Input name="customer_phone" value={formData.customer_phone} onChange={handleInputChange} type="tel" required />
-              <p className="text-xs text-gray-500 mt-1">We'll call/SMS this number for delivery. Make sure it's switched on and reachable.</p>
-            </div>
-
-            <div>
-              <Label>Delivery Address / Landmark *</Label>
+              <Label>Delivery Address *</Label>
               <Textarea name="delivery_address" value={formData.delivery_address} onChange={handleInputChange} required />
-
-              <div className="mt-2 flex items-start gap-2">
-                <span className="text-lg">📍</span>
-                <div className="flex-1">
-                  <p className="text-xs text-gray-600 font-medium">Auto-detect your current location</p>
-                  <Button type="button" variant="outline" size="sm" onClick={getCurrentLocation} className="mt-1 text-xs">
-                    Get Location
-                  </Button>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Click to automatically detect and add your GPS location to the address field. If permission is denied, you'll be guided to enable location services.
-                  </p>
-                  {locationError && (
-                    <div className="mt-1">
-                      <p className="text-xs text-red-500">⚠️ {locationError}</p>
-                      <button
-                        type="button"
-                        onClick={() => { window.open('https://support.google.com/android/answer/3457478?hl=en', '_blank'); }}
-                        className="text-xs text-blue-600 underline font-medium hover:text-blue-800"
-                      >
-                        📱 Tap here to open Location Settings guide
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <Button type="button" variant="outline" size="sm" onClick={getCurrentLocation} className="mt-2 text-xs">📍 Get My Location</Button>
+              {locationError && <p className="text-xs text-red-500 mt-1">{locationError}</p>}
             </div>
-
-            <div>
-              <Label>Order Notes (Optional)</Label>
-              <Textarea name="notes" value={formData.notes} onChange={handleInputChange} />
-            </div>
+            <div><Label>Notes (Optional)</Label><Textarea name="notes" value={formData.notes} onChange={handleInputChange} /></div>
           </Card>
 
           <Card className="p-4 mt-4">
-            <h2 className="font-semibold text-base mb-3">Payment Method</h2>
-
+            <h2 className="font-semibold text-base mb-3">Payment</h2>
             <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
               <span className="text-2xl">🏦</span>
-              <div>
-                <p className="font-semibold text-sm">Hubtel Secure Payment</p>
-                <p className="text-xs text-gray-500">Mobile Money • Debit Card • Bank Transfer • Wallet</p>
-              </div>
+              <div><p className="font-semibold text-sm">Hubtel Secure Payment</p><p className="text-xs text-gray-500">Mobile Money • Card • Bank Transfer</p></div>
             </div>
           </Card>
 
           <div className="mt-4">
             <Button type="submit" disabled={isSubmitting} className="w-full rounded-xl bg-blue-800 text-white py-3 font-semibold hover:bg-blue-900">
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing Payment...
-                </>
-              ) : (
-                '💳 Pay with Hubtel'
-              )}
+              {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</> : '💳 Pay with Hubtel'}
             </Button>
-            {orderError && (
-              <p className="text-sm text-red-600 mt-2 text-center">{orderError}</p>
-            )}
+            {orderError && <p className="text-sm text-red-600 mt-2 text-center">{orderError}</p>}
           </div>
         </form>
-
       </div>
     </div>
   );

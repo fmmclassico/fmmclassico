@@ -43,6 +43,38 @@ const paymentStatusConfig = {
   refunded: { color: 'bg-blue-100 text-blue-700', label: '↩️ Refunded' },
 };
 
+// Helper to send notification to both customer and admin
+async function sendNotification({ userEmail, adminEmails, title, message, type, orderNumber, orderId }) {
+  // Notify customer
+  await supabase.from('notifications').insert({
+    user_email: userEmail,
+    title,
+    message,
+    type,
+    order_number: orderNumber,
+    order_id: orderId,
+    is_read: false,
+  });
+  // Notify all admins
+  if (adminEmails && adminEmails.length > 0) {
+    const adminNotifs = adminEmails.map(email => ({
+      user_email: email,
+      title: `[ADMIN] ${title}`,
+      message: `Customer (${userEmail}): ${message}`,
+      type,
+      order_number: orderNumber,
+      order_id: orderId,
+      is_read: false,
+    }));
+    await supabase.from('notifications').insert(adminNotifs);
+  }
+}
+
+function getAdminEmails() {
+  const envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || '';
+  return envAdminEmails.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+}
+
 export default function Orders() {
   const [user, setUser] = useState(null);
   const [selectedOrders, setSelectedOrders] = useState([]);
@@ -51,7 +83,6 @@ export default function Orders() {
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
 
-  // Get current user from Supabase Auth
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: authUser } }) => {
       if (authUser) {
@@ -62,35 +93,28 @@ export default function Orders() {
     });
   }, []);
 
-  // Check payment status if returning from Hubtel (Requirement 3: Transaction Status Check)
+  // Check payment status if returning from Hubtel
   useEffect(() => {
     const orderNumber = searchParams.get('order');
     const status = searchParams.get('status');
 
-    // Wait for user to load first
     if (!orderNumber || !user) return;
 
     console.log('[Orders] Checking payment status for order:', orderNumber);
 
-    // 1.5s delay gives Hubtel time to finalize the transaction
     const timer = setTimeout(async () => {
       try {
-        // This calls your Supabase Edge Function (hubtel-checkout GET)
-        // which then calls Hubtel's Transaction Status API (Requirement 3)
         const result = await checkPaymentStatus(orderNumber);
         console.log('[Orders] Hubtel Transaction Status response:', result);
 
-        // Determine payment status from Hubtel's response
         let paymentStatus = 'pending_payment';
         if (result?.data?.status) {
           const hubtelStatus = result.data.status.toLowerCase();
           paymentStatus = (hubtelStatus === 'paid' || hubtelStatus === 'success') ? 'paid' : 'pending_payment';
         } else if (status === 'success') {
-          // Fallback: if Hubtel redirected with status=success in URL
           paymentStatus = 'paid';
         }
 
-        // Find and update the order in Supabase
         const { data: orders, error: fetchError } = await supabase
           .from('orders')
           .select('*')
@@ -103,6 +127,15 @@ export default function Orders() {
         }
 
         const order = orders[0];
+
+        // Only update if status actually changed
+        if (order.payment_status === paymentStatus) {
+          if (paymentStatus === 'paid') {
+            toast.success('✅ Payment already confirmed!');
+          }
+          return;
+        }
+
         const trackingUpdates = order.tracking_updates || [];
         trackingUpdates.push({
           status: paymentStatus === 'paid' ? 'Payment Confirmed' : 'Payment Pending',
@@ -110,7 +143,7 @@ export default function Orders() {
           timestamp: new Date().toISOString(),
         });
 
-        const { error: updateError } = await supabase
+        await supabase
           .from('orders')
           .update({
             payment_status: paymentStatus,
@@ -118,47 +151,67 @@ export default function Orders() {
           })
           .eq('id', order.id);
 
-        if (updateError) {
-          console.error('[Orders] Update error:', updateError);
-        }
-
-        // Force refresh the orders list
-        queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
-        queryClient.refetchQueries({ queryKey: ['orders', user.email] });
-
+        // Send notifications to customer AND admin
+        const adminEmails = getAdminEmails();
         if (paymentStatus === 'paid') {
+          await sendNotification({
+            userEmail: user.email,
+            adminEmails,
+            title: '✅ Payment Confirmed',
+            message: `Payment for order #${orderNumber} (₵${order.total_amount?.toFixed(2)}) has been confirmed successfully!`,
+            type: 'payment_confirmed',
+            orderNumber: orderNumber,
+            orderId: order.id,
+          });
+
           toast.success('✅ Payment confirmed! Your order has been received.');
-          // Clear cart items
-          const { data: cartItems } = await supabase
-            .from('cart_items')
-            .select('id')
-            .eq('user_email', user.email);
-          if (cartItems && cartItems.length > 0) {
-            await supabase
-              .from('cart_items')
-              .delete()
-              .eq('user_email', user.email);
-            queryClient.invalidateQueries({ queryKey: ['cartItems'] });
-          }
+
+          // Clear cart
+          await supabase.from('cart_items').delete().eq('user_email', user.email);
+          queryClient.invalidateQueries({ queryKey: ['cartItems'] });
         } else {
+          await sendNotification({
+            userEmail: user.email,
+            adminEmails,
+            title: '⏳ Payment Pending',
+            message: `Payment for order #${orderNumber} is still being processed. We'll notify you once confirmed.`,
+            type: 'payment_pending',
+            orderNumber: orderNumber,
+            orderId: order.id,
+          });
           toast.info('Payment is being processed. It may take a moment to confirm.');
         }
+
+        // Force refresh
+        queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+        queryClient.refetchQueries({ queryKey: ['orders', user.email] });
+        queryClient.invalidateQueries({ queryKey: ['notifications', user.email] });
+
       } catch (err) {
         console.error('[Orders] Payment status check error:', err);
-        // Even on error, if URL says success, update optimistically
         if (status === 'success') {
           const { data: orders } = await supabase
             .from('orders')
-            .select('id')
+            .select('id, total_amount')
             .eq('order_number', orderNumber)
             .limit(1);
           if (orders && orders.length > 0) {
-            await supabase
-              .from('orders')
-              .update({ payment_status: 'paid' })
-              .eq('id', orders[0].id);
+            await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', orders[0].id);
+
+            const adminEmails = getAdminEmails();
+            await sendNotification({
+              userEmail: user.email,
+              adminEmails,
+              title: '✅ Payment Confirmed',
+              message: `Payment for order #${orderNumber} (₵${orders[0].total_amount?.toFixed(2)}) has been confirmed!`,
+              type: 'payment_confirmed',
+              orderNumber: orderNumber,
+              orderId: orders[0].id,
+            });
+
             queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
             queryClient.refetchQueries({ queryKey: ['orders', user.email] });
+            queryClient.invalidateQueries({ queryKey: ['notifications', user.email] });
             toast.success('✅ Payment confirmed!');
           }
         }
@@ -168,7 +221,6 @@ export default function Orders() {
     return () => clearTimeout(timer);
   }, [searchParams, queryClient, user]);
 
-  // Fetch orders from Supabase
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', user?.email],
     queryFn: async () => {
@@ -226,18 +278,21 @@ export default function Orders() {
         }
       ];
       await supabase.from('orders').update({ status: 'cancelled', tracking_updates: newTracking }).eq('id', order.id);
-      await supabase.from('notifications').insert({
-        user_email: order.customer_email,
+
+      const adminEmails = getAdminEmails();
+      await sendNotification({
+        userEmail: order.customer_email,
+        adminEmails,
         title: '❌ Order Cancelled',
-        message: `Your order #${order.order_number} has been cancelled. If you paid, please contact us on WhatsApp: 0509 896 035 for a refund.`,
+        message: `Order #${order.order_number} has been cancelled. ${reason ? `Reason: ${reason}` : ''} If paid, contact WhatsApp: 0509 896 035 for a refund.`,
         type: 'order_cancelled',
-        order_id: order.id,
-        order_number: order.order_number,
-        is_read: false
+        orderNumber: order.order_number,
+        orderId: order.id,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       setCancellingOrder(null);
       setCancelReason('');
       toast.success('Order cancelled successfully.');
@@ -293,7 +348,6 @@ export default function Orders() {
         )}
       </div>
 
-      {/* Selection Controls */}
       {orders.length > 0 && (
         <div className="flex items-center gap-2 mb-3">
           <input
@@ -315,12 +369,10 @@ export default function Orders() {
           ))
         ) : (
           orders.map((order) => {
-            const StatusIcon = statusConfig[order.status]?.icon || Package;
             const isSelected = selectedOrders.includes(order.id);
 
             return (
               <Card key={order.id} className={`p-4 rounded-xl border ${isSelected ? 'border-blue-400 bg-blue-50/30' : ''}`}>
-                {/* Top bar: checkbox + order number + amount */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <input
@@ -349,7 +401,6 @@ export default function Orders() {
                   </div>
                 </div>
 
-                {/* Product(s) with images */}
                 <div className="mb-3">
                   <div className="flex flex-wrap gap-2">
                     {order.items?.map((item, idx) => (
@@ -366,7 +417,6 @@ export default function Orders() {
                   </div>
                 </div>
 
-                {/* Tracking checklist */}
                 <div className="mb-3">
                   <p className="text-xs font-semibold text-gray-600 mb-1">Order Progress</p>
                   {(() => {
@@ -396,12 +446,8 @@ export default function Orders() {
                   })()}
                 </div>
 
-                {/* Delivery info + actions */}
                 <div className="text-xs text-gray-500 mb-2">
                   <p>📍 {order.delivery_address}{order.city ? `, ${order.city}` : ''}</p>
-                  {order.estimated_delivery && (
-                    <p>🗓 Est. delivery: {format(new Date(order.estimated_delivery), 'MMM d, yyyy')}</p>
-                  )}
                 </div>
                 <div className="flex gap-2">
                   <Link to={`${createPageUrl('OrderTracking')}?order=${order.order_number}`} className="flex-1">
@@ -427,7 +473,6 @@ export default function Orders() {
         )}
       </div>
 
-      {/* Cancel Order Modal */}
       {cancellingOrder && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <Card className="w-full max-w-md p-6 rounded-2xl">

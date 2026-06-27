@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
@@ -51,6 +51,7 @@ export default function Orders() {
   const [cancelReason, setCancelReason] = useState('');
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const paymentCheckDone = useRef(false);
 
   useEffect(() => {
     base44.auth.me()
@@ -58,98 +59,133 @@ export default function Orders() {
       .catch(() => base44.auth.redirectToLogin(createPageUrl('Home')));
   }, []);
 
-  // Check payment status if returning from Hubtel
+  // Check payment status ONLY when user is loaded AND we have an order param
   useEffect(() => {
+    if (!user || paymentCheckDone.current) return;
+
     const orderNumber = searchParams.get('order');
-    const status = searchParams.get('status');
+    if (!orderNumber) return;
 
-    if (orderNumber && user) {
-      console.log('[Orders] Checking payment for:', orderNumber, 'Status param:', status);
+    paymentCheckDone.current = true;
+    console.log('[Orders] Verifying payment for:', orderNumber);
 
-      checkPaymentStatus(orderNumber)
-        .then(async (result) => {
-          console.log('[Orders] Payment status result:', result);
+    const verifyPayment = async () => {
+      try {
+        const result = await checkPaymentStatus(orderNumber);
+        console.log('[Orders] Hubtel status result:', result);
 
-          if (result?.data?.status) {
-            const hubtelStatus = result.data.status.toLowerCase();
-            const paymentStatus = (hubtelStatus === 'paid' || hubtelStatus === 'success') ? 'paid' : 'pending_payment';
+        // Determine if paid - check multiple possible response formats
+        let isPaid = false;
+        if (result?.data?.status) {
+          const s = result.data.status.toLowerCase();
+          isPaid = (s === 'paid' || s === 'success');
+        }
 
-            // Find the order
-            const orders = await base44.entities.Order.filter({ order_number: orderNumber });
-            if (orders && orders.length > 0) {
-              const order = orders[0];
+        // Also check if URL param says success (as fallback)
+        const urlStatus = searchParams.get('status');
+        if (urlStatus === 'success' && !result?.error) {
+          isPaid = true;
+        }
 
-              // Update order with payment status
-              await base44.entities.Order.update(order.id, {
-                payment_status: paymentStatus,
-                status: paymentStatus === 'paid' ? 'confirmed' : order.status,
-                tracking_updates: [
-                  ...(order.tracking_updates || []),
-                  {
-                    status: paymentStatus === 'paid' ? 'Payment Confirmed' : 'Payment Status Checked',
-                    message: `Payment verified via Hubtel: ${result.data.status}`,
-                    timestamp: new Date().toISOString(),
-                  }
-                ]
-              });
+        // Find the order in our DB
+        const orders = await base44.entities.Order.filter({ order_number: orderNumber });
+        if (!orders || orders.length === 0) {
+          console.warn('[Orders] Order not found:', orderNumber);
+          return;
+        }
 
-              queryClient.invalidateQueries({ queryKey: ['orders'] });
+        const order = orders[0];
 
-              // NOTIFICATIONS: Only when payment is confirmed as PAID
-              if (paymentStatus === 'paid') {
-                toast.success('✅ Payment confirmed! Your order has been received.');
+        // Only update if not already marked as paid
+        if (order.payment_status === 'paid') {
+          console.log('[Orders] Already marked paid, skipping update');
+          // Still clear cart just in case
+          await clearCart(user.email);
+          return;
+        }
 
-                // Clear cart
-                try {
-                  const cartItems = await base44.entities.CartItem.filter({ user_email: user.email });
-                  for (const item of cartItems) {
-                    await base44.entities.CartItem.delete(item.id).catch(() => {});
-                  }
-                  queryClient.invalidateQueries({ queryKey: ['cartItems'] });
-                } catch (e) { console.warn('Cart clear error:', e); }
+        const paymentStatus = isPaid ? 'paid' : 'pending_payment';
 
-                // Notify CUSTOMER
-                try {
-                  await base44.entities.Notification.create({
-                    user_email: order.customer_email || user.email,
-                    title: '✅ Payment Confirmed!',
-                    message: `Payment for order #${orderNumber} (GHS ${order.total_amount?.toFixed(2)}) has been confirmed! Your order is now being processed.`,
-                    type: 'payment_confirmed',
-                    order_id: order.id,
-                    order_number: orderNumber,
-                    is_read: false,
-                  });
-                } catch (e) { console.warn('Customer notification error:', e); }
-
-                // Notify ADMIN(s)
-                try {
-                  const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
-                  for (const adminEmail of adminEmails) {
-                    await base44.entities.Notification.create({
-                      user_email: adminEmail,
-                      title: '💰 New Payment Received!',
-                      message: `Order #${orderNumber} by ${order.customer_name} (${order.customer_phone}) - GHS ${order.total_amount?.toFixed(2)} payment confirmed via Hubtel! Ready to process.`,
-                      type: 'payment_confirmed',
-                      order_id: order.id,
-                      order_number: orderNumber,
-                      is_read: false,
-                    });
-                  }
-                } catch (e) { console.warn('Admin notification error:', e); }
-
-                queryClient.invalidateQueries({ queryKey: ['notifications'] });
-
-              } else {
-                toast.info('Payment status checked. Please complete payment if needed.');
-              }
+        // Update order: payment status + order status
+        await base44.entities.Order.update(order.id, {
+          payment_status: paymentStatus,
+          status: isPaid ? 'confirmed' : order.status,
+          tracking_updates: [
+            ...(order.tracking_updates || []),
+            {
+              status: isPaid ? 'Payment Confirmed' : 'Payment Status Checked',
+              message: isPaid 
+                ? `Payment confirmed via Hubtel. Order is now being processed.`
+                : `Payment verification returned: ${result?.data?.status || 'unknown'}`,
+              timestamp: new Date().toISOString(),
             }
-          }
-        })
-        .catch(err => {
-          console.error('[Orders] Payment status check error:', err);
+          ]
         });
+
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
+
+        if (isPaid) {
+          toast.success('✅ Payment confirmed! Your order is being processed.');
+
+          // Clear cart
+          await clearCart(user.email);
+
+          // Create customer notification
+          try {
+            await base44.entities.Notification.create({
+              user_email: user.email,
+              title: '✅ Payment Confirmed!',
+              message: `Payment for order #${orderNumber} (GHS ${order.total_amount?.toFixed(2)}) has been confirmed! Your order is now being processed.`,
+              type: 'payment_confirmed',
+              order_id: order.id,
+              order_number: orderNumber,
+              is_read: false,
+            });
+          } catch (e) { console.warn('Customer notification error:', e); }
+
+          // Create admin notification(s)
+          try {
+            const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+            for (const adminEmail of adminEmails) {
+              await base44.entities.Notification.create({
+                user_email: adminEmail,
+                title: '💰 New Payment!',
+                message: `Order #${orderNumber} by ${order.customer_name} (${order.customer_phone}) paid GHS ${order.total_amount?.toFixed(2)} via Hubtel.`,
+                type: 'payment_confirmed',
+                order_id: order.id,
+                order_number: orderNumber,
+                is_read: false,
+              });
+            }
+          } catch (e) { console.warn('Admin notification error:', e); }
+
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        } else {
+          toast.info('Payment not yet confirmed. If you paid, it may take a moment to process.');
+        }
+      } catch (err) {
+        console.error('[Orders] Payment verification error:', err);
+      }
+    };
+
+    verifyPayment();
+  }, [user, searchParams, queryClient]);
+
+  // Helper: clear cart items
+  const clearCart = async (email) => {
+    try {
+      const cartItems = await base44.entities.CartItem.filter({ user_email: email });
+      if (cartItems && cartItems.length > 0) {
+        for (const item of cartItems) {
+          await base44.entities.CartItem.delete(item.id).catch(() => {});
+        }
+        queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+        console.log('[Orders] Cart cleared:', cartItems.length, 'items');
+      }
+    } catch (e) {
+      console.warn('[Orders] Cart clear failed:', e);
     }
-  }, [searchParams, user, queryClient]);
+  };
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', user?.email],
@@ -231,7 +267,7 @@ export default function Orders() {
     );
   }
 
-  if (orders.length === 0) {
+  if (!isLoading && orders.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center space-y-3">
@@ -267,7 +303,6 @@ export default function Orders() {
           )}
         </div>
 
-        {/* Selection Controls */}
         {orders.length > 0 && (
           <div className="flex items-center gap-2 mb-3">
             <input
@@ -292,13 +327,12 @@ export default function Orders() {
             ))
           ) : (
             orders.map((order) => {
-              const StatusIcon = statusConfig[order.status]?.icon || Package;
               const isSelected = selectedOrders.includes(order.id);
 
               return (
                 <Card key={order.id} className={`p-4 ${isSelected ? 'ring-2 ring-blue-300' : ''}`}>
 
-                  {/* Top bar: checkbox + order number + amount */}
+                  {/* Top: checkbox + order number + amount */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-2">
                       <input
@@ -325,7 +359,7 @@ export default function Orders() {
                     </div>
                   </div>
 
-                  {/* Product(s) with images */}
+                  {/* Products */}
                   <div className="mb-3">
                     <div className="space-y-2">
                       {order.items?.map((item, idx) => (
@@ -342,7 +376,7 @@ export default function Orders() {
                     </div>
                   </div>
 
-                  {/* Tracking checklist */}
+                  {/* Progress */}
                   <div className="mb-3">
                     <p className="text-xs font-semibold text-gray-600 mb-1">Order Progress</p>
                     {(() => {
@@ -372,11 +406,12 @@ export default function Orders() {
                     })()}
                   </div>
 
-                  {/* Delivery info + actions */}
+                  {/* Delivery address */}
                   <div className="text-xs text-gray-500 mb-3">
-                    <p>📍 {order.delivery_address}, {order.city}</p>
+                    <p>📍 {order.delivery_address}{order.city ? `, ${order.city}` : ''}</p>
                   </div>
 
+                  {/* Actions */}
                   <div className="flex items-center gap-2">
                     <Link
                       to={createPageUrl(`OrderTracking?id=${order.id}`)}
@@ -400,28 +435,25 @@ export default function Orders() {
           )}
         </div>
 
-        {/* Cancel Order Modal */}
+        {/* Cancel Modal */}
         {cancellingOrder && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
             <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold">Cancel Order</h3>
-                  <p className="text-xs text-gray-500">#{cancellingOrder.order_number}</p>
-                </div>
+              <div>
+                <h3 className="font-bold">Cancel Order</h3>
+                <p className="text-xs text-gray-500">#{cancellingOrder.order_number}</p>
               </div>
 
               <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-1">
                 <p className="font-semibold">📋 Cancellation Policy</p>
                 <p>Orders can only be cancelled while in Pending or Confirmed status.</p>
-                <p>Once an order is Shipped or In Transit, it cannot be cancelled.</p>
-                <p>If you have already paid, contact us on WhatsApp 0509 896 035 to arrange a refund.</p>
-                <p>Refunds are processed within 1–3 business days via Mobile Money.</p>
-                <p>Custom or special orders may not be eligible for cancellation.</p>
+                <p>Once shipped, it cannot be cancelled.</p>
+                <p>If you paid, contact WhatsApp 0509 896 035 for refund.</p>
+                <p>Refunds: 1-3 business days via Mobile Money.</p>
               </div>
 
               <div>
-                <label className="text-sm font-medium">Reason for cancellation (optional)</label>
+                <label className="text-sm font-medium">Reason (optional)</label>
                 <textarea
                   className="w-full border rounded-lg p-2 mt-1 text-sm"
                   value={cancelReason}

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import { supabase } from '@/lib/supabase';
+import { base44 } from '@/api/base44Client';
 import { checkPaymentStatus } from '@/api/hubtelClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
+import { 
   Package,
   ChevronRight,
   CheckCircle2,
@@ -35,6 +35,7 @@ const statusConfig = {
 };
 
 const CANCELLABLE_STATUSES = ['confirmed', 'processing'];
+
 const paymentStatusConfig = {
   paid: { color: 'bg-green-100 text-green-700', label: '✅ Paid' },
   pending_payment: { color: 'bg-yellow-100 text-yellow-700', label: '⏳ Pending Payment' },
@@ -52,13 +53,9 @@ export default function Orders() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user: authUser } }) => {
-      if (authUser) {
-        setUser(authUser);
-      } else {
-        window.location.href = createPageUrl('Login');
-      }
-    });
+    base44.auth.me()
+      .then(setUser)
+      .catch(() => base44.auth.redirectToLogin(createPageUrl('Home')));
   }, []);
 
   // Check payment status if returning from Hubtel
@@ -66,130 +63,97 @@ export default function Orders() {
     const orderNumber = searchParams.get('order');
     const status = searchParams.get('status');
 
-    if (!orderNumber || !user) return;
+    if (orderNumber && user) {
+      console.log('[Orders] Checking payment for:', orderNumber, 'Status param:', status);
 
-    console.log('[Orders] Checking payment status for order:', orderNumber);
+      checkPaymentStatus(orderNumber)
+        .then(async (result) => {
+          console.log('[Orders] Payment status result:', result);
 
-    const timer = setTimeout(async () => {
-      try {
-        const result = await checkPaymentStatus(orderNumber);
-        console.log('[Orders] Hubtel Transaction Status response:', result);
+          if (result?.data?.status) {
+            const hubtelStatus = result.data.status.toLowerCase();
+            const paymentStatus = (hubtelStatus === 'paid' || hubtelStatus === 'success') ? 'paid' : 'pending_payment';
 
-        let paymentStatus = 'pending_payment';
-        if (result?.data?.status) {
-          const hubtelStatus = result.data.status.toLowerCase();
-          paymentStatus = (hubtelStatus === 'paid' || hubtelStatus === 'success') ? 'paid' : 'pending_payment';
-        } else if (status === 'success') {
-          paymentStatus = 'paid';
-        }
+            // Find the order
+            const orders = await base44.entities.Order.filter({ order_number: orderNumber });
+            if (orders && orders.length > 0) {
+              const order = orders[0];
 
-        const { data: orders, error: fetchError } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('order_number', orderNumber)
-          .limit(1);
+              // Update order with payment status
+              await base44.entities.Order.update(order.id, {
+                payment_status: paymentStatus,
+                status: paymentStatus === 'paid' ? 'confirmed' : order.status,
+                tracking_updates: [
+                  ...(order.tracking_updates || []),
+                  {
+                    status: paymentStatus === 'paid' ? 'Payment Confirmed' : 'Payment Status Checked',
+                    message: `Payment verified via Hubtel: ${result.data.status}`,
+                    timestamp: new Date().toISOString(),
+                  }
+                ]
+              });
 
-        if (fetchError || !orders || orders.length === 0) return;
+              queryClient.invalidateQueries({ queryKey: ['orders'] });
 
-        const order = orders[0];
-        const trackingUpdates = order.tracking_updates || [];
-        trackingUpdates.push({
-          status: paymentStatus === 'paid' ? 'Payment Confirmed' : 'Payment Pending',
-          message: `Payment verified via Hubtel Status API: ${paymentStatus}`,
-          timestamp: new Date().toISOString(),
+              // NOTIFICATIONS: Only when payment is confirmed as PAID
+              if (paymentStatus === 'paid') {
+                toast.success('✅ Payment confirmed! Your order has been received.');
+
+                // Clear cart
+                try {
+                  const cartItems = await base44.entities.CartItem.filter({ user_email: user.email });
+                  for (const item of cartItems) {
+                    await base44.entities.CartItem.delete(item.id).catch(() => {});
+                  }
+                  queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+                } catch (e) { console.warn('Cart clear error:', e); }
+
+                // Notify CUSTOMER
+                try {
+                  await base44.entities.Notification.create({
+                    user_email: order.customer_email || user.email,
+                    title: '✅ Payment Confirmed!',
+                    message: `Payment for order #${orderNumber} (GHS ${order.total_amount?.toFixed(2)}) has been confirmed! Your order is now being processed.`,
+                    type: 'payment_confirmed',
+                    order_id: order.id,
+                    order_number: orderNumber,
+                    is_read: false,
+                  });
+                } catch (e) { console.warn('Customer notification error:', e); }
+
+                // Notify ADMIN(s)
+                try {
+                  const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+                  for (const adminEmail of adminEmails) {
+                    await base44.entities.Notification.create({
+                      user_email: adminEmail,
+                      title: '💰 New Payment Received!',
+                      message: `Order #${orderNumber} by ${order.customer_name} (${order.customer_phone}) - GHS ${order.total_amount?.toFixed(2)} payment confirmed via Hubtel! Ready to process.`,
+                      type: 'payment_confirmed',
+                      order_id: order.id,
+                      order_number: orderNumber,
+                      is_read: false,
+                    });
+                  }
+                } catch (e) { console.warn('Admin notification error:', e); }
+
+                queryClient.invalidateQueries({ queryKey: ['notifications'] });
+
+              } else {
+                toast.info('Payment status checked. Please complete payment if needed.');
+              }
+            }
+          }
+        })
+        .catch(err => {
+          console.error('[Orders] Payment status check error:', err);
         });
-
-        await supabase
-          .from('orders')
-          .update({
-            payment_status: paymentStatus,
-            tracking_updates: trackingUpdates,
-          })
-          .eq('id', order.id);
-
-        // Create notification for customer
-        if (paymentStatus === 'paid') {
-          await supabase.from('notifications').insert({
-            user_email: order.customer_email,
-            title: '✅ Payment Confirmed',
-            message: `Payment for order #${order.order_number} has been confirmed. Your order is now being processed.`,
-            type: 'payment_confirmed',
-            order_id: order.id,
-            order_number: order.order_number,
-            is_read: false,
-            created_date: new Date().toISOString(),
-          });
-
-          // Create notification for admin
-          const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
-          for (const adminEmail of adminEmails) {
-            await supabase.from('notifications').insert({
-              user_email: adminEmail,
-              title: '💰 New Payment Received',
-              message: `Order #${order.order_number} by ${order.customer_name} (₵${order.total_amount?.toFixed(2)}) - Payment confirmed via Hubtel.`,
-              type: 'payment_confirmed',
-              order_id: order.id,
-              order_number: order.order_number,
-              is_read: false,
-              created_date: new Date().toISOString(),
-            });
-          }
-
-          // Clear cart
-          await supabase.from('cart_items').delete().eq('user_email', user.email);
-          queryClient.invalidateQueries({ queryKey: ['cartItems'] });
-
-          toast.success('✅ Payment confirmed! Your order has been received.');
-        } else {
-          toast.info('Payment is being processed. It may take a moment to confirm.');
-        }
-
-        queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
-        queryClient.refetchQueries({ queryKey: ['orders', user.email] });
-        queryClient.invalidateQueries({ queryKey: ['notifications', user.email] });
-
-      } catch (err) {
-        console.error('[Orders] Payment status check error:', err);
-        if (status === 'success') {
-          const { data: orders } = await supabase
-            .from('orders')
-            .select('*')
-            .eq('order_number', orderNumber)
-            .limit(1);
-          if (orders && orders.length > 0) {
-            await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', orders[0].id);
-            await supabase.from('notifications').insert({
-              user_email: user.email,
-              title: '✅ Payment Confirmed',
-              message: `Payment for order #${orderNumber} has been confirmed.`,
-              type: 'payment_confirmed',
-              order_number: orderNumber,
-              is_read: false,
-              created_date: new Date().toISOString(),
-            });
-            queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
-            queryClient.refetchQueries({ queryKey: ['orders', user.email] });
-            toast.success('✅ Payment confirmed!');
-          }
-        }
-      }
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [searchParams, queryClient, user]);
+    }
+  }, [searchParams, user, queryClient]);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', user?.email],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('customer_email', user.email)
-        .order('created_date', { ascending: false })
-        .limit(200);
-      if (error) return [];
-      return data || [];
-    },
+    queryFn: () => base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 200),
     enabled: !!user?.email,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
@@ -197,7 +161,7 @@ export default function Orders() {
 
   const deleteOrdersMutation = useMutation({
     mutationFn: async (orderIds) => {
-      await Promise.all(orderIds.map(id => supabase.from('orders').delete().eq('id', id)));
+      await Promise.all(orderIds.map(id => base44.entities.Order.delete(id)));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -208,7 +172,9 @@ export default function Orders() {
 
   const handleToggleSelect = (orderId) => {
     setSelectedOrders(prev =>
-      prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
+      prev.includes(orderId)
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
     );
   };
 
@@ -224,40 +190,25 @@ export default function Orders() {
     mutationFn: async ({ order, reason }) => {
       const newTracking = [
         ...(order.tracking_updates || []),
-        { status: 'Cancelled', message: `Order cancelled by customer. Reason: ${reason || 'No reason given'}`, timestamp: new Date().toISOString() }
+        {
+          status: 'Cancelled',
+          message: `Order cancelled by customer. Reason: ${reason || 'No reason given'}`,
+          timestamp: new Date().toISOString()
+        }
       ];
-      await supabase.from('orders').update({ status: 'cancelled', tracking_updates: newTracking }).eq('id', order.id);
-
-      // Notify customer
-      await supabase.from('notifications').insert({
+      await base44.entities.Order.update(order.id, { status: 'cancelled', tracking_updates: newTracking });
+      await base44.entities.Notification.create({
         user_email: order.customer_email,
         title: '❌ Order Cancelled',
         message: `Your order #${order.order_number} has been cancelled. If you paid, please contact us on WhatsApp: 0509 896 035 for a refund.`,
         type: 'order_cancelled',
         order_id: order.id,
         order_number: order.order_number,
-        is_read: false,
-        created_date: new Date().toISOString(),
+        is_read: false
       });
-
-      // Notify admin
-      const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
-      for (const adminEmail of adminEmails) {
-        await supabase.from('notifications').insert({
-          user_email: adminEmail,
-          title: '❌ Order Cancelled by Customer',
-          message: `Order #${order.order_number} by ${order.customer_name} has been cancelled. Reason: ${reason || 'No reason given'}`,
-          type: 'order_cancelled',
-          order_id: order.id,
-          order_number: order.order_number,
-          is_read: false,
-          created_date: new Date().toISOString(),
-        });
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       setCancellingOrder(null);
       setCancelReason('');
       toast.success('Order cancelled successfully.');
@@ -274,6 +225,7 @@ export default function Orders() {
   if (!user) {
     return (
       <div className="p-4 space-y-4">
+        <Skeleton className="h-8 w-48" />
         {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
       </div>
     );
@@ -281,168 +233,220 @@ export default function Orders() {
 
   if (orders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
-        <Card className="p-8 max-w-sm w-full">
-          <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h2 className="text-xl font-bold text-gray-800">No orders yet</h2>
-          <p className="text-gray-500 mt-2 mb-6">Start shopping to see your orders here</p>
-          <Link to={createPageUrl('Shop')}>
-            <Button className="w-full rounded-xl bg-blue-800 hover:bg-blue-900">Go to Shop</Button>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center space-y-3">
+          <Package className="w-12 h-12 text-gray-300 mx-auto" />
+          <p className="text-gray-500 font-medium">No orders yet</p>
+          <p className="text-sm text-gray-400">Start shopping to see your orders here</p>
+          <Link to={createPageUrl('Shop')} className="inline-block mt-2 px-6 py-2 bg-blue-800 text-white rounded-full font-semibold text-sm hover:bg-blue-900">
+            Go to Shop
           </Link>
-        </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-4 pb-24">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Orders</h1>
-          <p className="text-sm text-gray-500">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+    <div className="min-h-screen bg-gray-50 pb-32">
+      <div className="max-w-lg mx-auto p-4">
+
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-xl font-bold">My Orders</h1>
+            <p className="text-sm text-gray-500">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
+          </div>
+
+          {selectedOrders.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">{selectedOrders.length} selected</span>
+              <Button size="sm" variant="destructive" onClick={handleDeleteSelected}>
+                <Trash2 className="w-4 h-4 mr-1" />
+                Delete
+              </Button>
+            </div>
+          )}
         </div>
-        {selectedOrders.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">{selectedOrders.length} selected</span>
-            <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
-              <Trash2 className="w-4 h-4 mr-1" />Delete
-            </Button>
+
+        {/* Selection Controls */}
+        {orders.length > 0 && (
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              type="checkbox"
+              checked={selectedOrders.length === orders.length && orders.length > 0}
+              onChange={handleSelectAll}
+              className="w-4 h-4 cursor-pointer"
+            />
+            <span className="text-xs text-gray-500">
+              Select All ({selectedOrders.length}/{orders.length})
+            </span>
           </div>
         )}
-      </div>
 
-      {orders.length > 0 && (
-        <div className="flex items-center gap-2 mb-3">
-          <input type="checkbox" checked={selectedOrders.length > 0} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer" />
-          <span className="text-sm text-gray-600">Select All ({selectedOrders.length}/{orders.length})</span>
-        </div>
-      )}
+        <div className="space-y-4">
+          {isLoading ? (
+            Array(3).fill(0).map((_, i) => (
+              <Card key={i} className="p-4">
+                <Skeleton className="h-6 w-full mb-2" />
+                <Skeleton className="h-16 w-full" />
+              </Card>
+            ))
+          ) : (
+            orders.map((order) => {
+              const StatusIcon = statusConfig[order.status]?.icon || Package;
+              const isSelected = selectedOrders.includes(order.id);
 
-      <div className="space-y-4">
-        {isLoading ? (
-          Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)
-        ) : (
-          orders.map((order) => {
-            const isSelected = selectedOrders.includes(order.id);
-            return (
-              <Card key={order.id} className={`p-4 rounded-xl border ${isSelected ? 'border-blue-400 bg-blue-50/30' : ''}`}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" checked={isSelected} onChange={() => handleToggleSelect(order.id)} className="w-4 h-4 cursor-pointer" />
-                    <div>
-                      <span className="font-bold text-sm">}</p>
+              return (
+                <Card key={order.id} className={`p-4 ${isSelected ? 'ring-2 ring-blue-300' : ''}`}>
+
+                  {/* Top bar: checkbox + order number + amount */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelect(order.id)}
+                        className="w-4 h-4 cursor-pointer mt-1"
+                      />
+                      <div>
+                        <p className="font-semibold text-sm">{order.order_number}</p>
+                        <p className="text-xs text-gray-400">{format(new Date(order.created_date), 'MMM d, yyyy')}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold text-base">₵{order.total_amount?.toFixed(2)}</span>
-                    <div className="flex flex-wrap gap-1 mt-1 justify-end">
+                    <div className="text-right">
+                      <p className="font-bold text-sm">₵{order.total_amount?.toFixed(2)}</p>
                       <Badge className={`text-xs ${statusConfig[order.status]?.color || 'bg-gray-100'}`}>
                         {statusConfig[order.status]?.label || order.status}
                       </Badge>
                       {order.payment_status && (
-                        <Badge className={`text-xs ${paymentStatusConfig[order.payment_status]?.color || 'bg-gray-100'}`}>
+                        <p className={`text-xs mt-1 px-2 py-0.5 rounded-full inline-block ${paymentStatusConfig[order.payment_status]?.color || ''}`}>
                           {paymentStatusConfig[order.payment_status]?.label || order.payment_status}
-                        </Badge>
+                        </p>
                       )}
                     </div>
                   </div>
-                </div>
 
-                <div className="mb-3">
-                  <div className="flex flex-wrap gap-2">
-                    {order.items?.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2 flex-1 min-w-[200px]">
-                        {item.product_image && <img src={item.product_image} alt={item.product_name} className="w-10 h-10 rounded object-cover" />}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{item.product_name}</p>
-                          <p className="text-xs text-gray-500">x{item.quantity} · ₵{(item.price * item.quantity).toFixed(2)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <p className="text-xs font-semibold text-gray-600 mb-1">Order Progress</p>
-                  {(() => {
-                    const s = order.status;
-                    const ORDER_RANK = { confirmed: 1, processing: 2, packed: 3, shipped: 4, out_for_delivery: 5, in_transit: 5, delivered: 6 };
-                    const rank = ORDER_RANK[s] || 0;
-                    const isPaid = order.payment_status === 'paid';
-                    const steps = [
-                      { label: 'Order Placed', done: true },
-                      { label: 'Payment Confirmed', done: isPaid },
-                      { label: 'Processing', done: isPaid && rank >= 2 },
-                      { label: 'Shipped', done: isPaid && rank >= 4 },
-                      { label: 'Delivered', done: isPaid && rank >= 6 },
-                    ];
-                    return (
-                      <div className="flex flex-wrap gap-2">
-                        {steps.map((step, i) => (
-                          <div key={i} className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${step.done ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
-                            <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${step.done ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}>
-                              {step.done && <Check className="w-2 h-2 text-white" />}
-                            </div>
-                            <span>{step.label}</span>
+                  {/* Product(s) with images */}
+                  <div className="mb-3">
+                    <div className="space-y-2">
+                      {order.items?.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          {item.product_image && (
+                            <img src={item.product_image} alt="" className="w-10 h-10 rounded object-cover" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{item.product_name}</p>
+                            <p className="text-xs text-gray-400">x{item.quantity} · ₵{(item.price * item.quantity).toFixed(2)}</p>
                           </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-                <div className="text-xs text-gray-500 mb-2">
-                  <p>📍 {order.delivery_address}{order.city ? `, ${order.city}` : ''}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Link to={`${createPageUrl('OrderTracking')}?order=${order.order_number}`} className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full text-xs rounded-lg">Track Order</Button>
-                  </Link>
-                  {CANCELLABLE_STATUSES.includes(order.status) && (
-                    <Button variant="ghost" size="sm" className="text-xs text-red-600" onClick={() => { setCancellingOrder(order); setCancelReason(''); }}>
-                      <XCircle className="w-3 h-3 mr-1" />Cancel Order
-                    </Button>
-                  )}
-                </div>
-              </Card>
-            );
-          })
-        )}
-      </div>
+                  {/* Tracking checklist */}
+                  <div className="mb-3">
+                    <p className="text-xs font-semibold text-gray-600 mb-1">Order Progress</p>
+                    {(() => {
+                      const s = order.status;
+                      const ORDER_RANK = { confirmed: 1, processing: 2, packed: 3, shipped: 4, out_for_delivery: 5, in_transit: 5, delivered: 6 };
+                      const rank = ORDER_RANK[s] || 0;
+                      const isPaid = order.payment_status === 'paid';
+                      const steps = [
+                        { label: 'Order Placed', done: true },
+                        { label: 'Payment Confirmed', done: isPaid },
+                        { label: 'Processing', done: isPaid && rank >= 2 },
+                        { label: 'Shipped', done: isPaid && rank >= 4 },
+                        { label: 'Delivered', done: isPaid && rank >= 6 },
+                      ];
+                      return (
+                        <div className="flex items-center gap-1">
+                          {steps.map((step, i) => (
+                            <div key={i} className="flex items-center gap-1">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs ${step.done ? 'bg-green-500' : 'bg-gray-200'}`}>
+                                {step.done && <Check className="w-3 h-3" />}
+                              </div>
+                              <span className="text-[10px] text-gray-500 hidden sm:inline">{step.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
 
-      {cancellingOrder && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md p-6 rounded-2xl">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="p-2 bg-red-100 rounded-full"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
+                  {/* Delivery info + actions */}
+                  <div className="text-xs text-gray-500 mb-3">
+                    <p>📍 {order.delivery_address}, {order.city}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={createPageUrl(`OrderTracking?id=${order.id}`)}
+                      className="flex-1 text-center py-2 bg-blue-50 text-blue-700 rounded-lg text-xs font-semibold hover:bg-blue-100"
+                    >
+                      Track Order
+                    </Link>
+                    {CANCELLABLE_STATUSES.includes(order.status) && (
+                      <button
+                        onClick={() => { setCancellingOrder(order); setCancelReason(''); }}
+                        className="flex-1 text-center py-2 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100"
+                      >
+                        Cancel Order
+                      </button>
+                    )}
+                  </div>
+
+                </Card>
+              );
+            })
+          )}
+        </div>
+
+        {/* Cancel Order Modal */}
+        {cancellingOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold">Cancel Order</h3>
+                  <p className="text-xs text-gray-500">#{cancellingOrder.order_number}</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-1">
+                <p className="font-semibold">📋 Cancellation Policy</p>
+                <p>Orders can only be cancelled while in Pending or Confirmed status.</p>
+                <p>Once an order is Shipped or In Transit, it cannot be cancelled.</p>
+                <p>If you have already paid, contact us on WhatsApp 0509 896 035 to arrange a refund.</p>
+                <p>Refunds are processed within 1–3 business days via Mobile Money.</p>
+                <p>Custom or special orders may not be eligible for cancellation.</p>
+              </div>
+
               <div>
-                <h3 className="font-bold text-lg">Cancel Order</h3>
-                <p className="text-sm text-gray-500">#{cancellingOrder.order_number}</p>
+                <label className="text-sm font-medium">Reason for cancellation (optional)</label>
+                <textarea
+                  className="w-full border rounded-lg p-2 mt-1 text-sm"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => { setCancellingOrder(null); setCancelReason(''); }}>
+                  Keep Order
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => cancelOrderMutation.mutate({ order: cancellingOrder, reason: cancelReason })}
+                  disabled={cancelOrderMutation.isPending}
+                >
+                  {cancelOrderMutation.isPending ? 'Cancelling...' : 'Confirm Cancel'}
+                </Button>
               </div>
             </div>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-xs text-yellow-800">
-              <p className="font-semibold mb-1">📋 Cancellation Policy</p>
-              <ul className="list-disc pl-4 space-y-1">
-                <li>Orders can only be cancelled while in Pending or Confirmed status.</li>
-                <li>Once an order is Shipped or In Transit, it cannot be cancelled.</li>
-                <li>If you have already paid, contact us on WhatsApp 0509 896 035 to arrange a refund.</li>
-                <li>Refunds are processed within 1–3 business days via Mobile Money.</li>
-                <li>Custom or special orders may not be eligible for cancellation.</li>
-              </ul>
-            </div>
-            <div className="mb-4">
-              <label className="text-sm font-medium text-gray-700">Reason for cancellation (optional)</label>
-              <textarea className="w-full mt-1 p-2 border rounded-lg text-sm" rows={3} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => { setCancellingOrder(null); setCancelReason(''); }}>Keep Order</Button>
-              <Button variant="destructive" className="flex-1" onClick={() => cancelOrderMutation.mutate({ order: cancellingOrder, reason: cancelReason })} disabled={cancelOrderMutation.isPending}>
-                {cancelOrderMutation.isPending ? 'Cancelling...' : 'Confirm Cancel'}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

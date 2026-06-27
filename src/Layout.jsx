@@ -80,10 +80,7 @@ export default function Layout({ children, currentPageName }) {
   });
 
   // Notifications — only for authenticated users
-     // --- IMPORT at the top of the file: ---
-  // import { supabaseNotifications } from '@/lib/supabaseNotifications';
-
-  const { data: userNotifications = [] } = useQuery({
+      const { data: userNotifications = [] } = useQuery({
     queryKey: ['notifications', user?.email],
     queryFn: () => supabaseNotifications.filter(user.email, 50),
     enabled: !!user?.email && isAuthenticated,
@@ -92,7 +89,7 @@ export default function Layout({ children, currentPageName }) {
   });
 
 
-  u  useEffect(() => {
+    useEffect(() => {
     if (!user?.email || !isAuthenticated) return;
     const unsubscribe = supabaseNotifications.subscribe(user.email, () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
@@ -168,84 +165,98 @@ export default function Layout({ children, currentPageName }) {
 
   // SEO meta tags
   useEffect(() => {
-    const merchantPhone = '0208207543';
-    const merchantEmail = import.meta.env.VITE_MERCHANT_EMAIL || 'merchant@example.com';
+    const merchantPhone = '+233208207543';
+    const merchantEmail = 'fmmclassico@gmail.com';
     const merchantWhatsapp = 'https://wa.me/233208207543';
-    document.title = 'FMM CLASSICO – Phone Accessories, Electronics & Home Appliances in Ghana | FMMCLASSICO';
+
+    document.title = 'FMM Classico – Phones & Accessories, Home Appliances and Electronics';
+
     const setMeta = (attr, key, content) => {
       let el = document.querySelector(`meta[${attr}="${key}"]`);
       if (!el) { el = document.createElement('meta'); el.setAttribute(attr, key); document.head.appendChild(el); }
       el.setAttribute('content', content);
     };
-    setMeta('name', 'description', 'FMM CLASSICO – Your trusted destination phones & accessories, home appliances and Electronics in Ghana. Explore a wide range of premium phone accessories, quality electronics and essential home appliances at unbeatable prices. Fast delivery across Ghana.');
-    setMeta('name', 'keywords', 'FMMCLASSICO, FMM CLASSICO, fmmclassico, fmm, classico,  phone accessories Ghana, buy Phones Ghana, buy phone accessories Ghana, Buy Electronics Ghana, buy home appliances Ghana, Phone accessories Ghana, Electronics Ghana, smart watches Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa shop, University of Mines and Technology shop, Accra phones shop, Kumasi, Accra, Ghana, phones shop, Phone Accessories, Accra, Kumasi, Tarkwa, Knust, Legon , Shops in Umat, Umat, Knust Shops, Shops in Knust, Shops in University of Ghana, University of Ghana, Shops in Ghana, Popular Shop in Ghana, Chargers, Charger, Cable, Phones, Games, Speakers, Watches, wholesale shop in Ghana, Retail shop in Ghana, Best quality premium goods shop, shops that sells quality products, online shopping Ghana');
+
+    const siteDescription = 'FMM Classico - trusted online and physical retail and wholesale store specializing in premium phone accessories, quality electronics, and home appliances. We are committed to providing authentic products at competitive prices to both individual customers and businesses. Whether you shop online or visit our physical store, you will enjoy a seamless shopping experience with secure payments, fast and reliable delivery, and exceptional customer service. At FMM Classico, our mission is to make quality technology and home essentials accessible, affordable, and convenient for everyone.';
+    const logoUrl = `${window.location.origin}/logo.png`;
+
+    setMeta('name', 'description', siteDescription);
+    setMeta('name', 'keywords', 'FMM Classico, fmmclassico, phones Ghana, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronics Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Kumasi phone shop, Ashongman Estate, Airport Residential Area, online shopping Ghana, wholesale electronics Ghana');
     setMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
     setMeta('name', 'googlebot', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
-    setMeta('name', 'author', 'FMM CLASSICO');
+    setMeta('name', 'author', 'FMM Classico');
     setMeta('property', 'og:type', 'website');
-    setMeta('property', 'og:site_name', 'FMM CLASSICO');
-    setMeta('property', 'og:title', 'FMM CLASSICO – Phones & Accessories, Electronics & Home Appliances in Ghana');
-    setMeta('property', 'og:description', 'FMM Classico is a trusted online and physical retail and wholesale store specializing in premium phones & accessories, quality electronics, and home appliances. We are committed to providing authentic products at competitive prices to both individual customers and businesses. Whether you shop online or visit our physical store, you’ll enjoy a seamless shopping experience with secure payments, fast and reliable delivery, and exceptional customer service. At FMM Classico, our mission is to make quality technology and home essentials accessible, affordable, and convenient for everyone. Shop with confidence and experience quality you can trust.');
-    setMeta('property', 'og:image', 'https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg');
+    setMeta('property', 'og:site_name', 'FMM Classico');
+    setMeta('property', 'og:title', 'FMM Classico – Phones & Accessories, Home Appliances and Electronics');
+    setMeta('property', 'og:description', siteDescription);
+    setMeta('property', 'og:image', logoUrl);
     setMeta('property', 'og:url', window.location.origin);
     setMeta('name', 'twitter:card', 'summary_large_image');
-    setMeta('name', 'twitter:title', 'FMM CLASSICO – Phones & Accessories, Electronics and Home appliances in Ghana');
-    setMeta('name', 'twitter:description', 'Premium phones & accessories, electronics and home appliances. Fast delivery across Ghana. Shop FMMCLASSICO now!');
-    setMeta('name', 'twitter:image', 'https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg');
+    setMeta('name', 'twitter:title', 'FMM Classico – Phones & Accessories, Home Appliances and Electronics');
+    setMeta('name', 'twitter:description', siteDescription);
+    setMeta('name', 'twitter:image', logoUrl);
+
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical); }
     canonical.href = window.location.origin;
+
     let jsonLd = document.querySelector('#fmm-jsonld');
     if (!jsonLd) { jsonLd = document.createElement('script'); jsonLd.id = 'fmm-jsonld'; jsonLd.type = 'application/ld+json'; document.head.appendChild(jsonLd); }
     jsonLd.textContent = JSON.stringify([
       {
         "@context": "https://schema.org",
         "@type": "OnlineStore",
-        "name": "FMM CLASSICO",
-        "alternateName": ["FMMCLASSICO", "FMMClassico", "FMM", "Classico", "fmm", "classico", "fmmclassico"],
-        "description": "FMM Classico is a trusted online and physical retail and wholesale store specializing in premium phones & accessories, quality electronics, and home appliances in Ghana.",
+        "name": "FMM Classico",
+        "alternateName": ["FMMCLASSICO", "FMMClassico", "fmmclassico", "FMM CLASSICO"],
+        "description": siteDescription,
         "url": window.location.origin,
-        "logo": { "@type": "ImageObject", "url": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg", "width": 1200, "height": 1200 },
-        "image": "https://i.pinimg.com/1200x/7b/12/4f/7b124f42aefb35999bab0f52ebf07e85.jpg",
-          "telephone": merchantPhone,
-          "email": merchantEmail,
+        "logo": { "@type": "ImageObject", "url": logoUrl, "width": 512, "height": 512 },
+        "image": logoUrl,
+        "telephone": "+233208207543",
+        "email": "fmmclassico@gmail.com",
+        "founder": {
+          "@type": "Person",
+          "name": "Fedra Mensah Martha",
+          "jobTitle": "CEO & Founder"
+        },
         "address": [
-          { "@type": "PostalAddress", "streetAddress": "UMAT Campus", "addressLocality": "Tarkwa", "addressRegion": "Western Region", "addressCountry": "GH" },
-          { "@type": "PostalAddress", "streetAddress": "Ashongman Estate", "addressLocality": "Accra", "addressRegion": "Greater Accra", "addressCountry": "GH" }
+          { "@type": "PostalAddress", "streetAddress": "Accra", "addressRegion": "Greater Accra Region ", "addressCountry": "GH" },
+          { "@type": "PostalAddress", "addressLocality": "Kumasi", "addressRegion": "Ashanti Region", "addressCountry": "GH" },
+          { "@type": "PostalAddress", "addressLocality": "Tarkwa", "addressRegion": "Western Region", "addressCountry": "GH" }
         ],
         "areaServed": { "@type": "Country", "name": "Ghana" },
         "priceRange": "₵₵",
         "openingHours": "Mo-Su 08:00-20:00",
         "currenciesAccepted": "GHS",
         "paymentAccepted": "Mobile Money, Credit Card, Bank Transfer",
-          "sameAs": [merchantWhatsapp]
+        "sameAs": ["https://wa.me/233208207543"]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Fedra Mensah Martha",
+        "alternateName": ["Fedra Martha", "Fedra Mensah", "Miss Fedra Mensah Martha"],
+        "jobTitle": "CEO & Founder",
+        "worksFor": {
+          "@type": "Organization",
+          "name": "FMM Classico",
+          "url": window.location.origin
+        },
+        "description": "Fedra Mensah Martha is the CEO and Founder of FMM Classico, a trusted retail and wholesale store in Accra, Kumasi and Tarkwa, Ghana specializing in phones, phone accessories, electronics, and home appliances.",
+        "nationality": "Ghanaian"
       },
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
-        "name": "FMM CLASSICO",
+        "name": "FMM Classico",
         "url": window.location.origin,
         "potentialAction": {
           "@type": "SearchAction",
           "target": { "@type": "EntryPoint", "urlTemplate": `${window.location.origin}?page=Shop&search={search_term_string}` },
           "query-input": "required name=search_term_string"
-         }
-},
-{
-  "@context": "https://schema.org",
-  "@type": "Person",
-  "name": "Fedra Mensah Martha",
-  "alternateName": ["Fedra Martha", "Fedra Mensah", "Miss Fedra Mensah Martha"],
-  "jobTitle": "CEO & Founder",
-  "worksFor": {
-    "@type": "Organization",
-    "name": "FMM CLASSICO",
-    "url": window.location.origin
-  },
-  "description": "Fedra Mensah Martha is the CEO and Founder of FMM CLASSICO, a trusted retail and wholesale store in Ghana specializing in phones, phone accessories, electronics, and home appliances.",
-  "nationality": "Ghanaian"
-}
-]);
+        }
+      }
+    ]);
   }, []);
 
   const ASH = '#2E86C1';

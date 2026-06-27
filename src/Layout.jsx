@@ -204,8 +204,8 @@ export default function Layout({ children, currentPageName }) {
         "alternateName": ["FMMCLASSICO", "FMMClassico", "fmmclassico", "FMM CLASSICO"],
         "description": "FMM Classico is a trusted online and physical retail and wholesale store specializing in premium phone accessories, quality electronics, and home appliances. We are committed to providing authentic products at competitive prices.",
         "url": window.location.origin,
-        "logo": { "@type": "ImageObject", "url": window.location.origin + "/logo-white.png", "width": 512, "height": 512 },
-        "image": window.location.origin + "/logo-white.png",
+        "logo": { "@type": "ImageObject", "url": "https://fmmclassico.com/logo-white.png", "width": 512, "height": 512 },
+        "image": "https://fmmclassico.com/logo-white.png",
         "telephone": "0208207543",
         "address": [
           { "@type": "PostalAddress", "streetAddress": "UMAT Campus", "addressLocality": "Tarkwa", "addressRegion": "Western Region", "addressCountry": "GH" },

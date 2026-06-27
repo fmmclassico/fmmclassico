@@ -119,100 +119,95 @@ export default function Checkout() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (isSubmitting) return;
+  if (isSubmitting) return;
 
-    if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !selectedZoneId) {
-      toast.error('Please fill in all required fields, including your delivery option.');
-      return;
-    }
+  if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !selectedZoneId) {
+    toast.error('Please fill in all required fields, including your delivery option.');
+    return;
+  }
 
-    const expectedSubtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
-    if (Math.abs(expectedSubtotal - subtotal) > 0.01) {
-      toast.error('Cart total mismatch detected. Please go back to your cart and try again.');
-      return;
-    }
-    if (total <= 0 || isNaN(total)) {
-      toast.error('Order total is invalid. Please check your cart and delivery details.');
-      return;
-    }
+  const expectedSubtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
+  if (Math.abs(expectedSubtotal - subtotal) > 0.01) {
+    toast.error('Cart total mismatch detected. Please go back to your cart and try again.');
+    return;
+  }
+  if (total <= 0 || isNaN(total)) {
+    toast.error('Order total is invalid. Please check your cart and delivery details.');
+    return;
+  }
 
-    setIsSubmitting(true);
+  setIsSubmitting(true);
+  setOrderError('');
 
-    const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
+  const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
 
-    setOrderError('');
+  try {
+    // STEP 1: Try to initiate payment FIRST (before creating order)
+    const callbackUrl = `https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback`;
+    const returnUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=success`;
+    const cancellationUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=cancelled`;
 
-    try {
-      const orderPayload = {
-        order_number: orderNumber,
-        items: cartItems.map(item => ({
-          product_id: item.product_id,
-          product_name: item.product_name,
-          product_image: item.product_image,
-          price: item.product_price,
-          quantity: item.quantity,
-        })),
-        total_amount: total,
-        payment_status: 'pending_payment',
-        status: 'processing',
-        customer_name: formData.customer_name,
-        customer_email: user.email,
-        customer_phone: formData.customer_phone,
-        delivery_address: formData.delivery_address,
-        notes: formData.notes,
-        tracking_updates: [
-          {
-            status: 'Order Placed',
-            message: 'Order created and waiting for payment confirmation.',
-            timestamp: new Date().toISOString(),
-          }
-        ],
-      };
+    const initRes = await initiatePayment({
+      totalAmount: total,
+      description: `Order ${orderNumber}`,
+      callbackUrl,
+      returnUrl,
+      cancellationUrl,
+      clientReference: orderNumber,
+    });
 
-      await base44.entities.Order.create(orderPayload);
-      queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
-
-      setCreatedOrderNumber(orderNumber);
-
-      // NO notifications here. Notifications only after Hubtel confirms payment.
-
-      try {
-        const callbackUrl = `https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback`;
-        const returnUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=success`;
-        const cancellationUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=cancelled`;
-
-        const initRes = await initiatePayment({
-          totalAmount: total,
-          description: `Order ${orderNumber}`,
-          callbackUrl,
-          returnUrl,
-          cancellationUrl,
-          clientReference: orderNumber,
-        });
-
-        if (initRes && initRes.data && initRes.data.checkoutUrl) {
-          toast.success('Redirecting to Hubtel payment page...');
-          window.location.href = initRes.data.checkoutUrl;
-          return;
-        }
-
-        const errorMsg = initRes?.error || 'Unable to connect to payment gateway. Please try again.';
-        setOrderError(`Payment Error: ${errorMsg}. Your order #${orderNumber} has been created. Please try the payment again or contact support.`);
-        toast.error('Payment initiation failed. Please try again.');
-      } catch (err) {
-        console.error('[Checkout] Payment initiation error:', err);
-        setOrderError(`Payment Error: ${err.message || 'Unknown error'}. Your order #${orderNumber} has been created. Please try again or contact support.`);
-        toast.error('Payment initiation failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Order creation error:', error);
-      setOrderError('Unable to place your order right now. Please try again.');
-    } finally {
+    // If payment initiation failed, DON'T create the order
+    if (!initRes || !initRes.data || !initRes.data.checkoutUrl) {
+      const errorMsg = initRes?.error || 'Unable to connect to payment gateway.';
+      setOrderError(`Payment failed: ${errorMsg}`);
+      toast.error('Payment could not be initiated. No order was created. Please try again.');
       setIsSubmitting(false);
+      return;
     }
-  };
+
+    // STEP 2: Payment initiation succeeded, NOW create the order
+    const orderPayload = {
+      order_number: orderNumber,
+      items: cartItems.map(item => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        product_image: item.product_image,
+        price: item.product_price,
+        quantity: item.quantity,
+      })),
+      total_amount: total,
+      payment_status: 'pending_payment',
+      status: 'processing',
+      customer_name: formData.customer_name,
+      customer_email: user.email,
+      customer_phone: formData.customer_phone,
+      delivery_address: formData.delivery_address,
+      notes: formData.notes,
+      tracking_updates: [
+        {
+          status: 'Order Placed',
+          message: 'Order created. Redirecting to payment.',
+          timestamp: new Date().toISOString(),
+        }
+      ],
+    };
+
+    await base44.entities.Order.create(orderPayload);
+    queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+
+    // STEP 3: Redirect to Hubtel payment page
+    toast.success('Redirecting to Hubtel payment page...');
+    window.location.href = initRes.data.checkoutUrl;
+
+  } catch (error) {
+    console.error('Checkout error:', error);
+    setOrderError('Something went wrong. Please try again.');
+    toast.error('An error occurred. Please try again.');
+    setIsSubmitting(false);
+  }
+};
 
   if (!user) {
     return (

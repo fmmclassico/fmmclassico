@@ -183,12 +183,12 @@ export default function Layout({ children, currentPageName }) {
     setMeta('property', 'og:site_name', 'FMM Classico');
     setMeta('property', 'og:title', 'FMM Classico - Phones & Accessories, Home Appliances and Electronics');
     setMeta('property', 'og:description', 'Shop for premium phones & accessories, quality electronics, and trusted home appliances all in one place. Browse a wide selection of authentic products, enjoy competitive prices, secure payments, and fast, reliable delivery.');
-    setMeta('property', 'og:image', '/logo-white.png');
+    setMeta('property', 'og:image', 'https://fmmclassico.com/logo-white.png');
     setMeta('property', 'og:url', window.location.origin);
     setMeta('name', 'twitter:card', 'summary_large_image');
     setMeta('name', 'twitter:title', 'FMM Classico - Phones & Accessories, Home Appliances and Electronics');
     setMeta('name', 'twitter:description', 'Shop for premium phones & accessories, quality electronics, and trusted home appliances all in one place. Authentic products, competitive prices, fast delivery across Ghana.');
-    setMeta('name', 'twitter:image', '/logo-white.png');
+    setMeta('name', 'twitter:image', 'https://fmmclassico.com/logo-white.png');
 
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical); }

@@ -15,7 +15,7 @@ const DEFAULT_SLIDES = [
     title: 'Phones',
     subtitle: 'Samsung, iPhones & more at unbeatable prices',
     bg_gradient: NAVY_GRADIENT,
-    image_url: '',
+    image_url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80',
     cta_link: createPageUrl('Shop?category=phones'),
     cta_text: 'Shop Now',
   },
@@ -25,7 +25,7 @@ const DEFAULT_SLIDES = [
     title: 'Phone Accessories',
     subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
     bg_gradient: NAVY_GRADIENT,
-    image_url: '',
+    image_url: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&q=80',
     cta_link: createPageUrl('Categories'),
     cta_text: 'Shop Now',
   },
@@ -35,7 +35,7 @@ const DEFAULT_SLIDES = [
     title: 'Electronic Appliances',
     subtitle: 'Top quality electronics for your everyday needs',
     bg_gradient: NAVY_GRADIENT,
-    image_url: '',
+    image_url: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=400&q=80',
     cta_link: createPageUrl('Shop?category=electronic_appliances'),
     cta_text: 'Shop Now',
   },
@@ -45,7 +45,7 @@ const DEFAULT_SLIDES = [
     title: 'Home Appliances',
     subtitle: 'Quality home appliances delivered to your door',
     bg_gradient: NAVY_GRADIENT,
-    image_url: '',
+    image_url: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80',
     cta_link: createPageUrl('Shop?category=home_appliances'),
     cta_text: 'Shop Now',
   },
@@ -55,7 +55,7 @@ const DEFAULT_SLIDES = [
     title: 'Samsung & Apple',
     subtitle: 'Genuine Samsung & Apple products at great prices',
     bg_gradient: NAVY_GRADIENT,
-    image_url: '',
+    image_url: 'https://images.unsplash.com/photo-1592950630581-03cb41342cc5?w=400&q=80',
     cta_link: createPageUrl('BrandProducts?brand=Samsung'),
     cta_text: 'Shop Brands',
   },
@@ -65,7 +65,7 @@ const DEFAULT_SLIDES = [
     title: 'Earphones & Speakers',
     subtitle: 'Premium sound at affordable prices — Oraimo, JBL & more',
     bg_gradient: NAVY_GRADIENT,
-    image_url: '',
+    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80',
     cta_link: createPageUrl('Shop?category=earphones'),
     cta_text: 'Shop Now',
   },
@@ -75,7 +75,7 @@ const DEFAULT_SLIDES = [
     title: 'Smart Watches',
     subtitle: 'Stay connected with the latest smartwatches',
     bg_gradient: NAVY_GRADIENT,
-    image_url: '',
+    image_url: 'https://images.unsplash.com/photo-1546868871-af0de0ae72be?w=400&q=80',
     cta_link: createPageUrl('Shop?category=smart_watches'),
     cta_text: 'Shop Now',
   },
@@ -87,14 +87,14 @@ export default function HeroBanner() {
   const [touchStart, setTouchStart] = useState(null);
 
   useEffect(() => {
-    // Load any active promo banners from admin
     base44.entities.PromoBanner.filter({ is_active: true }, 'order', 20)
       .then(data => {
-        if (data && data.length > 0) {
-          setSlides(data);
+        const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+        if (list.length > 0) {
+          setSlides(list);
         }
       })
-      .catch(() => {}); // fallback to default slides on error
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -115,6 +115,7 @@ export default function HeroBanner() {
     if (Math.abs(diff) > 40) { diff > 0 ? next() : prev(); }
     setTouchStart(null);
   };
+
   const slide = slides.length > 0 ? slides[current % slides.length] : DEFAULT_SLIDES[0];
 
   useEffect(() => {
@@ -123,7 +124,6 @@ export default function HeroBanner() {
     }
   }, [slides.length]);
 
-  // Normalize cta_link: could be a full URL, an absolute path (/Shop), or a relative page name (Shop?category=phones)
   const ctaHref = (() => {
     const link = slide.cta_link;
     if (!link) return createPageUrl('Shop');

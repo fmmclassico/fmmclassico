@@ -1,130 +1,117 @@
-// Server function: Hubtel checkout callback receiver
-// Hubtel will POST JSON to this endpoint when transaction finalises.
-// Updates the Order entity and logs transaction for UAT.
+import { createClient } from '@supabase/supabase-js';
 
-import { createClient } from '@base44/sdk';
-
-// Initialize Base44 client for server-side operations
-const base44 = createClient({
-  appId: process.env.BASE44_APP_ID,
-  token: process.env.BASE44_SERVER_TOKEN,
-  requiresAuth: false,
-});
-
-// In-memory sample storage for UAT (in production, use persistent storage)
-const UAT_SAMPLES = {
-  callbacks: [],
-  statusChecks: [],
-  maxSamples: 50,
-};
+const supabase = createClient(
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     let body;
     try {
-      body = (typeof req.json === 'function') ? await req.json() : req.body || await readReqBody(req);
-    } catch (e) {
-      body = null;
-    }
+      body = typeof req.json === 'function' ? await req.json() : req.body || await readBody(req);
+    } catch { body = null; }
 
-    if (!body) {
-      return res.status(400).json({ error: 'Invalid JSON' });
-    }
+    if (!body) return res.status(400).json({ error: 'Invalid JSON' });
 
-    console.log(`[Hubtel Callback] Received: ${JSON.stringify(body)}`);
+    console.log('[Hubtel Callback]', JSON.stringify(body));
 
-    // Extract key fields
-    const clientReference = body.Data?.ClientReference;
-    const status = body.Data?.Status;
-    const amount = body.Data?.Amount;
-    const checkoutId = body.Data?.CheckoutId;
+    const clientReference = body.Data?.ClientReference || body.clientReference;
+    const status = body.Data?.Status || body.status;
+    const amount = body.Data?.Amount || body.amount;
+    const checkoutId = body.Data?.CheckoutId || body.checkoutId;
     const paymentDetails = body.Data?.PaymentDetails || {};
 
     if (!clientReference || !status) {
-      console.warn('[Hubtel Callback] Missing clientReference or status');
-      return res.status(200).json({ message: 'Callback received (partial data)' });
+      return res.status(200).json({ message: 'Partial data received' });
     }
 
-    // Store sample for UAT (with timestamp)
-    UAT_SAMPLES.callbacks.push({
+    // Find the order
+    const { data: orders } = await supabase
+      .from('orders').select('*').eq('order_number', clientReference);
+
+    if (!orders?.length) {
+      console.warn(`[Hubtel Callback] No order for: ${clientReference}`);
+      return res.status(200).json({ message: 'No order found' });
+    }
+
+    const order = orders[0];
+    let paymentStatus = 'pending_payment';
+    if (status === 'Success' || status === 'Paid') paymentStatus = 'paid';
+    else if (status === 'Failed') paymentStatus = 'failed';
+    else if (status === 'Cancelled') paymentStatus = 'cancelled';
+
+    const trackingUpdate = {
+      status: `Payment ${status}`,
+      message: `Hubtel: ${status}. GHS ${amount}. Via ${paymentDetails.PaymentType || 'N/A'}`,
       timestamp: new Date().toISOString(),
-      clientReference,
-      status,
-      amount,
       checkoutId,
-      paymentMethod: paymentDetails.PaymentType || 'unknown',
-      fullPayload: body,
-    });
-    if (UAT_SAMPLES.callbacks.length > UAT_SAMPLES.maxSamples) {
-      UAT_SAMPLES.callbacks.shift();
-    }
+    };
 
-    // Lookup and update order
-    try {
-      const orders = await base44.entities.Order.filter({
-        order_number: clientReference,
+    // Update order
+    await supabase.from('orders').update({
+      payment_status: paymentStatus,
+      status: paymentStatus === 'paid' ? 'confirmed' : order.status,
+      tracking_updates: [...(order.tracking_updates || []), trackingUpdate],
+    }).eq('id', order.id);
+
+    // Notifications
+    if (paymentStatus === 'paid') {
+      // Customer notification
+      await supabase.from('notifications').insert({
+        user_email: order.customer_email,
+        title: '✅ Payment Confirmed!',
+        message: `Payment for order #${order.order_number} confirmed (GHS ${order.total_amount?.toFixed(2)}). Now being processed!`,
+        type: 'payment_confirmed',
+        order_id: order.id,
+        order_number: order.order_number,
+        is_read: false,
+        created_date: new Date().toISOString(),
       });
 
-      if (orders && orders.length > 0) {
-        const order = orders[0];
-        let paymentStatus = 'pending_payment';
-        
-        if (status === 'Success') {
-          paymentStatus = 'paid';
-        } else if (status === 'Failed') {
-          paymentStatus = 'failed';
-        } else if (status === 'Cancelled') {
-          paymentStatus = 'cancelled';
-        }
-
-        // Add callback info to tracking updates
-        const trackingUpdate = {
-          status: `Payment ${status}`,
-          message: `Hubtel callback received. Status: ${status}. Amount: ${amount}. Method: ${paymentDetails.PaymentType || 'N/A'}`,
-          timestamp: new Date().toISOString(),
-          checkoutId,
-        };
-
-        const updatedOrder = await base44.entities.Order.update(order.id, {
-          payment_status: paymentStatus,
-          tracking_updates: [
-            ...(order.tracking_updates || []),
-            trackingUpdate,
-          ],
+      // Admin notifications
+      const admins = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+      for (const email of admins) {
+        await supabase.from('notifications').insert({
+          user_email: email,
+          title: '💰 Payment Received!',
+          message: `#${order.order_number} by ${order.customer_name} (GHS ${order.total_amount?.toFixed(2)}) paid! Ready to process.`,
+          type: 'payment_confirmed',
+          order_id: order.id,
+          order_number: order.order_number,
+          is_read: false,
+          created_date: new Date().toISOString(),
         });
-
-        console.log(`[Hubtel Callback] Order ${clientReference} updated. Payment status: ${paymentStatus}`);
-        return res.status(200).json({ success: true, orderId: updatedOrder.id });
-      } else {
-        console.warn(`[Hubtel Callback] No order found for reference: ${clientReference}`);
-        return res.status(200).json({ message: 'No order found (will be retried)' });
       }
-    } catch (orderErr) {
-      console.error(`[Hubtel Callback] Error updating order ${clientReference}:`, orderErr);
-      return res.status(500).json({ error: 'Failed to update order', details: String(orderErr) });
+    } else if (paymentStatus === 'failed') {
+      await supabase.from('notifications').insert({
+        user_email: order.customer_email,
+        title: '❌ Payment Failed',
+        message: `Payment for #${order.order_number} failed. Try again or call 0509 896 035.`,
+        type: 'general',
+        order_id: order.id,
+        order_number: order.order_number,
+        is_read: false,
+        created_date: new Date().toISOString(),
+      });
     }
+
+    return res.status(200).json({ success: true, paymentStatus });
   } catch (err) {
-    console.error('[Hubtel Callback] Unexpected error:', err);
-    return res.status(500).json({ error: 'Unexpected error', details: String(err) });
+    console.error('[Hubtel Callback] Error:', err);
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
-async function readReqBody(req) {
+function readBody(req) {
   return new Promise((resolve, reject) => {
-    let data = '';
-    req.on('data', chunk => (data += chunk));
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(data));
-      } catch (e) {
-        reject(e);
-      }
-    });
+    let d = '';
+    req.on('data', c => d += c);
+    req.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
     req.on('error', reject);
   });
 }

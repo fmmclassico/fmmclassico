@@ -330,8 +330,7 @@ export default function Orders() {
                   <div className="flex items-center gap-2">
                     <input type="checkbox" checked={isSelected} onChange={() => handleToggleSelect(order.id)} className="w-4 h-4 cursor-pointer" />
                     <div>
-                      <span className="font-bold text-sm">{order.order_number}</span>
-                      <p className="text-xs text-gray-500">{format(new Date(order.created_date), 'MMM d, yyyy')}</p>
+                      <span className="font-bold text-sm">}</p>
                     </div>
                   </div>
                   <div className="text-right">

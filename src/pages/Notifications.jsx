@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
+import { supabaseNotifications } from '@/lib/supabaseNotifications';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/lib/AuthContext';
 import { Bell, Package, CheckCircle2, Clock, Truck, ChevronRight, Check, Trash2 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 const typeConfig = {
   order_placed: { icon: Package, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Order Placed' },
@@ -22,53 +25,47 @@ const typeConfig = {
 };
 
 export default function Notifications() {
-  const [user, setUser] = useState(null);
+  const { user, isAuthenticated } = useAuth();
   const [selectedNotifs, setSelectedNotifs] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    base44.auth.me()
-      .then(setUser)
-      .catch(() => base44.auth.redirectToLogin(createPageUrl('Home')));
-  }, []);
+    if (!isAuthenticated && !user) {
+      base44.auth.redirectToLogin(createPageUrl('Home'));
+    }
+  }, [isAuthenticated, user]);
 
-  const isAdmin = user?.role === 'admin';
-
+  // Fetch notifications from SUPABASE
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ['notifications', user?.email],
-    queryFn: () => base44.entities.Notification.filter({ user_email: user.email }, '-created_date', 50),
+    queryFn: () => supabaseNotifications.filter(user.email, 50),
     enabled: !!user?.email,
     staleTime: 5000,
-    refetchInterval: 8000,
+    refetchInterval: 10000,
   });
 
-  const { data: orders = [] } = useQuery({
-    queryKey: ['orders-admin-alerts', isAdmin],
-    queryFn: () => base44.entities.Order.list('-updated_date', 50),
-    enabled: !!isAdmin,
-    staleTime: 60000,
-  });
-
-  const paymentAlerts = isAdmin
-    ? orders.filter(o => o.status === 'pending' && o.tracking_updates?.some(t => t.status === 'Payment Claimed'))
-    : [];
+  // Realtime subscription
+  useEffect(() => {
+    if (!user?.email) return;
+    const unsubscribe = supabaseNotifications.subscribe(user.email, () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', user.email] });
+    });
+    return unsubscribe;
+  }, [user?.email, queryClient]);
 
   const refreshNotifs = () => queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
 
   const handleMarkOneRead = async (notif) => {
     if (notif.is_read) return;
-    await base44.entities.Notification.update(notif.id, { is_read: true });
+    await supabaseNotifications.update(notif.id, { is_read: true });
     refreshNotifs();
   };
 
   const handleMarkAllRead = async () => {
-    const unread = notifications.filter(n => !n.is_read);
-    if (unread.length === 0) return;
+    if (!user?.email) return;
     setIsProcessing(true);
-    for (const n of unread) {
-      await base44.entities.Notification.update(n.id, { is_read: true });
-    }
+    await supabaseNotifications.markAllRead(user.email);
     setIsProcessing(false);
     refreshNotifs();
   };
@@ -79,7 +76,7 @@ export default function Notifications() {
     for (const id of selectedNotifs) {
       const notif = notifications.find(n => n.id === id);
       if (notif && !notif.is_read) {
-        await base44.entities.Notification.update(id, { is_read: true });
+        await supabaseNotifications.update(id, { is_read: true });
       }
     }
     setSelectedNotifs([]);
@@ -90,8 +87,11 @@ export default function Notifications() {
   const handleDeleteSelected = async () => {
     if (selectedNotifs.length === 0) return;
     setIsProcessing(true);
-    for (const id of selectedNotifs) {
-      await base44.entities.Notification.delete(id);
+    const success = await supabaseNotifications.deleteMany(selectedNotifs);
+    if (success) {
+      toast.success('Notifications deleted');
+    } else {
+      toast.error('Failed to delete some notifications');
     }
     setSelectedNotifs([]);
     setIsProcessing(false);
@@ -117,28 +117,25 @@ export default function Notifications() {
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (!user) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <p className="text-gray-500">Loading...</p>
-      </div>
-    );
+    return <div className="p-6 text-center text-gray-500">Loading...</div>;
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-2xl">
-      <div className="flex flex-col gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-full relative">
-            <Bell className="h-6 w-6 text-blue-800" />
+    <div className="max-w-2xl mx-auto px-4 py-6 pb-32">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Bell className="h-6 w-6 text-gray-800" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-800 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                 {unreadCount}
               </span>
             )}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Notifications</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-xl font-bold text-gray-900">Notifications</h1>
+            <p className="text-xs text-gray-500">
               {selectedNotifs.length > 0
                 ? `${selectedNotifs.length} selected`
                 : unreadCount > 0
@@ -147,99 +144,60 @@ export default function Notifications() {
             </p>
           </div>
         </div>
-
-        <div className="flex gap-2 flex-wrap">
-          {selectedNotifs.length > 0 && (
-            <>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDeleteSelected}
-                disabled={isProcessing}
-                className="gap-1 flex-1 sm:flex-none"
-              >
-                <Trash2 className="h-4 w-4" />
-                {isProcessing ? 'Deleting...' : `Delete (${selectedNotifs.length})`}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleMarkSelectedRead}
-                disabled={isProcessing}
-                className="gap-1 flex-1 sm:flex-none text-green-700 border-green-200"
-              >
-                <Check className="h-4 w-4" />
-                {isProcessing ? 'Updating...' : 'Mark Read'}
-              </Button>
-            </>
-          )}
-          {unreadCount > 0 && selectedNotifs.length === 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleMarkAllRead}
-              disabled={isProcessing}
-              className="text-blue-800 border-blue-200 flex-1 sm:flex-none"
-            >
-              <Check className="h-4 w-4 mr-1" />
-              {isProcessing ? 'Updating...' : 'Mark all read'}
-            </Button>
-          )}
-        </div>
       </div>
 
+      {/* Action buttons */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {selectedNotifs.length > 0 && (
+          <>
+            <Button size="sm" variant="destructive" onClick={handleDeleteSelected} disabled={isProcessing}>
+              <Trash2 className="h-3 w-3 mr-1" />
+              {isProcessing ? 'Deleting...' : `Delete (${selectedNotifs.length})`}
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleMarkSelectedRead} disabled={isProcessing}>
+              {isProcessing ? 'Updating...' : 'Mark Read'}
+            </Button>
+          </>
+        )}
+        {unreadCount > 0 && selectedNotifs.length === 0 && (
+          <Button size="sm" variant="outline" onClick={handleMarkAllRead} disabled={isProcessing}>
+            <Check className="h-3 w-3 mr-1" />
+            {isProcessing ? 'Updating...' : 'Mark all read'}
+          </Button>
+        )}
+      </div>
+
+      {/* Select All */}
       {notifications.length > 0 && (
-        <div className="mb-4 flex items-center gap-2">
+        <div className="flex items-center gap-2 mb-3 px-1">
           <input
             type="checkbox"
-            checked={selectedNotifs.length === notifications.length && notifications.length > 0}
+            checked={selectedNotifs.length > 0 && selectedNotifs.length === notifications.length}
             onChange={handleSelectAll}
             className="w-4 h-4 cursor-pointer"
           />
-          <label className="text-sm font-medium text-gray-600 cursor-pointer" onClick={handleSelectAll}>
+          <span className="text-xs text-gray-600">
             Select All ({selectedNotifs.length}/{notifications.length})
-          </label>
+          </span>
         </div>
       )}
 
-      {/* Admin Payment Alert Banner */}
-      {isAdmin && paymentAlerts.length > 0 && (
-        <div className="mb-4 p-4 bg-red-50 border-2 border-red-400 rounded-xl flex items-start gap-3">
-          <span className="text-2xl animate-bounce">🔔</span>
-          <div>
-            <p className="font-bold text-red-700">
-              Payment Alert! {paymentAlerts.length} customer{paymentAlerts.length > 1 ? 's' : ''} clicked "Payment Completed"
-            </p>
-            <p className="text-sm text-red-600 mt-1">
-              Check payment status in{' '}
-              <Link to={createPageUrl('AdminOrders')} className="underline font-bold">Admin Orders</Link>.
-            </p>
-            <div className="mt-2 space-y-1">
-              {paymentAlerts.map(o => (
-                <p key={o.id} className="text-sm text-red-700">
-                  • <strong>{o.customer_name}</strong> – ₵{o.total_amount?.toFixed(2)} – 📞 {o.customer_phone}
-                </p>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Notifications List */}
       {isLoading ? (
         <div className="space-y-3">
-          {Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+          {Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
         </div>
       ) : notifications.length === 0 ? (
         <div className="text-center py-16">
           <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-          <h3 className="text-gray-500 font-medium">No notifications yet</h3>
-          <p className="text-sm text-gray-400 mt-1">Order updates will appear here</p>
-          <Link to={createPageUrl('Shop')} className="inline-block mt-4">
-            <button className="text-blue-800 font-medium text-sm">Start Shopping →</button>
+          <p className="text-gray-500 font-medium">No notifications yet</p>
+          <p className="text-gray-400 text-sm">Order updates will appear here</p>
+          <Link to={createPageUrl('Shop')} className="text-blue-600 text-sm font-medium mt-3 inline-block">
+            Start Shopping →
           </Link>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {notifications.map((notif, i) => {
             const config = typeConfig[notif.type] || typeConfig.general;
             const Icon = config.icon;
@@ -251,44 +209,34 @@ export default function Notifications() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.04 }}
               >
-                <div
-                  className={`flex items-start gap-3 p-4 rounded-xl border transition-all hover:shadow-md ${
-                    isSelected
-                      ? 'bg-blue-50 border-blue-300'
-                      : !notif.is_read
-                      ? 'border-blue-200 bg-blue-50'
-                      : 'border-gray-100 bg-white'
-                  }`}
-                >
+                <div className={`flex items-start gap-3 p-3 rounded-xl border transition-colors ${
+                  !notif.is_read ? 'bg-blue-50/50 border-blue-100' : 'bg-white border-gray-100'
+                } ${isSelected ? 'ring-2 ring-blue-300' : ''}`}>
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => handleToggleSelect(notif.id)}
                     className="w-4 h-4 mt-1 cursor-pointer flex-shrink-0"
                   />
-                  <div
-                    className="flex-1 min-w-0 cursor-pointer"
-                    onClick={() => handleMarkOneRead(notif)}
-                  >
-                    <div className={`p-2 rounded-full ${config.bg} flex-shrink-0 w-fit mb-2`}>
-                      <Icon className={`h-5 w-5 ${config.color}`} />
-                    </div>
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <Badge className={`text-xs ${!notif.is_read ? 'bg-blue-800' : 'bg-gray-400'}`}>
-                        {config.label}
-                      </Badge>
-                      {!notif.is_read && <span className="w-2 h-2 rounded-full bg-blue-800 animate-pulse" />}
+                  <div className="flex-1 cursor-pointer" onClick={() => handleMarkOneRead(notif)}>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${config.bg}`}>
+                        <Icon className={`h-3 w-3 ${config.color}`} />
+                      </div>
+                      <Badge variant="outline" className="text-[10px]">{config.label}</Badge>
+                      {!notif.is_read && <span className="w-2 h-2 rounded-full bg-blue-500" />}
                     </div>
                     <p className="text-sm font-semibold text-gray-800">{notif.title}</p>
-                    <p className="text-sm text-gray-600 mt-0.5">{notif.message}</p>
-                    <p className="text-xs text-gray-400 mt-1">{new Date(notif.created_date).toLocaleString()}</p>
+                    <p className="text-xs text-gray-600 mt-0.5">{notif.message}</p>
+                    <p className="text-[10px] text-gray-400 mt-1">{new Date(notif.created_date).toLocaleString()}</p>
                   </div>
-                  {notif.order_id && (
+                  {notif.order_number && (
                     <Link
-                      to={createPageUrl(isAdmin ? 'AdminOrders' : `OrderTracking?id=${notif.order_id}`)}
-                      onClick={e => e.stopPropagation()}
+                      to={createPageUrl(`Orders?order=${notif.order_number}`)}
+                      className="text-blue-600"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <ChevronRight className="h-4 w-4 text-gray-400 mt-1 hover:text-blue-800" />
+                      <ChevronRight className="h-4 w-4" />
                     </Link>
                   )}
                 </div>

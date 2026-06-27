@@ -1,4 +1,5 @@
 /* eslint-disable */
+import { supabaseNotifications } from '@/lib/supabaseNotifications';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
@@ -79,35 +80,26 @@ export default function Layout({ children, currentPageName }) {
   });
 
   // Notifications — only for authenticated users
-   const { data: userNotifications = [] } = useQuery({
-  queryKey: ['notifications', user?.email],
-  queryFn: async () => {
-    try {
-      const r = await base44.entities.Notification.filter(
-        { user_email: user?.email },
-        '-created_date',
-        50
-      );
-      return Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : [];
-    } catch (e) {
-      console.error('Notifications load failed:', e);
-      return [];
-    }
-  },
-  enabled: !!user?.email && isAuthenticated,
-  staleTime: 20000,
-  refetchInterval: 15000,
-});
+     // --- IMPORT at the top of the file: ---
+  // import { supabaseNotifications } from '@/lib/supabaseNotifications';
 
-  useEffect(() => {
+  const { data: userNotifications = [] } = useQuery({
+    queryKey: ['notifications', user?.email],
+    queryFn: () => supabaseNotifications.filter(user.email, 50),
+    enabled: !!user?.email && isAuthenticated,
+    staleTime: 20000,
+    refetchInterval: 15000,
+  });
+
+
+  u  useEffect(() => {
     if (!user?.email || !isAuthenticated) return;
-    const unsubscribe = base44.entities.Notification.subscribe((event) => {
-      if (event.data.user_email === user.email) {
-        queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
-      }
+    const unsubscribe = supabaseNotifications.subscribe(user.email, () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.email] });
     });
     return unsubscribe;
   }, [user?.email, isAuthenticated, queryClient]);
+
 
   const cartCount = Array.isArray(cartItems) ? cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0) : 0;
   const unreadNotifCount = Array.isArray(userNotifications) ? userNotifications.filter(n => !n.is_read).length : 0;

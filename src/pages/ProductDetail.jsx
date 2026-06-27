@@ -112,7 +112,7 @@ export default function ProductDetail() {
           old.map(p => p.id === product.id ? { ...p, stock: Math.max(0, p.stock - quantity) } : p)
         );
       }
-      toast.success('Added to cart!');
+      
       // Persist in background
       const existingItems = await base44.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
       if (existingItems.length > 0) {

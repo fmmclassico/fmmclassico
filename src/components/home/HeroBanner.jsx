@@ -15,7 +15,7 @@ const DEFAULT_SLIDES = [
     title: 'Phones',
     subtitle: 'Samsung, iPhones & more at unbeatable prices',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&h=400&fit=crop',
     cta_link: createPageUrl('Shop?category=phones'),
     cta_text: 'Shop Now',
   },
@@ -25,7 +25,7 @@ const DEFAULT_SLIDES = [
     title: 'Phone Accessories',
     subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=600&h=400&fit=crop',
     cta_link: createPageUrl('Categories'),
     cta_text: 'Shop Now',
   },
@@ -35,7 +35,7 @@ const DEFAULT_SLIDES = [
     title: 'Electronic Appliances',
     subtitle: 'Top quality electronics for your everyday needs',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=600&h=400&fit=crop',
     cta_link: createPageUrl('Shop?category=electronic_appliances'),
     cta_text: 'Shop Now',
   },
@@ -45,7 +45,7 @@ const DEFAULT_SLIDES = [
     title: 'Home Appliances',
     subtitle: 'Quality home appliances delivered to your door',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&h=400&fit=crop',
     cta_link: createPageUrl('Shop?category=home_appliances'),
     cta_text: 'Shop Now',
   },
@@ -55,7 +55,7 @@ const DEFAULT_SLIDES = [
     title: 'Samsung & Apple',
     subtitle: 'Genuine Samsung & Apple products at great prices',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1592950630581-03cb41342cc5?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=600&h=400&fit=crop',
     cta_link: createPageUrl('BrandProducts?brand=Samsung'),
     cta_text: 'Shop Brands',
   },
@@ -65,7 +65,7 @@ const DEFAULT_SLIDES = [
     title: 'Earphones & Speakers',
     subtitle: 'Premium sound at affordable prices — Oraimo, JBL & more',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=400&fit=crop',
     cta_link: createPageUrl('Shop?category=earphones'),
     cta_text: 'Shop Now',
   },
@@ -75,7 +75,7 @@ const DEFAULT_SLIDES = [
     title: 'Smart Watches',
     subtitle: 'Stay connected with the latest smartwatches',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1546868871-af0de0ae72be?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=600&h=400&fit=crop',
     cta_link: createPageUrl('Shop?category=smart_watches'),
     cta_text: 'Shop Now',
   },
@@ -88,10 +88,10 @@ export default function HeroBanner() {
 
   useEffect(() => {
     base44.entities.PromoBanner.filter({ is_active: true }, 'order', 20)
-      .then(data => {
-        const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-        if (list.length > 0) {
-          setSlides(list);
+      .then(result => {
+        const data = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : null;
+        if (data && data.length > 0) {
+          setSlides(data);
         }
       })
       .catch(() => {});
@@ -136,8 +136,8 @@ export default function HeroBanner() {
 
   return (
     <div
-      className="relative overflow-hidden"
-      style={{ backgroundImage: NAVY_BACKGROUND }}
+      className="relative w-full rounded-2xl overflow-hidden shadow-lg"
+      style={{ background: NAVY_BACKGROUND }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -150,38 +150,41 @@ export default function HeroBanner() {
           transition={{ duration: 0.4 }}
           className="flex items-center min-h-[200px] md:min-h-[280px]"
         >
-          <div className="container mx-auto px-6 sm:px-8 md:px-10 py-8 md:py-12 flex items-center justify-between gap-4">
-            <div className="flex-1 max-w-md">
-              {slide.badge && (
-                <span className="inline-block bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full mb-3">
-                  {slide.badge}
-                </span>
-              )}
-              <h1 className="text-xl md:text-3xl font-black text-white mb-2 leading-tight">
-                {slide.title}
-              </h1>
-              {slide.subtitle && (
-                <p className="text-sm md:text-base text-white/90 mb-4">
-                  {slide.subtitle}
-                </p>
-              )}
-              <Link to={ctaHref}>
-                <Button size="sm" className="bg-white font-bold shadow-lg text-sm" style={{ color: '#0093A6' }}>
-                  {slide.cta_text || 'Shop Now'} <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-            {slide.image_url && (
-              <div className="w-32 h-32 md:w-56 md:h-48 flex-shrink-0 rounded-2xl overflow-hidden shadow-2xl">
-                <img src={slide.image_url} alt={slide.title} className="w-full h-full object-cover" />
-              </div>
+          <div className="flex-1 p-6 md:p-10 space-y-3">
+            {slide.badge && (
+              <span className="inline-block bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">
+                {slide.badge}
+              </span>
             )}
+            <h2 className="text-2xl md:text-4xl font-extrabold text-white leading-tight">
+              {slide.title}
+            </h2>
+            {slide.subtitle && (
+              <p className="text-white/80 text-sm md:text-base max-w-md">
+                {slide.subtitle}
+              </p>
+            )}
+            <Link to={ctaHref}>
+              <Button className="mt-2 bg-white text-[#0A2E60] hover:bg-gray-100 font-bold rounded-full px-6 py-2 text-sm">
+                {slide.cta_text || 'Shop Now'} <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
+          {slide.image_url && (
+            <div className="hidden sm:flex items-center justify-center w-1/3 pr-6">
+              <img
+                src={slide.image_url}
+                alt={slide.title}
+                className="max-h-[200px] md:max-h-[240px] object-contain drop-shadow-xl rounded-lg"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
 
-      {slides.length > 1 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+      {Array.isArray(slides) && slides.length > 1 && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
           {slides.map((_, i) => (
             <button
               key={i}

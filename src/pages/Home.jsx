@@ -158,10 +158,6 @@ export default function Home() {
   // Ensure products is always an array
   const safeProducts = Array.isArray(products) ? products : [];
 
-  // Refetch products when component mounts to ensure fresh data
-  useEffect(() => {
-    refetch();
-
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {
       if (!isAuthenticated || !user) {

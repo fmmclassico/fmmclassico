@@ -154,8 +154,8 @@ const AuthenticatedApp = () => {
   // LOADING SCREEN
   if (isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-white">
+        <img src="/logo.png" alt="FMM CLASSICO" style={{width:120,height:120,marginBottom:16,borderRadius:16}} /><div className="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
       </div>
     );
   }

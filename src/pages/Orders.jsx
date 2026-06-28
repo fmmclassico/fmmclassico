@@ -199,7 +199,7 @@ export default function Orders() {
     }
   };
 
-  if (!user) {
+  if (!user && !searchParams.get("order")) {
     return (
       <div className="p-4 space-y-4">
         <div className="space-y-3">

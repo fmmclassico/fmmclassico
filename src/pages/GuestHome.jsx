@@ -432,7 +432,7 @@ export default function GuestHome() {
                     <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1.5 border border-gray-100">
                       {logoSrc
                         ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain"
-                            onError={(e) => { e.target.style.display = 'none'; }} />
+                            onError={(e) => { e.target.onerror=null; e.target.src='/logo.png'; }} />
                         : <span className="text-[10px] font-black text-gray-400">{brand.name[0]}</span>}
                     </div>
                     <span className="text-[10px] font-bold text-gray-600">{brand.name}</span>

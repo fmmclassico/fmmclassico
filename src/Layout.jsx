@@ -178,7 +178,6 @@ export default function Layout({ children, currentPageName }) {
     };
 
     const siteDescription = 'FMM Classico - trusted online and physical retail and wholesale store specializing in premium phone accessories, quality electronics, and home appliances. We are committed to providing authentic products at competitive prices to both individual customers and businesses. Whether you shop online or visit our physical store, you will enjoy a seamless shopping experience with secure payments, fast and reliable delivery, and exceptional customer service. At FMM Classico, our mission is to make quality technology and home essentials accessible, affordable, and convenient for everyone.';
-    const logoUrl = `${window.location.origin}/logo.png`;
 
     setMeta('name', 'description', siteDescription);
     setMeta('name', 'keywords', 'FMM Classico, fmmclassico, phones Ghana, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronics Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Kumasi phone shop, Ashongman Estate, Airport Residential Area, online shopping Ghana, wholesale electronics Ghana');
@@ -189,12 +188,10 @@ export default function Layout({ children, currentPageName }) {
     setMeta('property', 'og:site_name', 'FMM Classico');
     setMeta('property', 'og:title', 'FMM Classico – Phones & Accessories, Home Appliances and Electronics');
     setMeta('property', 'og:description', siteDescription);
-    setMeta('property', 'og:image', logoUrl);
     setMeta('property', 'og:url', window.location.origin);
     setMeta('name', 'twitter:card', 'summary_large_image');
     setMeta('name', 'twitter:title', 'FMM Classico – Phones & Accessories, Home Appliances and Electronics');
     setMeta('name', 'twitter:description', siteDescription);
-    setMeta('name', 'twitter:image', logoUrl);
 
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical); }
@@ -210,8 +207,6 @@ export default function Layout({ children, currentPageName }) {
         "alternateName": ["FMMCLASSICO", "FMMClassico", "fmmclassico", "FMM CLASSICO"],
         "description": siteDescription,
         "url": window.location.origin,
-        "logo": { "@type": "ImageObject", "url": logoUrl, "width": 512, "height": 512 },
-        "image": logoUrl,
         "telephone": "+233208207543",
         "email": "fmmclassico@gmail.com",
         "founder": {

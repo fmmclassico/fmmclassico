@@ -88,14 +88,14 @@ export default function GuestLayout({ children, currentPageName }) {
 
   // SEO
   useEffect(() => {
-    document.title = 'FMM CLASSICO – Phone Accessories, Electronics & Home Appliances in Ghana | FMMCLASSICO';
+    document.title = 'FMM CLASSICO – Phones & Accessories, Home Appliances and Electronics | FMMCLASSICO';
     const setMeta = (attr, key, content) => {
       let el = document.querySelector(`meta[${attr}="${key}"]`);
       if (!el) { el = document.createElement('meta'); el.setAttribute(attr, key); document.head.appendChild(el); }
       el.setAttribute('content', content);
     };
-    setMeta('name', 'description', 'FMM CLASSICO (FMMCLASSICO) – Your trusted online store for premium phone accessories, electronic appliances and home appliances in Ghana. Shop chargers, earphones, phone cases, smart watches and more. Fast delivery to Tarkwa (UMAT Campus), Accra (Ashongman Estate) and across Ghana.');
-    setMeta('name', 'keywords', 'FMMCLASSICO, FMM CLASSICO, fmmclassico, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Ashongman Estate, online shopping Ghana');
+    setMeta('name', 'description', 'FMM CLASSICO – Your trusted online store for premium phone accessories, electronic appliances and home appliances in Ghana. Shop chargers, earphones, phone cases, smart watches and more. Fast delivery to Tarkwa (UMAT Campus), Accra (Ashongman Estate) and across Ghana.');
+    setMeta('name', 'keywords', 'FMM CLASSICO, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Ashongman Estate, online shopping Ghana');
     setMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
   }, []);
 

@@ -204,7 +204,6 @@ export default function Layout({ children, currentPageName }) {
         "@context": "https://schema.org",
         "@type": "OnlineStore",
         "name": "FMM Classico",
-        "alternateName": ["FMMCLASSICO", "FMMClassico", "fmmclassico", "FMM CLASSICO"],
         "description": siteDescription,
         "url": window.location.origin,
         "telephone": "+233208207543",
@@ -230,7 +229,6 @@ export default function Layout({ children, currentPageName }) {
         "@context": "https://schema.org",
         "@type": "Person",
         "name": "Fedra Mensah Martha",
-        "alternateName": ["Fedra Martha", "Fedra Mensah", "Miss Fedra Mensah Martha"],
         "jobTitle": "CEO & Founder",
         "worksFor": {
           "@type": "Organization",

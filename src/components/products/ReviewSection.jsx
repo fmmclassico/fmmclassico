@@ -34,38 +34,30 @@ export default function ReviewSection({ product, user }) {
   const autoApprove = settings.find(s => s.key === 'auto_approve_reviews')?.value === 'true';
 
   const submitMutation = useMutation({
-    mutationFn: async () => {
-      if (!user) {
-        toast.error('Please log in to submit a review.');
-        base44.auth.redirectToLogin(window.location.href);
-        throw new Error('Not authenticated');
-      }
-      if (!comment.trim()) {
-        throw new Error('Please write a comment before submitting.');
-      }
-      await base44.entities.Review.create({
-        product_id: product.id,
-        user_name: user.full_name || user.email.split('@')[0],
-        user_email: user.email,
-        rating,
-        comment: comment.trim(),
-        verified_purchase: true,
-        approved: autoApprove,
-      });
-    },
-    onSuccess: () => {
-      toast.success(autoApprove ? 'Review posted!' : 'Review submitted! It will appear after admin approval.');
-      setComment('');
-      setRating(5);
-      setShowForm(false);
-      queryClient.invalidateQueries({ queryKey: ['reviews', product.id] });
-    },
-    onError: (error) => {
-      if (error.message && error.message !== 'Not authenticated') {
-        toast.error(error.message);
-      }
-    }
-  });
+  mutationFn: async () => {
+    if (!user) { base44.auth.redirectToLogin(window.location.href); return; }
+    await base44.entities.Review.create({
+      product_id: product.id,
+      user_name: user.full_name || user.email.split('@')[0],
+      user_email: user.email,
+      rating,
+      comment,
+      verified_purchase: true,
+      approved: autoApprove,
+    });
+  },
+  onSuccess: () => {
+    toast.success(autoApprove ? 'Review posted!' : 'Review submitted! It will appear after admin approval.');
+    setComment('');
+    setRating(5);
+    setShowForm(false);
+    queryClient.invalidateQueries({ queryKey: ['reviews', product.id] });
+  },
+  onError: (error) => {
+    console.error('Review submit error:', error);
+    toast.error('Failed to submit review. Please try again.');
+  }
+});
 
   if (!product.review_enabled) return null;
 

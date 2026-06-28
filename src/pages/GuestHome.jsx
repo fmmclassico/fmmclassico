@@ -173,7 +173,7 @@ export default function GuestHome() {
         product_price: product.price,
         quantity: 1,
       });
-      toast.success('Added to cart!');
+      
     },
   });
 

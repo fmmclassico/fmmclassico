@@ -151,7 +151,7 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // LOADING SCREEN - show guest page immediately instead of waiting
+  // Skip loading screen - render guest page immediately
   if (isLoadingAuth) {
     return (
       <GuestLayout currentPageName="GuestHome">
@@ -159,7 +159,6 @@ const AuthenticatedApp = () => {
       </GuestLayout>
     );
   }
-
   // AUTH ERROR HANDLING
   if (authError?.type === 'user_not_registered') {
     return <UserNotRegisteredError />;

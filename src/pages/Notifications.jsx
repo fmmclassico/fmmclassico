@@ -1,3 +1,4 @@
+import { useAuth } from "@/lib/AuthContext";
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -37,7 +38,7 @@ export default function Notifications() {
   }, [isAuthenticated, user]);
 
   // Fetch notifications from SUPABASE
-  const { data: notifications = [], isLoading } = useQuery({
+  const { data: notifications = [], is= useQuery({
     queryKey: ['notifications', user?.email],
     queryFn: () => supabaseNotifications.filter(user.email, 50),
     enabled: !!user?.email,
@@ -117,7 +118,7 @@ export default function Notifications() {
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (!user) {
-    return <div className="p-6 text-center text-gray-500">Loading...</div>;
+    return <div className="p-6 text-center text-gray-500"></div>;
   }
 
   return (
@@ -183,7 +184,7 @@ export default function Notifications() {
       )}
 
       {/* Notifications List */}
-      {isLoading ? (
+      {is(
         <div className="space-y-3">
           {Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
         </div>

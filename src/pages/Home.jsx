@@ -161,7 +161,6 @@ export default function Home() {
   // Refetch products when component mounts to ensure fresh data
   useEffect(() => {
     refetch();
-  }, [refetch]);
 
   const addToCartMutation = useMutation({
     mutationFn: async (product) => {

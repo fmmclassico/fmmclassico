@@ -1,10 +1,11 @@
 import { useAuth } from "@/lib/AuthContext";
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
 import { supabaseNotifications } from '@/lib/supabaseNotifications';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/lib/AuthContext';
 import { useAuth } from '@/lib/AuthContext';
 import { Bell, Package, CheckCircle2, Clock, Truck, ChevronRight, Check, Trash2 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";

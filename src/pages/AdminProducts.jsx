@@ -184,45 +184,64 @@ export default function AdminProducts() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      const { main_group, home_sections, custom_brand, custom_subcategory, color_input, wattage_input, type_input, ...rest } = data;
-      const sections = home_sections || [];
-      const finalBrand = rest.brand === 'Other (type below)' ? (custom_brand || 'Other') : rest.brand;
-      const finalSubcategory = rest.subcategory === '__custom__' ? (custom_subcategory || '') : rest.subcategory;
-      const stockValue = typeof data.stock === 'string' ? data.stock.trim() : data.stock;
-      const stockNumber = stockValue === '' ? undefined : parseInt(stockValue, 10);
-      const payload = {
-        ...rest,
-        brand: finalBrand,
-        subcategory: finalSubcategory,
-        price: parseFloat(data.price) || 0,
-        original_price: data.original_price ? parseFloat(data.original_price) : undefined,
-        stock: stockValue === '' ? undefined : Number.isNaN(stockNumber) ? undefined : stockNumber,
-        rating: data.rating ? parseFloat(data.rating) : undefined,
-        reviews_count: data.reviews_count ? parseInt(data.reviews_count) : undefined,
-        is_visible: data.is_visible !== false,
-        featured:   sections.includes('featured'),
-        flash_sale: sections.includes('flash_sale'),
-        donkomi:    sections.includes('donkomi'),
-        new_arrival: sections.includes('new_arrival'),
-        top_selling: sections.includes('top_selling'),
-      };
-      if (editingProduct) {
-        return base44.entities.Product.update(editingProduct.id, payload);
-      }
-      return base44.entities.Product.create(payload);
-    },
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ['products'] });
-      queryClient.removeQueries({ queryKey: ['products-admin'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['products-admin'] });
-      toast.success(editingProduct ? 'Product updated!' : 'Product created!');
-      setShowForm(false);
-      setEditingProduct(null);
-      setForm(EMPTY_FORM);
+  mutationFn: async (data) => {
+    const { main_group, home_sections, custom_brand, custom_subcategory, color_input, wattage_input, type_input, ...rest } = data;
+    const sections = home_sections || [];
+    const finalBrand = rest.brand === 'Other (type below)' ? (custom_brand || 'Other') : rest.brand;
+    const finalSubcategory = rest.subcategory === '__custom__' ? (custom_subcategory || '') : rest.subcategory;
+    const stockValue = typeof data.stock === 'string' ? data.stock.trim() : data.stock;
+    const stockNumber = stockValue === '' ? null : parseInt(stockValue, 10);
+
+    const payload = {
+      name: rest.name,
+      description: rest.description,
+      price: parseFloat(data.price) || 0,
+      original_price: data.original_price ? parseFloat(data.original_price) : null,
+      category: rest.category,
+      brand: finalBrand,
+      subcategory: finalSubcategory,
+      stock: stockValue === '' ? null : Number.isNaN(stockNumber) ? null : stockNumber,
+      rating: data.rating ? parseFloat(data.rating) : null,
+      reviews_count: data.reviews_count ? parseInt(data.reviews_count) : null,
+      review_enabled: rest.review_enabled !== false,
+      is_visible: data.is_visible !== false,
+      image_url: rest.image_url || null,
+      image_urls: rest.image_urls || [],
+      video_url: rest.video_url || null,
+      flash_sale_end: rest.flash_sale_end || null,
+      featured: sections.includes('featured'),
+      flash_sale: sections.includes('flash_sale'),
+      donkomi: sections.includes('donkomi'),
+      new_arrival: sections.includes('new_arrival'),
+      top_selling: sections.includes('top_selling'),
+      show_colors: rest.show_colors || false,
+      available_colors: rest.available_colors || [],
+      show_wattage: rest.show_wattage || false,
+      available_wattage: rest.available_wattage || [],
+      show_type: rest.show_type || false,
+      available_types: rest.available_types || [],
+    };
+
+    if (editingProduct) {
+      return base44.entities.Product.update(editingProduct.id, payload);
     }
-  });
+    return base44.entities.Product.create(payload);
+  },
+  onSuccess: () => {
+    queryClient.removeQueries({ queryKey: ['products'] });
+    queryClient.removeQueries({ queryKey: ['products-admin'] });
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+    queryClient.invalidateQueries({ queryKey: ['products-admin'] });
+    toast.success(editingProduct ? 'Product updated!' : 'Product created!');
+    setShowForm(false);
+    setEditingProduct(null);
+    setForm(EMPTY_FORM);
+  },
+  onError: (error) => {
+    console.error('Save product error:', error);
+    toast.error(`Failed to save: ${error.message || 'Unknown error'}`);
+  }
+});
 
   // Quick visibility toggle from the product list (no form needed)
   const toggleVisibilityMutation = useMutation({

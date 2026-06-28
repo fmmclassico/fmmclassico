@@ -95,14 +95,12 @@ export default function Chat() {
       // Build product catalog for AI context
       const productCatalog = products.slice(0, 50).map(p =>
         `- ${p.name} | Category: ${p.category} | Price: ₵${p.price}${p.original_price ? ` (was ₵${p.original_price})` : ''} | ${p.description?.slice(0, 80) || 'No description'} | Stock: ${p.stock ?? 'available'}`
-      ).join('
-');
+      ).join('\n');
 
       // Build conversation history for context (last 10 messages)
       const recentMessages = messages.slice(-10).map(m =>
         `${m.role === 'user' ? 'Customer' : 'Assistant'}: ${m.content}`
-      ).join('
-');
+      ).join('\n');
 
       const response = await base44.integrations.Core.InvokeLLM({
         prompt: `You are FMM CLASSICO's AI shopping assistant. You are friendly, helpful, and knowledgeable about all products in the store. You reply like a real customer service agent would on WhatsApp: concise, warm, and action-oriented.

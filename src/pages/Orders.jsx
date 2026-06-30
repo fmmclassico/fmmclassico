@@ -11,9 +11,26 @@ import { Package, ChevronRight, CheckCircle2, Truck, MapPin, XCircle, Trash2, Ch
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-var statusConfig = { confirmed: { color: 'bg-blue-100 text-blue-800', icon: CheckCircle2, label: 'Confirmed' }, processing: { color: 'bg-purple-100 text-purple-800', icon: Package, label: 'Processing' }, packed: { color: 'bg-orange-100 text-orange-800', icon: Package, label: 'Packed' }, shipped: { color: 'bg-indigo-100 text-indigo-800', icon: Truck, label: 'Shipped' }, out_for_delivery: { color: 'bg-cyan-100 text-cyan-800', icon: MapPin, label: 'Out for Delivery' }, in_transit: { color: 'bg-cyan-100 text-cyan-800', icon: MapPin, label: 'In Transit' }, delivered: { color: 'bg-green-100 text-green-800', icon: CheckCircle2, label: 'Delivered' }, cancelled: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Cancelled' }, returned: { color: 'bg-gray-100 text-gray-800', icon: XCircle, label: 'Returned' } };
+var statusConfig = {
+  confirmed: { color: 'bg-blue-100 text-blue-800', icon: CheckCircle2, label: 'Confirmed' },
+  processing: { color: 'bg-purple-100 text-purple-800', icon: Package, label: 'Processing' },
+  packed: { color: 'bg-orange-100 text-orange-800', icon: Package, label: 'Packed' },
+  shipped: { color: 'bg-indigo-100 text-indigo-800', icon: Truck, label: 'Shipped' },
+  out_for_delivery: { color: 'bg-cyan-100 text-cyan-800', icon: MapPin, label: 'Out for Delivery' },
+  in_transit: { color: 'bg-cyan-100 text-cyan-800', icon: MapPin, label: 'In Transit' },
+  delivered: { color: 'bg-green-100 text-green-800', icon: CheckCircle2, label: 'Delivered' },
+  cancelled: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Cancelled' },
+  returned: { color: 'bg-gray-100 text-gray-800', icon: XCircle, label: 'Returned' },
+};
+
 var CANCELLABLE_STATUSES = ['confirmed', 'processing'];
-var paymentStatusConfig = { paid: { color: 'bg-green-100 text-green-700', label: 'Paid' }, pending_payment: { color: 'bg-yellow-100 text-yellow-700', label: 'Pending Payment' }, failed: { color: 'bg-red-100 text-red-700', label: 'Failed' }, cancelled: { color: 'bg-gray-100 text-gray-600', label: 'Cancelled' }, refunded: { color: 'bg-blue-100 text-blue-700', label: 'Refunded' } };
+var paymentStatusConfig = {
+  paid: { color: 'bg-green-100 text-green-700', label: 'Paid' },
+  pending_payment: { color: 'bg-yellow-100 text-yellow-700', label: 'Pending Payment' },
+  failed: { color: 'bg-red-100 text-red-700', label: 'Failed' },
+  cancelled: { color: 'bg-gray-100 text-gray-600', label: 'Cancelled' },
+  refunded: { color: 'bg-blue-100 text-blue-700', label: 'Refunded' },
+};
 
 export default function Orders() {
   var [user, setUser] = useState(null);
@@ -33,7 +50,10 @@ export default function Orders() {
   }, []);
 
   useEffect(function() {
-    var channel = supabase.channel('orders-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, function() { queryClient.invalidateQueries({ queryKey: ['orders'] }); }).subscribe();
+    var channel = supabase.channel('orders-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, function() {
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
+      }).subscribe();
     return function() { supabase.removeChannel(channel); };
   }, [queryClient]);
 
@@ -41,58 +61,69 @@ export default function Orders() {
     var orderNumber = searchParams.get('order');
     var status = searchParams.get('status');
     if (!orderNumber || !user || verificationDone) return;
-    if (status === 'cancelled') { toast.error('Payment was cancelled. Your items are still in your cart.'); setSearchParams({}); setVerificationDone(true); return; }
-
+    if (status === 'cancelled') {
+      toast.error('Payment was cancelled. Your items are still in your cart.');
+      setSearchParams({});
+      setVerificationDone(true);
+      return;
+    }
     setIsVerifyingPayment(true);
     var pollCount = 0;
-    var maxPolls = 20;
+    var maxPolls = 15;
     var pollInterval = 2000;
     var done = false;
 
     function pollOrder() {
       if (done || pollCount >= maxPolls) {
-        if (!done) { setIsVerifyingPayment(false); setVerificationDone(true); setSearchParams({}); toast.info('Order is being processed. Check back shortly.'); }
+        if (!done) {
+          if (status === 'success') { forceConfirmOrder(orderNumber); }
+          else { setIsVerifyingPayment(false); setVerificationDone(true); setSearchParams({}); }
+        }
         return;
       }
       pollCount++;
-
       supabase.from('orders').select('*').eq('order_number', orderNumber).then(function(result) {
         var found = result.data;
-        if (!found || found.length === 0) { setTimeout(pollOrder, pollInterval); return; }
-
-        var order = found[0];
-
-        if (!order.customer_email && user.email) {
-          supabase.from('orders').update({ customer_email: user.email }).eq('id', order.id);
+        if (!found || found.length === 0) {
+          if (pollCount < 5) { setTimeout(pollOrder, pollInterval); return; }
+          if (status !== 'success') { done = true; setIsVerifyingPayment(false); setVerificationDone(true); setSearchParams({}); return; }
+          setTimeout(pollOrder, pollInterval); return;
         }
-
-        if (order.payment_status === 'paid') {
-          done = true;
-          setIsVerifyingPayment(false);
-          setVerificationDone(true);
+        if (found[0].payment_status === 'paid') {
+          done = true; setIsVerifyingPayment(false); setVerificationDone(true);
           queryClient.invalidateQueries({ queryKey: ['orders'] });
           toast.success('Payment confirmed! Your order is being processed.');
-          supabase.from('cart_items').delete().eq('user_email', user.email).then(function() { queryClient.invalidateQueries({ queryKey: ['cartItems'] }); });
-          setSearchParams({});
+          clearCart(); setSearchParams({});
           return;
         }
-
-        if (pollCount >= 10 && status === 'success') {
-          var updatedTracking = (order.tracking_updates || []).concat([{ status: 'Payment Confirmed', message: 'Payment verified via redirect.', timestamp: new Date().toISOString() }]);
-          supabase.from('orders').update({ payment_status: 'paid', status: 'confirmed', tracking_updates: updatedTracking, customer_email: user.email }).eq('id', order.id).then(function() {
-            done = true; setIsVerifyingPayment(false); setVerificationDone(true);
-            queryClient.invalidateQueries({ queryKey: ['orders'] });
-            toast.success('Payment confirmed!');
-            supabase.from('cart_items').delete().eq('user_email', user.email).then(function() { queryClient.invalidateQueries({ queryKey: ['cartItems'] }); });
-            setSearchParams({});
-          });
-          return;
-        }
-
         setTimeout(pollOrder, pollInterval);
       }).catch(function() { setTimeout(pollOrder, pollInterval); });
     }
 
+    function forceConfirmOrder(orderNum) {
+      supabase.from('orders').select('*').eq('order_number', orderNum).then(function(result) {
+        var found = result.data;
+        if (found && found.length > 0) {
+          var order = found[0];
+          if (order.payment_status === 'paid') { done = true; setIsVerifyingPayment(false); setVerificationDone(true); queryClient.invalidateQueries({ queryKey: ['orders'] }); toast.success('Payment confirmed!'); clearCart(); setSearchParams({}); return; }
+          var updatedTracking = (order.tracking_updates || []).concat([{ status: 'Payment Confirmed', message: 'Payment verified via Hubtel redirect.', timestamp: new Date().toISOString() }]);
+          supabase.from('orders').update({ payment_status: 'paid', status: 'confirmed', tracking_updates: updatedTracking }).eq('id', order.id).then(function() {
+            done = true; setIsVerifyingPayment(false); setVerificationDone(true);
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            toast.success('Payment confirmed! Your order is being processed.');
+            clearCart(); setSearchParams({});
+          });
+        } else { done = true; setIsVerifyingPayment(false); setVerificationDone(true); setSearchParams({}); }
+      }).catch(function() { done = true; setIsVerifyingPayment(false); setVerificationDone(true); setSearchParams({}); });
+    }
+
+    function clearCart() {
+      if (user && user.email) {
+        supabase.from('cart_items').delete().eq('user_email', user.email).then(function() {
+          queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+        });
+      }
+    }
     setTimeout(pollOrder, 1500);
   }, [searchParams, user, queryClient, verificationDone]);
 

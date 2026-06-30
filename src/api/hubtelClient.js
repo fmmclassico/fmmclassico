@@ -1,19 +1,12 @@
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://kptlejtauwqvaapsrjfx.supabase.co";
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = "https://kptlejtauwqvaapsrjfx.supabase.co";
 
 export async function initiatePayment({ totalAmount, description, callbackUrl, returnUrl, cancellationUrl, clientReference }) {
-  // Check if anon key is configured
-  if (!SUPABASE_ANON_KEY) {
-    console.error('[HubtelClient] VITE_SUPABASE_ANON_KEY is not set! Create a .env file.');
-    return { error: 'Payment system not configured. Contact admin.' };
-  }
-
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/hubtel-checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'}`,
       },
       body: JSON.stringify({
         totalAmount,
@@ -24,69 +17,54 @@ export async function initiatePayment({ totalAmount, description, callbackUrl, r
         clientReference,
       }),
     });
-
-    // Handle non-OK responses
-    if (!response.ok) {
-      const text = await response.text();
-      console.error(`[HubtelClient] Server error ${response.status}:`, text);
-      return { error: `Payment server error (${response.status}). Please try again.` };
-    }
-
-    // Handle empty responses
-    const text = await response.text();
-    if (!text || text.trim() === '') {
-      console.error('[HubtelClient] Empty response from server');
-      return { error: 'Payment server returned empty response. Please try again.' };
-    }
-
-    // Parse JSON safely
-    try {
-      const result = JSON.parse(text);
-      return result;
-    } catch (parseErr) {
-      console.error('[HubtelClient] Invalid JSON response:', text);
-      return { error: 'Invalid response from payment server. Please try again.' };
-    }
+    const result = await response.json();
+    return result;
   } catch (error) {
-    console.error('[HubtelClient] Network error:', error);
-    return { error: 'Unable to reach payment server. Check your internet connection.' };
+    console.error('[HubtelClient] Error:', error);
+    return { error: error.message };
   }
 }
 
 export async function checkPaymentStatus(clientReference) {
-  if (!SUPABASE_ANON_KEY) {
-    console.error('[HubtelClient] VITE_SUPABASE_ANON_KEY is not set!');
-    return { error: 'Payment system not configured.' };
-  }
-
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/hubtel-checkout?clientReference=${clientReference}`, {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/hubtel-checkout?clientReference=${encodeURIComponent(clientReference)}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'}`,
       },
     });
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.error(`[HubtelClient] Status check error ${response.status}:`, text);
-      return { error: `Status check failed (${response.status})` };
-    }
-
-    const text = await response.text();
-    if (!text || text.trim() === '') {
-      return { error: 'Empty response from payment server.' };
-    }
-
-    try {
-      return JSON.parse(text);
-    } catch (e) {
-      console.error('[HubtelClient] Invalid JSON:', text);
-      return { error: 'Invalid response from server.' };
-    }
+    const result = await response.json();
+    return result;
   } catch (error) {
-    console.error('[HubtelClient] Status check network error:', error);
+    console.error('[HubtelClient] Status check error:', error);
     return { error: error.message };
   }
+}
+
+// Poll payment status with retries for fast verification after redirect
+export async function verifyPaymentWithRetries(clientReference, maxRetries = 4, delayMs = 800) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const result = await checkPaymentStatus(clientReference);
+      const status = result?.data?.status || result?.data?.Status || '';
+
+      if (status.toLowerCase() === 'paid' || status.toLowerCase() === 'success') {
+        return { verified: true, status: 'paid', data: result };
+      }
+      if (status.toLowerCase() === 'failed' || status.toLowerCase() === 'unpaid') {
+        return { verified: true, status: 'failed', data: result };
+      }
+      if (status.toLowerCase() === 'cancelled') {
+        return { verified: true, status: 'cancelled', data: result };
+      }
+    } catch (err) {
+      console.warn('[HubtelClient] Retry attempt', attempt + 1, err);
+    }
+    // Wait before next attempt
+    if (attempt < maxRetries - 1) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  return { verified: false, status: 'unknown', data: null };
 }

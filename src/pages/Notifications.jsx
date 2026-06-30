@@ -8,17 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
-var typeConfig = {
-  order_placed: { icon: Package, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Order Placed' },
-  payment_confirmed: { icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50', label: 'Payment Confirmed' },
-  payment_pending: { icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-50', label: 'Awaiting Verification' },
-  order_processing: { icon: Package, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Processing' },
-  order_shipped: { icon: Truck, color: 'text-purple-500', bg: 'bg-purple-50', label: 'Shipped' },
-  order_delivered: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', label: 'Delivered' },
-  order_cancelled: { icon: Clock, color: 'text-red-500', bg: 'bg-red-50', label: 'Cancelled' },
-  delivery_update: { icon: Truck, color: 'text-blue-700', bg: 'bg-blue-50', label: 'Delivery Update' },
-  general: { icon: Bell, color: 'text-gray-500', bg: 'bg-gray-50', label: 'Notice' },
-};
+var typeConfig = { order_placed: { icon: Package, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Order Placed' }, payment_confirmed: { icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50', label: 'Payment Confirmed' }, payment_pending: { icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-50', label: 'Awaiting Verification' }, order_processing: { icon: Package, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Processing' }, order_shipped: { icon: Truck, color: 'text-purple-500', bg: 'bg-purple-50', label: 'Shipped' }, order_delivered: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', label: 'Delivered' }, order_cancelled: { icon: Clock, color: 'text-red-500', bg: 'bg-red-50', label: 'Cancelled' }, delivery_update: { icon: Truck, color: 'text-blue-700', bg: 'bg-blue-50', label: 'Delivery Update' }, general: { icon: Bell, color: 'text-gray-500', bg: 'bg-gray-50', label: 'Notice' } };
 
 export default function Notifications() {
   var [user, setUser] = useState(null);
@@ -26,33 +16,15 @@ export default function Notifications() {
   var [isProcessing, setIsProcessing] = useState(false);
   var queryClient = useQueryClient();
 
-  useEffect(function() {
-    supabase.auth.getUser().then(function(result) {
-      if (result.data && result.data.user) { setUser(result.data.user); }
-      else { window.location.href = '/'; }
-    });
-  }, []);
+  useEffect(function() { supabase.auth.getUser().then(function(result) { if (result.data && result.data.user) { setUser(result.data.user); } else { window.location.href = '/'; } }); }, []);
+  useEffect(function() { var channel = supabase.channel('notifications-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, function() { queryClient.invalidateQueries({ queryKey: ['notifications'] }); }).subscribe(); return function() { supabase.removeChannel(channel); }; }, [queryClient]);
 
-  useEffect(function() {
-    var channel = supabase.channel('notifications-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, function() {
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      }).subscribe();
-    return function() { supabase.removeChannel(channel); };
-  }, [queryClient]);
-
-  var notificationsQuery = useQuery({
-    queryKey: ['notifications', user ? user.email : null],
-    queryFn: function() { return supabase.from('notifications').select('*').eq('user_email', user.email).order('created_date', { ascending: false }).limit(50).then(function(r) { return r.data || []; }); },
-    enabled: !!(user && user.email),
-    staleTime: 5000,
-    refetchInterval: 10000,
-  });
+  var notificationsQuery = useQuery({ queryKey: ['notifications', user ? user.email : null], queryFn: function() { return supabase.from('notifications').select('*').eq('user_email', user.email).order('created_date', { ascending: false }).limit(50).then(function(r) { return r.data || []; }); }, enabled: !!(user && user.email), staleTime: 5000, refetchInterval: 10000 });
   var notifications = notificationsQuery.data || [];
   var isLoading = notificationsQuery.isLoading;
   var refreshNotifs = function() { queryClient.invalidateQueries({ queryKey: ['notifications'] }); };
   var handleMarkOneRead = function(notif) { if (notif.is_read) return; supabase.from('notifications').update({ is_read: true }).eq('id', notif.id).then(refreshNotifs); };
-  var handleMarkAllRead = function() { var unread = notifications.filter(function(n) { return !n.is_read; }); if (unread.length === 0) return; setIsProcessing(true); var ids = unread.map(function(n) { return n.id; }); supabase.from('notifications').update({ is_read: true }).in('id', ids).then(function() { setIsProcessing(false); refreshNotifs(); }); };
+  var handleMarkAllRead = function() { var unread = notifications.filter(function(n) { return !n.is_read; }); if (unread.length === 0) return; setIsProcessing(true); supabase.from('notifications').update({ is_read: true }).in('id', unread.map(function(n) { return n.id; })).then(function() { setIsProcessing(false); refreshNotifs(); }); };
   var handleMarkSelectedRead = function() { if (selectedNotifs.length === 0) return; setIsProcessing(true); supabase.from('notifications').update({ is_read: true }).in('id', selectedNotifs).then(function() { setSelectedNotifs([]); setIsProcessing(false); refreshNotifs(); }); };
   var handleDeleteSelected = function() { if (selectedNotifs.length === 0) return; setIsProcessing(true); supabase.from('notifications').delete().in('id', selectedNotifs).then(function() { setSelectedNotifs([]); setIsProcessing(false); refreshNotifs(); }); };
   var handleToggleSelect = function(notifId) { setSelectedNotifs(function(prev) { return prev.includes(notifId) ? prev.filter(function(id) { return id !== notifId; }) : prev.concat([notifId]); }); };

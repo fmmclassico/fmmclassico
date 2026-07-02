@@ -30,7 +30,7 @@ const PAGE_LINK_OPTIONS = [
 ];
 
 const GRADIENTS = [
-  { label: '🩵 Teal (Default)', value: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]' },
+  { label: '🌑 Navy (Default)', value: 'from-[#031725] via-[#0A2E60] to-[#102C54]' },
   { label: '🔴 Red/Pink', value: 'from-red-600 via-red-500 to-pink-400' },
   { label: '🟠 Orange', value: 'from-orange-600 via-orange-500 to-amber-400' },
   { label: '🟡 Gold', value: 'from-yellow-500 via-amber-500 to-orange-400' },
@@ -42,7 +42,7 @@ const GRADIENTS = [
 
 const EMPTY_FORM = {
   title: '', subtitle: '', badge: '', image_url: '',
-  bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
+  bg_gradient: 'from-[#031725] via-[#0A2E60] to-[#102C54]',
   cta_text: 'Shop Now', cta_link: '', is_active: true, order: 0
 };
 

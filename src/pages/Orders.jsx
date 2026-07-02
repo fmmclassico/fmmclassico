@@ -316,7 +316,7 @@ export default function Orders() {
       await base44.entities.Notification.create({
         user_email: order.customer_email,
         title: 'Order Cancelled',
-        message: 'Dear ' + firstName + ', your order #' + order.order_number + ' has been cancelled. If you paid, please contact us on WhatsApp: 0509 896 035 for a refund.',
+        message: 'Dear ' + firstName + ', your order #' + order.order_number + ' has been cancelled. If you paid, please contact us on WhatsApp: 0208 207 543 for a refund.',
         type: 'order_cancelled',
         order_id: order.id,
         order_number: order.order_number,
@@ -537,7 +537,7 @@ export default function Orders() {
               <ul className="list-disc pl-4 space-y-1">
                 <li>Orders can only be cancelled while in Pending or Confirmed status.</li>
                 <li>Once an order is Packed, Shipped or In Transit, it cannot be cancelled.</li>
-                <li>If you have already paid, contact us on WhatsApp 0509 896 035 to arrange a refund.</li>
+                <li>If you have already paid, contact us on WhatsApp 0208 207 543 to arrange a refund.</li>
                 <li>Refunds are processed within 1 to 3 business days via Mobile Money.</li>
                 <li>Custom or special orders may not be eligible for cancellation.</li>
               </ul>

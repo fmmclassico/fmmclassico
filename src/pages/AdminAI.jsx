@@ -17,9 +17,9 @@ async function askGemini(prompt, systemContext) {
       { role: 'user', parts: [{ text: prompt }] }
     ];
 
-    var response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY, {
+    var response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
       body: JSON.stringify({ contents: contents }),
     });
 
@@ -94,7 +94,7 @@ export default function AdminAI() {
     <div className="max-w-4xl mx-auto px-4 py-6">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Sparkles className="w-5 h-5 text-blue-600" /> AI Assistant</h1>
-        <p className="text-sm text-gray-500">Generate descriptions, marketing copy, get business advice (powered by Google Gemini)</p>
+        <p className="text-sm text-gray-500">Generate descriptions, marketing copy, get business advice</p>
       </div>
 
       <div className="flex gap-2 mb-6">
@@ -137,8 +137,8 @@ export default function AdminAI() {
       {activeTab === 'description' && (
         <Card className="p-4 rounded-2xl">
           <h2 className="font-bold text-gray-800 mb-3">Generate Product Description</h2>
-          <p className="text-xs text-gray-500 mb-3">Enter product name or details. AI will write a selling description for your store.</p>
-          <Input value={descProduct} onChange={function(e) { setDescProduct(e.target.value); }} placeholder="e.g. Samsung 20W Fast Charger USB-C, or paste product details..." className="mb-3 rounded-xl" />
+          <p className="text-xs text-gray-500 mb-3">Enter product name or details. AI writes a selling description.</p>
+          <Input value={descProduct} onChange={function(e) { setDescProduct(e.target.value); }} placeholder="e.g. Samsung 20W Fast Charger USB-C" className="mb-3 rounded-xl" />
           <Button onClick={handleGenerateDescription} disabled={isLoading || !descProduct.trim()} className="rounded-xl bg-blue-800 text-white mb-4">
             {isLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Generating...</> : <><FileText className="w-4 h-4 mr-2" /> Generate Description</>}
           </Button>
@@ -146,7 +146,7 @@ export default function AdminAI() {
             <div className="mt-4 bg-gray-50 rounded-xl p-4">
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{generatedDesc}</p>
               <Button variant="outline" size="sm" className="mt-3 rounded-xl" onClick={function() { navigator.clipboard.writeText(generatedDesc); toast.success('Copied!'); }}>
-                <Copy className="w-3 h-3 mr-1" /> Copy to Clipboard
+                <Copy className="w-3 h-3 mr-1" /> Copy
               </Button>
             </div>
           )}

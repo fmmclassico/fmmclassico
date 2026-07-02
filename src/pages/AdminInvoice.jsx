@@ -157,7 +157,7 @@ export default function AdminInvoice() {
           </div>
           <div style="text-align:center;border-top:1px solid #e5e7eb;padding-top:16px;color:#9ca3af;font-size:12px;">
             <p style="font-weight:bold;color:#6b7280;">Thank you for shopping with FMM CLASSICO! 🧡</p>
-            <p>WhatsApp: ${import.meta.env.VITE_MERCHANT_PHONE || '059XXXXXXX'} | ${import.meta.env.VITE_MERCHANT_EMAIL || 'merchant@example.com'}</p>
+            <p>WhatsApp: 0208207543 | fmmclassico@gmail.com</p>
             <p>Tarkwa (UMAT Campus) & Accra (Ashongman Estate)</p>
             <p style="margin-top:8px;">This is a computer-generated invoice — no signature required.</p>
           </div>

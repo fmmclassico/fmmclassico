@@ -4,40 +4,35 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, Image, FileText, Sparkles, Download } from 'lucide-react';
+import { Loader2, Send, FileText, Sparkles, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
-var AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || 'https://api.freetheai.xyz/v1';
-var AI_API_KEY = import.meta.env.VITE_AI_API_KEY || '';
+var GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
-async function chatWithAI(messages) {
-  var response = await fetch(AI_BASE_URL + '/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AI_API_KEY },
-    body: JSON.stringify({ model: 'gpt-4o', messages: messages, max_tokens: 2000 }),
-  });
-  var data = await response.json();
-  if (data.choices && data.choices[0] && data.choices[0].message) {
-    return data.choices[0].message.content;
-  }
-  if (data.error) throw new Error(data.error.message || 'AI request failed');
-  throw new Error('Unexpected AI response');
-}
+async function askGemini(prompt, systemContext) {
+  try {
+    var contents = [
+      { role: 'user', parts: [{ text: systemContext }] },
+      { role: 'model', parts: [{ text: 'Understood. I will help as requested.' }] },
+      { role: 'user', parts: [{ text: prompt }] }
+    ];
 
-async function generateImage(prompt) {
-  var response = await fetch(AI_BASE_URL + '/images/generations', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AI_API_KEY },
-    body: JSON.stringify({ model: 'vhr/gpt_image_2', prompt: prompt }),
-  });
-  var data = await response.json();
-  if (data.data && data.data[0]) {
-    if (data.data[0].url) return { type: 'url', value: data.data[0].url };
-    if (data.data[0].b64_json) return { type: 'base64', value: 'data:image/png;base64,' + data.data[0].b64_json };
+    var response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_API_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: contents }),
+    });
+
+    var data = await response.json();
+
+    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+      return data.candidates[0].content.parts[0].text;
+    }
+    if (data.error) throw new Error(data.error.message || 'Gemini API error');
+    throw new Error('No response from Gemini');
+  } catch (err) {
+    throw err;
   }
-  if (data.error) throw new Error(data.error.message || 'Image generation failed');
-  throw new Error('No image in response');
 }
 
 export default function AdminAI() {
@@ -47,8 +42,6 @@ export default function AdminAI() {
   var [chatMessages, setChatMessages] = useState([]);
   var [chatInput, setChatInput] = useState('');
   var [isLoading, setIsLoading] = useState(false);
-  var [imagePrompt, setImagePrompt] = useState('');
-  var [generatedImage, setGeneratedImage] = useState(null);
   var [descProduct, setDescProduct] = useState('');
   var [generatedDesc, setGeneratedDesc] = useState('');
   var messagesEndRef = useRef(null);
@@ -70,26 +63,12 @@ export default function AdminAI() {
     setChatInput('');
     setIsLoading(true);
     try {
-      var systemMsg = { role: 'system', content: 'You are the AI assistant for FMM CLASSICO, an online store in Ghana selling phone accessories, electronics, and home appliances. Locations: Tarkwa (UMAT Campus) and Accra (Ashongman Estate). Phone: 0208207543. Help the admin with product descriptions, marketing ideas, business advice, and any questions about running the store.' };
-      var result = await chatWithAI([systemMsg].concat(newMessages));
+      var systemContext = 'You are the AI business assistant for FMM CLASSICO, an online store in Ghana selling phone accessories, electronics, and home appliances. Locations: Tarkwa (UMaT Campus), Accra (Ashongman Estate), and Kumasi. Phone: 0208207543. Email: fmmclassico@gmail.com. Help the admin with product descriptions, marketing ideas, business advice, social media captions, pricing strategies, and any business questions.';
+      var result = await askGemini(chatInput, systemContext);
       setChatMessages(newMessages.concat([{ role: 'assistant', content: result }]));
     } catch (err) {
       toast.error('AI Error: ' + err.message);
-      setChatMessages(newMessages.concat([{ role: 'assistant', content: 'Sorry, I could not process that request. Error: ' + err.message }]));
-    }
-    setIsLoading(false);
-  };
-
-  var handleGenerateImage = async function() {
-    if (!imagePrompt.trim() || isLoading) return;
-    setIsLoading(true);
-    setGeneratedImage(null);
-    try {
-      var result = await generateImage(imagePrompt);
-      setGeneratedImage(result.value);
-      toast.success('Image generated!');
-    } catch (err) {
-      toast.error('Image Error: ' + err.message);
+      setChatMessages(newMessages.concat([{ role: 'assistant', content: 'Error: ' + err.message }]));
     }
     setIsLoading(false);
   };
@@ -99,10 +78,8 @@ export default function AdminAI() {
     setIsLoading(true);
     setGeneratedDesc('');
     try {
-      var result = await chatWithAI([
-        { role: 'system', content: 'You are a product copywriter for FMM CLASSICO, a phone accessories and electronics store in Ghana. Write compelling, SEO-friendly product descriptions. Include key features, benefits, and a call to action. Keep it concise but persuasive. Use cedis currency.' },
-        { role: 'user', content: 'Write a product description for: ' + descProduct }
-      ]);
+      var systemContext = 'You are a product copywriter for FMM CLASSICO, a phone accessories and electronics store in Ghana. Write compelling, SEO-friendly product descriptions. Include key features, benefits, and a call to action. Keep it concise but persuasive. Prices in GHS (Ghana cedis). Make it sound professional and appealing.';
+      var result = await askGemini('Write a product description for: ' + descProduct, systemContext);
       setGeneratedDesc(result);
     } catch (err) {
       toast.error('Error: ' + err.message);
@@ -117,26 +94,23 @@ export default function AdminAI() {
     <div className="max-w-4xl mx-auto px-4 py-6">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Sparkles className="w-5 h-5 text-blue-600" /> AI Assistant</h1>
-        <p className="text-sm text-gray-500">Generate descriptions, images, marketing copy and more</p>
+        <p className="text-sm text-gray-500">Generate descriptions, marketing copy, get business advice (powered by Google Gemini)</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 overflow-x-auto">
-        {[{ id: 'chat', label: 'AI Chat', icon: Send }, { id: 'image', label: 'Generate Image', icon: Image }, { id: 'description', label: 'Product Description', icon: FileText }].map(function(tab) {
-          return (
-            <Button key={tab.id} variant={activeTab === tab.id ? 'default' : 'outline'} size="sm" onClick={function() { setActiveTab(tab.id); }} className={'rounded-xl ' + (activeTab === tab.id ? 'bg-blue-800 text-white' : '')}>
-              <tab.icon className="w-4 h-4 mr-1" /> {tab.label}
-            </Button>
-          );
-        })}
+      <div className="flex gap-2 mb-6">
+        <Button variant={activeTab === 'chat' ? 'default' : 'outline'} size="sm" onClick={function() { setActiveTab('chat'); }} className={'rounded-xl ' + (activeTab === 'chat' ? 'bg-blue-800 text-white' : '')}>
+          <Send className="w-4 h-4 mr-1" /> AI Chat
+        </Button>
+        <Button variant={activeTab === 'description' ? 'default' : 'outline'} size="sm" onClick={function() { setActiveTab('description'); }} className={'rounded-xl ' + (activeTab === 'description' ? 'bg-blue-800 text-white' : '')}>
+          <FileText className="w-4 h-4 mr-1" /> Product Description
+        </Button>
       </div>
 
-      {/* AI Chat Tab */}
       {activeTab === 'chat' && (
         <Card className="p-4 rounded-2xl">
           <div className="h-[400px] overflow-y-auto mb-4 space-y-3">
             {chatMessages.length === 0 && (
-              <div className="text-center text-gray-400 text-sm py-12">Ask me anything about your business, products, marketing ideas...</div>
+              <div className="text-center text-gray-400 text-sm py-12">Ask me anything: product descriptions, marketing ideas, social media captions, business advice...</div>
             )}
             {chatMessages.map(function(msg, i) {
               var isUser = msg.role === 'user';
@@ -160,33 +134,10 @@ export default function AdminAI() {
         </Card>
       )}
 
-      {/* Image Generation Tab */}
-      {activeTab === 'image' && (
-        <Card className="p-4 rounded-2xl">
-          <h2 className="font-bold text-gray-800 mb-3">Generate Image</h2>
-          <p className="text-xs text-gray-500 mb-3">Create flyers, product images, promotional graphics. Describe what you want.</p>
-          <Textarea value={imagePrompt} onChange={function(e) { setImagePrompt(e.target.value); }} placeholder="Example: A professional product flyer for FMM CLASSICO showing phone accessories with blue and white branding, modern design, Ghana themed" rows={3} className="mb-3" />
-          <Button onClick={handleGenerateImage} disabled={isLoading || !imagePrompt.trim()} className="rounded-xl bg-blue-800 text-white mb-4">
-            {isLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Generating...</> : <><Image className="w-4 h-4 mr-2" /> Generate Image</>}
-          </Button>
-          {generatedImage && (
-            <div className="mt-4">
-              <img src={generatedImage} alt="Generated" className="w-full max-w-md rounded-xl shadow-lg mx-auto" />
-              <div className="text-center mt-3">
-                <a href={generatedImage} download="fmm-classico-image.png" target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="sm" className="rounded-xl"><Download className="w-4 h-4 mr-1" /> Download Image</Button>
-                </a>
-              </div>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* Product Description Tab */}
       {activeTab === 'description' && (
         <Card className="p-4 rounded-2xl">
           <h2 className="font-bold text-gray-800 mb-3">Generate Product Description</h2>
-          <p className="text-xs text-gray-500 mb-3">Enter product name or paste product details. AI will write a selling description.</p>
+          <p className="text-xs text-gray-500 mb-3">Enter product name or details. AI will write a selling description for your store.</p>
           <Input value={descProduct} onChange={function(e) { setDescProduct(e.target.value); }} placeholder="e.g. Samsung 20W Fast Charger USB-C, or paste product details..." className="mb-3 rounded-xl" />
           <Button onClick={handleGenerateDescription} disabled={isLoading || !descProduct.trim()} className="rounded-xl bg-blue-800 text-white mb-4">
             {isLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Generating...</> : <><FileText className="w-4 h-4 mr-2" /> Generate Description</>}
@@ -194,7 +145,9 @@ export default function AdminAI() {
           {generatedDesc && (
             <div className="mt-4 bg-gray-50 rounded-xl p-4">
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{generatedDesc}</p>
-              <Button variant="outline" size="sm" className="mt-3 rounded-xl" onClick={function() { navigator.clipboard.writeText(generatedDesc); toast.success('Copied!'); }}>Copy to Clipboard</Button>
+              <Button variant="outline" size="sm" className="mt-3 rounded-xl" onClick={function() { navigator.clipboard.writeText(generatedDesc); toast.success('Copied!'); }}>
+                <Copy className="w-3 h-3 mr-1" /> Copy to Clipboard
+              </Button>
             </div>
           )}
         </Card>

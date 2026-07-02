@@ -1,50 +1,58 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { Send, Loader2, MessageCircle, Bot } from 'lucide-react';
+import { Send, Loader2, Bot } from 'lucide-react';
 import { toast } from 'sonner';
 
-var AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || 'https://api.freetheai.xyz/v1';
-var AI_API_KEY = import.meta.env.VITE_AI_API_KEY || '';
+var GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
-var FMM_SYSTEM_PROMPT = 'You are the customer support AI assistant for FMM CLASSICO, an online store in Ghana. You are friendly, helpful, and professional.' +
-  ' Here is what you know about FMM CLASSICO:' +
+var FMM_SYSTEM_PROMPT = 'You are the friendly customer support AI for FMM CLASSICO, an online store in Ghana.' +
+  ' About FMM CLASSICO:' +
   ' - We sell phone accessories (cases, chargers, earphones, cables, power banks, screen protectors, holders, speakers, smart watches), electronic appliances, and home appliances.' +
-  ' - Locations: Tarkwa (UMAT Campus) and Accra (Ashongman Estate near Awo Dede Purewater, and Airport Residential Area at Libi Kraal).' +
+  ' - Locations: Tarkwa (UMaT Campus), Accra (Ashongman Estate near Awo Dede Purewater, and Airport Residential Area at Libi Kraal), and Kumasi.' +
   ' - Phone/WhatsApp: 0208207543' +
   ' - Email: fmmclassico@gmail.com' +
   ' - Website: fmmclassico.vercel.app' +
-  ' - Payment: We accept Mobile Money, Debit Cards, Bank Transfer, and Wallet payments through Hubtel secure payment.' +
-  ' - Delivery zones: UMAT Campus (free pickup or GHS 10 doorstep), Tarkwa station (GHS 20), Tarkwa outside UMAT (GHS 25), Ashongman Estate (free pickup), Airport Residential (free pickup), Accra station (GHS 25), Accra delivery (GHS 25), Yango/Uber/Bolt (rider fee on delivery), Outside Accra and Tarkwa (GHS 50 flat rate).' +
-  ' - Delivery time: Usually 1 to 5 business days depending on location.' +
-  ' - Cancellation policy: Orders can only be cancelled while in Pending or Confirmed status. Once packed, shipped or in transit, cannot be cancelled. Refunds via MoMo in 1 to 3 business days.' +
-  ' - Returns: Contact us on WhatsApp 0208207543 for returns within 3 days of delivery if product is defective.' +
-  ' - If you do not know something specific about a product or order, tell the customer to contact us on WhatsApp 0208207543 for personalized help.' +
-  ' - Keep responses concise, friendly, and helpful. Use simple English.';
+  ' - Payment: Mobile Money, Debit Cards, Bank Transfer, and Wallet payments through Hubtel secure payment.' +
+  ' - Delivery zones and fees: UMAT Campus pickup (free), UMAT doorstep (GHS 10), Tarkwa station (GHS 20), Tarkwa outside UMAT (GHS 25), Ashongman Estate pickup (free), Airport Residential pickup (free), Accra station (GHS 25), Accra delivery (GHS 25), Yango/Uber/Bolt (rider fee on delivery), Outside Accra and Tarkwa (GHS 50 flat rate).' +
+  ' - Delivery time: 1 to 5 business days.' +
+  ' - Cancellation: Only while order is Pending or Confirmed. Once packed/shipped, cannot cancel. Refunds via MoMo in 1 to 3 business days.' +
+  ' - Returns: Contact WhatsApp 0208207543 within 3 days if product is defective.' +
+  ' - Keep responses concise, friendly, helpful. Use simple English. If you do not know something specific, direct them to WhatsApp 0208207543.';
 
-async function getAIResponse(conversationHistory) {
+async function askGemini(conversationHistory) {
   try {
-    var response = await fetch(AI_BASE_URL + '/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AI_API_KEY },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [{ role: 'system', content: FMM_SYSTEM_PROMPT }].concat(conversationHistory),
-        max_tokens: 500,
-        temperature: 0.7,
-      }),
+    var contents = conversationHistory.map(function(msg) {
+      return { role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.content }] };
     });
-    var data = await response.json();
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      return data.choices[0].message.content;
+
+    // Add system instruction as first user message if not present
+    if (contents.length > 0 && contents[0].role !== 'model') {
+      contents.unshift({ role: 'user', parts: [{ text: FMM_SYSTEM_PROMPT + ' Now respond to customers as this AI assistant.' }] });
+      contents.splice(1, 0, { role: 'model', parts: [{ text: 'Understood! I am FMM CLASSICO AI support. I will help customers with their questions about products, delivery, payment, orders, and more.' }] });
     }
-    return 'Sorry, I am having trouble responding right now. Please contact us on WhatsApp: 0208207543';
+
+    var response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_API_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: contents }),
+    });
+
+    var data = await response.json();
+
+    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+      return data.candidates[0].content.parts[0].text;
+    }
+    if (data.error) {
+      console.error('[Gemini] Error:', data.error);
+      return 'Sorry, I am having a brief issue. Please try again or contact us on WhatsApp: 0208207543';
+    }
+    return 'Sorry, I could not understand that. Please try again or WhatsApp us at 0208207543';
   } catch (err) {
     console.error('[Chat AI] Error:', err);
-    return 'Sorry, I am having trouble responding right now. Please contact us on WhatsApp: 0208207543';
+    return 'Sorry, I am temporarily unavailable. Please contact us on WhatsApp: 0208207543';
   }
 }
 
@@ -54,6 +62,7 @@ export default function Chat() {
   var [input, setInput] = useState('');
   var [isTyping, setIsTyping] = useState(false);
   var messagesEndRef = useRef(null);
+  var queryClient = useQueryClient();
 
   useEffect(function() {
     base44.auth.me().then(function(u) { setUser(u); }).catch(function() {});
@@ -61,16 +70,15 @@ export default function Chat() {
 
   // Load previous messages from DB
   useEffect(function() {
-    if (!user?.email) return;
-    base44.entities.ChatMessage.filter({ user_email: user.email }, 'created_date', 50).then(function(dbMessages) {
+    if (!user || !user.email) return;
+    base44.entities.ChatMessage.filter({ user_email: user.email }, 'created_date', 30).then(function(dbMessages) {
       if (dbMessages && dbMessages.length > 0) {
         var loaded = dbMessages.map(function(m) {
           return { role: m.is_admin ? 'assistant' : 'user', content: m.message };
         });
         setMessages(loaded);
       } else {
-        // Welcome message
-        setMessages([{ role: 'assistant', content: 'Hi! Welcome to FMM CLASSICO. I am your AI shopping assistant. How can I help you today? You can ask me about our products, delivery, payments, orders, or anything else!' }]);
+        setMessages([{ role: 'assistant', content: 'Hi! Welcome to FMM CLASSICO. I am your AI shopping assistant, available 24/7. How can I help you today? Ask me about products, delivery, payments, or anything else!' }]);
       }
     }).catch(function() {
       setMessages([{ role: 'assistant', content: 'Hi! Welcome to FMM CLASSICO. How can I help you today?' }]);
@@ -102,8 +110,8 @@ export default function Chat() {
       });
     } catch (err) { console.error('Save msg error:', err); }
 
-    // Get AI response
-    var aiResponse = await getAIResponse(newMessages.slice(-10)); // Last 10 messages for context
+    // Get AI response from Gemini
+    var aiResponse = await askGemini(newMessages.slice(-10));
     var finalMessages = newMessages.concat([{ role: 'assistant', content: aiResponse }]);
     setMessages(finalMessages);
     setIsTyping(false);
@@ -134,7 +142,10 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Messages */}
+      <div className="bg-blue-50 rounded-xl p-3 mb-4 text-xs text-blue-700">
+        Ask me anything about our products, delivery, payments, or orders. For urgent help, WhatsApp us at 0208207543.
+      </div>
+
       <div className="flex-1 overflow-y-auto space-y-3 mb-4">
         {messages.map(function(msg, i) {
           var isUser = msg.role === 'user';
@@ -157,7 +168,6 @@ export default function Chat() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <form onSubmit={handleSend} className="flex gap-2">
         <Input value={input} onChange={function(e) { setInput(e.target.value); }} placeholder="Ask about products, delivery, orders..." className="flex-1 rounded-xl" disabled={isTyping} />
         <Button type="submit" disabled={isTyping || !input.trim()} className="rounded-xl bg-blue-800 text-white hover:bg-blue-900">

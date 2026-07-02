@@ -24,6 +24,7 @@ import Checkout from './pages/Checkout';
 import Feedback from './pages/Feedback';
 import Home from './pages/Home';
 import HowToUse from './pages/HowToUse';
+import Invoices from './pages/Invoices';
 import Notifications from './pages/Notifications';
 import OrderTracking from './pages/OrderTracking';
 import Orders from './pages/Orders';
@@ -31,8 +32,6 @@ import ProductDetail from './pages/ProductDetail';
 import Settings from './pages/Settings';
 import Shop from './pages/Shop';
 import __Layout from './Layout.jsx';
-import Invoices from './pages/Invoices';
-
 
 export const PAGES = {
   "About": About,
@@ -61,6 +60,7 @@ export const PAGES = {
   "Feedback": Feedback,
   "Home": Home,
   "HowToUse": HowToUse,
+  "Invoices": Invoices,
   "Notifications": Notifications,
   "OrderTracking": OrderTracking,
   "Orders": Orders,

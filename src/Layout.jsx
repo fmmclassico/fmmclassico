@@ -135,6 +135,7 @@ export default function Layout({ children, currentPageName }) {
     { icon: Grid3X3, label: 'Categories', page: 'Categories' },
     { icon: ShoppingCart, label: 'Cart', page: 'Cart', badge: cartCount },
     { icon: Package, label: 'My Orders', page: 'Orders' },
+    { icon: FileText, label: 'My Invoices', page: 'Invoices' },
     { icon: Bell, label: 'Notifications', page: 'Notifications' },
     { icon: MessageCircle, label: 'Chat Support', page: 'Chat' },
     { icon: MessageCircle, label: 'Feedback / Report Issue', page: 'Feedback' },

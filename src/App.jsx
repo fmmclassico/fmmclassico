@@ -58,6 +58,7 @@ const PROTECTED_ROUTES = new Set([
   'Checkout',
   'Account',
   'Orders',
+  'Invoices',
   'OrderTracking',
   'Notifications',
   'Settings',

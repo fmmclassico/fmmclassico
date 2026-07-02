@@ -31,6 +31,8 @@ import ProductDetail from './pages/ProductDetail';
 import Settings from './pages/Settings';
 import Shop from './pages/Shop';
 import __Layout from './Layout.jsx';
+import Invoices from './pages/Invoices';
+
 
 export const PAGES = {
   "About": About,

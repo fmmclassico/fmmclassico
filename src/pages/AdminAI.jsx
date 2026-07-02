@@ -1,378 +1,204 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Send, Loader2, Sparkles, Trash2, User, Download, X, Paperclip } from 'lucide-react';
+import { Loader2, Send, Image, FileText, Sparkles, Download } from 'lucide-react';
 import { toast } from 'sonner';
-import ReactMarkdown from 'react-markdown';
 
-const QUICK_PROMPTS = [
-  '🎨 Generate a flyer for a 20% off flash sale on phones',
-  '🖼️ Show me an image of AirPods Pro on white background',
-  '🖼️ Photo of iPhone 15 charger – product image',
-  '🎨 Create a promotional banner for Tecno Spark 20 at ₵1,200',
-  '🎬 Generate a 6-second video of iPhone 15 Pro',
-  '📣 Write a WhatsApp broadcast for a weekend sale',
-  '📝 Write a product description for Samsung Galaxy A15',
-  '💡 Suggest promotions for the Donkomi deals section',
-  '🛒 Give me 5 upsell ideas for phone cases',
-];
+var AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || 'https://api.freetheai.xyz/v1';
+var AI_API_KEY = import.meta.env.VITE_AI_API_KEY || '';
+
+async function chatWithAI(messages) {
+  var response = await fetch(AI_BASE_URL + '/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AI_API_KEY },
+    body: JSON.stringify({ model: 'gpt-4o', messages: messages, max_tokens: 2000 }),
+  });
+  var data = await response.json();
+  if (data.choices && data.choices[0] && data.choices[0].message) {
+    return data.choices[0].message.content;
+  }
+  if (data.error) throw new Error(data.error.message || 'AI request failed');
+  throw new Error('Unexpected AI response');
+}
+
+async function generateImage(prompt) {
+  var response = await fetch(AI_BASE_URL + '/images/generations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AI_API_KEY },
+    body: JSON.stringify({ model: 'vhr/gpt_image_2', prompt: prompt }),
+  });
+  var data = await response.json();
+  if (data.data && data.data[0]) {
+    if (data.data[0].url) return { type: 'url', value: data.data[0].url };
+    if (data.data[0].b64_json) return { type: 'base64', value: 'data:image/png;base64,' + data.data[0].b64_json };
+  }
+  if (data.error) throw new Error(data.error.message || 'Image generation failed');
+  throw new Error('No image in response');
+}
 
 export default function AdminAI() {
-  const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hello! I'm your **CLASSICO AI Assistant** — powered by advanced AI.\n\nI can help you with anything for your store:\n\n- 🖼️ **Generate product images** — say *\"design a product image for iPhone 15 Pro Max\"* to get a photorealistic product photo\n- 🎬 **Generate videos** — say *\"create a 6-second video of AirPods Pro\"* for promotional videos\n- 💧 **Add watermark** — say *\"add FMM CLASSICO watermark\"* to any product image generation\n- 🎨 **Generate flyers & banners** — say *\"create a flyer for 20% off sale\"* to get a downloadable marketing image\n- 📣 **Marketing copy** — WhatsApp broadcasts, product descriptions, promo campaigns\n- 💡 **Business advice** — pricing strategies, promotions, upsell ideas for the Ghana market\n- 🛒 **Store content** — banner text (title, subtitle, CTA, gradient), notification messages\n- 📊 **Sales strategy** — deal ideas, seasonal campaigns, customer retention tips\n- ✍️ **Any writing task** — emails, announcements, customer replies\n\nJust type what you need or pick a quick prompt below!" }
-  ]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [attachedImage, setAttachedImage] = useState(null); // { url, file }
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [watermarkBrand, setWatermarkBrand] = useState('FMM CLASSICO');
-  const bottomRef = useRef(null);
-  const fileInputRef = useRef(null);
+  var [user, setUser] = useState(null);
+  var [isAdmin, setIsAdmin] = useState(false);
+  var [activeTab, setActiveTab] = useState('chat');
+  var [chatMessages, setChatMessages] = useState([]);
+  var [chatInput, setChatInput] = useState('');
+  var [isLoading, setIsLoading] = useState(false);
+  var [imagePrompt, setImagePrompt] = useState('');
+  var [generatedImage, setGeneratedImage] = useState(null);
+  var [descProduct, setDescProduct] = useState('');
+  var [generatedDesc, setGeneratedDesc] = useState('');
+  var messagesEndRef = useRef(null);
 
-  useEffect(() => {
-    base44.auth.me().then(u => { setUser(u); setIsAdmin(u?.role === 'admin'); }).catch(() => {});
+  useEffect(function() {
+    base44.auth.me().then(function(u) { setUser(u); setIsAdmin(u.role === 'admin'); }).catch(function() {});
   }, []);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  useEffect(function() {
+    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
 
-  const PRODUCT_KEYWORDS = [
-    'airpods', 'iphone', 'samsung', 'tecno', 'infinix', 'itel', 'oraimo',
-    'charger', 'earphone', 'earbuds', 'earbud', 'cable', 'phone case', 'power bank',
-    'speaker', 'watch', 'laptop', 'tablet', 'tv', 'fridge', 'blender', 'microwave',
-    'headphone', 'headphones', 'keyboard', 'mouse', 'router', 'modem', 'printer',
-    'camera', 'tripod', 'selfie stick', 'ring light', 'powerbank', 'adapter',
-    'screen protector', 'tempered glass', 'phone holder', 'car charger', 'wireless charger',
-    'bluetooth', 'neckband', 'TWS', 'air fryer', 'kettle', 'iron', 'fan', 'ac unit',
-    'smart watch', 'smartwatch', 'washing machine', 'refrigerator', 'air conditioner',
-    'jbl', 'apple', 'huawei', 'oppo', 'realme', 'xiaomi', 'redmi', 'nokia', 'itel',
-    'product', 'gadget', 'device', 'accessory', 'accessories'
-  ];
-
-  const isVideoRequest = (msg) => {
-   const lower = msg.toLowerCase();
-   return lower.includes('video') || lower.includes('motion') || lower.includes('animate') || lower.includes('animated');
-  };
-
-  const isImageRequest = (msg) => {
-   const lower = msg.toLowerCase();
-   const hasMarketingWord = lower.includes('flyer') || lower.includes('banner') || lower.includes('poster') || lower.includes('promotional') || lower.includes('advertisement');
-   const hasImageWord = lower.includes('generate') || lower.includes('create') || lower.includes('design') || lower.includes('make') || lower.includes('show') || lower.includes('draw') || lower.includes('render') || lower.includes('give me') || lower.includes('get me') || lower.includes('i want');
-   const hasProductWord = PRODUCT_KEYWORDS.some(k => lower.includes(k));
-   return (
-     hasMarketingWord ||
-     lower.includes('generate image') || lower.includes('create image') ||
-     lower.includes('product image') || lower.includes('product photo') ||
-     lower.includes('product picture') || lower.includes('generate a photo') ||
-     lower.includes('generate a picture') || lower.includes('image of') ||
-     lower.includes('picture of') || lower.includes('photo of') ||
-     lower.includes('generate only') || lower.includes('show me an image') ||
-     (hasImageWord && hasProductWord)
-   );
-  };
-
-  const isPureProductImage = (msg) => {
-    const lower = msg.toLowerCase();
-    const hasMarketingWord = lower.includes('flyer') || lower.includes('banner') || lower.includes('poster') || lower.includes('advertisement');
-    return !hasMarketingWord;
-  };
-
-  const handleImageAttach = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingImage(true);
+  var handleChat = async function(e) {
+    e.preventDefault();
+    if (!chatInput.trim() || isLoading) return;
+    var userMsg = { role: 'user', content: chatInput };
+    var newMessages = chatMessages.concat([userMsg]);
+    setChatMessages(newMessages);
+    setChatInput('');
+    setIsLoading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setAttachedImage({ url: file_url, name: file.name });
-      toast.success('Image attached!');
-    } catch {
-      toast.error('Failed to upload image');
+      var systemMsg = { role: 'system', content: 'You are the AI assistant for FMM CLASSICO, an online store in Ghana selling phone accessories, electronics, and home appliances. Locations: Tarkwa (UMAT Campus) and Accra (Ashongman Estate). Phone: 0208207543. Help the admin with product descriptions, marketing ideas, business advice, and any questions about running the store.' };
+      var result = await chatWithAI([systemMsg].concat(newMessages));
+      setChatMessages(newMessages.concat([{ role: 'assistant', content: result }]));
+    } catch (err) {
+      toast.error('AI Error: ' + err.message);
+      setChatMessages(newMessages.concat([{ role: 'assistant', content: 'Sorry, I could not process that request. Error: ' + err.message }]));
     }
-    setUploadingImage(false);
-    e.target.value = '';
+    setIsLoading(false);
   };
 
-  const sendMessage = async (text) => {
-    const msg = (text || input).trim();
-    if (!msg && !attachedImage) return;
-    const displayMsg = msg || '🖼️ [Image attached — generate/edit based on this]';
-    setInput('');
-    const imgUrl = attachedImage?.url || null;
-    setAttachedImage(null);
-
-    setMessages(m => [...m, { role: 'user', content: displayMsg, image_url: imgUrl }]);
-    setLoading(true);
-
-    // Handle video generation
-    if (isVideoRequest(msg)) {
-      try {
-        setMessages(m => [...m, { role: 'assistant', content: '🎬 Generating your video... this takes about 30-60 seconds...', isTemp: true }]);
-        const videoPrompt = `Create a cinematic, realistic 6-second video. ${msg}. High quality, well-lit, professional product showcase, smooth camera movement, modern style.`;
-        const { url } = await base44.integrations.Core.GenerateVideo({ prompt: videoPrompt, label: 'Product Video' });
-        setMessages(m => {
-          const filtered = m.filter(x => !x.isTemp);
-          return [...filtered, { role: 'assistant', content: '✅ Here is your generated video!', video_url: url }];
-        });
-      } catch (e) {
-        setMessages(m => m.filter(x => !x.isTemp));
-        setMessages(m => [...m, { role: 'assistant', content: 'Sorry, video generation failed. Please try again.' }]);
-      }
-      setLoading(false);
-      return;
-    }
-
-    // If user attached an image, use it as reference for generation or editing
-    if (imgUrl || isImageRequest(msg)) {
-      try {
-        const isProductImg = !imgUrl ? isPureProductImage(msg) : true;
-        setMessages(m => [...m, {
-          role: 'assistant',
-          content: imgUrl ? '🖼️ Analyzing your image and generating... ~15 seconds...' : (isProductImg ? '🖼️ Generating product image... this takes about 10-15 seconds...' : '🎨 Generating your flyer... this takes about 10-15 seconds...'),
-          isTemp: true
-        }]);
-
-        let imagePrompt;
-        if (imgUrl && msg) {
-          imagePrompt = `${msg}. Use the uploaded reference image as inspiration or as the subject to edit/recreate. Photorealistic, high quality, 4K.`;
-        } else if (imgUrl) {
-          imagePrompt = `Generate a high-quality photorealistic version of this product image. Clean white background, professional studio lighting, commercial e-commerce quality, no text, no logos.`;
-        } else if (isProductImg) {
-           const hasWatermark = msg.toLowerCase().includes('watermark') || msg.toLowerCase().includes(watermarkBrand.toLowerCase());
-           imagePrompt = `Ultra-realistic professional product photography. Subject: ${msg}. Pure white background, studio soft-box lighting from top-left, crisp shadows, hyper-detailed, 8K resolution, commercial e-commerce product shot, isolated product only, photorealistic render.${hasWatermark ? ` Add a subtle semi-transparent watermark or badge with "${watermarkBrand}" in the corner.` : ' No text, no logos, no watermarks.'}`;
-         } else {
-          imagePrompt = `Professional high-quality advertising flyer for FMM CLASSICO Ghana store. ${msg}. Include bold text layout, vibrant colors, modern design, clean typography, product imagery. Style: photoshop-quality commercial banner, 4K resolution, professional marketing material.`;
-        }
-
-        const genPayload = { prompt: imagePrompt };
-        if (imgUrl) genPayload.existing_image_urls = [imgUrl];
-
-        const { url } = await base44.integrations.Core.GenerateImage(genPayload);
-        setMessages(m => {
-          const filtered = m.filter(x => !x.isTemp);
-          return [...filtered, { role: 'assistant', content: '✅ Here is your generated image!', image_url: url }];
-        });
-      } catch (e) {
-        setMessages(m => m.filter(x => !x.isTemp));
-        setMessages(m => [...m, { role: 'assistant', content: 'Sorry, I could not generate the image. Please try again.' }]);
-      }
-      setLoading(false);
-      return;
-    }
-
-    const history = messages.map(m => `${m.role === 'user' ? 'Admin' : 'AI'}: ${m.content}`).join('\n');
-    const response = await base44.integrations.Core.InvokeLLM({
-      model: 'claude_sonnet_4_6',
-      prompt: `You are the AI assistant for FMM CLASSICO, a premium online store in Ghana selling phones, phone accessories, electronics, and home appliances.
-
-Store context:
-- Store name: FMM CLASSICO (also known as FMMCLASSICO)
-- Locations: Tarkwa (UMAT Campus) and Accra (Ashongman Estate)
-- Currency: GHS (₵)
-- Key brands: Apple, Samsung, Tecno, Infinix, Oraimo, JBL, TCL, Hisense, Roch, Silver Crest, Midea, Nasco, Hoffman
-- Sections: CLASSICO Deals (flash sales), Donkomi Sales (best prices), New Arrivals, Top Selling
-- Payment: Mobile Money, Card
-- WhatsApp: 0509 896 035
-
-You can help the admin with:
-- Writing product descriptions, promo copy, marketing messages
-- Creating WhatsApp broadcast messages
-- Suggesting promotional strategies, pricing ideas, discount campaigns
-- Generating promo banner text (title, subtitle, badge, gradient, CTA)
-- Writing customer emails or notifications
-- Giving business advice specific to the Ghana electronics market
-- Analyzing sales strategies for the store
-- Any other business or content task the admin needs
-
-Previous conversation:
-${history}
-
-Admin's latest message: ${msg}
-
-Respond in a helpful, practical and detailed way. Be specific to the Ghana/West Africa market context. If asked to create promo banner text, provide all fields: title, subtitle, badge text, Tailwind gradient classes, and call-to-action button text.`,
-    });
-
-    setMessages(m => [...m, { role: 'assistant', content: response }]);
-    setLoading(false);
-  };
-
-  const handleDownload = async (url) => {
+  var handleGenerateImage = async function() {
+    if (!imagePrompt.trim() || isLoading) return;
+    setIsLoading(true);
+    setGeneratedImage(null);
     try {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `classico-flyer-${Date.now()}.png`;
-      a.target = '_blank';
-      a.click();
-      toast.success('Downloading flyer...');
-    } catch {
-      window.open(url, '_blank');
+      var result = await generateImage(imagePrompt);
+      setGeneratedImage(result.value);
+      toast.success('Image generated!');
+    } catch (err) {
+      toast.error('Image Error: ' + err.message);
     }
+    setIsLoading(false);
   };
 
-  if (!user) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
-  if (!isAdmin) {
-    const adminVerified = sessionStorage.getItem(`admin_verified_${user.email}`);
-    if (!adminVerified) {
-      return <div className="p-8 text-center text-gray-500">Admin password verification required. Please logout and login again.</div>;
+  var handleGenerateDescription = async function() {
+    if (!descProduct.trim() || isLoading) return;
+    setIsLoading(true);
+    setGeneratedDesc('');
+    try {
+      var result = await chatWithAI([
+        { role: 'system', content: 'You are a product copywriter for FMM CLASSICO, a phone accessories and electronics store in Ghana. Write compelling, SEO-friendly product descriptions. Include key features, benefits, and a call to action. Keep it concise but persuasive. Use cedis currency.' },
+        { role: 'user', content: 'Write a product description for: ' + descProduct }
+      ]);
+      setGeneratedDesc(result);
+    } catch (err) {
+      toast.error('Error: ' + err.message);
     }
-    return <div className="p-8 text-center text-gray-500">Your account does not have admin privileges.</div>;
-  }
+    setIsLoading(false);
+  };
+
+  if (!user) return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+  if (!isAdmin) return <div className="p-8 text-center"><p className="text-gray-500">Admin access required</p></div>;
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-          <Sparkles className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-black text-gray-900">CLASSICO AI Assistant</h1>
-          <p className="text-gray-500 text-sm">Generate flyers, product images, banners, promo copy & business advice</p>
-        </div>
-        <Badge className="ml-auto bg-green-100 text-green-700 border-green-200">Admin Only</Badge>
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Sparkles className="w-5 h-5 text-blue-600" /> AI Assistant</h1>
+        <p className="text-sm text-gray-500">Generate descriptions, images, marketing copy and more</p>
       </div>
 
-      {/* Quick prompts */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {QUICK_PROMPTS.map(p => (
-          <button key={p} onClick={() => sendMessage(p)}
-            className="text-xs px-3 py-1.5 rounded-full border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors font-medium">
-            {p.includes('flyer') || p.includes('banner') ? '🎨 ' : ''}{p}
-          </button>
-        ))}
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 overflow-x-auto">
+        {[{ id: 'chat', label: 'AI Chat', icon: Send }, { id: 'image', label: 'Generate Image', icon: Image }, { id: 'description', label: 'Product Description', icon: FileText }].map(function(tab) {
+          return (
+            <Button key={tab.id} variant={activeTab === tab.id ? 'default' : 'outline'} size="sm" onClick={function() { setActiveTab(tab.id); }} className={'rounded-xl ' + (activeTab === tab.id ? 'bg-blue-800 text-white' : '')}>
+              <tab.icon className="w-4 h-4 mr-1" /> {tab.label}
+            </Button>
+          );
+        })}
       </div>
 
-      {/* Chat window */}
-      <Card className="mb-4 overflow-hidden">
-        <div className="h-[55vh] overflow-y-auto p-4 space-y-4 bg-gray-50">
-          {messages.map((msg, i) => (
-            <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              {msg.role === 'assistant' && (
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Bot className="h-4 w-4 text-white" />
-                </div>
-              )}
-              <div className={`max-w-[85%] ${msg.role === 'user' ? '' : ''}`}>
-                {msg.role === 'user' && msg.image_url && (
-                  <div className="mb-1">
-                    <img src={msg.image_url} alt="attached" className="rounded-xl max-h-40 object-cover border border-gray-300" />
+      {/* AI Chat Tab */}
+      {activeTab === 'chat' && (
+        <Card className="p-4 rounded-2xl">
+          <div className="h-[400px] overflow-y-auto mb-4 space-y-3">
+            {chatMessages.length === 0 && (
+              <div className="text-center text-gray-400 text-sm py-12">Ask me anything about your business, products, marketing ideas...</div>
+            )}
+            {chatMessages.map(function(msg, i) {
+              var isUser = msg.role === 'user';
+              return (
+                <div key={i} className={'flex ' + (isUser ? 'justify-end' : 'justify-start')}>
+                  <div className={'max-w-[80%] rounded-2xl px-4 py-2 ' + (isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800')}>
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                   </div>
-                )}
-                {msg.content && (
-                  <div className={`rounded-2xl px-4 py-2.5 text-sm ${msg.role === 'user' ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}>
-                    {msg.role === 'assistant'
-                      ? <ReactMarkdown className="prose prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">{msg.content}</ReactMarkdown>
-                      : <p>{msg.content}</p>
-                    }
-                  </div>
-                )}
-                {msg.role === 'assistant' && msg.image_url && (
-                   <div className="mt-2 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-md">
-                     <img src={msg.image_url} alt="Generated flyer" className="w-full object-cover" style={{ maxHeight: 400 }} />
-                     <div className="flex gap-2 p-3 bg-gray-50 border-t border-gray-100">
-                       <Button size="sm" className="bg-blue-600 hover:bg-blue-700 gap-1.5 flex-1" onClick={() => handleDownload(msg.image_url)}>
-                         <Download className="h-4 w-4" /> Download Image
-                       </Button>
-                       <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.open(msg.image_url, '_blank')}>
-                         Open Full Size
-                       </Button>
-                     </div>
-                   </div>
-                 )}
-                {msg.role === 'assistant' && msg.video_url && (
-                   <div className="mt-2 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-md">
-                     <video src={msg.video_url} controls className="w-full object-cover" style={{ maxHeight: 400 }} />
-                     <div className="flex gap-2 p-3 bg-gray-50 border-t border-gray-100">
-                       <Button size="sm" className="bg-green-600 hover:bg-green-700 gap-1.5 flex-1" onClick={() => window.open(msg.video_url, '_blank')}>
-                         <Download className="h-4 w-4" /> Download Video
-                       </Button>
-                     </div>
-                   </div>
-                 )}
-              </div>
-              {msg.role === 'user' && (
-                <div className="w-7 h-7 rounded-lg bg-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <User className="h-4 w-4 text-white" />
                 </div>
-              )}
-            </div>
-          ))}
-          {loading && (
-            <div className="flex gap-3 justify-start">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                <Bot className="h-4 w-4 text-white" />
-              </div>
-              <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3">
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
+              );
+            })}
+            {isLoading && (
+              <div className="flex justify-start"><div className="bg-gray-100 rounded-2xl px-4 py-2"><Loader2 className="w-4 h-4 animate-spin" /></div></div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          <form onSubmit={handleChat} className="flex gap-2">
+            <Input value={chatInput} onChange={function(e) { setChatInput(e.target.value); }} placeholder="Ask AI anything..." className="flex-1 rounded-xl" />
+            <Button type="submit" disabled={isLoading || !chatInput.trim()} className="rounded-xl bg-blue-800 text-white"><Send className="w-4 h-4" /></Button>
+          </form>
+        </Card>
+      )}
+
+      {/* Image Generation Tab */}
+      {activeTab === 'image' && (
+        <Card className="p-4 rounded-2xl">
+          <h2 className="font-bold text-gray-800 mb-3">Generate Image</h2>
+          <p className="text-xs text-gray-500 mb-3">Create flyers, product images, promotional graphics. Describe what you want.</p>
+          <Textarea value={imagePrompt} onChange={function(e) { setImagePrompt(e.target.value); }} placeholder="Example: A professional product flyer for FMM CLASSICO showing phone accessories with blue and white branding, modern design, Ghana themed" rows={3} className="mb-3" />
+          <Button onClick={handleGenerateImage} disabled={isLoading || !imagePrompt.trim()} className="rounded-xl bg-blue-800 text-white mb-4">
+            {isLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Generating...</> : <><Image className="w-4 h-4 mr-2" /> Generate Image</>}
+          </Button>
+          {generatedImage && (
+            <div className="mt-4">
+              <img src={generatedImage} alt="Generated" className="w-full max-w-md rounded-xl shadow-lg mx-auto" />
+              <div className="text-center mt-3">
+                <a href={generatedImage} download="fmm-classico-image.png" target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="sm" className="rounded-xl"><Download className="w-4 h-4 mr-1" /> Download Image</Button>
+                </a>
               </div>
             </div>
           )}
-          <div ref={bottomRef} />
-        </div>
+        </Card>
+      )}
 
-        {/* Watermark settings */}
-          <div className="p-3 border-b bg-gray-50 flex gap-2 items-center">
-            <label className="text-xs font-medium text-gray-600">Watermark Brand:</label>
-            <input
-              type="text"
-              value={watermarkBrand}
-              onChange={e => setWatermarkBrand(e.target.value)}
-              placeholder="e.g., FMM CLASSICO"
-              className="flex-1 text-xs border rounded px-2 py-1"
-            />
-            <span className="text-[10px] text-gray-500">Use in prompts: "add watermark" or "with FMM CLASSICO watermark"</span>
-          </div>
-
-          {/* Input */}
-          <div className="p-3 border-t bg-white">
-            {/* Attached image preview */}
-            {attachedImage && (
-            <div className="flex items-center gap-2 mb-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
-              <img src={attachedImage.url} alt="attached" className="h-10 w-10 object-cover rounded" />
-              <span className="text-xs text-blue-700 flex-1 truncate">{attachedImage.name}</span>
-              <button onClick={() => setAttachedImage(null)} className="text-gray-400 hover:text-red-500"><X className="h-4 w-4" /></button>
+      {/* Product Description Tab */}
+      {activeTab === 'description' && (
+        <Card className="p-4 rounded-2xl">
+          <h2 className="font-bold text-gray-800 mb-3">Generate Product Description</h2>
+          <p className="text-xs text-gray-500 mb-3">Enter product name or paste product details. AI will write a selling description.</p>
+          <Input value={descProduct} onChange={function(e) { setDescProduct(e.target.value); }} placeholder="e.g. Samsung 20W Fast Charger USB-C, or paste product details..." className="mb-3 rounded-xl" />
+          <Button onClick={handleGenerateDescription} disabled={isLoading || !descProduct.trim()} className="rounded-xl bg-blue-800 text-white mb-4">
+            {isLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Generating...</> : <><FileText className="w-4 h-4 mr-2" /> Generate Description</>}
+          </Button>
+          {generatedDesc && (
+            <div className="mt-4 bg-gray-50 rounded-xl p-4">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{generatedDesc}</p>
+              <Button variant="outline" size="sm" className="mt-3 rounded-xl" onClick={function() { navigator.clipboard.writeText(generatedDesc); toast.success('Copied!'); }}>Copy to Clipboard</Button>
             </div>
           )}
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <Textarea
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                placeholder='Ask anything, generate a flyer, or attach an image to edit/recreate it...'
-                className="resize-none text-sm min-h-[44px] max-h-32"
-                rows={2}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-              />
-              <p className="text-[10px] text-gray-400 mt-1">💡 Attach an image 📎 to generate similar or edited versions. Or type to generate from scratch.</p>
-            </div>
-            <div className="flex flex-col gap-1 self-end mb-5">
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageAttach} />
-              <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} title="Attach image">
-                {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-              </Button>
-              <Button onClick={() => sendMessage()} disabled={loading || (!input.trim() && !attachedImage)}
-                className="bg-blue-600 hover:bg-blue-700 px-3">
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <div className="flex justify-end">
-        <button onClick={() => setMessages([{ role: 'assistant', content: "Chat cleared. How can I help you?" }])}
-          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-          <Trash2 className="h-3.5 w-3.5" /> Clear chat
-        </button>
-      </div>
+        </Card>
+      )}
     </div>
   );
 }

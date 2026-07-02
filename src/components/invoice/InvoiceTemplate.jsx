@@ -2,8 +2,8 @@ import React from 'react';
 import { format } from 'date-fns';
 
 export default function InvoiceTemplate({ order, invoiceRef }) {
-  const merchantPhone = import.meta.env.VITE_MERCHANT_PHONE || '059XXXXXXX';
-  const merchantEmail = import.meta.env.VITE_MERCHANT_EMAIL || 'merchant@example.com';
+  const merchantPhone = import.meta.env.VITE_MERCHANT_PHONE || '0208207543';
+  const merchantEmail = import.meta.env.VITE_MERCHANT_EMAIL || 'fmmclassico@gmail.com';
   const subtotal = order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
   const shipping = order.total_amount - subtotal;
 
@@ -14,7 +14,7 @@ export default function InvoiceTemplate({ order, invoiceRef }) {
         <div>
           <h1 className="text-lg font-black text-blue-800 tracking-tight">FMM CLASSICO</h1>
           <p className="text-[10px] text-gray-500 mt-0.5">Phones &amp; Accessories · Home Appliances · Electronics</p>
-          <p className="text-[10px] text-gray-500">Tarkwa (UMAT Campus) &amp; Accra (Ashongman Estate)</p>
+          <p className="text-[10px] text-gray-500">Accra, Kumasi &amp; Tarkwa (UMAT Campus)</p>
           <p className="text-[10px] text-gray-500">Tel: {merchantPhone} | {merchantEmail}</p>
         </div>
         <div className="text-right">

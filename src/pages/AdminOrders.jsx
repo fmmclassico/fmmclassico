@@ -90,7 +90,7 @@ export default function AdminOrders() {
           to: order.customer_email,
           from_name: 'FMM CLASSICO',
           subject: 'Message about your order #' + order.order_number,
-          body: 'Dear ' + firstName + ',\n\n' + message + '\n\nFor help: 0509896035\n\nFMM CLASSICO Team'
+          body: 'Dear ' + firstName + ',\n\n' + message + '\n\nFor help: 0208207543\n\nFMM CLASSICO Team'
         })
       ]);
     },
@@ -140,7 +140,7 @@ export default function AdminOrders() {
         },
         cancelled: {
           title: 'Order Cancelled',
-          msg: 'Dear ' + firstName + ', your order #' + order.order_number + ' has been cancelled. Contact 0509896035 for help.',
+          msg: 'Dear ' + firstName + ', your order #' + order.order_number + ' has been cancelled. Contact 0208207543 for help.',
           type: 'order_cancelled'
         },
       };
@@ -162,7 +162,7 @@ export default function AdminOrders() {
             to: order.customer_email,
             from_name: 'FMM CLASSICO',
             subject: notif.title + ' - Order #' + order.order_number,
-            body: notif.msg + '\n\nOrder: #' + order.order_number + '\nTotal: GHS ' + (order.total_amount?.toFixed(2) || '0.00') + '\nDelivery: ' + (order.delivery_address || '') + (order.city ? ', ' + order.city : '') + '\n\nTrack your order on FMM CLASSICO.\nFor help: 0509896035\n\nFMM CLASSICO Team'
+            body: notif.msg + '\n\nOrder: #' + order.order_number + '\nTotal: GHS ' + (order.total_amount?.toFixed(2) || '0.00') + '\nDelivery: ' + (order.delivery_address || '') + (order.city ? ', ' + order.city : '') + '\n\nTrack your order on FMM CLASSICO.\nFor help: 0208207543\n\nFMM CLASSICO Team'
           })
         ]);
       }

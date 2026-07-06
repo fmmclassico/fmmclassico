@@ -12,73 +12,61 @@
       "items": {
         "type": "object",
         "properties": {
-          "product_id": {
-            "type": "string"
-          },
-          "product_name": {
-            "type": "string"
-          },
-          "product_image": {
-            "type": "string"
-          },
-          "price": {
-            "type": "number"
-          },
-          "quantity": {
-            "type": "number"
-          }
+          "product_id": { "type": "string" },
+          "product_name": { "type": "string" },
+          "product_image": { "type": "string" },
+          "price": { "type": "number" },
+          "quantity": { "type": "number" }
         }
       }
     },
     "total_amount": {
       "type": "number",
-      "description": "Total order amount"
+      "description": "Amount actually charged to Hubtel (what customer pays now)"
+    },
+    "subtotal_amount": {
+      "type": "number",
+      "description": "Full product subtotal before any payment method adjustments"
+    },
+    "delivery_fee": {
+      "type": "number",
+      "description": "Delivery fee charged"
+    },
+    "balance_due": {
+      "type": "number",
+      "description": "Remaining amount to be paid on delivery (0 for full payment)"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": ["full_payment", "deposit_balance", "pay_on_delivery"],
+      "description": "Payment method chosen by customer. full_payment = paid everything online. deposit_balance = half product paid, rest on delivery. pay_on_delivery = only delivery fee paid, product payment on delivery."
+    },
+    "delivery_zone": {
+      "type": "string",
+      "description": "Selected delivery zone ID"
     },
     "payment_status": {
       "type": "string",
-      "enum": [
-        "pending_payment",
-        "paid",
-        "failed",
-        "cancelled",
-        "refunded"
-      ],
+      "enum": ["pending_payment", "paid", "failed", "cancelled", "refunded"],
       "default": "pending_payment",
-      "description": "Payment status. Initially pending_payment - update to 'paid' when payment is confirmed."
+      "description": "Payment status. For full_payment: paid means fully paid. For deposit_balance: paid means deposit was paid. For pay_on_delivery: paid means delivery fee was paid but product payment is still pending on delivery."
     },
     "status": {
       "type": "string",
-      "enum": [
-        "confirmed",
-        "processing",
-        "packed",
-        "shipped",
-        "out_for_delivery",
-        "delivered",
-        "cancelled",
-        "returned"
-      ],
+      "enum": ["confirmed", "processing", "packed", "shipped", "out_for_delivery", "delivered", "cancelled", "returned"],
       "default": "confirmed",
-      "description": "Fulfillment status. IMPORTANT: Do NOT change to 'processing' unless payment_status is 'paid'. Check BOTH payment_status AND status before fulfilling orders."
+      "description": "Fulfillment status."
     },
-    "customer_name": {
-      "type": "string"
+    "customer_name": { "type": "string" },
+    "customer_email": { "type": "string" },
+    "customer_phone": { "type": "string" },
+    "delivery_address": { "type": "string" },
+    "city": { "type": "string" },
+    "map_location": {
+      "type": "string",
+      "description": "Google Maps GPS link for delivery location"
     },
-    "customer_email": {
-      "type": "string"
-    },
-    "customer_phone": {
-      "type": "string"
-    },
-    "delivery_address": {
-      "type": "string"
-    },
-    "city": {
-      "type": "string"
-    },
-    "notes": {
-      "type": "string"
-    },
+    "notes": { "type": "string" },
     "estimated_delivery": {
       "type": "string",
       "format": "date"
@@ -88,15 +76,9 @@
       "items": {
         "type": "object",
         "properties": {
-          "status": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "timestamp": {
-            "type": "string"
-          }
+          "status": { "type": "string" },
+          "message": { "type": "string" },
+          "timestamp": { "type": "string" }
         }
       }
     },
@@ -106,12 +88,7 @@
     },
     "hubtel_status": {
       "type": "string",
-      "enum": [
-        "initiated",
-        "pending",
-        "successful",
-        "failed"
-      ],
+      "enum": ["initiated", "pending", "successful", "failed"],
       "default": "initiated",
       "description": "(Deprecated - for legacy reference only)"
     },
@@ -130,37 +107,21 @@
   "rls": {
     "create": {
       "$or": [
-        {
-          "data.customer_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
+        { "data.customer_email": "{{user.email}}" },
+        { "user_condition": { "role": "admin" } }
       ]
     },
     "read": {
       "$or": [
-        {
-          "data.customer_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
+        { "data.customer_email": "{{user.email}}" },
+        { "user_condition": { "role": "admin" } }
       ]
     },
     "update": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "user_condition": { "role": "admin" }
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "user_condition": { "role": "admin" }
     }
   }
 }

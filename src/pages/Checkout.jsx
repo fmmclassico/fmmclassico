@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
@@ -10,52 +10,50 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Truck, CreditCard, Loader2, Info } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Truck, CreditCard, Loader2, Info, MapPin, AlertTriangle, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
-import DeliveryInfoModal from '../components/delivery/DeliveryInfoModal';
 
+// ========== DELIVERY ZONES ==========
 const DELIVERY_ZONES = [
-  { id: 'umat_pickup', label: '\ud83c\udfeb UMAT Campus \u2013 Pickup / Meeting Point', fee: 0, note: 'FREE \u2013 collect on campus' },
-  { id: 'umat_doorstep', label: '\ud83c\udfe0 UMAT Campus \u2013 Doorstep Delivery', fee: 10, note: '\u20b510 to your door' },
-  { id: 'tarkwa_station', label: '\ud83d\ude8c Tarkwa \u2013 Delivery to a Station / Car', fee: 20, note: '\u20b520 to a station or car' },
-  { id: 'tarkwa', label: '\ud83c\udfd8\ufe0f Tarkwa (Outside UMAT) \u2013 Doorstep', fee: 25, note: '\u20b525 delivery fee' },
-  { id: 'ashongman', label: '\ud83c\udfe0 Ashongman Estate \u2013 Pickup Point (Close to Awo Dede \u2013 Purewater)', fee: 0, note: 'FREE \u2013 pickup from our location' },
-  { id: 'airport', label: '\ud83c\udfe0 Airport Residential Area \u2013 Pickup Point (Libi Kraal)', fee: 0, note: 'FREE \u2013 pickup from our location' },
-  { id: 'accra_station', label: '\ud83d\ude8c Accra \u2013 Delivery to a Station / Car', fee: 25, note: '\u20b525 to a station or car' },
-  { id: 'accra_delivery', label: '\ud83d\ude97 Delivery Within Accra', fee: 25, note: '\u20b525 delivery fee' },
-  { id: 'yango', label: '\ud83d\udef5 Yango Delivery \u2013 Pay on Delivery', fee: 0, note: 'Yango rider fee paid when product arrives' },
-  { id: 'uber', label: '\ud83d\ude97 Uber Delivery \u2013 Pay on Delivery', fee: 0, note: 'Uber rider fee paid when product arrives' },
-  { id: 'bolt', label: '\u26a1 Bolt Delivery \u2013 Pay on Delivery', fee: 0, note: 'Bolt rider fee paid when product arrives' },
-  { id: 'other', label: '\ud83d\udce6 Outside Accra & Tarkwa', fee: 50, note: '\u20b550 flat rate' },
+  { id: 'accra', label: 'Within Accra Delivery', fee: 30, area: 'accra' },
+  { id: 'kumasi', label: 'Within Kumasi Delivery', fee: 30, area: 'kumasi' },
+  { id: 'umat_doorstep', label: 'UMaT Main Campus – Doorstep Delivery', fee: 10, area: 'tarkwa' },
+  { id: 'tarkwa', label: 'Within Tarkwa (Outside UMAT Campus)', fee: 25, area: 'tarkwa' },
+  { id: 'outside', label: 'Outside Accra, Tarkwa & Kumasi', fee: 50, area: 'other' },
+  { id: 'bus_station', label: 'Delivery to Bus Stations', fee: 25, area: 'station' },
 ];
+
+// Areas that qualify for Pay on Delivery
+const PAY_ON_DELIVERY_AREAS = ['accra', 'kumasi', 'tarkwa'];
 
 export default function Checkout() {
   const [user, setUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
-  const [orderSubmitted, setOrderSubmitted] = useState(false);
-  const [createdOrderNumber, setCreatedOrderNumber] = useState('');
   const [orderError, setOrderError] = useState('');
   const [locationError, setLocationError] = useState('');
+  const [showDepositWarning, setShowDepositWarning] = useState(false);
+  const [depositWarningAccepted, setDepositWarningAccepted] = useState(false);
+  const [showPodWarning, setShowPodWarning] = useState(false);
+  const [podWarningAccepted, setPodWarningAccepted] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const initialZoneId = urlParams.get('zone') || '';
-
-  const [selectedZoneId, setSelectedZoneId] = useState(initialZoneId);
+  const [selectedZoneId, setSelectedZoneId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
 
   const [formData, setFormData] = useState({
     customer_name: '',
     customer_phone: '',
     delivery_address: '',
-    notes: '',
+    landmark: '',
+    region: '',
+    city: '',
+    map_location: '',
   });
 
   useEffect(() => {
     setIsSubmitting(false);
-    setOrderSubmitted(false);
     base44.auth.me()
       .then(userData => {
         setUser(userData);
@@ -71,11 +69,66 @@ export default function Checkout() {
     staleTime: 30000,
   });
 
+  // ========== CALCULATIONS ==========
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
   const selectedZone = DELIVERY_ZONES.find(z => z.id === selectedZoneId);
-  const shipping = selectedZone ? selectedZone.fee : 0;
-  const total = subtotal + shipping;
+  const deliveryFee = selectedZone ? selectedZone.fee : 0;
 
+  // Check if selected zone qualifies for pay on delivery
+  const isPayOnDeliveryArea = selectedZone ? PAY_ON_DELIVERY_AREAS.includes(selectedZone.area) : false;
+
+  // Check if city/region also matches (double validation)
+  const cityMatchesPodArea = useMemo(() => {
+    const cityLower = (formData.city || '').toLowerCase().trim();
+    const regionLower = (formData.region || '').toLowerCase().trim();
+    const combined = cityLower + ' ' + regionLower;
+    return combined.includes('accra') || combined.includes('kumasi') || combined.includes('tarkwa');
+  }, [formData.city, formData.region]);
+
+  // Final POD eligibility: delivery zone must be in POD area AND city/region must match
+  const canUsePayOnDelivery = isPayOnDeliveryArea && cityMatchesPodArea;
+
+  // Calculate order summary based on payment method
+  const orderSummary = useMemo(() => {
+    if (!paymentMethod || !selectedZoneId) {
+      return { displaySubtotal: subtotal, deliveryFee, total: subtotal + deliveryFee, balanceDue: 0 };
+    }
+
+    if (paymentMethod === 'full_payment') {
+      return {
+        displaySubtotal: subtotal,
+        deliveryFee,
+        total: subtotal + deliveryFee,
+        balanceDue: 0,
+        label: 'Full Amount',
+      };
+    }
+
+    if (paymentMethod === 'deposit_balance') {
+      const halfSubtotal = Math.ceil(subtotal / 2 * 100) / 100;
+      return {
+        displaySubtotal: halfSubtotal,
+        deliveryFee,
+        total: halfSubtotal + deliveryFee,
+        balanceDue: subtotal - halfSubtotal,
+        label: 'Deposit (half paid, balance on delivery)',
+      };
+    }
+
+    if (paymentMethod === 'pay_on_delivery') {
+      return {
+        displaySubtotal: 0,
+        deliveryFee,
+        total: deliveryFee,
+        balanceDue: subtotal,
+        label: 'Payment on Delivery',
+      };
+    }
+
+    return { displaySubtotal: subtotal, deliveryFee, total: subtotal + deliveryFee, balanceDue: 0 };
+  }, [paymentMethod, subtotal, deliveryFee, selectedZoneId]);
+
+  // ========== HANDLERS ==========
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -91,58 +144,82 @@ export default function Checkout() {
       (position) => {
         const { latitude, longitude } = position.coords;
         const googleMapsLink = `https://www.google.com/maps?q=${latitude.toFixed(6)},${longitude.toFixed(6)}&z=15`;
-        setFormData(prev => ({ ...prev, delivery_address: googleMapsLink }));
-        toast.success('Location detected! Google Maps link added to address field.');
+        setFormData(prev => ({ ...prev, map_location: googleMapsLink }));
+        toast.success('📍 Location detected! Google Maps link added.');
       },
       (error) => {
         let errorMsg = 'Unable to get your location';
-        if (error.code === 1) {
-          errorMsg = 'Location access denied';
-          setLocationError(errorMsg);
-          setTimeout(() => {
-            if (confirm('Location permission is needed to auto-detect your location. Tap OK to open location settings.')) {
-              window.open('https://support.google.com/android/answer/3457478?hl=en', '_blank');
-            }
-          }, 500);
-        } else if (error.code === 2) {
-          errorMsg = 'Location service unavailable';
-          setLocationError(errorMsg);
-        } else if (error.code === 3) {
-          errorMsg = 'Location request timed out';
-          setLocationError(errorMsg);
-        }
+        if (error.code === 1) errorMsg = 'Location access denied. Please enable location in your settings.';
+        else if (error.code === 2) errorMsg = 'Location service unavailable';
+        else if (error.code === 3) errorMsg = 'Location request timed out';
+        setLocationError(errorMsg);
         toast.error(errorMsg);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
+  const handlePaymentMethodChange = (value) => {
+    setPaymentMethod(value);
+    setDepositWarningAccepted(false);
+    setShowDepositWarning(false);
+    setPodWarningAccepted(false);
+    setShowPodWarning(false);
+
+    if (value === 'deposit_balance') {
+      setShowDepositWarning(true);
+    }
+    if (value === 'pay_on_delivery') {
+      setShowPodWarning(true);
+    }
+  };
+
+  // ========== SUBMIT ==========
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isSubmitting || isRedirecting) return;
+    if (isSubmitting) return;
 
-    if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !selectedZoneId) {
-      toast.error('Please fill in all required fields, including your delivery option.');
+    // Validation
+    if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !formData.region || !formData.city) {
+      toast.error('Please fill in all required delivery information fields.');
+      return;
+    }
+    if (!selectedZoneId) {
+      toast.error('Please select a delivery method.');
+      return;
+    }
+    if (!paymentMethod) {
+      toast.error('Please select a payment method.');
+      return;
+    }
+    if (paymentMethod === 'deposit_balance' && !depositWarningAccepted) {
+      toast.error('Please read and accept the deposit payment terms before continuing.');
+      return;
+    }
+    if (paymentMethod === 'pay_on_delivery' && !podWarningAccepted) {
+      toast.error('Please read and accept the pay on delivery terms before continuing.');
+      return;
+    }
+    if (paymentMethod === 'pay_on_delivery' && !canUsePayOnDelivery) {
+      toast.error('Pay on Delivery is only available within Accra, Kumasi & Tarkwa. Please choose another payment method.');
       return;
     }
 
-    const expectedSubtotal = cartItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
-    if (Math.abs(expectedSubtotal - subtotal) > 0.01) {
-      toast.error('Cart total mismatch detected. Please go back to your cart and try again.');
-      return;
-    }
-    if (total <= 0 || isNaN(total)) {
-      toast.error('Order total is invalid. Please check your cart and delivery details.');
+    if (orderSummary.total <= 0 || isNaN(orderSummary.total)) {
+      toast.error('Order total is invalid. Please check your selections.');
       return;
     }
 
     setIsSubmitting(true);
+    setOrderError('');
+
     const orderNumber = 'FMM' + Date.now().toString(36).toUpperCase();
     const estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
-    setOrderError('');
 
     try {
+      const fullAddress = [formData.delivery_address, formData.landmark, formData.city, formData.region].filter(Boolean).join(', ');
+
       const orderPayload = {
         order_number: orderNumber,
         items: cartItems.map(item => ({
@@ -152,19 +229,26 @@ export default function Checkout() {
           price: item.product_price,
           quantity: item.quantity,
         })),
-        total_amount: total,
+        total_amount: orderSummary.total,
+        subtotal_amount: subtotal,
+        delivery_fee: deliveryFee,
+        balance_due: orderSummary.balanceDue,
+        payment_method: paymentMethod,
         payment_status: 'pending_payment',
-        status: 'pending',
+        status: 'processing',
         customer_name: formData.customer_name,
         customer_email: user.email,
         customer_phone: formData.customer_phone,
-        delivery_address: formData.delivery_address,
-        notes: formData.notes,
+        delivery_address: fullAddress,
+        city: formData.city,
+        map_location: formData.map_location || '',
+        notes: formData.landmark ? `Landmark: ${formData.landmark}` : '',
+        delivery_zone: selectedZoneId,
         estimated_delivery: estimatedDelivery.toISOString().split('T')[0],
         tracking_updates: [
           {
             status: 'Order Placed',
-            message: 'Order created and waiting for payment confirmation.',
+            message: `Order created. Payment method: ${paymentMethod === 'full_payment' ? 'Full Payment' : paymentMethod === 'deposit_balance' ? 'Deposit + Balance on Delivery' : 'Pay on Delivery'}. Amount to pay now: GHS ${orderSummary.total.toFixed(2)}${orderSummary.balanceDue > 0 ? '. Balance due on delivery: GHS ' + orderSummary.balanceDue.toFixed(2) : ''}.`,
             timestamp: new Date().toISOString(),
           }
         ],
@@ -172,19 +256,20 @@ export default function Checkout() {
 
       await base44.entities.Order.create(orderPayload);
       queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
-      setCreatedOrderNumber(orderNumber);
 
-      // Show redirecting overlay IMMEDIATELY
-      setIsRedirecting(true);
-
+      // Initiate Hubtel payment
       try {
         const callbackUrl = 'https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback';
         const returnUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=success`;
         const cancellationUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${orderNumber}&status=cancelled`;
 
+        let payDescription = `Order ${orderNumber}`;
+        if (paymentMethod === 'deposit_balance') payDescription = `Deposit for Order ${orderNumber}`;
+        if (paymentMethod === 'pay_on_delivery') payDescription = `Delivery fee for Order ${orderNumber}`;
+
         const initRes = await initiatePayment({
-          totalAmount: total,
-          description: `Order ${orderNumber}`,
+          totalAmount: orderSummary.total,
+          description: payDescription,
           callbackUrl,
           returnUrl,
           cancellationUrl,
@@ -192,185 +277,457 @@ export default function Checkout() {
         });
 
         if (initRes && initRes.data && initRes.data.checkoutUrl) {
+          toast.success('Redirecting to Hubtel payment...');
           window.location.href = initRes.data.checkoutUrl;
           return;
         }
 
-        setIsRedirecting(false);
-        const errorMsg = initRes?.error || 'Unable to connect to payment gateway. Please try again.';
-        setOrderError('Payment Error: ' + errorMsg + '. Your order #' + orderNumber + ' has been created. Please try the payment again or contact support.');
+        const errorMsg = initRes?.error || 'Unable to connect to payment gateway.';
+        setOrderError(`Payment Error: ${errorMsg}. Your order #${orderNumber} has been created. Please try again from your Orders page.`);
         toast.error('Payment initiation failed. Please try again.');
       } catch (err) {
-        setIsRedirecting(false);
-        console.error('[Checkout] Payment initiation error:', err);
-        setOrderError('Payment Error: ' + (err.message || 'Unknown error') + '. Your order #' + orderNumber + ' has been created. Please try again or contact support.');
-        toast.error('Payment initiation failed. Please try again.');
+        console.error('[Checkout] Payment error:', err);
+        setOrderError(`Payment Error: ${err.message || 'Unknown error'}. Order #${orderNumber} created. Try again from Orders page.`);
+        toast.error('Payment initiation failed.');
       }
     } catch (error) {
-      setIsRedirecting(false);
       console.error('Order creation error:', error);
-      setOrderError('Unable to place your order right now. Please try again.');
+      setOrderError('Unable to place your order. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ============ REDIRECTING OVERLAY ============
-  if (isRedirecting) {
-    return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white">
-        <div className="text-center px-6">
-          <div className="relative mx-auto w-16 h-16 mb-6">
-            <div className="absolute inset-0 rounded-full border-4 border-blue-100"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Connecting to Hubtel...</h2>
-          <p className="text-gray-500 text-sm">You will be redirected to complete your payment securely.</p>
-          <p className="text-gray-400 text-xs mt-4">Please do not close this page.</p>
-        </div>
-      </div>
-    );
-  }
-
+  // ========== LOADING STATES ==========
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-6 h-6 animate-spin" /> Loading...
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
   if (cartItems.length === 0) {
     return (
-      <div className="max-w-md mx-auto px-4 py-10 text-center">
-        <p className="text-gray-500">Your cart is empty</p>
-        <button onClick={() => navigate(createPageUrl('Cart'))} className="text-blue-600 font-semibold hover:underline mt-2">Back to Cart</button>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <p className="text-gray-500 mb-4">Your cart is empty</p>
+        <Button onClick={() => navigate(createPageUrl('Cart'))} variant="link" className="text-blue-600 font-semibold">
+          ← Back to Cart
+        </Button>
       </div>
     );
   }
 
+  // ========== RENDER ==========
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 pb-32">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Checkout</h1>
-      </div>
+    <div className="min-h-screen bg-gray-50 pb-8">
+      <div className="max-w-2xl mx-auto px-4 pt-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card className="p-4 rounded-2xl">
-          <h2 className="font-bold text-gray-900 mb-3">Order Summary</h2>
-          <div className="space-y-3">
+        {/* ORDER ITEMS PREVIEW */}
+        <Card className="p-4 mb-6 bg-white">
+          <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <span>🛒</span> Your Items ({cartItems.length})
+          </h2>
+          <div className="space-y-2">
             {cartItems.map((item) => (
-              <div key={item.id} className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                  {item.product_image
-                    ? <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
-                    : <span className="flex items-center justify-center w-full h-full text-xs text-gray-400">No img</span>
-                  }
-                </div>
+              <div key={item.id} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+                {item.product_image ? (
+                  <img src={item.product_image} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center text-xs text-gray-400">No img</div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-800 truncate">{item.product_name}</p>
                   <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                 </div>
-                <p className="text-sm font-semibold text-gray-900">{'\u20B5'}{(item.product_price * item.quantity).toFixed(2)}</p>
+                <p className="text-sm font-semibold text-gray-900">₵{(item.product_price * item.quantity).toFixed(2)}</p>
               </div>
             ))}
           </div>
-          <Separator className="my-4" />
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Subtotal</span>
-              <span className="font-medium">{'\u20B5'}{subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between items-start">
-              <div className="flex items-center gap-1">
-                <Truck className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-500">Delivery</span>
-              </div>
-              <span className="font-medium">
-                {selectedZoneId ? (shipping === 0 ? 'FREE' : '\u20B5' + shipping.toFixed(2)) : '\u2014'}
-              </span>
-            </div>
-            <div className="pt-2">
-              <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
-                <SelectTrigger className="w-full rounded-xl">
-                  <SelectValue placeholder="Select delivery option..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {DELIVERY_ZONES.map(zone => (
-                    <SelectItem key={zone.id} value={zone.id}>
-                      {zone.label} {zone.fee === 0 ? '(FREE)' : '(\u20B5' + zone.fee + ')'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedZone?.note && (<p className="text-xs text-green-600 mt-1">{selectedZone.note}</p>)}
-              {!selectedZoneId && (<p className="text-xs text-orange-500 mt-1">Please choose a delivery option to see your total.</p>)}
-            </div>
-            <Separator className="my-2" />
-            <div className="flex justify-between text-base font-bold">
-              <span>Total</span>
-              <span>{'\u20B5'}{total.toFixed(2)}</span>
-            </div>
-          </div>
         </Card>
 
-        <Card className="p-4 rounded-2xl">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-gray-900">Delivery Information</h2>
-            <DeliveryInfoModal trigger={<Button variant="ghost" size="sm" className="text-xs text-blue-600 hover:text-blue-800"><Info className="w-3 h-3 mr-1" /> Delivery Rates</Button>} />
-          </div>
-          <div className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium">Full Name *</Label>
-              <Input name="customer_name" value={formData.customer_name} onChange={handleInputChange} placeholder="Your full name" className="rounded-xl mt-1" required />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Active Phone Number * (must be reachable)</Label>
-              <Input name="customer_phone" value={formData.customer_phone} onChange={handleInputChange} placeholder="0XX XXX XXXX" className="rounded-xl mt-1" required />
-              <p className="text-xs text-gray-400 mt-1">We will call/SMS this number for delivery.</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Delivery Address / Landmark *</Label>
-              <Textarea name="delivery_address" value={formData.delivery_address} onChange={handleInputChange} placeholder="e.g. Hostel D, Room 12, UMAT Campus" className="rounded-xl mt-1" rows={2} required />
-              <div className="mt-2 flex items-start gap-2 bg-blue-50 rounded-xl p-3">
-                <span className="text-lg">{'\ud83d\udccd'}</span>
-                <div className="flex-1">
-                  <p className="text-xs text-gray-600">Auto-detect your current location</p>
-                  <Button type="button" variant="outline" size="sm" onClick={getCurrentLocation} className="mt-1 text-xs rounded-lg">Get Location</Button>
+        <form onSubmit={handleSubmit} className="space-y-6">
+
+          {/* ============ SECTION 1: CUSTOMER INFORMATION ============ */}
+          <Card className="p-5 bg-white">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-blue-600" />
+              Delivery Information
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Full Name *</Label>
+                <Input
+                  name="customer_name"
+                  value={formData.customer_name}
+                  onChange={handleInputChange}
+                  placeholder="Enter your full name"
+                  required
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Phone Number *</Label>
+                <Input
+                  name="customer_phone"
+                  value={formData.customer_phone}
+                  onChange={handleInputChange}
+                  placeholder="e.g. 0241234567"
+                  required
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">We will call/SMS this number for delivery. Must be reachable.</p>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Delivery Address *</Label>
+                <Input
+                  name="delivery_address"
+                  value={formData.delivery_address}
+                  onChange={handleInputChange}
+                  placeholder="House number, street name, area"
+                  required
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Landmark</Label>
+                <Input
+                  name="landmark"
+                  value={formData.landmark}
+                  onChange={handleInputChange}
+                  placeholder="Near a school, church, market, etc."
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Region *</Label>
+                  <Input
+                    name="region"
+                    value={formData.region}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Greater Accra"
+                    required
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">City *</Label>
+                  <Input
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Accra"
+                    required
+                    className="mt-1"
+                  />
                 </div>
               </div>
-              {locationError && (
-                <div className="mt-2">
-                  <p className="text-xs text-red-500">{locationError}</p>
-                  <button type="button" onClick={() => window.open('https://support.google.com/android/answer/3457478?hl=en', '_blank')} className="text-xs text-blue-600 underline font-medium hover:text-blue-800">Tap here to open Location Settings guide</button>
+
+              {/* MAP LOCATION - GPS Auto-detect */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Map Location</Label>
+                <div className="mt-1 flex items-center gap-2">
+                  <Input
+                    name="map_location"
+                    value={formData.map_location}
+                    onChange={handleInputChange}
+                    placeholder="GPS location will appear here"
+                    className="flex-1"
+                    readOnly
+                  />
+                  <Button
+                    type="button"
+                    onClick={getCurrentLocation}
+                    variant="outline"
+                    className="shrink-0 border-blue-300 text-blue-700 hover:bg-blue-50"
+                  >
+                    📍 Get Location
+                  </Button>
                 </div>
+                <p className="text-xs text-gray-500 mt-1">Click to auto-detect your GPS location for precise delivery.</p>
+                {locationError && (
+                  <p className="text-xs text-red-600 mt-1">⚠️ {locationError}</p>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          {/* ============ SECTION 2: DELIVERY METHOD ============ */}
+          <Card className="p-5 bg-white">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Truck className="h-5 w-5 text-blue-600" />
+              Delivery Method
+            </h2>
+
+            <RadioGroup value={selectedZoneId} onValueChange={(val) => { setSelectedZoneId(val); setPaymentMethod(''); setDepositWarningAccepted(false); setPodWarningAccepted(false); }}>
+              <div className="space-y-2">
+                {DELIVERY_ZONES.map(zone => (
+                  <label
+                    key={zone.id}
+                    className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                      selectedZoneId === zone.id
+                        ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <RadioGroupItem value={zone.id} />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-800">{zone.label}</p>
+                    </div>
+                    <span className="text-sm font-bold text-blue-700">₵{zone.fee}</span>
+                  </label>
+                ))}
+              </div>
+            </RadioGroup>
+
+            {!selectedZoneId && (
+              <p className="text-xs text-amber-600 mt-3 flex items-center gap-1">
+                <Info className="h-3 w-3" /> Please select a delivery method to continue.
+              </p>
+            )}
+          </Card>
+
+          {/* ============ SECTION 3: PAYMENT METHOD ============ */}
+          {selectedZoneId && (
+            <Card className="p-5 bg-white">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-blue-600" />
+                Payment Method
+              </h2>
+
+              <RadioGroup value={paymentMethod} onValueChange={handlePaymentMethodChange}>
+                <div className="space-y-3">
+
+                  {/* OPTION 1: Pay Full Amount Online */}
+                  <label className={`block p-4 rounded-xl border cursor-pointer transition-all ${
+                    paymentMethod === 'full_payment'
+                      ? 'border-green-500 bg-green-50 ring-1 ring-green-500'
+                      : 'border-gray-200 hover:border-green-300'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <RadioGroupItem value="full_payment" />
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-gray-900">Pay Full Amount Online</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Pay product price + delivery fee in full now</p>
+                      </div>
+                      <span className="text-sm font-bold text-green-700">₵{(subtotal + deliveryFee).toFixed(2)}</span>
+                    </div>
+                  </label>
+
+                  {/* OPTION 2: Pay Deposit, Balance on Delivery */}
+                  <label className={`block p-4 rounded-xl border cursor-pointer transition-all ${
+                    paymentMethod === 'deposit_balance'
+                      ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500'
+                      : 'border-gray-200 hover:border-orange-300'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <RadioGroupItem value="deposit_balance" />
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-gray-900">Pay Deposit, Balance on Delivery</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Pay half of product price + delivery fee now. Pay remaining on delivery.</p>
+                      </div>
+                      <span className="text-sm font-bold text-orange-700">₵{(Math.ceil(subtotal / 2 * 100) / 100 + deliveryFee).toFixed(2)}</span>
+                    </div>
+                  </label>
+
+                  {/* DEPOSIT WARNING */}
+                  {showDepositWarning && paymentMethod === 'deposit_balance' && (
+                    <div className="ml-7 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold text-amber-800 mb-2">Important: Deposit Payment Terms</p>
+                          <p className="text-xs text-amber-700 leading-relaxed">
+                            When the product is delivered and the customer does not pay immediately and in full cash the rest of the amount and we have to return the product, only half of the product deposit price he/she paid for will be refunded into their mobile money, or customer would have to come for pickup at our store (which delivery fee will not be refunded). Our customer service personnel will make sure customer is available before product is delivered. If not, product delivery date will be communicated. Hence, they must make sure the delivery details and contact numbers are correct before choosing this option.
+                          </p>
+                          <Button
+                            type="button"
+                            onClick={() => setDepositWarningAccepted(true)}
+                            className={`mt-3 text-xs px-4 py-2 rounded-lg ${
+                              depositWarningAccepted
+                                ? 'bg-green-600 text-white cursor-default'
+                                : 'bg-amber-600 hover:bg-amber-700 text-white'
+                            }`}
+                            disabled={depositWarningAccepted}
+                          >
+                            {depositWarningAccepted ? '✓ Terms Accepted' : 'I Understand, Continue'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* OPTION 3: Pay on Delivery */}
+                  <div className={`rounded-xl border transition-all ${
+                    !canUsePayOnDelivery && selectedZoneId
+                      ? 'opacity-60 border-gray-200 bg-gray-50'
+                      : paymentMethod === 'pay_on_delivery'
+                        ? 'border-purple-500 bg-purple-50 ring-1 ring-purple-500'
+                        : 'border-gray-200 hover:border-purple-300'
+                  }`}>
+                    <label className={`block p-4 ${!canUsePayOnDelivery ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                      <div className="flex items-center gap-3">
+                        <RadioGroupItem value="pay_on_delivery" disabled={!canUsePayOnDelivery} />
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-gray-900">Pay on Delivery (within Accra, Kumasi & Tarkwa)</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Only pay delivery fee now. Pay for product when it arrives.</p>
+                        </div>
+                        {canUsePayOnDelivery && (
+                          <span className="text-sm font-bold text-purple-700">₵{deliveryFee.toFixed(2)}</span>
+                        )}
+                      </div>
+                    </label>
+
+                    {/* NOT ELIGIBLE WARNING */}
+                    {!canUsePayOnDelivery && selectedZoneId && (
+                      <div className="px-4 pb-3">
+                        <p className="text-xs text-red-600 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          Not available: Your delivery location is not within Accra, Kumasi, or Tarkwa.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* PRODUCT OVER 200 CEDIS RECOMMENDATION */}
+                    {canUsePayOnDelivery && subtotal > 200 && (
+                      <div className="px-4 pb-3">
+                        <p className="text-xs text-amber-700 flex items-center gap-1 bg-amber-50 p-2 rounded-lg">
+                          <Info className="h-3 w-3 shrink-0" />
+                          Your product total is above ₵200. We recommend choosing "Pay Deposit, Balance on Delivery" for orders above ₵200.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* PAY ON DELIVERY WARNING */}
+                  {showPodWarning && paymentMethod === 'pay_on_delivery' && canUsePayOnDelivery && (
+                    <div className="ml-7 p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-5 w-5 text-purple-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold text-purple-800 mb-2">Important: Pay on Delivery Terms</p>
+                          <p className="text-xs text-purple-700 leading-relaxed">
+                            If product is delivered and upon delivery customer does not pay the product amount in full, product will not be given to them, and their delivery fee will not be refunded. If product is returned, customer must place another order on our website or come for pickup at our store (which delivery fee will not be refunded). Customer must be available before product is delivered. If not, product delivery date will be communicated.
+                          </p>
+                          <Button
+                            type="button"
+                            onClick={() => setPodWarningAccepted(true)}
+                            className={`mt-3 text-xs px-4 py-2 rounded-lg ${
+                              podWarningAccepted
+                                ? 'bg-green-600 text-white cursor-default'
+                                : 'bg-purple-600 hover:bg-purple-700 text-white'
+                            }`}
+                            disabled={podWarningAccepted}
+                          >
+                            {podWarningAccepted ? '✓ Terms Accepted' : 'I Understand, Continue'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              </RadioGroup>
+            </Card>
+          )}
+
+          {/* ============ ORDER SUMMARY ============ */}
+          {selectedZoneId && paymentMethod && (
+            <Card className="p-5 bg-white border-2 border-blue-100">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-blue-600" />
+                Order Summary
+              </h2>
+
+              <div className="space-y-3">
+                {/* Subtotal line */}
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">
+                    {paymentMethod === 'pay_on_delivery'
+                      ? 'Subtotal (Payment on Delivery)'
+                      : paymentMethod === 'deposit_balance'
+                        ? `Subtotal (₵${(Math.ceil(subtotal / 2 * 100) / 100).toFixed(2)} – half will be paid upon delivery)`
+                        : 'Subtotal'
+                    }
+                  </span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {paymentMethod === 'pay_on_delivery'
+                      ? 'On Delivery'
+                      : paymentMethod === 'deposit_balance'
+                        ? `₵${(Math.ceil(subtotal / 2 * 100) / 100).toFixed(2)}`
+                        : `₵${subtotal.toFixed(2)}`
+                    }
+                  </span>
+                </div>
+
+                {/* Delivery fee line */}
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Delivery Fee ({selectedZone?.label})</span>
+                  <span className="text-sm font-semibold text-gray-900">₵{deliveryFee.toFixed(2)}</span>
+                </div>
+
+                <Separator />
+
+                {/* Total to pay now */}
+                <div className="flex justify-between items-center">
+                  <span className="text-base font-bold text-gray-900">Total to Pay Now</span>
+                  <span className="text-xl font-bold text-blue-700">₵{orderSummary.total.toFixed(2)}</span>
+                </div>
+
+                {/* Balance due on delivery */}
+                {orderSummary.balanceDue > 0 && (
+                  <div className="flex justify-between items-center bg-amber-50 p-3 rounded-lg">
+                    <span className="text-sm font-medium text-amber-800">
+                      {paymentMethod === 'pay_on_delivery' ? 'Product Payment Due on Delivery' : 'Balance Due on Delivery'}
+                    </span>
+                    <span className="text-sm font-bold text-amber-800">₵{orderSummary.balanceDue.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* ============ PAY BUTTON ============ */}
+          {selectedZoneId && paymentMethod && (
+            <div className="space-y-3">
+              <Button
+                type="submit"
+                disabled={isSubmitting || (paymentMethod === 'deposit_balance' && !depositWarningAccepted) || (paymentMethod === 'pay_on_delivery' && !podWarningAccepted)}
+                className="w-full rounded-xl bg-blue-800 px-4 py-4 text-white font-bold text-base hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed h-14"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Processing...
+                  </span>
+                ) : (
+                  `💳 Pay ₵${orderSummary.total.toFixed(2)} with Hubtel`
+                )}
+              </Button>
+
+              {/* Hubtel trust badge */}
+              <div className="text-center">
+                <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
+                  <ShieldCheck className="h-3 w-3" />
+                  Secured by Hubtel • Mobile Money • Debit Card • Bank Transfer
+                </p>
+              </div>
+
+              {orderError && (
+                <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg text-center">{orderError}</p>
               )}
             </div>
-            <div>
-              <Label className="text-sm font-medium">Order Notes (Optional)</Label>
-              <Textarea name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Any special instructions..." className="rounded-xl mt-1" rows={2} />
-            </div>
-          </div>
-        </Card>
+          )}
 
-        <Card className="p-4 rounded-2xl">
-          <h2 className="font-bold text-gray-900 mb-3">Payment Method</h2>
-          <div className="border-2 border-blue-200 bg-blue-50 rounded-xl p-4">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{'\ud83c\udfe6'}</span>
-              <div>
-                <p className="font-semibold text-gray-900">Hubtel Secure Payment</p>
-                <p className="text-xs text-gray-500">Mobile Money, Debit Card, Bank Transfer, Wallet</p>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <Button type="submit" disabled={isSubmitting || !selectedZoneId} className="w-full rounded-xl bg-blue-800 text-white py-4 text-lg font-bold hover:bg-blue-900 disabled:opacity-50">
-          {isSubmitting ? (<><Loader2 className="w-5 h-5 animate-spin mr-2" /> Processing Payment...</>) : ('Pay with Hubtel')}
-        </Button>
-        {orderError && (<p className="text-sm text-red-600 text-center mt-2">{orderError}</p>)}
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

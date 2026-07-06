@@ -42,24 +42,33 @@ async function sendSMS(to, message) {
   }
 }
 
-function parseExcel(file) {
+function parseFileContacts(file) {
   return new Promise(function(resolve, reject) {
     var reader = new FileReader();
     reader.onload = function(e) {
       try {
         var text = e.target.result;
-        var lines = text.split(String.fromCharCode(10)).filter(function(line) { return line.trim(); });
+        var NL = String.fromCharCode(10);
+        var lines = text.split(NL).filter(function(line) { return line.trim().length > 0; });
         var phones = [];
         for (var i = 0; i < lines.length; i++) {
-          var cells = lines[i].split(/[,;\t]/);
+          var line = lines[i];
+          var cells = line.split(',');
+          if (cells.length === 1) cells = line.split(';');
+          if (cells.length === 1) cells = line.split('\t');
           for (var j = 0; j < cells.length; j++) {
-            var cell = cells[j].trim().replace(/["']/g, '');
-            if (cell.match(/^[+]?[0-9]{9,15}$/)) {
-              phones.push(cell);
+            var cell = cells[j].trim().replace(/"/g, '').replace(/'/g, '');
+            var digitsOnly = cell.replace(/[^0-9+]/g, '');
+            if (digitsOnly.length >= 9 && digitsOnly.length <= 15) {
+              phones.push(digitsOnly);
             }
           }
         }
-        resolve([...new Set(phones)]);
+        var unique = [];
+        for (var k = 0; k < phones.length; k++) {
+          if (unique.indexOf(phones[k]) === -1) unique.push(phones[k]);
+        }
+        resolve(unique);
       } catch (err) {
         reject(err);
       }
@@ -85,18 +94,18 @@ export default function AdminSMSBroadcast() {
   }, []);
 
   var handleFileUpload = async function(e) {
-    var file = e.target.files?.[0];
+    var file = e.target.files && e.target.files[0];
     if (!file) return;
     try {
-      var phones = await parseExcel(file);
+      var phones = await parseFileContacts(file);
       if (phones.length === 0) {
         toast.error('No valid phone numbers found in file');
         return;
       }
       setContacts(function(prev) {
         var existing = prev.map(function(c) { return c.phone; });
-        var newContacts = phones.filter(function(p) { return !existing.includes(p); }).map(function(p) { return { phone: p }; });
-        return prev.concat(newContacts);
+        var newOnes = phones.filter(function(p) { return existing.indexOf(p) === -1; }).map(function(p) { return { phone: p }; });
+        return prev.concat(newOnes);
       });
       toast.success(phones.length + ' contacts loaded from file');
     } catch (err) {
@@ -107,12 +116,16 @@ export default function AdminSMSBroadcast() {
 
   var handleAddManual = function() {
     if (!manualNumber.trim()) return;
-    var numbers = manualNumber.split(/[,;
-]/).map(function(n) { return n.trim(); }).filter(Boolean);
+    var separators = [',', ';'];
+    var raw = manualNumber;
+    for (var s = 0; s < separators.length; s++) {
+      raw = raw.split(separators[s]).join('\n');
+    }
+    var numbers = raw.split('\n').map(function(n) { return n.trim(); }).filter(function(n) { return n.length > 0; });
     var newContacts = [];
     var existing = contacts.map(function(c) { return c.phone; });
     for (var i = 0; i < numbers.length; i++) {
-      if (!existing.includes(numbers[i])) {
+      if (existing.indexOf(numbers[i]) === -1) {
         newContacts.push({ phone: numbers[i] });
         existing.push(numbers[i]);
       }
@@ -137,7 +150,7 @@ export default function AdminSMSBroadcast() {
   var handleSend = async function() {
     if (!message.trim()) { toast.error('Please write a message'); return; }
     if (contacts.length === 0) { toast.error('Add at least one contact'); return; }
-    if (!SMS_CLIENT_ID || !SMS_CLIENT_SECRET) { toast.error('Hubtel SMS credentials not configured. Add VITE_HUBTEL_SMS_CLIENT_ID and VITE_HUBTEL_SMS_CLIENT_SECRET to env vars.'); return; }
+    if (!SMS_CLIENT_ID || !SMS_CLIENT_SECRET) { toast.error('Hubtel SMS credentials not configured'); return; }
 
     setIsSending(true);
     setResults(null);
@@ -156,7 +169,6 @@ export default function AdminSMSBroadcast() {
         failedNumbers.push(result.phone + ' (' + (result.error || 'failed') + ')');
       }
       setProgress(Math.round(((i + 1) / contacts.length) * 100));
-      // Small delay to avoid rate limiting
       if (i < contacts.length - 1) {
         await new Promise(function(resolve) { setTimeout(resolve, 500); });
       }
@@ -166,7 +178,7 @@ export default function AdminSMSBroadcast() {
     setIsSending(false);
 
     if (failCount === 0) {
-      toast.success('All ' + successCount + ' messages sent successfully!');
+      toast.success('All ' + successCount + ' messages sent!');
     } else {
       toast.error('Sent: ' + successCount + ', Failed: ' + failCount);
     }
@@ -179,11 +191,10 @@ export default function AdminSMSBroadcast() {
     <div className="max-w-4xl mx-auto px-4 py-6">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Send className="w-5 h-5 text-blue-600" /> SMS Broadcast</h1>
-        <p className="text-sm text-gray-500">Send SMS to one or many contacts using Hubtel. Upload Excel or type numbers.</p>
+        <p className="text-sm text-gray-500">Send SMS to one or many contacts using Hubtel</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Left: Message + Send */}
         <div className="space-y-4">
           <Card className="p-4 rounded-2xl">
             <h2 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Phone className="w-4 h-4" /> Compose Message</h2>
@@ -203,7 +214,6 @@ export default function AdminSMSBroadcast() {
               </Button>
             </div>
 
-            {/* Progress bar */}
             {isSending && (
               <div className="mt-3">
                 <div className="w-full bg-gray-200 rounded-full h-2">
@@ -212,7 +222,6 @@ export default function AdminSMSBroadcast() {
               </div>
             )}
 
-            {/* Results */}
             {results && (
               <div className="mt-4 p-3 bg-gray-50 rounded-xl text-sm">
                 <div className="flex items-center gap-2 mb-2">
@@ -232,37 +241,32 @@ export default function AdminSMSBroadcast() {
             )}
           </Card>
 
-          {/* Sender ID info */}
           <Card className="p-3 rounded-2xl bg-blue-50 border-blue-200">
             <p className="text-xs text-blue-700">Sender ID: <strong>{SMS_SENDER_ID}</strong></p>
-            <p className="text-xs text-blue-600">Messages will appear from "FMMCLASSICO" on recipient phones.</p>
+            <p className="text-xs text-blue-600">Messages appear from "FMMCLASSICO" on phones.</p>
           </Card>
         </div>
 
-        {/* Right: Contacts */}
         <div className="space-y-4">
           <Card className="p-4 rounded-2xl">
             <h2 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> Contacts ({contacts.length})</h2>
 
-            {/* Upload Excel */}
             <div className="mb-3">
               <input type="file" ref={fileInputRef} className="hidden" accept=".csv,.xlsx,.xls,.txt" onChange={handleFileUpload} />
-              <Button variant="outline" className="w-full rounded-xl" onClick={function() { fileInputRef.current?.click(); }}>
+              <Button variant="outline" className="w-full rounded-xl" onClick={function() { fileInputRef.current && fileInputRef.current.click(); }}>
                 <Upload className="w-4 h-4 mr-2" /> Upload Excel / CSV File
               </Button>
-              <p className="text-[10px] text-gray-400 mt-1">Accepts .csv, .xlsx, .xls, .txt files with phone numbers</p>
+              <p className="text-[10px] text-gray-400 mt-1">Accepts .csv, .xlsx, .xls, .txt with phone numbers</p>
             </div>
 
-            {/* Manual add */}
             <div className="mb-3">
               <Label className="text-xs font-medium">Add numbers manually</Label>
               <div className="flex gap-2 mt-1">
-                <Input value={manualNumber} onChange={function(e) { setManualNumber(e.target.value); }} placeholder="0208207543 or multiple separated by commas" className="flex-1 rounded-xl text-sm" onKeyDown={function(e) { if (e.key === 'Enter') handleAddManual(); }} />
+                <Input value={manualNumber} onChange={function(e) { setManualNumber(e.target.value); }} placeholder="0208207543 or comma separated" className="flex-1 rounded-xl text-sm" onKeyDown={function(e) { if (e.key === 'Enter') handleAddManual(); }} />
                 <Button size="sm" onClick={handleAddManual} className="rounded-xl bg-green-600 text-white hover:bg-green-700">Add</Button>
               </div>
             </div>
 
-            {/* Contact list */}
             {contacts.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -295,13 +299,13 @@ export default function AdminSMSBroadcast() {
             )}
           </Card>
 
-          {/* Tips */}
           <Card className="p-3 rounded-2xl">
-            <p className="text-xs font-semibold text-gray-700 mb-1">Tips:</p><ul className="text-xs text-gray-500 space-y-0.5 list-disc pl-4">
-              <li>Numbers can be in format: 0208207543, 233208207543, or +233208207543</li>
-              <li>Excel file should have phone numbers in any column</li>
-              <li>Each SMS over 160 characters counts as multiple messages</li>
-              <li>There is a 500ms delay between messages to avoid rate limits</li>
+            <p className="text-xs font-semibold text-gray-700 mb-1">Tips:</p>
+            <ul className="text-xs text-gray-500 space-y-0.5 list-disc pl-4">
+              <li>Numbers: 0208207543, 233208207543, or +233208207543</li>
+              <li>Excel: phone numbers found in any column</li>
+              <li>Over 160 chars counts as multiple SMS</li>
+              <li>500ms delay between messages to avoid rate limits</li>
             </ul>
           </Card>
         </div>

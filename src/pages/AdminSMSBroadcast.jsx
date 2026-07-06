@@ -48,8 +48,7 @@ function parseExcel(file) {
     reader.onload = function(e) {
       try {
         var text = e.target.result;
-        var lines = text.split(/\r?
-/).filter(function(line) { return line.trim(); });
+        var lines = text.split(String.fromCharCode(10)).filter(function(line) { return line.trim(); });
         var phones = [];
         for (var i = 0; i < lines.length; i++) {
           var cells = lines[i].split(/[,;\t]/);

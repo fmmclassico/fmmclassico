@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 const DELIVERY_ZONES = [
   { id: 'accra', label: 'Within Accra Delivery', fee: 30, area: 'accra' },
   { id: 'kumasi', label: 'Within Kumasi Delivery', fee: 30, area: 'kumasi' },
-  { id: 'umat_doorstep', label: 'UMaT Main Campus – Doorstep Delivery', fee: 10, area: 'tarkwa' },
+  { id: 'umat_doorstep', label: 'UMaT Main Campus – Doorstep Delivery', fee: 1, area: 'tarkwa' },
   { id: 'tarkwa', label: 'Within Tarkwa (Outside UMAT Campus)', fee: 25, area: 'tarkwa' },
   { id: 'outside', label: 'Outside Accra, Tarkwa & Kumasi', fee: 50, area: 'other' },
   { id: 'bus_station', label: 'Delivery to Bus Stations', fee: 25, area: 'station' },

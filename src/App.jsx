@@ -185,23 +185,21 @@ const AuthenticatedApp = () => {
     <Routes>
 
       {/* HOME */}
-      <Route
-        path="/"
-        element={
-          isAuthenticated ? (
-            <LayoutWrapper
-              currentPageName={mainPageKey}
-              isAuthenticated={true}
-            >
-              <MainPage />
-            </LayoutWrapper>
-          ) : (
-            <GuestLayout currentPageName="GuestHome">
-              <GuestHome />
-            </GuestLayout>
-          )
-        }
-      />
+<Route path="/" element={
+  isLoadingAuth ? (
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+  ) : isAuthenticated ? (
+    <LayoutWrapper currentPageName="Home" isAuthenticated={isAuthenticated}>
+      <MainPage />
+    </LayoutWrapper>
+  ) : (
+    <GuestLayout>
+      <GuestHome />
+    </GuestLayout>
+  )
+} />
 
       {/* STATIC PAGES */}
       <Route path="/BrandProducts" element={<BrandProducts />} />

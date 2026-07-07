@@ -2,44 +2,31 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import { supabase } from '@/lib/supabase';
 import guestCart from "@/lib/guest-cart";
 
-const AuthContext = createContext();
+var AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [authError, setAuthError] = useState(null);
+export var AuthProvider = function({ children }) {
+  var [user, setUser] = useState(null);
+  var [isAuthenticated, setIsAuthenticated] = useState(false);
+  var [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  var [authError, setAuthError] = useState(null);
 
-  useEffect(() => {
-    checkUser();
-  }, []);
+  useEffect(function() { checkUser(); }, []);
 
-  const checkUser = async () => {
+  var checkUser = async function() {
     setIsLoadingAuth(true);
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
+      var result = await supabase.auth.getUser();
+      var userData = result.data?.user;
+      if (!userData) {
         setUser(null);
         setIsAuthenticated(false);
         setIsLoadingAuth(false);
         return;
       }
-
-      const envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || "";
-      const ADMIN_EMAILS = envAdminEmails
-        .split(",")
-        .map((e) => e.trim().toLowerCase())
-        .filter(Boolean);
-
-      const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase());
-
-      setUser({
-        ...user,
-        isAdmin,
-      });
-
+      var envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || "";
+      var ADMIN_EMAILS = envAdminEmails.split(",").map(function(e) { return e.trim().toLowerCase(); }).filter(Boolean);
+      var isAdmin = ADMIN_EMAILS.includes(userData.email?.toLowerCase());
+      setUser({ ...userData, isAdmin: isAdmin });
       setIsAuthenticated(true);
     } catch (err) {
       console.error("Auth error:", err);
@@ -50,61 +37,36 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
-  await supabase.auth.signOut({ scope: 'local' });
-  setUser(null);
-  setIsAuthenticated(false);
-  window.location.href = "/";
-};
-
-
-  const refreshUser = () => {
-    checkUser();
+  var logout = async function() {
+    await supabase.auth.signOut({ scope: 'local' });
+    setUser(null);
+    setIsAuthenticated(false);
+    window.location.href = "/";
   };
 
-  const navigateToLogin = (redirectPath) => {
-    const target = redirectPath || window.location.pathname + window.location.search;
-    try {
-      sessionStorage.setItem('redirectAfterLogin', target);
-    } catch (_) {}
+  var refreshUser = function() { checkUser(); };
+
+  var navigateToLogin = function(redirectPath) {
+    var target = redirectPath || window.location.pathname + window.location.search;
+    try { sessionStorage.setItem('redirectAfterLogin', target); } catch (e) {}
     window.location.href = '/login';
   };
 
-  // Admin password verified server-side via Supabase RPC
-  const verifyAdminPassword = async (password) => {
-    try {
-      const { data, error } = await supabase.rpc('verify_admin_password', {
-        input_password: password
-      });
-      if (error) return false;
-      return data === true;
-    } catch {
-      return false;
-    }
+  var verifyAdminPassword = function(password) {
+    var adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || '';
+    if (!adminPassword) return false;
+    return password === adminPassword;
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated,
-        isLoadingAuth,
-        authError,
-        logout,
-        refreshUser,
-        navigateToLogin,
-        verifyAdminPassword,
-      }}
-    >
+    <AuthContext.Provider value={{ user: user, isAuthenticated: isAuthenticated, isLoadingAuth: isLoadingAuth, authError: authError, logout: logout, refreshUser: refreshUser, navigateToLogin: navigateToLogin, verifyAdminPassword: verifyAdminPassword }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
+export var useAuth = function() {
+  var context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 };

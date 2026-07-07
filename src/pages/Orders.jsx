@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { base44 } from '@/api/base44Client';
+import { checkPaymentStatus } from '@/api/hubtelClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, CheckCircle2, Truck, MapPin, XCircle, Trash2, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, CheckCircle2, Truck, MapPin, XCircle, Trash2, Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -49,54 +50,98 @@ export default function Orders() {
   var [cancellingOrder, setCancellingOrder] = useState(null);
   var [cancelReason, setCancelReason] = useState('');
   var [expandedOrder, setExpandedOrder] = useState(null);
-  var [cartCleared, setCartCleared] = useState(false);
   var [searchParams] = useSearchParams();
+  var navigate = useNavigate();
   var queryClient = useQueryClient();
 
-  // Auth check with retry to prevent homepage flash
+  // Payment verification state
+  var [isVerifying, setIsVerifying] = useState(false);
+  var [verificationDone, setVerificationDone] = useState(false);
+
+  // Auth check with retry (prevents homepage flash)
   useEffect(function() {
     var attempts = 0;
-    var maxAttempts = 3;
     function checkAuth() {
       base44.auth.me()
         .then(function(userData) { setUser(userData); setAuthChecked(true); })
         .catch(function() {
           attempts++;
-          if (attempts < maxAttempts) {
-            setTimeout(checkAuth, 800);
-          } else {
-            setAuthChecked(true);
-            base44.auth.redirectToLogin(createPageUrl('Home'));
-          }
+          if (attempts < 3) { setTimeout(checkAuth, 800); }
+          else { setAuthChecked(true); base44.auth.redirectToLogin(createPageUrl('Home')); }
         });
     }
     checkAuth();
   }, []);
 
-  // Clear cart after successful payment return
+  // Payment verification after Hubtel redirect
   useEffect(function() {
-    if (!user || cartCleared) return;
+    if (!user || verificationDone) return;
     var orderNumber = searchParams.get('order');
     var status = searchParams.get('status');
-    if (orderNumber && status === 'success') {
-      setCartCleared(true);
-      base44.entities.CartItem.filter({ user_email: user.email }).then(function(items) {
-        var arr = Array.isArray(items) ? items : Array.isArray(items?.data) ? items.data : [];
-        arr.forEach(function(item) { base44.entities.CartItem.delete(item.id).catch(function() {}); });
-        queryClient.invalidateQueries({ queryKey: ['cartItems', user.email] });
-        queryClient.invalidateQueries({ queryKey: ['cartItems'] });
-      }).catch(function() {});
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success('Payment successful! Your order has been placed.');
-    }
-  }, [user, searchParams, cartCleared, queryClient]);
+
+    if (!orderNumber) { setVerificationDone(true); return; }
+
+    // Show verification screen
+    setIsVerifying(true);
+
+    // Give callback a moment to process, then check
+    setTimeout(function() {
+      checkPaymentStatus(orderNumber)
+        .then(function(result) {
+          var hubtelStatus = result?.data?.status || '';
+          var isPaid = hubtelStatus.toLowerCase() === 'paid' || hubtelStatus.toLowerCase() === 'success';
+
+          if (isPaid || status === 'success') {
+            // Payment successful - clear cart
+            base44.entities.CartItem.filter({ user_email: user.email }).then(function(items) {
+              var arr = Array.isArray(items) ? items : Array.isArray(items?.data) ? items.data : [];
+              arr.forEach(function(item) { base44.entities.CartItem.delete(item.id).catch(function() {}); });
+              queryClient.invalidateQueries({ queryKey: ['cartItems', user.email] });
+              queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+            }).catch(function() {});
+
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            toast.success('Payment confirmed! Your order has been placed.');
+            setIsVerifying(false);
+            setVerificationDone(true);
+          } else {
+            // Payment failed or cancelled
+            toast.error('Payment failed. Please crosscheck payment again. If your amount was deducted, contact Hubtel to verify.');
+            setIsVerifying(false);
+            setVerificationDone(true);
+            // Redirect to cart after short delay
+            setTimeout(function() {
+              navigate(createPageUrl('Cart'));
+            }, 3000);
+          }
+        })
+        .catch(function() {
+          // If status check fails, check the URL status param
+          if (status === 'success') {
+            base44.entities.CartItem.filter({ user_email: user.email }).then(function(items) {
+              var arr = Array.isArray(items) ? items : Array.isArray(items?.data) ? items.data : [];
+              arr.forEach(function(item) { base44.entities.CartItem.delete(item.id).catch(function() {}); });
+              queryClient.invalidateQueries({ queryKey: ['cartItems'] });
+            }).catch(function() {});
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            toast.success('Payment confirmed!');
+            setIsVerifying(false);
+            setVerificationDone(true);
+          } else {
+            toast.error('Payment verification failed. If amount was deducted, contact Hubtel support.');
+            setIsVerifying(false);
+            setVerificationDone(true);
+            setTimeout(function() { navigate(createPageUrl('Cart')); }, 3000);
+          }
+        });
+    }, 2000); // Wait 2s for callback to process
+  }, [user, searchParams, verificationDone, queryClient, navigate]);
 
   var { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', user?.email],
     queryFn: function() { return base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 200); },
-    enabled: !!user?.email,
+    enabled: !!user?.email && verificationDone,
     staleTime: 15000,
-    gcTime: 5 * 60 * 1000,
   });
 
   var deleteOrdersMutation = useMutation({
@@ -117,13 +162,35 @@ export default function Orders() {
   var handleSelectAll = function() { setSelectedOrders(function(p) { return p.length === orders.length ? [] : orders.map(function(o) { return o.id; }); }); };
   var handleDeleteSelected = function() { if (selectedOrders.length === 0) return; if (confirm('Delete ' + selectedOrders.length + ' order(s)?')) deleteOrdersMutation.mutate(selectedOrders); };
 
-  // Show loading while auth is checking (prevents homepage flash)
+  // Loading while auth checking
   if (!authChecked) {
     return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
   }
 
   if (!user) {
     return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
+  }
+
+  // ========== GREEN VERIFICATION SCREEN ==========
+  if (isVerifying) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
+          </div>
+          <h2 className="text-lg font-bold text-green-800 mb-2">Verifying Payment</h2>
+          <p className="text-sm text-green-600">Please wait while we confirm your payment with Hubtel...</p>
+          <div className="mt-4 h-1.5 bg-green-100 rounded-full overflow-hidden">
+            <div className="h-full bg-green-500 rounded-full animate-pulse" style={{ width: '70%' }}></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!verificationDone) {
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
   }
 
   if (!isLoading && orders.length === 0) {
@@ -156,7 +223,6 @@ export default function Orders() {
             var rank = ORDER_RANK[s] || 0;
             var isExpanded = expandedOrder === order.id;
 
-            // Build steps based on payment method
             var steps;
             if (method === 'full_payment') {
               steps = [
@@ -192,7 +258,6 @@ export default function Orders() {
 
             return (
               <Card key={order.id} className={'p-4 bg-white ' + (isSelected ? 'ring-2 ring-blue-400' : '')}>
-                {/* Header */}
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-start gap-2">
                     <input type="checkbox" checked={isSelected} onChange={function() { handleToggleSelect(order.id); }} className="w-4 h-4 cursor-pointer mt-1" />
@@ -207,10 +272,8 @@ export default function Orders() {
                   </div>
                 </div>
 
-                {/* Payment badge */}
                 <div className="mb-3"><span className={'text-xs px-2.5 py-1 rounded-full font-medium ' + payBadge.color}>{payBadge.label}</span></div>
 
-                {/* Products */}
                 <div className="mb-3 border-t border-gray-100 pt-2">
                   {order.items?.map(function(item, idx) {
                     return (
@@ -222,7 +285,6 @@ export default function Orders() {
                   })}
                 </div>
 
-                {/* Progress steps */}
                 <div className="mb-3 border-t border-gray-100 pt-2">
                   <p className="text-xs font-bold text-gray-700 mb-2">Order Progress</p>
                   <div className="space-y-1.5">
@@ -239,10 +301,9 @@ export default function Orders() {
                   </div>
                 </div>
 
-                {/* Delivery info */}
                 <div className="border-t border-gray-100 pt-2">
                   <p className="text-xs text-gray-600">📍 {order.delivery_address}</p>
-                  <p className="text-xs text-gray-500 mt-1">📅 Est. delivery: {order.estimated_delivery && order.estimated_delivery !== '' && order.estimated_delivery !== '1970-01-01' ? format(new Date(order.estimated_delivery), 'MMM d, yyyy') : '—'}</p>
+                  <p className="text-xs text-gray-500 mt-1">📅 Est. delivery: {order.estimated_delivery && order.estimated_delivery.length > 4 && !order.estimated_delivery.startsWith('1970') ? format(new Date(order.estimated_delivery), 'MMM d, yyyy') : '—'}</p>
                   <div className="flex gap-3 mt-3">
                     <button onClick={function() { setExpandedOrder(isExpanded ? null : order.id); }} className="text-xs text-blue-600 font-semibold flex items-center gap-0.5">
                       {isExpanded ? 'Hide' : 'Track Order'} {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -253,7 +314,6 @@ export default function Orders() {
                   </div>
                 </div>
 
-                {/* Tracking details (expanded) */}
                 {isExpanded && order.tracking_updates && order.tracking_updates.length > 0 && (
                   <div className="mt-3 border-t border-gray-100 pt-3">
                     <p className="text-xs font-bold text-gray-700 mb-2">Tracking History</p>
@@ -278,7 +338,6 @@ export default function Orders() {
           })}
         </div>
 
-        {/* Cancel Modal */}
         {cancellingOrder && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-md p-6">

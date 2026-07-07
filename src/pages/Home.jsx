@@ -207,19 +207,20 @@ export default function Home() {
             const isExpanded = expandedCat === cat.id;
             return (
               <button key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
-                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 shadow-sm border border-gray-100 flex items-center justify-center">
-                  {displayImg
-                    ? <OptimizedImage
-                        src={displayImg}
-                        alt={cat.label}
-                        className="w-full h-full"
-                        containerClassName="w-full h-full"
-                        objectFit="cover"
-                        priority={true}
-                      />
-                    : <cat.icon className="h-10 w-10 opacity-70" />
-                  }
-                </div>
+                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-200 shadow-sm border border-gray-100 flex items-center justify-center">
+  {displayImg ? (
+    <img
+      src={displayImg}
+      alt={cat.label}
+      className="w-full h-full object-cover"
+      loading="eager"
+      onError={function(e) { e.target.style.display = 'none'; }}
+    />
+  ) : (
+    <div className="w-full h-full bg-gray-200 animate-pulse" />
+  )}
+</div>
+
                 <span className="text-xs md:text-sm font-bold text-gray-800 text-center leading-tight">{cat.label}</span>
               </button>
             );

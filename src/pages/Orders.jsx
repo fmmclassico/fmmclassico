@@ -305,9 +305,8 @@ export default function Orders() {
                   <p className="text-xs text-gray-600">📍 {order.delivery_address}</p>
                   <p className="text-xs text-gray-500 mt-1">📅 Est. delivery: {order.estimated_delivery && order.estimated_delivery.length > 4 && !order.estimated_delivery.startsWith('1970') ? format(new Date(order.estimated_delivery), 'MMM d, yyyy') : '—'}</p>
                   <div className="flex gap-3 mt-3">
-                    <button onClick={function() { setExpandedOrder(isExpanded ? null : order.id); }} className="text-xs text-blue-600 font-semibold flex items-center gap-0.5">
-                      {isExpanded ? 'Hide' : 'Track Order'} {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    </button>
+                    <Link to={createPageUrl('OrderTracking') + '?id=' + order.id} className="text-xs text-blue-600 font-semibold">Track Order</Link>
+
                     {CANCELLABLE_STATUSES.includes(order.status) && (
                       <button onClick={function() { setCancellingOrder(order); setCancelReason(''); }} className="text-xs text-red-600 font-semibold">Cancel Order</button>
                     )}

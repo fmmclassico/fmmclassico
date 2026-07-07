@@ -5,18 +5,6 @@ import AdminInvoice from './pages/AdminInvoice';
 import AdminMessages from './pages/AdminMessages';
 import AdminOrders from './pages/AdminOrders';
 import AdminSMSBroadcast from './pages/AdminSMSBroadcast';
-import AdminContactSettings from './pages/AdminContactSettings';
-import AdminAccessControl from './pages/AdminAccessControl';
-import AdminInterfaceControl from './pages/AdminInterfaceControl';
-import AdminAI from './pages/AdminAI';
-import AdminReviews from './pages/AdminReviews';
-import AdminProducts from './pages/AdminProducts';
-import AdminCategoryImages from './pages/AdminCategoryImages';
-import AdminPromoBanners2 from './pages/AdminPromoBanners2';
-import AdminBrandLogos from './pages/AdminBrandLogos';
-import AdminAbout from './pages/AdminAbout';
-import AdminPageContent from './pages/AdminPageContent';
-import AdminHomeEditor from './pages/AdminHomeEditor';
 import Cart from './pages/Cart';
 import Categories from './pages/Categories';
 import Chat from './pages/Chat';
@@ -24,7 +12,6 @@ import Checkout from './pages/Checkout';
 import Feedback from './pages/Feedback';
 import Home from './pages/Home';
 import HowToUse from './pages/HowToUse';
-import Invoices from './pages/Invoices';
 import Notifications from './pages/Notifications';
 import OrderTracking from './pages/OrderTracking';
 import Orders from './pages/Orders';
@@ -41,18 +28,6 @@ export const PAGES = {
   "AdminMessages": AdminMessages,
   "AdminOrders": AdminOrders,
   "AdminSMSBroadcast": AdminSMSBroadcast,
-  "AdminContactSettings": AdminContactSettings,
-  "AdminAccessControl": AdminAccessControl,
-  "AdminInterfaceControl": AdminInterfaceControl,
-  "AdminAI": AdminAI,
-  "AdminReviews": AdminReviews,
-  "AdminProducts": AdminProducts,
-  "AdminCategoryImages": AdminCategoryImages,
-  "AdminPromoBanners2": AdminPromoBanners2,
-  "AdminBrandLogos": AdminBrandLogos,
-  "AdminAbout": AdminAbout,
-  "AdminPageContent": AdminPageContent,
-  "AdminHomeEditor": AdminHomeEditor,
   "Cart": Cart,
   "Categories": Categories,
   "Chat": Chat,
@@ -60,10 +35,10 @@ export const PAGES = {
   "Feedback": Feedback,
   "Home": Home,
   "HowToUse": HowToUse,
-  "Invoices": Invoices,
   "Notifications": Notifications,
   "OrderTracking": OrderTracking,
   "Orders": Orders,
+  "Product": ProductDetail,
   "ProductDetail": ProductDetail,
   "Settings": Settings,
   "Shop": Shop,

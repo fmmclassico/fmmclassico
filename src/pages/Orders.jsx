@@ -32,12 +32,35 @@ const statusConfig = {
 const CANCELLABLE_STATUSES = ['confirmed', 'processing', 'pending'];
 
 const paymentStatusConfig = {
-  paid: { color: 'bg-green-100 text-green-700', label: 'Paid' },
-  pending_payment: { color: 'bg-yellow-100 text-yellow-700', label: 'Pending Payment' },
-  failed: { color: 'bg-red-100 text-red-700', label: 'Failed' },
-  cancelled: { color: 'bg-gray-100 text-gray-600', label: 'Cancelled' },
-  refunded: { color: 'bg-blue-100 text-blue-700', label: 'Refunded' },
+  paid: { color: 'bg-green-100 text-green-700', label: '✅ Paid' },
+  pending_payment: { color: 'bg-yellow-100 text-yellow-700', label: '⏳ Pending Payment' },
+  failed: { color: 'bg-red-100 text-red-700', label: '❌ Failed' },
+  cancelled: { color: 'bg-gray-100 text-gray-600', label: '🚫 Cancelled' },
+  refunded: { color: 'bg-blue-100 text-blue-700', label: '↩️ Refunded' },
 };
+
+// Helper to get smart payment label based on payment_method
+function getPaymentLabel(order) {
+  if (!order) return paymentStatusConfig[order?.payment_status] || { color: 'bg-gray-100 text-gray-600', label: 'Unknown' };
+  
+  if (order.payment_method === 'pay_on_delivery') {
+    if (order.payment_status === 'paid' || order.payment_status === 'pending_payment') {
+      return { color: 'bg-purple-100 text-purple-700', label: '📦 Delivery Fee Paid • Product: Pay on Delivery' };
+    }
+  }
+  
+  if (order.payment_method === 'deposit_balance') {
+    if (order.payment_status === 'paid') {
+      return { color: 'bg-orange-100 text-orange-700', label: '✅ Deposit Paid • Balance: ₵' + (order.balance_due || 0).toFixed(2) + ' on delivery' };
+    }
+  }
+  
+ order.payment_status && (
+  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${paymentStatusConfig[order.payment_status]?.color}`}>
+    {paymentStatusConfig[order.payment_status]?.label || order.payment_status}
+  </span> };
+}
+
 
 // Helper to get first name from full name
 function getFirstName(fullName) {

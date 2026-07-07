@@ -55,12 +55,8 @@ function getPaymentLabel(order) {
     }
   }
   
- order.payment_status && (
-  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${paymentStatusConfig[order.payment_status]?.color}`}>
-    {paymentStatusConfig[order.payment_status]?.label || order.payment_status}
-  </span> };
+  return paymentStatusConfig[order.payment_status] || { color: 'bg-gray-100 text-gray-600', label: order.payment_status || 'Unknown' };
 }
-
 
 // Helper to get first name from full name
 function getFirstName(fullName) {

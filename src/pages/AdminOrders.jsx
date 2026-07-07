@@ -8,14 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Textarea } from "@/components/ui/textarea";
-import {
-  CheckCircle2, Package, Truck, XCircle, FileText, Trash2, Send
-} from 'lucide-react';
+import { CheckCircle2, Package, Truck, XCircle, FileText, Trash2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 const statusConfig = {
-  pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Package },
   confirmed: { label: 'Confirmed', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
   processing: { label: 'Processing', color: 'bg-blue-100 text-blue-800', icon: Package },
   packed: { label: 'Packed', color: 'bg-orange-100 text-orange-800', icon: Package },
@@ -27,17 +24,30 @@ const statusConfig = {
   returned: { label: 'Returned', color: 'bg-gray-100 text-gray-700', icon: XCircle },
 };
 
-const nextStatusMap = {
-  confirmed: { newStatus: 'processing', label: 'Mark Processing', message: 'Order is being processed and prepared.' },
-  processing: { newStatus: 'packed', label: 'Mark Packed', message: 'Order has been packed and is ready for dispatch.' },
-  packed: { newStatus: 'shipped', label: 'Mark Shipped', message: 'Order has been shipped.' },
-  shipped: { newStatus: 'out_for_delivery', label: 'Mark Out for Delivery', message: 'Order is out for delivery.' },
-  out_for_delivery: { newStatus: 'delivered', label: 'Mark Delivered', message: 'Order has been delivered successfully.' },
-};
+// Dynamic next status based on payment method
+function getNextStatus(order) {
+  const s = order.status;
+  const method = order.payment_method || 'full_payment';
+  const needsPaymentConfirmation = method === 'deposit_balance' || method === 'pay_on_delivery';
 
-function getFirstName(fullName) {
-  if (!fullName) return 'Customer';
-  return fullName.split(' ')[0];
+  if (s === 'confirmed') return { newStatus: 'processing', label: 'Mark Processing', message: 'Order is being processed.' };
+  if (s === 'processing') return { newStatus: 'packed', label: 'Mark Packed', message: 'Order packed and ready for dispatch.' };
+  if (s === 'packed') return { newStatus: 'shipped', label: 'Mark Shipped', message: 'Order has been shipped.' };
+  if (s === 'shipped') {
+    if (needsPaymentConfirmation) {
+      return { newStatus: 'out_for_delivery', label: 'Mark Payment Confirmed', message: 'Customer product payment confirmed upon delivery.' };
+    }
+    return { newStatus: 'delivered', label: 'Mark Delivered Successfully', message: 'Order delivered successfully.' };
+  }
+  if (s === 'out_for_delivery') return { newStatus: 'delivered', label: 'Mark Delivered Successfully', message: 'Order delivered successfully.' };
+  return null;
+}
+
+function getPaymentMethodLabel(method) {
+  if (method === 'full_payment') return { text: 'Full Payment', color: 'bg-green-100 text-green-700' };
+  if (method === 'deposit_balance') return { text: 'Deposit + Balance on Delivery', color: 'bg-orange-100 text-orange-700' };
+  if (method === 'pay_on_delivery') return { text: 'Pay on Delivery', color: 'bg-red-100 text-red-700' };
+  return { text: 'Full Payment', color: 'bg-green-100 text-green-700' };
 }
 
 export default function AdminOrders() {
@@ -65,223 +75,153 @@ export default function AdminOrders() {
     refetchInterval: 30000,
   });
 
-  // Only show paid orders to admin (pending_payment orders are not real yet)
-  const paidOrders = orders.filter(o => o.payment_status === 'paid');
-  const activeOrders = paidOrders.filter(o => !['delivered', 'cancelled', 'returned'].includes(o.status));
-  const fulfilledOrders = paidOrders.filter(o => ['delivered', 'cancelled', 'returned'].includes(o.status));
+  const activeOrders = orders.filter(o => !['delivered', 'cancelled', 'returned'].includes(o.status));
+  const fulfilledOrders = orders.filter(o => ['delivered', 'cancelled', 'returned'].includes(o.status));
 
   const [adminMessages, setAdminMessages] = useState({});
 
   const sendAdminMessageMutation = useMutation({
     mutationFn: async ({ order, message }) => {
-      const firstName = getFirstName(order.customer_name);
       await Promise.all([
-        base44.entities.Notification.create({
-          user_email: order.customer_email,
-          title: 'Message from FMM CLASSICO',
-          message: 'Dear ' + firstName + ', ' + message,
-          type: 'general',
-          order_id: order.id,
-          order_number: order.order_number,
-          is_read: false,
-          created_date: new Date().toISOString()
-        }),
-        base44.integrations.Core.SendEmail({
-          to: order.customer_email,
-          from_name: 'FMM CLASSICO',
-          subject: 'Message about your order #' + order.order_number,
-          body: 'Dear ' + firstName + ',\n\n' + message + '\n\nFor help: 0208207543\n\nFMM CLASSICO Team'
-        })
+        base44.entities.Notification.create({ user_email: order.customer_email, title: '💬 Message from FMM CLASSICO', message, type: 'general', order_id: order.id, order_number: order.order_number, is_read: false }),
+        base44.integrations.Core.SendEmail({ to: order.customer_email, from_name: 'FMM CLASSICO', subject: 'Message about your order #' + order.order_number, body: 'Hi ' + order.customer_name + ',
+
+' + message + '
+
+For help: 0208207543
+
+FMM CLASSICO Team' })
       ]);
     },
-    onSuccess: (_, variables) => {
-      setAdminMessages(prev => ({ ...prev, [variables.order.id]: '' }));
-      toast.success('Message sent to customer!');
-    }
+    onSuccess: (_, variables) => { setAdminMessages(prev => ({ ...prev, [variables.order.id]: '' })); toast.success('Message sent!'); }
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ order, newStatus, message }) => {
-      const firstName = getFirstName(order.customer_name);
-      const productNames = order.items ? order.items.map(i => i.product_name).join(', ') : 'your order';
-
-      const newTrackingUpdates = [
-        ...(order.tracking_updates || []),
-        { status: statusConfig[newStatus]?.label || newStatus, message, timestamp: new Date().toISOString() }
-      ];
+      const newTrackingUpdates = [...(order.tracking_updates || []), { status: statusConfig[newStatus]?.label || newStatus, message, timestamp: new Date().toISOString() }];
       await base44.entities.Order.update(order.id, { status: newStatus, tracking_updates: newTrackingUpdates });
 
-      // Personalized notification messages
       const notifMap = {
-        processing: {
-          title: 'Order Being Prepared',
-          msg: 'Dear ' + firstName + ', your order #' + order.order_number + ' for "' + productNames + '" is being prepared. Kindly track your order status from your order page.',
-          type: 'order_processing'
-        },
-        packed: {
-          title: 'Order Packed',
-          msg: 'Dear ' + firstName + ', your order #' + order.order_number + ' for "' + productNames + '" has been packed and is ready for dispatch. Kindly track your order status from your order page.',
-          type: 'order_processing'
-        },
-        shipped: {
-          title: 'Order Shipped!',
-          msg: 'Dear ' + firstName + ', your order #' + order.order_number + ' for "' + productNames + '" has been shipped! Kindly track your order status from your order page.',
-          type: 'order_shipped'
-        },
-        out_for_delivery: {
-          title: 'Out for Delivery!',
-          msg: 'Dear ' + firstName + ', your order #' + order.order_number + ' for "' + productNames + '" is out for delivery. Expect it soon!',
-          type: 'order_shipped'
-        },
-        delivered: {
-          title: 'Order Delivered!',
-          msg: 'Dear ' + firstName + ', your order #' + order.order_number + ' for "' + productNames + '" has been delivered. Thank you for shopping with FMM CLASSICO!',
-          type: 'order_delivered'
-        },
-        cancelled: {
-          title: 'Order Cancelled',
-          msg: 'Dear ' + firstName + ', your order #' + order.order_number + ' has been cancelled. Contact 0208207543 for help.',
-          type: 'order_cancelled'
-        },
+        processing: { title: '📦 Order Being Prepared', msg: 'Your order #' + order.order_number + ' is being prepared.', type: 'order_processing' },
+        packed: { title: '📦 Order Packed', msg: 'Your order #' + order.order_number + ' has been packed.', type: 'order_processing' },
+        shipped: { title: '🚚 Order Shipped!', msg: 'Your order #' + order.order_number + ' has been shipped!', type: 'order_shipped' },
+        out_for_delivery: { title: '✅ Payment Confirmed', msg: 'Product payment for order #' + order.order_number + ' has been confirmed. Thank you!', type: 'payment_confirmed' },
+        delivered: { title: '🎉 Order Delivered!', msg: 'Your order #' + order.order_number + ' has been delivered. Thank you for shopping with FMM CLASSICO!', type: 'order_delivered' },
+        cancelled: { title: '❌ Order Cancelled', msg: 'Your order #' + order.order_number + ' has been cancelled.', type: 'order_cancelled' },
       };
-
       const notif = notifMap[newStatus];
       if (notif) {
         await Promise.all([
-          base44.entities.Notification.create({
-            user_email: order.customer_email,
-            title: notif.title,
-            message: notif.msg,
-            type: notif.type,
-            order_id: order.id,
-            order_number: order.order_number,
-            is_read: false,
-            created_date: new Date().toISOString()
-          }),
-          base44.integrations.Core.SendEmail({
-            to: order.customer_email,
-            from_name: 'FMM CLASSICO',
-            subject: notif.title + ' - Order #' + order.order_number,
-            body: notif.msg + '\n\nOrder: #' + order.order_number + '\nTotal: GHS ' + (order.total_amount?.toFixed(2) || '0.00') + '\nDelivery: ' + (order.delivery_address || '') + (order.city ? ', ' + order.city : '') + '\n\nTrack your order on FMM CLASSICO.\nFor help: 0208207543\n\nFMM CLASSICO Team'
-          })
+          base44.entities.Notification.create({ user_email: order.customer_email, title: notif.title, message: notif.msg, type: notif.type, order_id: order.id, order_number: order.order_number, is_read: false }),
+          base44.integrations.Core.SendEmail({ to: order.customer_email, from_name: 'FMM CLASSICO', subject: notif.title + ' – Order #' + order.order_number, body: 'Hi ' + order.customer_name + ',
+
+' + notif.msg + '
+
+Order: #' + order.order_number + '
+Total: ₵' + order.total_amount?.toFixed(2) + '
+Delivery: ' + order.delivery_address + '
+
+FMM CLASSICO
+0208207543' })
         ]);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
-      toast.success('Order updated! Customer notified via app and email.');
-    }
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['adminOrders'] }); toast.success('Order updated! Customer notified.'); }
   });
 
   const deleteOrdersMutation = useMutation({
-    mutationFn: async (orderIds) => {
-      await Promise.all(orderIds.map(id => base44.entities.Order.delete(id)));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
-      setSelectedOrders([]);
-      toast.success('Orders deleted successfully');
-    }
+    mutationFn: async (orderIds) => { await Promise.all(orderIds.map(id => base44.entities.Order.delete(id))); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['adminOrders'] }); setSelectedOrders([]); toast.success('Deleted'); }
   });
 
-  const handleToggleSelect = (orderId) => {
-    setSelectedOrders(prev =>
-      prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
-    );
-  };
-
+  const handleToggleSelect = (orderId) => { setSelectedOrders(prev => prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]); };
   const handleSelectAll = (orderList) => {
     const ids = orderList.map(o => o.id);
     const allSelected = ids.every(id => selectedOrders.includes(id));
-    if (allSelected) {
-      setSelectedOrders(prev => prev.filter(id => !ids.includes(id)));
-    } else {
-      setSelectedOrders(prev => [...new Set([...prev, ...ids])]);
-    }
+    setSelectedOrders(prev => allSelected ? prev.filter(id => !ids.includes(id)) : [...new Set([...prev, ...ids])]);
   };
+  const handleDeleteSelected = () => { if (selectedOrders.length === 0) return; if (confirm('Delete ' + selectedOrders.length + ' order(s)?')) deleteOrdersMutation.mutate(selectedOrders); };
 
-  const handleDeleteSelected = () => {
-    if (selectedOrders.length === 0) return;
-    if (confirm('Delete ' + selectedOrders.length + ' order(s)? This cannot be undone.')) {
-      deleteOrdersMutation.mutate(selectedOrders);
-    }
-  };
-
-  if (!isAdmin && user) {
-    return (
-      <div className="p-8 text-center">
-        <h1 className="text-xl font-bold">Access Denied</h1>
-        <p className="text-gray-500">You must be an admin to view this page.</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (<div className="p-8 text-center"><p>Loading...</p></div>);
-  }
+  if (!isAdmin && user) return <div className="p-8 text-center"><p className="text-red-600 font-bold">Access Denied</p></div>;
+  if (!user) return <div className="p-8 text-center"><p>Loading...</p></div>;
 
   const renderOrderCard = (order) => {
-    const next = nextStatusMap[order.status];
-    return (
-      <Card key={order.id} className="p-4 rounded-2xl shadow-sm border border-gray-100 mb-3">
-        <div className="flex items-start gap-3">
-          <input type="checkbox" checked={selectedOrders.includes(order.id)} onChange={() => handleToggleSelect(order.id)} className="w-4 h-4 mt-1 cursor-pointer flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <p className="text-sm font-bold text-gray-900">{order.order_number}</p>
-              <div className="flex gap-1 flex-wrap">
-                <Badge className={'text-[10px] ' + (statusConfig[order.status]?.color || '')}>
-                  {statusConfig[order.status]?.label || order.status}
-                </Badge>
-                {order.payment_status === 'paid' && (
-                  <Badge className="text-[10px] bg-green-100 text-green-800">Paid</Badge>
-                )}
-              </div>
-            </div>
-            <p className="text-sm font-medium text-gray-700 mt-1">{order.customer_name}</p>
-            <p className="text-xs text-gray-500">{order.customer_email} | {order.customer_phone}</p>
-            <p className="text-xs text-gray-500">{order.delivery_address}{order.city ? ', ' + order.city : ''}</p>
-            <p className="text-sm font-bold text-gray-900 mt-1">{'\u20B5'}{order.total_amount?.toFixed(2)}</p>
-            <p className="text-xs text-gray-400">{order.created_date && format(new Date(order.created_date), 'MMM d, yyyy h:mm a')}</p>
+    const next = getNextStatus(order);
+    const method = order.payment_method || 'full_payment';
+    const methodLabel = getPaymentMethodLabel(method);
+    const isDelivered = order.status === 'delivered';
+    const isClosed = ['delivered', 'cancelled', 'returned'].includes(order.status);
 
-            <div className="mt-2 bg-gray-50 rounded-xl p-2 space-y-2">
+    return (
+      <Card key={order.id} className="p-4 bg-white mb-3">
+        <div className="flex items-start gap-2">
+          <input type="checkbox" checked={selectedOrders.includes(order.id)} onChange={() => handleToggleSelect(order.id)} className="w-4 h-4 mt-1 cursor-pointer" />
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold">{order.order_number}</p>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusConfig[order.status]?.color}`}>{statusConfig[order.status]?.label}</span>
+            </div>
+
+            {/* Payment method + status badges */}
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${methodLabel.color}`}>{methodLabel.text}</span>
+              {order.payment_status === 'paid' && <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">✅ Paid</span>}
+              {order.payment_status === 'pending_payment' && <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">⏳ Pending</span>}
+            </div>
+
+            {/* Balance due for option 2 & 3 */}
+            {(method === 'deposit_balance' || method === 'pay_on_delivery') && order.balance_due > 0 && (
+              <p className="text-xs font-semibold text-orange-700 mt-1.5 bg-orange-50 px-2 py-1 rounded inline-block">
+                ⚠️ Balance due on delivery: ₵{order.balance_due?.toFixed(2)}
+              </p>
+            )}
+
+            {/* Customer info */}
+            <div className="mt-2 text-xs text-gray-600 space-y-0.5">
+              <p className="font-medium text-gray-800">{order.customer_name}</p>
+              <p>{order.customer_email} · {order.customer_phone}</p>
+              <p>📍 {order.delivery_address}</p>
+              <p className="font-bold">₵{order.total_amount?.toFixed(2)}</p>
+              {order.created_date && <p className="text-gray-400">{format(new Date(order.created_date), 'MMM d, yyyy h:mm a')}</p>}
+            </div>
+
+            {/* Items */}
+            <div className="mt-2 flex flex-wrap gap-2">
               {order.items?.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  {item.product_image && <img src={item.product_image} alt={item.product_name} className="w-8 h-8 rounded-md object-cover" />}
-                  <span className="text-xs text-gray-700">{item.product_name} x{item.quantity}</span>
+                <div key={idx} className="flex items-center gap-1.5 bg-gray-50 rounded-lg px-2 py-1">
+                  {item.product_image && <img src={item.product_image} className="w-8 h-8 rounded object-cover" />}
+                  <span className="text-[10px] text-gray-700">{item.product_name} ×{item.quantity}</span>
                 </div>
               ))}
             </div>
 
-            <div className="flex gap-2 mt-3 flex-wrap">
-              <Link to={createPageUrl('AdminInvoice') + '?order=' + order.id}>
-                <Button variant="outline" size="sm" className="text-xs rounded-lg">
-                  <FileText className="w-3 h-3 mr-1" /> Invoice
-                </Button>
-              </Link>
-              {next && order.payment_status === 'paid' && (
-                <Button size="sm" className="text-xs rounded-lg bg-blue-700 text-white hover:bg-blue-800" onClick={() => updateStatusMutation.mutate({ order, newStatus: next.newStatus, message: next.message })} disabled={updateStatusMutation.isPending}>
-                  {next.label}
-                </Button>
-              )}
-              {next && order.payment_status !== 'paid' && (
-                <Button size="sm" disabled className="text-xs rounded-lg opacity-50">
-                  {next.label} (Awaiting Payment)
-                </Button>
-              )}
-              {!['cancelled', 'delivered', 'returned'].includes(order.status) && (
-                <Button variant="destructive" size="sm" className="text-xs rounded-lg" onClick={() => updateStatusMutation.mutate({ order, newStatus: 'cancelled', message: 'Order cancelled by admin.' })} disabled={updateStatusMutation.isPending}>
+            {/* Actions - HIDE after delivered */}
+            {!isClosed && (
+              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
+                <Link to={createPageUrl('AdminInvoice') + '?order=' + order.order_number}>
+                  <Button size="sm" variant="outline" className="text-xs"><FileText className="h-3 w-3 mr-1" /> Invoice</Button>
+                </Link>
+                {next && order.payment_status === 'paid' && (
+                  <Button size="sm" className="text-xs bg-blue-600 hover:bg-blue-700" onClick={() => updateStatusMutation.mutate({ order, newStatus: next.newStatus, message: next.message })} disabled={updateStatusMutation.isPending}>
+                    {next.label}
+                  </Button>
+                )}
+                {next && order.payment_status !== 'paid' && (
+                  <Button size="sm" variant="outline" className="text-xs opacity-50" disabled>{next.label} (⏳ Awaiting Payment)</Button>
+                )}
+                <Button size="sm" variant="destructive" className="text-xs" onClick={() => updateStatusMutation.mutate({ order, newStatus: 'cancelled', message: 'Cancelled by admin.' })} disabled={updateStatusMutation.isPending}>
                   Cancel
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
 
-            <div className="mt-3 flex gap-2">
-              <Textarea placeholder="Message to customer..." className="text-xs flex-1" rows={1} value={adminMessages[order.id] || ''} onChange={(e) => setAdminMessages(prev => ({ ...prev, [order.id]: e.target.value }))} />
-              <Button size="sm" variant="outline" className="self-end" onClick={() => sendAdminMessageMutation.mutate({ order, message: adminMessages[order.id] })} disabled={!adminMessages[order.id]?.trim()}>
-                <Send className="w-3 h-3" />
-              </Button>
-            </div>
+            {/* Admin message */}
+            {!isClosed && (
+              <div className="mt-3 flex gap-2">
+                <Textarea className="text-xs flex-1" rows={1} placeholder="Message to customer..." value={adminMessages[order.id] || ''} onChange={(e) => setAdminMessages(prev => ({ ...prev, [order.id]: e.target.value }))} />
+                <Button size="sm" variant="outline" onClick={() => sendAdminMessageMutation.mutate({ order, message: adminMessages[order.id] })}><Send className="h-3 w-3" /></Button>
+              </div>
+            )}
           </div>
         </div>
       </Card>
@@ -289,52 +229,28 @@ export default function AdminOrders() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
+    <div className="max-w-4xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold">Admin - Manage Orders</h1>
-        {selectedOrders.length > 0 && (
-          <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
-            <Trash2 className="w-4 h-4 mr-1" /> Delete {selectedOrders.length} Selected
-          </Button>
-        )}
+        <h1 className="text-xl font-bold">Admin – Orders</h1>
+        {selectedOrders.length > 0 && <Button size="sm" variant="destructive" onClick={handleDeleteSelected}><Trash2 className="h-3 w-3 mr-1" /> Delete {selectedOrders.length}</Button>}
       </div>
 
+      {/* Active */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-gray-800">Active Orders ({activeOrders.length})</h2>
-          {activeOrders.length > 0 && (
-            <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer">
-              <input type="checkbox" checked={activeOrders.every(o => selectedOrders.includes(o.id))} onChange={() => handleSelectAll(activeOrders)} className="w-4 h-4 cursor-pointer" />
-              Select all
-            </label>
-          )}
+          <h2 className="text-sm font-bold text-gray-700">Active Orders ({activeOrders.length})</h2>
+          {activeOrders.length > 0 && <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer"><input type="checkbox" checked={activeOrders.every(o => selectedOrders.includes(o.id))} onChange={() => handleSelectAll(activeOrders)} className="w-3.5 h-3.5" /> Select all</label>}
         </div>
-        {isLoading ? (
-          <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-40 rounded-xl" />)}</div>
-        ) : activeOrders.length === 0 ? (
-          <p className="text-gray-400 text-sm">No active orders</p>
-        ) : (
-          <div>{activeOrders.map(renderOrderCard)}</div>
-        )}
+        {isLoading ? <Skeleton className="h-32" /> : activeOrders.length === 0 ? <p className="text-sm text-gray-400">No active orders</p> : activeOrders.map(renderOrderCard)}
       </div>
 
+      {/* Completed */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-gray-800">Completed and Cancelled ({fulfilledOrders.length})</h2>
-          {fulfilledOrders.length > 0 && (
-            <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer">
-              <input type="checkbox" checked={fulfilledOrders.every(o => selectedOrders.includes(o.id))} onChange={() => handleSelectAll(fulfilledOrders)} className="w-4 h-4 cursor-pointer" />
-              Select all
-            </label>
-          )}
+          <h2 className="text-sm font-bold text-gray-700">Completed & Cancelled ({fulfilledOrders.length})</h2>
+          {fulfilledOrders.length > 0 && <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer"><input type="checkbox" checked={fulfilledOrders.every(o => selectedOrders.includes(o.id))} onChange={() => handleSelectAll(fulfilledOrders)} className="w-3.5 h-3.5" /> Select all</label>}
         </div>
-        {isLoading ? (
-          <div className="space-y-3">{[1, 2].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}</div>
-        ) : fulfilledOrders.length === 0 ? (
-          <p className="text-gray-400 text-sm">No completed orders yet</p>
-        ) : (
-          <div>{fulfilledOrders.map(renderOrderCard)}</div>
-        )}
+        {isLoading ? <Skeleton className="h-32" /> : fulfilledOrders.length === 0 ? <p className="text-sm text-gray-400">No completed orders</p> : fulfilledOrders.map(renderOrderCard)}
       </div>
     </div>
   );

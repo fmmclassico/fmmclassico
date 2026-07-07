@@ -51,11 +51,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setIsAuthenticated(false);
-    window.location.href = "/";
-  };
+  await supabase.auth.signOut({ scope: 'local' });
+  setUser(null);
+  setIsAuthenticated(false);
+  window.location.href = "/";
+};
+
 
   const refreshUser = () => {
     checkUser();

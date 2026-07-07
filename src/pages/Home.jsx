@@ -70,7 +70,7 @@ var HOME_CATEGORIES = [
     label: 'Electronics',
     icon: Tv,
     link: createPageUrl('Shop?category=electronic_appliances'),
-    image: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=400&q=90',
+    image: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=200&q=60',
     match: function(p) { return ['electronic_appliances','smart_watches'].includes(p.category); },
     brands: CATEGORY_BRANDS.electronics,
     chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100',

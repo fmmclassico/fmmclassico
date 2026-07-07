@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from "rome_categoryeact";
 import { Link } from "react-router-dom";
 import { supabase } from '@/lib/supabase';
 import { Button } from "@/components/ui/button";
@@ -48,22 +48,30 @@ export default function Login() {
   };
 
   const handleGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin + getReturnUrl(),
+  await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: window.location.origin + getReturnUrl(),
+      queryParams: {
+        prompt: 'select_account',
       },
-    });
-  };
+    },
+  });
+};
+
 
   const handleFacebook = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "facebook",
-      options: {
-        redirectTo: window.location.origin + getReturnUrl(),
+  await supabase.auth.signInWithOAuth({
+    provider: "facebook",
+    options: {
+      redirectTo: window.location.origin + getReturnUrl(),
+      queryParams: {
+        auth_type: 'reauthenticate',
       },
-    });
-  };
+    },
+  });
+};
+
 
   return (
     <AuthLayout

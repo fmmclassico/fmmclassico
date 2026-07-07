@@ -427,13 +427,7 @@ export default function Layout({ children, currentPageName }) {
                     </Link>
                   ))}
                   <div className="border-t my-4" />
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 px-6 py-3 w-full hover:bg-red-50 text-red-600 transition-colors"
-                  >
-                    <LogOut className="h-5 w-5" />
-                    <span className="font-medium">Logout</span>
-                  </button>
+               
                 </div>
               </SheetContent>
             </Sheet>

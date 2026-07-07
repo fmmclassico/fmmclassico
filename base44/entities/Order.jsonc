@@ -22,11 +22,7 @@
     },
     "total_amount": {
       "type": "number",
-      "description": "Amount actually charged to Hubtel (what customer pays now)"
-    },
-    "subtotal_amount": {
-      "type": "number",
-      "description": "Full product subtotal before any payment method adjustments"
+      "description": "Total order amount charged to Hubtel"
     },
     "delivery_fee": {
       "type": "number",
@@ -34,43 +30,37 @@
     },
     "balance_due": {
       "type": "number",
-      "description": "Remaining amount to be paid on delivery (0 for full payment)"
+      "description": "Amount to be paid on delivery (0 for full payment)"
     },
     "payment_method": {
       "type": "string",
       "enum": ["full_payment", "deposit_balance", "pay_on_delivery"],
-      "description": "Payment method chosen by customer. full_payment = paid everything online. deposit_balance = half product paid, rest on delivery. pay_on_delivery = only delivery fee paid, product payment on delivery."
+      "description": "Payment method chosen at checkout"
     },
     "delivery_zone": {
       "type": "string",
-      "description": "Selected delivery zone ID"
+      "description": "Delivery zone selected"
     },
     "payment_status": {
       "type": "string",
       "enum": ["pending_payment", "paid", "failed", "cancelled", "refunded"],
       "default": "pending_payment",
-      "description": "Payment status. For full_payment: paid means fully paid. For deposit_balance: paid means deposit was paid. For pay_on_delivery: paid means delivery fee was paid but product payment is still pending on delivery."
+      "description": "Payment status. Initially pending_payment - update to 'paid' when payment is confirmed."
     },
     "status": {
       "type": "string",
       "enum": ["confirmed", "processing", "packed", "shipped", "out_for_delivery", "delivered", "cancelled", "returned"],
       "default": "confirmed",
-      "description": "Fulfillment status."
+      "description": "Fulfillment status. IMPORTANT: Do NOT change to 'processing' unless payment_status is 'paid'. Check BOTH payment_status AND status before fulfilling orders."
     },
     "customer_name": { "type": "string" },
     "customer_email": { "type": "string" },
     "customer_phone": { "type": "string" },
     "delivery_address": { "type": "string" },
     "city": { "type": "string" },
-    "map_location": {
-      "type": "string",
-      "description": "Google Maps GPS link for delivery location"
-    },
+    "map_location": { "type": "string", "description": "GPS link" },
     "notes": { "type": "string" },
-    "estimated_delivery": {
-      "type": "string",
-      "format": "date"
-    },
+    "estimated_delivery": { "type": "string", "format": "date" },
     "tracking_updates": {
       "type": "array",
       "items": {
@@ -82,28 +72,11 @@
         }
       }
     },
-    "hubtel_transaction_id": {
-      "type": "string",
-      "description": "(Deprecated - for legacy reference only)"
-    },
-    "hubtel_status": {
-      "type": "string",
-      "enum": ["initiated", "pending", "successful", "failed"],
-      "default": "initiated",
-      "description": "(Deprecated - for legacy reference only)"
-    },
-    "payment_reference": {
-      "type": "string",
-      "description": "(Deprecated - for legacy reference only)"
-    }
+    "hubtel_transaction_id": { "type": "string", "description": "(Deprecated)" },
+    "hubtel_status": { "type": "string", "enum": ["initiated", "pending", "successful", "failed"], "default": "initiated", "description": "(Deprecated)" },
+    "payment_reference": { "type": "string", "description": "(Deprecated)" }
   },
-  "required": [
-    "items",
-    "total_amount",
-    "customer_name",
-    "customer_email",
-    "delivery_address"
-  ],
+  "required": ["items", "total_amount", "customer_name", "customer_email", "delivery_address"],
   "rls": {
     "create": {
       "$or": [
@@ -117,11 +90,7 @@
         { "user_condition": { "role": "admin" } }
       ]
     },
-    "update": {
-      "user_condition": { "role": "admin" }
-    },
-    "delete": {
-      "user_condition": { "role": "admin" }
-    }
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
   }
 }

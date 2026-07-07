@@ -48,8 +48,8 @@ var CATEGORY_BRANDS = {
 var HOME_CATEGORIES = [
   { id: 'phones', label: 'Phones', icon: Smartphone, link: createPageUrl('Shop?category=phones'), image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400', match: function(p) { return p.category === 'phones'; }, brands: CATEGORY_BRANDS.phones, chipColor: 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100' },
   { id: 'phone_accessories', label: 'Phone Accessories', icon: Headphones, link: createPageUrl('Shop?category=phone_cases'), image: 'https://mate.net.in/public/uploads/all/UsReqZvujmEjMUb27qlTtRcCG8Pf18SyULO4HW7U.jpg', match: function(p) { return ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category); }, brands: CATEGORY_BRANDS.phone_accessories, chipColor: 'text-[#0093A6] bg-[#0093A6]/5 border-[#0093A6]/30 hover:bg-[#0093A6]/10' },
-  { id: 'electronics', label: 'Electronics', icon: Tv, link: createPageUrl('Shop?category=electronic_appliances'), image: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=200&q=60', match: function(p) { return ['electronic_appliances','smart_watches'].includes(p.category); }, brands: CATEGORY_BRANDS.electronics, chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100' },
-  { id: 'home_appliances', label: 'Home Appliances', icon: HomeIcon, link: createPageUrl('Shop?category=home_appliances'), image: '', match: function(p) { return p.category === 'home_appliances'; }, brands: CATEGORY_BRANDS.home_appliances, chipColor: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100' },
+  { id: 'electronics', label: 'Electronics', icon: Tv, link: createPageUrl('Shop?category=electronic_appliances'), image: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=160&q=50', match: function(p) { return ['electronic_appliances','smart_watches'].includes(p.category); }, brands: CATEGORY_BRANDS.electronics, chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100' },
+  { id: 'home_appliances', label: 'Home Appliances', icon: HomeIcon, link: createPageUrl('Shop?category=home_appliances'), image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=160&q=50' , match: function(p) { return p.category === 'home_appliances'; }, brands: CATEGORY_BRANDS.home_appliances, chipColor: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100' },
 ];
 
 export default function GuestHome() {
@@ -103,7 +103,7 @@ export default function GuestHome() {
         <div className="grid grid-cols-4 gap-3">
           {HOME_CATEGORIES.map(function(cat) {
             var adminImg = settings.find(function(s) { return s.key === 'cat_img_' + cat.id; })?.value;
-            var displayImg = adminImg || cat.image || (products.find(cat.match) || {}).image_url;
+            var displayImg = adminImg || cat.image;
             return (
               <button key={cat.id} onClick={function() { setExpandedCat(expandedCat === cat.id ? null : cat.id); }} className="flex flex-col items-center gap-2 group">
                 <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-200 shadow-sm border border-gray-100">

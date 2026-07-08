@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Package, CheckCircle2, Truck, MapPin, XCircle, Trash2, Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/AuthContext';
 
 var statusConfig = {
   confirmed: { color: 'bg-blue-100 text-blue-800', label: 'Confirmed' },
@@ -44,8 +45,7 @@ function getPaymentBadge(order) {
 }
 
 export default function Orders() {
-  var [user, setUser] = useState(null);
-  var [authChecked, setAuthChecked] = useState(false);
+  const { user, isAuthenticated, navigateToLogin } = useAuth();
   var [selectedOrders, setSelectedOrders] = useState([]);
   var [cancellingOrder, setCancellingOrder] = useState(null);
   var [cancelReason, setCancelReason] = useState('');
@@ -54,24 +54,15 @@ export default function Orders() {
   var navigate = useNavigate();
   var queryClient = useQueryClient();
 
-  // Payment verification state
   var [isVerifying, setIsVerifying] = useState(false);
   var [verificationDone, setVerificationDone] = useState(false);
 
-  // Auth check with retry (prevents homepage flash)
+  // Redirect if not logged in
   useEffect(function() {
-    var attempts = 0;
-    function checkAuth() {
-      base44.auth.me()
-        .then(function(userData) { setUser(userData); setAuthChecked(true); })
-        .catch(function() {
-          attempts++;
-          if (attempts < 3) { setTimeout(checkAuth, 800); }
-          else { setAuthChecked(true); base44.auth.redirectToLogin(createPageUrl('Home')); }
-        });
+    if (!isAuthenticated && user === null) {
+      navigateToLogin();
     }
-    checkAuth();
-  }, []);
+  }, [isAuthenticated, user]);
 
   // Payment verification after Hubtel redirect
   useEffect(function() {
@@ -81,10 +72,8 @@ export default function Orders() {
 
     if (!orderNumber) { setVerificationDone(true); return; }
 
-    // Show verification screen
     setIsVerifying(true);
 
-    // Give callback a moment to process, then check
     setTimeout(function() {
       checkPaymentStatus(orderNumber)
         .then(function(result) {
@@ -92,7 +81,6 @@ export default function Orders() {
           var isPaid = hubtelStatus.toLowerCase() === 'paid' || hubtelStatus.toLowerCase() === 'success';
 
           if (isPaid || status === 'success') {
-            // Payment successful - clear cart
             base44.entities.CartItem.filter({ user_email: user.email }).then(function(items) {
               var arr = Array.isArray(items) ? items : Array.isArray(items?.data) ? items.data : [];
               arr.forEach(function(item) { base44.entities.CartItem.delete(item.id).catch(function() {}); });
@@ -105,18 +93,13 @@ export default function Orders() {
             setIsVerifying(false);
             setVerificationDone(true);
           } else {
-            // Payment failed or cancelled
             toast.error('Payment failed. Please crosscheck payment again. If your amount was deducted, contact Hubtel to verify.');
             setIsVerifying(false);
             setVerificationDone(true);
-            // Redirect to cart after short delay
-            setTimeout(function() {
-              navigate(createPageUrl('Cart'));
-            }, 3000);
+            setTimeout(function() { navigate(createPageUrl('Cart')); }, 3000);
           }
         })
         .catch(function() {
-          // If status check fails, check the URL status param
           if (status === 'success') {
             base44.entities.CartItem.filter({ user_email: user.email }).then(function(items) {
               var arr = Array.isArray(items) ? items : Array.isArray(items?.data) ? items.data : [];
@@ -134,15 +117,36 @@ export default function Orders() {
             setTimeout(function() { navigate(createPageUrl('Cart')); }, 3000);
           }
         });
-    }, 2000); // Wait 2s for callback to process
+    }, 2000);
   }, [user, searchParams, verificationDone, queryClient, navigate]);
 
   var { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', user?.email],
-    queryFn: function() { return base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 200); },
+    queryFn: async function() {
+      try {
+        var result = await base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 200);
+        return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
+      } catch (err) {
+        console.error('Failed to load orders:', err);
+        return [];
+      }
+    },
     enabled: !!user?.email && verificationDone,
-    staleTime: 15000,
+    staleTime: 3000,
+    refetchInterval: 3000,
+    refetchOnWindowFocus: true,
   });
+
+  // REAL-TIME: Auto-refresh when admin updates orders
+  useEffect(function() {
+    if (!user?.email) return;
+    var unsubscribe = base44.entities.Order.subscribe(function(event) {
+      if (event.data?.customer_email === user.email) {
+        queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+      }
+    });
+    return unsubscribe;
+  }, [user?.email, queryClient]);
 
   var deleteOrdersMutation = useMutation({
     mutationFn: async function(orderIds) { await Promise.all(orderIds.map(function(id) { return base44.entities.Order.delete(id); })); },
@@ -162,16 +166,10 @@ export default function Orders() {
   var handleSelectAll = function() { setSelectedOrders(function(p) { return p.length === orders.length ? [] : orders.map(function(o) { return o.id; }); }); };
   var handleDeleteSelected = function() { if (selectedOrders.length === 0) return; if (confirm('Delete ' + selectedOrders.length + ' order(s)?')) deleteOrdersMutation.mutate(selectedOrders); };
 
-  // Loading while auth checking
-  if (!authChecked) {
-    return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
-  }
-
   if (!user) {
     return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
   }
 
-  // ========== GREEN VERIFICATION SCREEN ==========
   if (isVerifying) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 p-6">
@@ -256,6 +254,9 @@ export default function Orders() {
               ];
             }
 
+            // Only show est. delivery if admin has actually set it
+            var hasEstDelivery = order.estimated_delivery && order.estimated_delivery.length > 4 && !order.estimated_delivery.startsWith('1970') && !order.estimated_delivery.startsWith('0001');
+
             return (
               <Card key={order.id} className={'p-4 bg-white ' + (isSelected ? 'ring-2 ring-blue-400' : '')}>
                 <div className="flex items-start justify-between mb-2">
@@ -302,11 +303,12 @@ export default function Orders() {
                 </div>
 
                 <div className="border-t border-gray-100 pt-2">
-                  <p className="text-xs text-gray-600">📍 {order.delivery_address}</p>
-                  <p className="text-xs text-gray-500 mt-1">📅 Est. delivery: {order.estimated_delivery && order.estimated_delivery.length > 4 && !order.estimated_delivery.startsWith('1970') ? format(new Date(order.estimated_delivery), 'MMM d, yyyy') : '—'}</p>
+                  <p className="text-xs text-gray-600">{order.delivery_address ? '📍 ' + order.delivery_address : ''}</p>
+                  {hasEstDelivery && (
+                    <p className="text-xs text-gray-500 mt-1">📅 Est. delivery: {format(new Date(order.estimated_delivery), 'MMM d, yyyy')}</p>
+                  )}
                   <div className="flex gap-3 mt-3">
                     <Link to={createPageUrl('OrderTracking') + '?id=' + order.id} className="text-xs text-blue-600 font-semibold">Track Order</Link>
-
                     {CANCELLABLE_STATUSES.includes(order.status) && (
                       <button onClick={function() { setCancellingOrder(order); setCancelReason(''); }} className="text-xs text-red-600 font-semibold">Cancel Order</button>
                     )}

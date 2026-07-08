@@ -37,7 +37,6 @@ export default function AdminInvoice() {
     enabled: isAuthenticated && isAdmin,
   });
 
-  // Auto-select order from URL param
   useEffect(() => {
     if (orders.length > 0) {
       const params = new URLSearchParams(window.location.search);
@@ -83,8 +82,7 @@ export default function AdminInvoice() {
     const printContent = invoiceRef.current?.innerHTML;
     const win = window.open('', '_blank');
     win.document.write(`
-      <html>
-      <head>
+      <html><head>
       <title>Invoice - ${selectedOrder.order_number} - FMM CLASSICO</title>
       <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -92,8 +90,7 @@ export default function AdminInvoice() {
       table { width: 100%; border-collapse: collapse; }
       @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
       </style>
-      </head>
-      <body>
+      </head><body>
       <div>${printContent}</div>
       </body></html>
     `);
@@ -208,11 +205,7 @@ export default function AdminInvoice() {
           </div>
           {selectedInvoices.length > 0 && (
             <div className="flex items-center gap-2">
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDeleteSelected}
-              >
+              <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
                 <Trash2 className="h-4 w-4 mr-1" />
                 Delete {selectedInvoices.length} Selected
               </Button>
@@ -245,9 +238,7 @@ export default function AdminInvoice() {
                 <p className="text-sm text-gray-600 mt-1">{order.customer_name}</p>
                 <div className="flex items-center justify-between mt-1">
                   <span className="text-sm font-bold">₵{order.total_amount?.toFixed(2)}</span>
-                  <Badge variant="outline" className="text-xs">
-                    {order.status}
-                  </Badge>
+                  <Badge variant="outline" className="text-xs">{order.status}</Badge>
                 </div>
               </Card>
             ))}
@@ -263,19 +254,15 @@ export default function AdminInvoice() {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Action Buttons */}
               <div className="flex gap-2 flex-wrap">
                 <Button onClick={handlePrint} variant="outline" size="sm">
-                  <Printer className="h-4 w-4 mr-1" />
-                  Print Invoice
+                  <Printer className="h-4 w-4 mr-1" /> Print Invoice
                 </Button>
                 <Button onClick={handleSendEmail} disabled={sendingEmail} size="sm">
                   <Mail className="h-4 w-4 mr-1" />
                   {sendingEmail ? 'Sending...' : 'Email to Customer'}
                 </Button>
               </div>
-
-              {/* Invoice Preview Box */}
               <div className="border rounded-lg p-4 bg-white shadow-sm" ref={invoiceRef}>
                 <InvoiceTemplate order={selectedOrder} />
               </div>

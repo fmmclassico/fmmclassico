@@ -110,15 +110,14 @@ export default function Layout({ children, currentPageName }) {
   };
 
   // LOGOUT: clears session and returns user to Guest Homepage (not /login)
-  const handleLogout = async () => {
+   const handleLogout = async () => {
     try {
-      logout();
+      queryClient.clear();
+      await logout();
     } catch (e) {
       console.error('Logout failed', e);
+      window.location.href = '/';
     }
-    queryClient.clear();
-    navigate('/');
-    window.location.reload(); // force clean state
   };
 
   // Redirect guest to login, saving where they came from

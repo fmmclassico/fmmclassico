@@ -101,22 +101,20 @@ export default function GuestHome() {
           <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center hover:underline">All <ChevronRight className="h-3 w-3" /></Link>
         </div>
         <div className="grid grid-cols-4 gap-3">
-          {HOME_CATEGORIES.map(function(cat) {
-            var adminImg = settings.find(function(s) { return s.key === 'cat_img_' + cat.id; })?.value;
-            var displayImg = adminImg || cat.image;
-            return (
-              <button key={cat.id} onClick={function() { setExpandedCat(expandedCat === cat.id ? null : cat.id); }} className="flex flex-col items-center gap-2 group">
-                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-200 shadow-sm border border-gray-100">
-                  {displayImg ? (
-                    <img src={displayImg} alt={cat.label} className="w-full h-full object-cover" loading="eager" onError={function(e) { e.target.style.display='none'; }} />
-                  ) : (
-                    <div className="w-full h-full bg-gray-200 animate-pulse" />
-                  )}
-                </div>
-                <span className="text-xs md:text-sm font-bold text-gray-800 text-center leading-tight">{cat.label}</span>
-              </button>
-            );
-          })}
+          {HOME_CATEGORIES.map(cat => {
+  const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
+  const isExpanded = expandedCat === cat.id;
+  return (
+    <div key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
+      <div className={`w-20 h-20 rounded-2xl ${cat.color} flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform`}>
+        {adminImg
+          ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
+          : null}
+      </div>
+      <span className="text-xs font-medium text-gray-700 text-center">{cat.label}</span>
+    </div>
+  );
+})}
         </div>
         {expandedCat && (function() {
           var cat = HOME_CATEGORIES.find(function(c) { return c.id === expandedCat; });

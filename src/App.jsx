@@ -52,9 +52,6 @@ const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : () => null;
 
-/**
- * PAGES THAT REQUIRE LOGIN
- */
 const PROTECTED_ROUTES = new Set([
   'Checkout',
   'Account',
@@ -63,8 +60,6 @@ const PROTECTED_ROUTES = new Set([
   'Notifications',
   'Settings',
   'Chat',
-
-  // ADMIN PAGES
   'AdminReviews',
   'AdminProducts',
   'AdminCategoryImages',
@@ -85,12 +80,8 @@ const PROTECTED_ROUTES = new Set([
   'AdminMessages'
 ]);
 
-/**
- * Layout wrapper
- */
 const LayoutWrapper = ({ children, currentPageName, isAuthenticated }) => {
   const SelectedLayout = isAuthenticated ? Layout : GuestLayout;
-
   return SelectedLayout ? (
     <SelectedLayout currentPageName={currentPageName}>
       {children}
@@ -100,15 +91,7 @@ const LayoutWrapper = ({ children, currentPageName, isAuthenticated }) => {
   );
 };
 
-/**
- * Protected route wrapper
- */
-const ProtectedLayout = ({
-  children,
-  currentPageName,
-  isAuthenticated,
-  navigateToLogin
-}) => {
+const ProtectedLayout = ({ children, currentPageName, isAuthenticated, navigateToLogin }) => {
   React.useEffect(() => {
     if (!isAuthenticated) {
       navigateToLogin();
@@ -124,9 +107,6 @@ const ProtectedLayout = ({
   );
 };
 
-/**
- * MAIN APP ROUTER
- */
 const AuthenticatedApp = () => {
   const {
     isLoadingAuth,
@@ -142,7 +122,6 @@ const AuthenticatedApp = () => {
   const isAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password']
     .includes(location.pathname.toLowerCase());
 
-  // AUTH PAGES (safe render during loading)
   if (isLoadingAuth && isAuthRoute) {
     return (
       <Routes>
@@ -154,7 +133,7 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // LOADING SCREEN - prevents guest homepage flash on refresh
+  // Full-screen loading prevents guest homepage flash on refresh
   if (isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-white z-[9999]">
@@ -166,7 +145,6 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // AUTH ERROR HANDLING
   if (authError?.type === 'user_not_registered') {
     return <UserNotRegisteredError />;
   }
@@ -189,7 +167,6 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
-
       {/* HOME */}
       <Route
         path="/"
@@ -213,139 +190,84 @@ const AuthenticatedApp = () => {
       <Route path="/BrandProducts" element={<LayoutWrapper currentPageName="BrandProducts" isAuthenticated={isAuthenticated}><BrandProducts /></LayoutWrapper>} />
 
       {/* AUTH PAGES */}
-      <Route
-        path="/login"
-        element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
-      />
-      <Route
-        path="/register"
-        element={isAuthenticated ? <Navigate to="/" replace /> : <Register />}
-      />
+      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* ADMIN PAGES (EXPLICIT SAFE ROUTES) */}
-      <Route
-        path="/AdminReviews"
-        element={
-          <ProtectedLayout currentPageName="AdminReviews" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminReviews />
-          </ProtectedLayout>
-        }
-      />
+      {/* REDIRECT: /Invoices -> /AdminInvoice (fixes 404) */}
+      <Route path="/Invoices" element={<Navigate to="/AdminInvoice" replace />} />
 
-      <Route
-        path="/AdminProducts"
-        element={
-          <ProtectedLayout currentPageName="AdminProducts" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminProducts />
-          </ProtectedLayout>
-        }
-      />
-
-      <Route
-        path="/AdminCategoryImages"
-        element={
-          <ProtectedLayout currentPageName="AdminCategoryImages" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminCategoryImages />
-          </ProtectedLayout>
-        }
-      />
-
-      <Route
-        path="/AdminAI"
-        element={
-          <ProtectedLayout currentPageName="AdminAI" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminAI />
-          </ProtectedLayout>
-        }
-      />
-
-      <Route
-        path="/AdminPromoBanners2"
-        element={
-          <ProtectedLayout currentPageName="AdminPromoBanners2" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminPromoBanners2 />
-          </ProtectedLayout>
-        }
-      />
-
-      <Route
-        path="/AdminBrandLogos"
-        element={
-          <ProtectedLayout currentPageName="AdminBrandLogos" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminBrandLogos />
-          </ProtectedLayout>
-        }
-      />
-
-      <Route
-        path="/AdminAbout"
-        element={
-          <ProtectedLayout currentPageName="AdminAbout" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminAbout />
-          </ProtectedLayout>
-        }
-      />
-
-      <Route
-        path="/AdminPageContent"
-        element={
-          <ProtectedLayout currentPageName="AdminPageContent" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminPageContent />
-          </ProtectedLayout>
-        }
-      />
-
-      <Route
-        path="/AdminHomeEditor"
-        element={
-          <ProtectedLayout currentPageName="AdminHomeEditor" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminHomeEditor />
-          </ProtectedLayout>
-        }
-      />
-
-      <Route
-        path="/AdminInterfaceControl"
-        element={
-          <ProtectedLayout currentPageName="AdminInterfaceControl" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminInterfaceControl />
-          </ProtectedLayout>
-        }
-      />
-
-      <Route
-        path="/AdminAccessControl"
-        element={
-          <ProtectedLayout currentPageName="AdminAccessControl" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminAccessControl />
-          </ProtectedLayout>
-        }
-      />
-
-      <Route
-        path="/AdminContactSettings"
-        element={
-          <ProtectedLayout currentPageName="AdminContactSettings" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminContactSettings />
-          </ProtectedLayout>
-        }
-      />
-
-      <Route
-        path="/AdminInvoice"
-        element={
-          <ProtectedLayout currentPageName="AdminInvoice" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
-            <AdminInvoice />
-          </ProtectedLayout>
-        }
-      />
+      {/* ADMIN EXPLICIT ROUTES */}
+      <Route path="/AdminInvoice" element={
+        <ProtectedLayout currentPageName="AdminInvoice" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminInvoice />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminReviews" element={
+        <ProtectedLayout currentPageName="AdminReviews" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminReviews />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminProducts" element={
+        <ProtectedLayout currentPageName="AdminProducts" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminProducts />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminCategoryImages" element={
+        <ProtectedLayout currentPageName="AdminCategoryImages" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminCategoryImages />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminAI" element={
+        <ProtectedLayout currentPageName="AdminAI" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminAI />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminPromoBanners2" element={
+        <ProtectedLayout currentPageName="AdminPromoBanners2" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminPromoBanners2 />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminBrandLogos" element={
+        <ProtectedLayout currentPageName="AdminBrandLogos" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminBrandLogos />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminAbout" element={
+        <ProtectedLayout currentPageName="AdminAbout" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminAbout />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminPageContent" element={
+        <ProtectedLayout currentPageName="AdminPageContent" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminPageContent />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminHomeEditor" element={
+        <ProtectedLayout currentPageName="AdminHomeEditor" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminHomeEditor />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminInterfaceControl" element={
+        <ProtectedLayout currentPageName="AdminInterfaceControl" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminInterfaceControl />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminAccessControl" element={
+        <ProtectedLayout currentPageName="AdminAccessControl" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminAccessControl />
+        </ProtectedLayout>
+      } />
+      <Route path="/AdminContactSettings" element={
+        <ProtectedLayout currentPageName="AdminContactSettings" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <AdminContactSettings />
+        </ProtectedLayout>
+      } />
 
       {/* DYNAMIC PAGES */}
       {Object.entries(Pages).map(([path, Page]) => {
         const isProtected = PROTECTED_ROUTES.has(path);
-
         return (
           <Route
             key={path}
@@ -371,9 +293,6 @@ const AuthenticatedApp = () => {
   );
 };
 
-/**
- * ROOT APP
- */
 export default function App() {
   return (
     <QueryClientProvider client={queryClientInstance}>

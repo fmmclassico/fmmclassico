@@ -137,12 +137,34 @@ export default function Orders() {
     }, 2000); // Wait 2s for callback to process
   }, [user, searchParams, verificationDone, queryClient, navigate]);
 
-  var { data: orders = [], isLoading } = useQuery({
+  const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', user?.email],
-    queryFn: function() { return base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 200); },
-    enabled: !!user?.email && verificationDone,
-    staleTime: 15000,
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 200);
+        return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
+      } catch (err) {
+        console.error('Failed to load orders:', err);
+        return [];
+      }
+    },
+    enabled: !!user?.email,
+    staleTime: 10000,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+    gcTime: 5 * 60 * 1000,
   });
+
+  // REAL-TIME: Auto-refresh orders when admin updates them
+  useEffect(() => {
+    if (!user?.email) return;
+    const unsubscribe = base44.entities.Order.subscribe((event) => {
+      if (event.data?.customer_email === user.email) {
+        queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+      }
+    });
+    return unsubscribe;
+  }, [user?.email, queryClient]);
 
   var deleteOrdersMutation = useMutation({
     mutationFn: async function(orderIds) { await Promise.all(orderIds.map(function(id) { return base44.entities.Order.delete(id); })); },

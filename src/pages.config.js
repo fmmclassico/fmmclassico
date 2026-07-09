@@ -1,3 +1,4 @@
+import AllBrands from './pages/AllBrands';
 import About from './pages/About';
 import AdminBanners from './pages/AdminBanners';
 import AdminBroadcast from './pages/AdminBroadcast';
@@ -30,6 +31,7 @@ export const PAGES = {
   "AdminOrders": AdminOrders,
   "AdminSMSBroadcast": AdminSMSBroadcast,
   "Cart": Cart,
+  "AllBrands": AllBrands,
   "Categories": Categories,
   "Chat": Chat,
   "Checkout": Checkout,

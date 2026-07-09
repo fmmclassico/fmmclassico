@@ -3,12 +3,10 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { createPageUrl } from '../utils';
-import { ChevronRight, ShoppingBag } from 'lucide-react';
+import { ChevronRight, ShoppingBag, Filter, X } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import ProductCard from '../components/products/ProductCard';
+import { Button } from "@/components/ui/button";
 
-// Full product sub-type labels per category
 const CATEGORY_LABELS = {
   phones: 'Phones',
   phone_cases: 'Phone Cases',
@@ -24,173 +22,224 @@ const CATEGORY_LABELS = {
   home_appliances: 'Home Appliances',
 };
 
-// ─── STRICT CATEGORY ISOLATION ───────────────────────────────────────────────
-// BRAND_PRIMARY_CATEGORIES defines the ONLY categories a brand may show
-// when NO ?category param is in the URL.  This prevents Samsung's TVs from
-// appearing when the user browses Samsung Phones, for example.
-// The ?category URL param always overrides and narrows to a single category.
-
-const BRAND_PRIMARY_CATEGORIES = {
-  // Phone-only brands
-  Apple:   ['phones', 'phone_cases'],
-  Samsung: ['phones', 'phone_cases', 'chargers', 'earphones'],
-  Tecno:   ['phones'],
-  Infinix: ['phones'],
-  Itel:    ['phones'],
-  // Phone-accessories-only brands
-  Oraimo:  ['earphones', 'chargers', 'power_banks', 'cables', 'smart_watches', 'speakers'],
-  JBL:     ['speakers', 'earphones'],
-  Sony:    ['earphones', 'speakers'],
-  // Electronics-only brands
-  TCL:     ['electronic_appliances'],
-  Hisense: ['electronic_appliances', 'home_appliances'],
-  LG:      ['electronic_appliances', 'home_appliances'],
-  Midea:   ['electronic_appliances', 'home_appliances'],
-  // Home-appliances-only brands
-  Roch:         ['home_appliances'],
-  'Silver Crest': ['home_appliances'],
-  Nasco:        ['home_appliances'],
-  Hoffman:      ['home_appliances'],
-};
-
-
+const CATEGORY_GROUPS = [
+  { label: 'All', value: '' },
+  { label: 'Phones', value: 'phones' },
+  { label: 'Phone Accessories', values: ['phone_cases', 'chargers', 'earphones', 'cables', 'power_banks', 'screen_protectors', 'holders', 'speakers'] },
+  { label: 'Electronics', values: ['electronic_appliances', 'smart_watches'] },
+  { label: 'Home Appliances', value: 'home_appliances' },
+];
 
 export default function BrandProducts() {
   const [searchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState('newest');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
   const brand = searchParams.get('brand');
-  const category = searchParams.get('category');
+  const urlCategory = searchParams.get('category');
 
   const { data: allProducts = [], isLoading } = useQuery({
     queryKey: ['products'],
-    queryFn: () => base44.entities.Product.list('-created_date', 200),
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.Product.list('-created_date', 200);
+        return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
+      } catch (e) { return []; }
+    },
     staleTime: 2 * 60 * 1000,
   });
 
-  // STRICT category isolation:
-  // 1. If ?category is in URL → show ONLY that exact category.
-  // 2. If no ?category → show only categories in BRAND_PRIMARY_CATEGORIES for this brand.
-  //    This prevents Samsung's TVs appearing when browsing Samsung Phones.
-  const allowedCats = BRAND_PRIMARY_CATEGORIES[brand] || [];
+  const { data: appSettings = [] } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.AppSetting.list();
+        return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
+      } catch (e) { return []; }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-  let brandProducts = allProducts.filter(p => {
+  const settings = Array.isArray(appSettings) ? appSettings : [];
+  const safeProducts = Array.isArray(allProducts) ? allProducts : [];
+
+  // Filter products for this brand
+  const activeCategory = urlCategory || categoryFilter;
+
+  let brandProducts = safeProducts.filter(p => {
     if (p.is_visible === false) return false;
     if (p.stock != null && p.stock === 0) return false;
     const matchBrand = p.brand?.toLowerCase() === brand?.toLowerCase();
-    const matchCat = category
-      ? p.category === category
-      : allowedCats.length === 0 || allowedCats.includes(p.category);
-    return matchBrand && matchCat;
+    if (!matchBrand) return false;
+
+    if (activeCategory) {
+      // Check if it's a group filter
+      const group = CATEGORY_GROUPS.find(g => g.label.toLowerCase().replace(/ /g, '_') === activeCategory || g.value === activeCategory);
+      if (group && group.values) {
+        return group.values.includes(p.category);
+      }
+      return p.category === activeCategory;
+    }
+    return true;
   });
 
   // Sort
   if (sortBy === 'price_low') brandProducts = [...brandProducts].sort((a, b) => a.price - b.price);
   else if (sortBy === 'price_high') brandProducts = [...brandProducts].sort((a, b) => b.price - a.price);
+  else brandProducts = [...brandProducts].sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
 
-  const categories = [...new Set(brandProducts.map(p => p.category))].filter(Boolean);
+  // Get available categories for this brand
+  const availableCategories = [...new Set(safeProducts.filter(p => p.brand?.toLowerCase() === brand?.toLowerCase() && p.is_visible !== false).map(p => p.category))].filter(Boolean);
+
+  // Brand logo
+  const uploadedLogo = settings.find(s => s.key === `brand_logo_${brand?.toLowerCase().replace(/ /g, '_')}`)?.value;
 
   if (!brand) {
-    return <div className="container mx-auto px-4 py-12 text-center text-gray-500">No brand specified.</div>;
+    return <div className="p-8 text-center text-gray-500">No brand specified.</div>;
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-5xl">
+    <div className="min-h-screen bg-gray-50 pb-24">
+      <div className="max-w-4xl mx-auto px-4 pt-6">
 
-      {/* Header */}
-      <div className="flex items-start justify-between mb-5 gap-3">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-gray-900">{brand}</h1>
-
+        {/* Brand Header */}
+        <div className="flex items-center gap-4 mb-5">
+          {uploadedLogo && (
+            <div className="w-14 h-14 rounded-xl bg-white border flex items-center justify-center p-2">
+              <img src={uploadedLogo} alt={brand} className="w-10 h-10 object-contain" />
+            </div>
+          )}
+          <div className="flex-1">
+            <h1 className="text-xl font-bold text-gray-900">{brand}</h1>
+            <p className="text-xs text-gray-500">{brandProducts.length} product{brandProducts.length !== 1 ? 's' : ''} available</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
+            <Filter className="h-4 w-4 mr-1" /> Filter
+          </Button>
         </div>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-40 text-xs">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">Newest</SelectItem>
-            <SelectItem value="price_low">Price: Low to High</SelectItem>
-            <SelectItem value="price_high">Price: High to Low</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
 
-      {/* Category chips (shown when no category selected and brand has multiple allowed categories) */}
-      {!category && categories.length > 1 && (
-        <div className="mb-5">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Browse by Category</p>
-          <div className="flex flex-wrap gap-2">
-            {categories.map(cat => (
+        {/* Filter Bar */}
+        {showFilters && (
+          <div className="bg-white border rounded-xl p-4 mb-4 space-y-3">
+            {/* Category Filter */}
+            <div>
+              <p className="text-xs font-medium text-gray-600 mb-2">Category</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setCategoryFilter('')}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${!activeCategory ? 'bg-[#0A2E60] text-white border-[#0A2E60]' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                >
+                  All
+                </button>
+                {availableCategories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setCategoryFilter(cat)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${activeCategory === cat ? 'bg-[#0A2E60] text-white border-[#0A2E60]' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    {CATEGORY_LABELS[cat] || cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Price Sort */}
+            <div>
+              <p className="text-xs font-medium text-gray-600 mb-2">Sort by Price</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: 'Newest', value: 'newest' },
+                  { label: 'Price: Low to High', value: 'price_low' },
+                  { label: 'Price: High to Low', value: 'price_high' },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSortBy(opt.value)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${sortBy === opt.value ? 'bg-[#0A2E60] text-white border-[#0A2E60]' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {(activeCategory || sortBy !== 'newest') && (
+              <button onClick={() => { setCategoryFilter(''); setSortBy('newest'); }} className="text-xs text-red-500 flex items-center gap-1">
+                <X className="h-3 w-3" /> Clear all filters
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Active filter badge */}
+        {(activeCategory || sortBy !== 'newest') && !showFilters && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {activeCategory && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-[#0A2E60]/10 text-[#0A2E60] font-medium">
+                {CATEGORY_LABELS[activeCategory] || activeCategory}
+                <button onClick={() => setCategoryFilter('')} className="ml-1">×</button>
+              </span>
+            )}
+            {sortBy !== 'newest' && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
+                {sortBy === 'price_low' ? 'Low to High' : 'High to Low'}
+                <button onClick={() => setSortBy('newest')} className="ml-1">×</button>
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Products Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {Array(8).fill(0).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl overflow-hidden border">
+                <Skeleton className="h-36 w-full" />
+                <div className="p-3"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2 mt-2" /></div>
+              </div>
+            ))}
+          </div>
+        ) : brandProducts.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {brandProducts.map(product => (
               <Link
-                key={cat}
-                to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand)}&category=${cat}`)}
-                className="text-xs font-semibold px-3 py-1.5 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
+                key={product.id}
+                to={createPageUrl(`ProductDetail?id=${product.id}`)}
+                className="bg-white rounded-xl overflow-hidden border hover:shadow-md transition-shadow group"
               >
-                {CATEGORY_LABELS[cat] || cat}
+                <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+                  {product.image_url ? (
+                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  ) : (
+                    <ShoppingBag className="h-8 w-8 text-gray-300" />
+                  )}
+                </div>
+                <div className="p-3">
+                  <p className="text-xs font-medium text-gray-800 line-clamp-2">{product.name}</p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="text-sm font-bold text-[#0A2E60]">₵{product.price?.toLocaleString()}</span>
+                    {product.original_price > product.price && (
+                      <span className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</span>
+                    )}
+                  </div>
+                  {product.original_price > product.price && (
+                    <span className="text-[10px] text-red-500 font-medium">-{Math.round((1 - product.price / product.original_price) * 100)}% off</span>
+                  )}
+                </div>
               </Link>
             ))}
           </div>
-        </div>
-      )}
-
-
-
-
-
-      {/* Products */}
-      {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Array(8).fill(0).map((_, i) => (
-            <div key={i} className="space-y-2">
-              <Skeleton className="aspect-square rounded-xl" />
-              <Skeleton className="h-3 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-          ))}
-        </div>
-      ) : brandProducts.length > 0 ? (
-        !category && categories.length > 1 ? (
-          <div className="space-y-8">
-            {categories.map(cat => {
-              const catProducts = brandProducts.filter(p => p.category === cat);
-              return (
-                <div key={cat}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-black text-gray-800 text-base uppercase tracking-wide">{CATEGORY_LABELS[cat] || cat}</h2>
-                    <Link
-                      to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand)}&category=${cat}`)}
-                      className="text-xs text-blue-600 font-semibold flex items-center gap-0.5 hover:underline"
-                    >
-                      See all <ChevronRight className="h-3 w-3" />
-                    </Link>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {catProducts.slice(0, 4).map(product => (
-                      <ProductCard key={product.id} product={product} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {brandProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+          <div className="text-center py-16">
+            <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 font-medium">No {brand} products found</p>
+            <p className="text-sm text-gray-400 mt-1">{activeCategory ? 'Try removing the filter' : 'Check back soon'}</p>
+            {activeCategory && (
+              <button onClick={() => setCategoryFilter('')} className="mt-3 text-sm text-[#0A2E60] font-medium">Clear filter</button>
+            )}
           </div>
-        )
-      ) : (
-        <div className="text-center py-16">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-            <ShoppingBag className="h-8 w-8 text-gray-300" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-1">No {brand} products yet</h3>
-          <p className="text-gray-400 text-sm mb-4">Check back soon — new stock is added regularly.</p>
-          <Link to={createPageUrl('Shop')} className="text-blue-600 text-sm font-semibold hover:underline">
-            Browse all products
-          </Link>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

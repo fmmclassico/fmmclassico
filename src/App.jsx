@@ -64,7 +64,6 @@ const PROTECTED_ROUTES = new Set([
 
   // ADMIN PAGES
   'AdminReviews',
-  'AdminReviews',
   'AdminProducts',
   'AdminCategoryImages',
   'AdminAI',

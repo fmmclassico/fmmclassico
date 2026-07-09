@@ -54,34 +54,33 @@ export default function Chat() {
     }
   }, [messages]);
 
-  const callGroqAI = async (prompt) => {
+  const callGroqAI = async (systemMsg, userMsg, history) => {
     if (!GROQ_API_KEY) return '';
-
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + GROQ_API_KEY,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: prompt.system },
-          ...prompt.history,
-          { role: 'user', content: prompt.userMessage },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error('Groq API error:', response.status);
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: systemMsg },
+            ...history,
+            { role: 'user', content: userMsg },
+          ],
+          temperature: 0.7,
+          max_tokens: 500,
+        }),
+      });
+      if (!response.ok) return '';
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content || '';
+    } catch (err) {
+      console.error('Groq API error:', err);
       return '';
     }
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
   };
 
   const sendMessage = async (e) => {
@@ -101,84 +100,56 @@ export default function Chat() {
     setIsLoading(true);
 
     const safeProducts = Array.isArray(products) ? products : [];
-    const productCatalog = safeProducts.slice(0, 30).map(p => p.name + ' | GHS' + p.price + (p.original_price > p.price ? ' (was GHS' + p.original_price + ')' : '') + ' | ' + (p.category || '')).join('; ');
+    const productCatalog = safeProducts.slice(0, 30).map(p =>
+      `${p.name} | GHS${p.price}${p.original_price > p.price ? ` (was GHS${p.original_price})` : ''} | ${p.category || ''}`
+    ).join('; ');
 
     const recentHistory = messages.slice(-6).map(m => ({
       role: m.role === 'user' ? 'user' : 'assistant',
       content: m.content
     }));
 
-        const systemPrompt = 'You are a helpful, friendly AI shopping assistant for FMM CLASSICO, an online store in Ghana. You ONLY answer questions about FMM CLASSICO, its products, orders, delivery, and services. Do NOT answer questions unrelated to FMM CLASSICO. STORE INFO: Owner/CEO: Fedra Martha. Locations: UMAT Campus (Tarkwa) + Ashongman Estate, Accra (close to Awo Dede Purewater) + Airport Residential, Accra (at Libi Kraal). WhatsApp: 0208207543. Email: fmmclassico@gmail.com. Payments: Mobile Money, Bank Transfer. DELIVERY RATES: UMAT Campus Pickup/Meeting Point: FREE. UMAT Doorstep: GHS10. Tarkwa Station: GHS20. Tarkwa Doorstep (outside UMAT): GHS25. Ashongman/Airport Pickup: FREE. Within Accra delivery: GHS25. Yango delivery: customer pays Yango fee on arrival. Outside Accra/Tarkwa: GHS50. PRODUCTS AVAILABLE: ' + (productCatalog || 'Check our Shop page for all products') + '. RULES: Be concise, friendly, helpful. Keep answers short. If asked who made/owns the app: Fedra Martha, CEO of FMM CLASSICO. If you cannot help, suggest WhatsApp: 0208207543. For ordering: tell them to add items to cart and checkout on the website. Only answer questions about FMM CLASSICO. For anything else, politely say you can only help with FMM CLASSICO questions.';
-      '
+    const systemPrompt = `You are a helpful, friendly AI shopping assistant for FMM CLASSICO, an online store in Ghana. You ONLY answer questions about FMM CLASSICO, its products, orders, delivery, and services. Do NOT answer questions unrelated to FMM CLASSICO.
 
-STORE INFO:' +
-      '
-- Owner/CEO: Fedra Martha' +
-      '
-- Locations: UMAT Campus (Tarkwa) + Ashongman Estate, Accra (close to Awo Dede Purewater) + Airport Residential, Accra (at Libi Kraal)' +
-      '
-- WhatsApp: 0208207543' +
-      '
-- Email: fmmclassico@gmail.com' +
-      '
-- Payments: Mobile Money, Bank Transfer' +
-      '
+STORE INFO:
+- Owner/CEO: Fedra Martha
+- Locations: UMAT Campus (Tarkwa) + Ashongman Estate, Accra (close to Awo Dede Purewater) + Airport Residential, Accra (at Libi Kraal)
+- WhatsApp: 0208207543
+- Email: fmmclassico@gmail.com
+- Payments: Mobile Money, Bank Transfer
 
-DELIVERY RATES:' +
-      '
-- UMAT Campus Pickup/Meeting Point: FREE' +
-      '
-- UMAT Doorstep: GHS10' +
-      '
-- Tarkwa Station: GHS20' +
-      '
-- Tarkwa Doorstep (outside UMAT): GHS25' +
-      '
-- Ashongman/Airport Pickup: FREE' +
-      '
-- Within Accra delivery: GHS25' +
-      '
-- Yango delivery: customer pays Yango fee on arrival' +
-      '
-- Outside Accra/Tarkwa: GHS50' +
-      '
+DELIVERY RATES:
+- UMAT Campus Pickup/Meeting Point: FREE
+- UMAT Doorstep: GHS10
+- Tarkwa Station: GHS20
+- Tarkwa Doorstep (outside UMAT): GHS25
+- Ashongman/Airport Pickup: FREE
+- Within Accra delivery: GHS25
+- Yango delivery: customer pays Yango fee on arrival
+- Outside Accra/Tarkwa: GHS50
 
-PRODUCTS AVAILABLE: ' + (productCatalog || 'Check our Shop page for all products') +
-      '
+PRODUCTS AVAILABLE: ${productCatalog || 'Check our Shop page for all products'}
 
-RULES:' +
-      '
-- Be concise, friendly, helpful. Keep answers short.' +
-      '
-- If asked who made/owns the app: Fedra Martha, CEO of FMM CLASSICO' +
-      '
-- If you cannot help, suggest WhatsApp: 0208207543' +
-      '
-- For ordering: tell them to add items to cart and checkout on the website' +
-      '
-- Only answer questions about FMM CLASSICO. For anything else, politely say you can only help with FMM CLASSICO questions.';
+RULES:
+- Be concise, friendly, helpful. Keep answers short.
+- If asked who made/owns the app: Fedra Martha, CEO of FMM CLASSICO
+- If you cannot help, suggest WhatsApp: 0208207543
+- For ordering: tell them to add items to cart and checkout on the website
+- Only answer questions about FMM CLASSICO. For anything else, politely say you can only help with FMM CLASSICO questions.`;
 
     let assistantMessage = '';
 
-    try {
-      assistantMessage = await callGroqAI({
-        system: systemPrompt,
-        history: recentHistory,
-        userMessage: userMessage,
-      });
-    } catch (err) {
-      console.error('AI call failed:', err);
-    }
+    assistantMessage = await callGroqAI(systemPrompt, userMessage, recentHistory);
 
     if (!assistantMessage || assistantMessage.trim().length === 0) {
-      assistantMessage = "I'm having trouble right now. Here's how I can help:
+      assistantMessage = `I'm having trouble right now. Here's how I can help:
 
-• **Browse products**: Check our Shop page
-• **Place an order**: Add items to cart and checkout
-• **Track your order**: Go to My Orders
-• **Need help NOW?**: WhatsApp us at 0208207543
+- Browse products: Check our Shop page
+- Place an order: Add items to cart and checkout
+- Track your order: Go to My Orders
+- Need help NOW? WhatsApp us at 0208207543
 
-Try again or contact us directly!";
+Try again or contact us directly!`;
     }
 
     setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
@@ -206,7 +177,7 @@ Try again or contact us directly!";
             </div>
             <div>
               <h2 className="text-white font-semibold">Chat Support</h2>
-              <p className="text-white/70 text-xs">AI Assistant • Available 24/7</p>
+              <p className="text-white/70 text-xs">AI Assistant - Available 24/7</p>
             </div>
           </div>
         </div>
@@ -218,7 +189,7 @@ Try again or contact us directly!";
                 <Bot className="h-4 w-4 text-white" />
               </div>
               <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%]">
-                👋 Hello! Welcome to FMM CLASSICO support. I can help you with products, orders, delivery info, and more. How can I help you today?
+                Hello! Welcome to FMM CLASSICO support. I can help you with products, orders, delivery info, and more. How can I help you today?
               </div>
             </motion.div>
           )}

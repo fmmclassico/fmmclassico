@@ -44,7 +44,7 @@ const DEFAULT_SLIDES = [
     title: 'Electronic',
     subtitle: 'Top quality electronics for your everyday needs',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=400&q=80',
+    image_url: 'https://www.sencor.com/Sencor/media/content/Products/SLE32S700TCS-2.jpg?w=400&q=80',
     cta_link: createPageUrl('Shop?category=electronic_appliances'),
     cta_text: 'Shop Now',
   },

@@ -61,6 +61,9 @@ const PROTECTED_ROUTES = new Set([
   'Settings',
   'Chat',
   'Invoices',
+
+  // ADMIN PAGES
+  'AdminReviews',
   'AdminReviews',
   'AdminProducts',
   'AdminCategoryImages',

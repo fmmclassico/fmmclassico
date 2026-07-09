@@ -12,6 +12,7 @@ import Checkout from './pages/Checkout';
 import Feedback from './pages/Feedback';
 import Home from './pages/Home';
 import HowToUse from './pages/HowToUse';
+import Invoices from './pages/Invoices';
 import Notifications from './pages/Notifications';
 import OrderTracking from './pages/OrderTracking';
 import Orders from './pages/Orders';
@@ -35,10 +36,10 @@ export const PAGES = {
   "Feedback": Feedback,
   "Home": Home,
   "HowToUse": HowToUse,
+  "Invoices": Invoices,
   "Notifications": Notifications,
   "OrderTracking": OrderTracking,
   "Orders": Orders,
-  "Product": ProductDetail,
   "ProductDetail": ProductDetail,
   "Settings": Settings,
   "Shop": Shop,

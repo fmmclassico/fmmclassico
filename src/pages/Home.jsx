@@ -23,15 +23,6 @@ var CATEGORY_BRANDS = {
     { label: 'JBL', brand: 'JBL', category: 'speakers' },
     { label: 'Sony', brand: 'Sony', category: 'earphones' },
   ],
-  electronics: [
-    { label: 'Samsung', brand: 'Samsung' },
-    { label: 'TCL', brand: 'TCL' },
-    { label: 'Hisense', brand: 'Hisense' },
-    { label: 'Sony', brand: 'Sony' },
-    { label: 'LG', brand: 'LG' },
-    { label: 'Midea', brand: 'Midea' },
-    { label: 'Oraimo', brand: 'Oraimo' },
-  ],
   home_appliances: [
     { label: 'Hisense', brand: 'Hisense' },
     { label: 'Roch', brand: 'Roch' },
@@ -40,6 +31,15 @@ var CATEGORY_BRANDS = {
     { label: 'Nasco', brand: 'Nasco' },
     { label: 'Hoffman', brand: 'Hoffman' },
     { label: 'Samsung', brand: 'Samsung' },
+    { label: 'Oraimo', brand: 'Oraimo' },
+  ],
+   electronics: [
+    { label: 'Samsung', brand: 'Samsung' },
+    { label: 'TCL', brand: 'TCL' },
+    { label: 'Hisense', brand: 'Hisense' },
+    { label: 'Sony', brand: 'Sony' },
+    { label: 'LG', brand: 'LG' },
+    { label: 'Midea', brand: 'Midea' },
     { label: 'Oraimo', brand: 'Oraimo' },
   ],
 };
@@ -66,6 +66,16 @@ var HOME_CATEGORIES = [
     chipColor: 'text-[#0093A6] bg-[#0093A6]/5 border-[#0093A6]/30 hover:bg-[#0093A6]/10',
   },
   {
+    id: 'home_appliances',
+    label: 'Home Appliances',
+    icon: HomeIcon,
+    link: createPageUrl('Shop?category=home_appliances'),
+    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=160&q=50',
+    match: function(p) { return p.category === 'home_appliances'; },
+    brands: CATEGORY_BRANDS.home_appliances,
+    chipColor: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100',,
+  },
+  {
     id: 'electronics',
     label: 'Electronics',
     icon: Tv,
@@ -74,16 +84,6 @@ var HOME_CATEGORIES = [
     match: function(p) { return ['electronic_appliances','smart_watches'].includes(p.category); },
     brands: CATEGORY_BRANDS.electronics,
     chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100',
-  },
-  {
-    id: 'home_appliances',
-    label: 'Home Appliances',
-    icon: HomeIcon,
-    link: createPageUrl('Shop?category=home_appliances'),
-    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=160&q=50',
-    match: function(p) { return p.category === 'home_appliances'; },
-    brands: CATEGORY_BRANDS.home_appliances,
-    chipColor: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100',
   },
 ];
 

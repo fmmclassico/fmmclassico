@@ -1,3 +1,4 @@
+import Invoices from './pages/Invoices';
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
@@ -198,8 +199,12 @@ const AuthenticatedApp = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* REDIRECT: /Invoices -> /AdminInvoice (fixes 404) */}
-      <Route path="/Invoices" element={<Navigate to="/AdminInvoice" replace />} />
+      {/* Invoices */}
+            <Route path="/Invoices" element={
+        <ProtectedLayout currentPageName="Invoices" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <Invoices />
+        </ProtectedLayout>
+      } />
 
       {/* ADMIN EXPLICIT ROUTES */}
       <Route path="/AdminInvoice" element={

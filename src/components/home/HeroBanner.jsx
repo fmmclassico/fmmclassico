@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
-import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -83,19 +82,10 @@ const DEFAULT_SLIDES = [
 
 export default function HeroBanner() {
   const [current, setCurrent] = useState(0);
-  const [slides, setSlides] = useState(DEFAULT_SLIDES);
   const [touchStart, setTouchStart] = useState(null);
 
-  useEffect(() => {
-    base44.entities.PromoBanner.filter({ is_active: true }, 'order', 20)
-      .then(result => {
-        const data = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : null;
-        if (data && data.length > 0) {
-          setSlides(data);
-        }
-      })
-      .catch(() => {});
-  }, []);
+  // No fetching from base44 - just use DEFAULT_SLIDES
+  const slides = DEFAULT_SLIDES;
 
   useEffect(() => {
     if (slides.length <= 1) return;
@@ -105,8 +95,8 @@ export default function HeroBanner() {
     return () => clearInterval(timer);
   }, [slides.length]);
 
-  const prev = () => setCurrent(prev => (prev - 1 + slides.length) % slides.length);
-  const next = () => setCurrent(prev => (prev + 1) % slides.length);
+  const prev = () => setCurrent(p => (p - 1 + slides.length) % slides.length);
+  const next = () => setCurrent(p => (p + 1) % slides.length);
 
   const handleTouchStart = (e) => setTouchStart(e.touches[0].clientX);
   const handleTouchEnd = (e) => {
@@ -115,13 +105,8 @@ export default function HeroBanner() {
     if (Math.abs(diff) > 40) { diff > 0 ? next() : prev(); }
     setTouchStart(null);
   };
-  const slide = slides.length > 0 ? slides[current % slides.length] : DEFAULT_SLIDES[0];
 
-  useEffect(() => {
-    if (slides.length > 0) {
-      setCurrent(0);
-    }
-  }, [slides.length]);
+  const slide = slides[current % slides.length];
 
   const ctaHref = (() => {
     const link = slide.cta_link;
@@ -181,7 +166,7 @@ export default function HeroBanner() {
         </motion.div>
       </AnimatePresence>
 
-      {Array.isArray(slides) && slides.length > 1 && (
+      {slides.length > 1 && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
           {slides.map((_, i) => (
             <button

@@ -22,11 +22,10 @@ export default function ProductCard({ product }) {
 
   return (
     <Link
-      to={createPageUrl(`Product?id=${product.id}`)}
+      to={createPageUrl(`ProductDetail?id=${product.id}`)}
       className="block bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
     >
       <div className="relative">
-        {/* Image with shimmer placeholder */}
         <OptimizedImage
           src={product.image_url}
           alt={product.name}
@@ -47,7 +46,6 @@ export default function ProductCard({ product }) {
         )}
       </div>
 
-      {/* Info */}
       <div className="p-2.5">
         <p className="text-xs text-gray-700 font-medium line-clamp-2 leading-tight min-h-[32px]">
           {product.name}

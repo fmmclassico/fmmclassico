@@ -49,7 +49,7 @@ var HOME_CATEGORIES = [
     id: 'phones',
     label: 'Phones',
     icon: Smartphone,
-    link: createPageUrl('Shop?category=phones'),
+    link: createPageUrl('Shop?category=/phones'),
     image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
     match: function(p) { return p.category === 'phones'; },
     brands: CATEGORY_BRANDS.phones,
@@ -59,7 +59,7 @@ var HOME_CATEGORIES = [
     id: 'phone_accessories',
     label: 'Phone Accessories',
     icon: Headphones,
-    link: createPageUrl('Shop?category=phone_cases'),
+    link: createPageUrl('Shop?category=/phone-accessories'),
     image: 'https://mate.net.in/public/uploads/all/UsReqZvujmEjMUb27qlTtRcCG8Pf18SyULO4HW7U.jpg',
     match: function(p) { return ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category); },
     brands: CATEGORY_BRANDS.phone_accessories,
@@ -69,7 +69,7 @@ var HOME_CATEGORIES = [
     id: 'electronics',
     label: 'Electronics',
     icon: Tv,
-    link: createPageUrl('Shop?category=electronic_appliances'),
+    link: createPageUrl('Shop?category=/electronics'),
     image: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=160&q=50',
     match: function(p) { return ['electronic_appliances','smart_watches'].includes(p.category); },
     brands: CATEGORY_BRANDS.electronics,
@@ -79,7 +79,7 @@ var HOME_CATEGORIES = [
     id: 'home_appliances',
     label: 'Home Appliances',
     icon: HomeIcon,
-    link: createPageUrl('Shop?category=home_appliances'),
+    link: createPageUrl('Shop?category=/home-appliances'),
     image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=160&q=50',
     match: function(p) { return p.category === 'home_appliances'; },
     brands: CATEGORY_BRANDS.home_appliances,
@@ -245,7 +245,7 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
             <h2 className="font-black text-gray-900 text-sm">CLASSICO Deals</h2>
-            <Link to={createPageUrl('Shop?flash_sale=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
+            <Link to={createPageUrl('Shop?flash_sale=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">createPageUrl('Shop?flash_sale=true') <ChevronRight className="h-3 w-3" /></Link>
           </div>
           <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
             {isLoading
@@ -253,7 +253,7 @@ export default function Home() {
               : flashItems.length === 0
                 ? <p className="text-gray-400 text-xs px-2">No products assigned yet.</p>
                 : flashItems.map(function(product) { return (
-                <Link key={product.id} to={createPageUrl('Product?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
                       {product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}
@@ -278,7 +278,7 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
             <h2 className="font-black text-gray-900 text-sm">Donkomi Deals</h2>
-            <Link to={createPageUrl('Shop?donkomi=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
+            <Link to={createPageUrl('Shop?donkomi=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">createPageUrl('Shop?donkomi=true') <ChevronRight className="h-3 w-3" /></Link>
           </div>
           <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
             {isLoading
@@ -286,7 +286,7 @@ export default function Home() {
               : donkomiDeals.length === 0
                 ? <p className="text-gray-400 text-xs px-2">No products assigned yet.</p>
                 : donkomiDeals.map(function(product) { return (
-                <Link key={product.id} to={createPageUrl('Product?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
                       {product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}
@@ -309,7 +309,7 @@ export default function Home() {
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
               <h2 className="font-black text-gray-900 text-sm">Shop by Brand</h2>
-              <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
+              <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center">createPageUrl('Categories') <ChevronRight className="h-3 w-3" /></Link>
             </div>
             <div className="fmm-stable-rail overflow-x-auto flex gap-4 p-4">
               {[
@@ -343,7 +343,7 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
             <h2 className="font-black text-gray-900 text-sm">New Arrivals</h2>
-            <Link to={createPageUrl('Shop?new_arrival=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
+            <Link to={createPageUrl('Shop?new_arrival=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">createPageUrl('Shop?new_arrival=true') <ChevronRight className="h-3 w-3" /></Link>
           </div>
           <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
             {isLoading
@@ -351,7 +351,7 @@ export default function Home() {
               : newArrivals.length === 0
                 ? <p className="text-gray-400 text-xs px-2">No products assigned yet.</p>
                 : newArrivals.map(function(product) { return (
-                <Link key={product.id} to={createPageUrl('Product?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
                       {product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}
@@ -373,7 +373,7 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
             <h2 className="font-black text-gray-900 text-sm">Top Selling</h2>
-            <Link to={createPageUrl('Shop?top_selling=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
+            <Link to={createPageUrl('Shop?top_selling=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">createPageUrl('Shop?top_selling=true') <ChevronRight className="h-3 w-3" /></Link>
           </div>
           <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
             {isLoading
@@ -381,7 +381,7 @@ export default function Home() {
               : topSellingFallback.length === 0
                 ? <p className="text-gray-400 text-xs px-2">No products assigned yet.</p>
                 : topSellingFallback.map(function(product) { return (
-                <Link key={product.id} to={createPageUrl('Product?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
                       {product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}

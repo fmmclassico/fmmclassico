@@ -154,7 +154,7 @@ export default function GuestHome() {
           {isLoading ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
             : flashItems.length === 0 ? <p className="text-gray-400 text-xs px-2">No products yet.</p>
             : flashItems.map(function(product) { return (
-              <Link key={product.id} to={createPageUrl('Product?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div>{product.original_price > product.price && <span className="absolute top-1 left-1 bg-red-500 text-white text-[9px] font-bold px-1 py-0.5 rounded">-{Math.round((1 - product.price / product.original_price) * 100)}%</span>}</div>
                 <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}</div>
               </Link>
@@ -168,7 +168,7 @@ export default function GuestHome() {
           {isLoading ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
             : donkomiDeals.length === 0 ? <p className="text-gray-400 text-xs px-2">No products yet.</p>
             : donkomiDeals.map(function(product) { return (
-              <Link key={product.id} to={createPageUrl('Product?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
                 <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}</div>
               </Link>
@@ -195,7 +195,7 @@ export default function GuestHome() {
           {isLoading ? Array(6).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
             : newArrivals.length === 0 ? <p className="text-gray-400 text-xs px-2">No products yet.</p>
             : newArrivals.map(function(product) { return (
-              <Link key={product.id} to={createPageUrl('Product?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
                 <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}</div>
               </Link>
@@ -209,7 +209,7 @@ export default function GuestHome() {
           {isLoading ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
             : topSellingFallback.length === 0 ? <p className="text-gray-400 text-xs px-2">No products yet.</p>
             : topSellingFallback.map(function(product) { return (
-              <Link key={product.id} to={createPageUrl('Product?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
                 <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.reviews_count > 0 && <p className="text-[10px] text-gray-400">{product.reviews_count} sold</p>}</div>
               </Link>

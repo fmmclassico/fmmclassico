@@ -132,19 +132,19 @@ export default function HeroBanner() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -60 }}
           transition={{ duration: 0.4 }}
-          className="flex items-center min-h-[200px] md:min-h-[280px]"
+          className="fmm-stable-hero flex items-center"
         >
-          <div className="flex-1 px-6 py-8 md:px-10 md:py-12">
+          <div className="fmm-stable-hero-copy flex-1">
             {slide.badge && (
               <span className="inline-block px-3 py-1 mb-3 text-xs font-bold text-white bg-white/20 rounded-full">
                 {slide.badge}
               </span>
             )}
-            <h2 className="text-2xl md:text-4xl font-bold text-white mb-2">
+            <h2 className="fmm-stable-hero-title font-bold text-white mb-2">
               {slide.title}
             </h2>
             {slide.subtitle && (
-              <p className="text-sm md:text-base text-white/80 mb-4 max-w-md">
+              <p className="fmm-stable-hero-subtitle text-white/80 mb-4 max-w-md">
                 {slide.subtitle}
               </p>
             )}
@@ -155,11 +155,11 @@ export default function HeroBanner() {
             </Link>
           </div>
           {slide.image_url && (
-            <div className="hidden sm:flex items-center justify-center w-1/3 pr-6">
+            <div className="fmm-stable-hero-image-wrap flex items-center justify-center">
               <img
                 src={slide.image_url}
                 alt={slide.title}
-                className="max-h-[200px] md:max-h-[240px] object-contain drop-shadow-2xl"
+                className="fmm-stable-hero-image drop-shadow-2xl"
               />
             </div>
           )}

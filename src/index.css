@@ -75,8 +75,6 @@
   }
 }
 
-
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -114,12 +112,63 @@
   margin-bottom: 0.2em;
 }
 
-/* ── Mobile typography & layout fixes ── */
-@media (max-width: 640px) {
-  h1 { font-size: 1.25rem !important; line-height: 1.4 !important; }
-  h2 { font-size: 1.1rem !important; }
-  h3 { font-size: 1rem !important; }
-  .container { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+/* ── Stable cross-phone layout baseline ── */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.fmm-stable-rail {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.fmm-stable-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.fmm-stable-promo-card {
+  width: 280px;
+}
+
+.fmm-stable-hero {
+  min-height: 240px;
+}
+
+.fmm-stable-hero-copy {
+  padding: 2rem 1.5rem;
+}
+
+.fmm-stable-hero-title {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.fmm-stable-hero-subtitle {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.fmm-stable-hero-image-wrap {
+  width: 120px;
+  padding-right: 1rem;
+  flex-shrink: 0;
+}
+
+.fmm-stable-hero-image {
+  width: 100%;
+  max-height: 120px;
+  object-fit: contain;
 }
 
 /* Ensure images don't overflow on mobile */

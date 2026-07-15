@@ -189,7 +189,7 @@ export default function Home() {
                 {cat.brands.map(function(b) {
                   return <Link key={b.brand + b.category} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + b.category)} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>{b.label}</Link>;
                 })}
-                <Link to={cat.link} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>All {cat.label} →</Link>
+                <Link to={cat.link} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>All {cat.label} →</Link>;
               </div>
             </div>
           );
@@ -215,12 +215,12 @@ export default function Home() {
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
                 <h2 className="font-black text-gray-900 text-sm">Promotions</h2>
               </div>
-              <div className="overflow-x-auto flex gap-px bg-gray-100" style={{ scrollbarWidth: 'none' }}>
+              <div className="fmm-stable-rail overflow-x-auto flex gap-px bg-gray-100">
                 {orderedCards.map(function(card) {
                   var CardWrapper = card.link ? Link : 'div';
                   var wrapperProps = card.link ? { to: card.link } : {};
                   return (
-                    <CardWrapper key={card.key} {...wrapperProps} className="flex-shrink-0 w-[72vw] md:w-72 relative overflow-hidden" style={{ minHeight: 130 }}>
+                    <CardWrapper key={card.key} {...wrapperProps} className="fmm-stable-promo-card flex-shrink-0 relative overflow-hidden" style={{ minHeight: 130 }}>
                       <div className={'absolute inset-0 bg-gradient-to-r ' + (card.gradient || 'from-blue-600 to-blue-400')} />
                       {card.image_url && <img src={card.image_url} alt={card.title} className="absolute inset-0 w-full h-full object-cover opacity-60" />}
                       <div className="relative z-10 p-3 h-full flex flex-col justify-between" style={{ minHeight: 130 }}>
@@ -247,7 +247,7 @@ export default function Home() {
             <h2 className="font-black text-gray-900 text-sm">CLASSICO Deals</h2>
             <Link to={createPageUrl('Shop?flash_sale=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
           </div>
-          <div className="overflow-x-auto flex gap-2 p-3" style={{ scrollbarWidth: 'none' }}>
+          <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
             {isLoading
               ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
               : flashItems.length === 0
@@ -280,7 +280,7 @@ export default function Home() {
             <h2 className="font-black text-gray-900 text-sm">Donkomi Deals</h2>
             <Link to={createPageUrl('Shop?donkomi=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
           </div>
-          <div className="overflow-x-auto flex gap-2 p-3" style={{ scrollbarWidth: 'none' }}>
+          <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
             {isLoading
               ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
               : donkomiDeals.length === 0
@@ -311,7 +311,7 @@ export default function Home() {
               <h2 className="font-black text-gray-900 text-sm">Shop by Brand</h2>
               <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
             </div>
-            <div className="overflow-x-auto flex gap-4 p-4" style={{ scrollbarWidth: 'none' }}>
+            <div className="fmm-stable-rail overflow-x-auto flex gap-4 p-4">
               {[
                 { name: 'Apple', fallback: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
                 { name: 'Samsung', fallback: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },
@@ -345,7 +345,7 @@ export default function Home() {
             <h2 className="font-black text-gray-900 text-sm">New Arrivals</h2>
             <Link to={createPageUrl('Shop?new_arrival=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
           </div>
-          <div className="overflow-x-auto flex gap-2 p-3" style={{ scrollbarWidth: 'none' }}>
+          <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
             {isLoading
               ? Array(6).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
               : newArrivals.length === 0
@@ -375,7 +375,7 @@ export default function Home() {
             <h2 className="font-black text-gray-900 text-sm">Top Selling</h2>
             <Link to={createPageUrl('Shop?top_selling=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
           </div>
-          <div className="overflow-x-auto flex gap-2 p-3" style={{ scrollbarWidth: 'none' }}>
+          <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
             {isLoading
               ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
               : topSellingFallback.length === 0

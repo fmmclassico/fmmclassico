@@ -245,7 +245,7 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
             <h2 className="font-black text-gray-900 text-sm">CLASSICO Deals</h2>
-            <Link to={createPageUrl('Shop?flash_sale=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">createPageUrl('Shop?flash_sale=true') <ChevronRight className="h-3 w-3" /></Link>
+            <Link to="/classico-deals" className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
           </div>
           <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
             {isLoading
@@ -278,7 +278,8 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
             <h2 className="font-black text-gray-900 text-sm">Donkomi Deals</h2>
-            <Link to={createPageUrl('Shop?donkomi=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">createPageUrl('Shop?donkomi=true') <ChevronRight className="h-3 w-3" /></Link>
+
+            <Link to="/donkomi-deals" className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
           </div>
           <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
             {isLoading
@@ -309,18 +310,18 @@ export default function Home() {
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
               <h2 className="font-black text-gray-900 text-sm">Shop by Brand</h2>
-              <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center">createPageUrl('Categories') <ChevronRight className="h-3 w-3" /></Link>
+              <Link to="/brands" className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
             </div>
             <div className="fmm-stable-rail overflow-x-auto flex gap-4 p-4">
               {[
-                { name: 'Apple', fallback: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
-                { name: 'Samsung', fallback: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },
-                { name: 'Tecno', fallback: 'https://upload.wikimedia.org/wikipedia/commons/a/a8/TECNO_Mobile_Logo.svg' },
-                { name: 'Hisense', fallback: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Hisense_logo.svg' },
-                { name: 'TCL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/1/16/TCL_Logo.svg' },
-                { name: 'Oraimo', fallback: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },
-                { name: 'Sony', fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
-                { name: 'JBL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
+                { name: 'Apple', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124420/SzZdRSkx_400x400_tbfe0u.png'},
+                { name: 'Samsung', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124507/360_197_1_dnlnk4.avif' },
+                { name: 'Tecno', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124576/Tecno_Mobile_logo.svg_q82f72.webp' },
+                { name: 'Hisense', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124629/hisense-logo-png_seeklogo-285063_n8qoro.png' },
+                { name: 'TCL', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124688/images_jwltph.png' },
+                { name: 'Oraimo', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124735/images_puin9l.jpg' },
+                { name: 'Sony', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124971/sony-logo-png_seeklogo-129420_kd8rt7.png' },
+                { name: 'JBL', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784125078/JBL-Logo.svg_a4jkuo.webp' },
               ].map(function(brand) {
                 var uploadedLogo = settings.find(function(s) { return s.key === 'brand_logo_' + brand.name.toLowerCase().replace(/ /g,'_'); })?.value;
                 var logoSrc = uploadedLogo || brand.fallback;
@@ -343,7 +344,7 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
             <h2 className="font-black text-gray-900 text-sm">New Arrivals</h2>
-            <Link to={createPageUrl('Shop?new_arrival=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">createPageUrl('Shop?new_arrival=true') <ChevronRight className="h-3 w-3" /></Link>
+            <Link to="/new-arrivals" className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
           </div>
           <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
             {isLoading
@@ -373,7 +374,7 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
             <h2 className="font-black text-gray-900 text-sm">Top Selling</h2>
-            <Link to={createPageUrl('Shop?top_selling=true')} className="text-[#2E86C1] text-xs font-semibold flex items-center">createPageUrl('Shop?top_selling=true') <ChevronRight className="h-3 w-3" /></Link>
+            <Link to="/best-selling" className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
           </div>
           <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
             {isLoading

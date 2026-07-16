@@ -177,7 +177,7 @@ body {
 
 @media (max-width: 767px) {
   .fmm-stable-hero {
-    min-height: 230px;
+    min-height: 130px;
     gap: 0.5rem;
   }
 

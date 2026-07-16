@@ -14,7 +14,7 @@ const DEFAULT_SLIDES = [
     title: 'Phones',
     subtitle: 'Samsung, iPhones & more at unbeatable prices',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=1400&q=90',
     cta_link: createPageUrl('Shop?category=phones'),
     cta_text: 'Shop Now',
   },
@@ -24,17 +24,17 @@ const DEFAULT_SLIDES = [
     title: 'Phone Accessories',
     subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=1400&q=90',
     cta_link: createPageUrl('Categories'),
     cta_text: 'Shop Now',
   },
   {
-   id: 'default-2',
+    id: 'default-2',
     badge: '🏡 Home Deals',
     title: 'Home Appliances',
     subtitle: 'Quality home appliances delivered to your door',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1400&q=90',
     cta_link: createPageUrl('Shop?category=home_appliances'),
     cta_text: 'Shop Now',
   },
@@ -44,7 +44,7 @@ const DEFAULT_SLIDES = [
     title: 'Electronic',
     subtitle: 'Top quality electronics for your everyday needs',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://www.sencor.com/Sencor/media/content/Products/SLE32S700TCS-2.jpg?w=400&q=80',
+    image_url: 'https://www.sencor.com/Sencor/media/content/Products/SLE32S700TCS-2.jpg?w=1200&q=90',
     cta_link: createPageUrl('Shop?category=electronic_appliances'),
     cta_text: 'Shop Now',
   },
@@ -54,7 +54,7 @@ const DEFAULT_SLIDES = [
     title: 'Samsung & Apple',
     subtitle: 'Genuine Samsung & Apple products at great prices',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=1400&q=90',
     cta_link: createPageUrl('BrandProducts?brand=Samsung'),
     cta_text: 'Shop Brands',
   },
@@ -64,7 +64,7 @@ const DEFAULT_SLIDES = [
     title: 'Earphones & Speakers',
     subtitle: 'Premium sound at affordable prices — Oraimo, JBL & more',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1400&q=90',
     cta_link: createPageUrl('Shop?category=earphones'),
     cta_text: 'Shop Now',
   },
@@ -74,7 +74,7 @@ const DEFAULT_SLIDES = [
     title: 'Smart Watches',
     subtitle: 'Stay connected with the latest smartwatches',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://images.unsplash.com/photo-1546868871-af0de0ae72be?w=400&q=80',
+    image_url: 'https://images.unsplash.com/photo-1546868871-af0de0ae72be?w=1400&q=90',
     cta_link: createPageUrl('Shop?category=smart_watches'),
     cta_text: 'Shop Now',
   },
@@ -84,25 +84,26 @@ export default function HeroBanner() {
   const [current, setCurrent] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
 
-  // No fetching from base44 - just use DEFAULT_SLIDES
   const slides = DEFAULT_SLIDES;
 
   useEffect(() => {
     if (slides.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrent(prev => (prev + 1) % slides.length);
+      setCurrent((prev) => (prev + 1) % slides.length);
     }, 7000);
     return () => clearInterval(timer);
   }, [slides.length]);
 
-  const prev = () => setCurrent(p => (p - 1 + slides.length) % slides.length);
-  const next = () => setCurrent(p => (p + 1) % slides.length);
+  const prev = () => setCurrent((p) => (p - 1 + slides.length) % slides.length);
+  const next = () => setCurrent((p) => (p + 1) % slides.length);
 
   const handleTouchStart = (e) => setTouchStart(e.touches[0].clientX);
   const handleTouchEnd = (e) => {
     if (touchStart === null) return;
     const diff = touchStart - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 40) { diff > 0 ? next() : prev(); }
+    if (Math.abs(diff) > 40) {
+      diff > 0 ? next() : prev();
+    }
     setTouchStart(null);
   };
 
@@ -144,12 +145,12 @@ export default function HeroBanner() {
               {slide.title}
             </h2>
             {slide.subtitle && (
-              <p className="fmm-stable-hero-subtitle text-white/80 mb-4 max-w-md">
+              <p className="fmm-stable-hero-subtitle text-white/80 mb-4 max-w-2xl">
                 {slide.subtitle}
               </p>
             )}
             <Link to={ctaHref}>
-              <Button className="bg-white text-[#0A2E60] hover:bg-gray-100 font-semibold px-5 py-2 rounded-full text-sm">
+              <Button className="bg-white text-[#0A2E60] hover:bg-gray-100 font-semibold px-5 py-2 rounded-full text-sm md:text-base md:px-6 md:py-2.5">
                 {slide.cta_text || 'Shop Now'} <ArrowRight className="ml-1 h-4 w-4" />
               </Button>
             </Link>

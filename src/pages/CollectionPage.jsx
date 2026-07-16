@@ -8,7 +8,8 @@ import ProductCard from '@/components/products/ProductCard';
 import PageNotFound from '@/lib/PageNotFound';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Filter, ChevronRight } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Filter, ChevronRight, X } from 'lucide-react';
 
 export default function CollectionPage() {
   const { collectionSlug } = useParams();
@@ -19,6 +20,7 @@ export default function CollectionPage() {
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const { data: allProducts = [], isLoading } = useQuery({
     queryKey: ['products'],
@@ -99,6 +101,26 @@ export default function CollectionPage() {
     return uniqueCategories.map((category) => ({ value: category, label: CATEGORY_LABELS[category] || category }));
   }, [collection]);
 
+  const clearFilters = () => {
+    setSortBy('newest');
+    setCategoryFilter('all');
+    setSubcategoryFilter('all');
+    setBrandFilter('all');
+    setAvailabilityFilter('all');
+    setMinPrice('');
+    setMaxPrice('');
+  };
+
+  const activeFilters = [
+    categoryFilter !== 'all' ? `Category: ${CATEGORY_LABELS[categoryFilter] || categoryFilter}` : null,
+    subcategoryFilter !== 'all' ? `Subcategory: ${subcategoryFilter}` : null,
+    brandFilter !== 'all' ? `Brand: ${brandFilter}` : null,
+    availabilityFilter !== 'all' ? `Availability: ${availabilityFilter.replace('_', ' ')}` : null,
+    minPrice !== '' ? `Min: ₵${minPrice}` : null,
+    maxPrice !== '' ? `Max: ₵${maxPrice}` : null,
+    sortBy !== 'newest' ? `Sort: ${sortBy.replace('_', ' ')}` : null,
+  ].filter(Boolean);
+
   if (!collection) {
     return <PageNotFound />;
   }
@@ -139,89 +161,99 @@ export default function CollectionPage() {
         <p className="text-gray-500">{collection.description}</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <Filter className="h-4 w-4" />
-            <span>Filters</span>
-          </div>
-          <div className="text-xs text-gray-500">Products update instantly</div>
-        </div>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="text-sm text-gray-500">{filteredProducts.length} product(s) found</div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Category</label>
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm">
-              <option value="all">All Categories</option>
-              {categories.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Subcategory</label>
-            <select value={subcategoryFilter} onChange={(e) => setSubcategoryFilter(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm">
-              <option value="all">All Subcategories</option>
-              {subcategories.map((subcategory) => <option key={subcategory} value={subcategory}>{subcategory}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Brand</label>
-            <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm">
-              <option value="all">All Brands</option>
-              {brands.map((brand) => <option key={brand} value={brand}>{brand}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Sort By</label>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm">
-              <option value="newest">Newest</option>
-              <option value="best_selling">Best Selling</option>
-              <option value="most_popular">Most Popular</option>
-              <option value="highest_rated">Highest Rated</option>
-              <option value="price_low">Price Low → High</option>
-              <option value="price_high">Price High → Low</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Availability</label>
-            <select value={availabilityFilter} onChange={(e) => setAvailabilityFilter(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm">
-              <option value="all">All</option>
-              <option value="in_stock">In Stock</option>
-              <option value="out_of_stock">Out of Stock</option>
-              <option value="preorder">Pre-order</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Min Price</label>
-            <Input value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="0" type="number" />
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Max Price</label>
-            <Input value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="5000" type="number" />
-          </div>
-
-          <div className="flex items-end">
-            <Button variant="outline" className="w-full" onClick={() => {
-              setSortBy('newest');
-              setCategoryFilter('all');
-              setSubcategoryFilter('all');
-              setBrandFilter('all');
-              setAvailabilityFilter('all');
-              setMinPrice('');
-              setMaxPrice('');
-            }}>
-              Clear Filters
+        <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" className="rounded-full border-gray-300">
+              <Filter className="h-4 w-4 mr-2" /> Filters
             </Button>
-          </div>
-        </div>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Filters</SheetTitle>
+            </SheetHeader>
+
+            <div className="mt-6 space-y-4">
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Category</label>
+                <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white">
+                  <option value="all">All Categories</option>
+                  {categories.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Subcategory</label>
+                <select value={subcategoryFilter} onChange={(e) => setSubcategoryFilter(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white">
+                  <option value="all">All Subcategories</option>
+                  {subcategories.map((subcategory) => <option key={subcategory} value={subcategory}>{subcategory}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Brand</label>
+                <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white">
+                  <option value="all">All Brands</option>
+                  {brands.map((brand) => <option key={brand} value={brand}>{brand}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Availability</label>
+                <select value={availabilityFilter} onChange={(e) => setAvailabilityFilter(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white">
+                  <option value="all">All</option>
+                  <option value="in_stock">In Stock</option>
+                  <option value="out_of_stock">Out of Stock</option>
+                  <option value="preorder">Pre-order</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Sort By</label>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white">
+                  <option value="newest">Newest</option>
+                  <option value="best_selling">Best Selling</option>
+                  <option value="most_popular">Most Popular</option>
+                  <option value="highest_rated">Highest Rated</option>
+                  <option value="price_low">Price Low → High</option>
+                  <option value="price_high">Price High → Low</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">Min Price</label>
+                  <Input value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="0" type="number" className="rounded-xl" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">Max Price</label>
+                  <Input value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="5000" type="number" className="rounded-xl" />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" className="flex-1 rounded-xl" onClick={clearFilters}>Clear Filters</Button>
+                <Button className="flex-1 rounded-xl bg-[#0A2E60] hover:bg-[#082449]" onClick={() => setFiltersOpen(false)}>Done</Button>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
-      <div className="mb-4 text-sm text-gray-500">{filteredProducts.length} product(s) found</div>
+      {activeFilters.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5">
+          {activeFilters.map((filter) => (
+            <span key={filter} className="inline-flex items-center gap-1 rounded-full bg-white border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700 shadow-sm">
+              {filter}
+            </span>
+          ))}
+          <button onClick={clearFilters} className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-100 px-3 py-1 text-xs font-medium text-red-600">
+            <X className="h-3.5 w-3.5" /> Clear
+          </button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">

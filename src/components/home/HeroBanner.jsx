@@ -133,30 +133,31 @@ export default function HeroBanner() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -60 }}
           transition={{ duration: 0.4 }}
-          className="fmm-stable-hero flex items-center"
+          className="fmm-stable-hero"
         >
-          <div className="fmm-stable-hero-copy flex-1">
+          <div className="fmm-stable-hero-copy">
             {slide.badge && (
-              <span className="inline-block px-3 py-1 mb-3 text-xs font-bold text-white bg-white/20 rounded-full">
+              <span className="fmm-stable-hero-badge">
                 {slide.badge}
               </span>
             )}
-            <h2 className="fmm-stable-hero-title font-bold text-white mb-2">
+            <h2 className="fmm-stable-hero-title">
               {slide.title}
             </h2>
             {slide.subtitle && (
-              <p className="fmm-stable-hero-subtitle text-white/80 mb-4 max-w-2xl">
+              <p className="fmm-stable-hero-subtitle">
                 {slide.subtitle}
               </p>
             )}
-            <Link to={ctaHref}>
-              <Button className="bg-white text-[#0A2E60] hover:bg-gray-100 font-semibold px-5 py-2 rounded-full text-sm md:text-base md:px-6 md:py-2.5">
-                {slide.cta_text || 'Shop Now'} <ArrowRight className="ml-1 h-4 w-4" />
+            <Link to={ctaHref} className="fmm-stable-hero-cta-wrap">
+              <Button className="fmm-stable-hero-cta bg-white text-[#0A2E60] hover:bg-gray-100 font-semibold rounded-full">
+                {slide.cta_text || 'Shop Now'} <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
+
           {slide.image_url && (
-            <div className="fmm-stable-hero-image-wrap flex items-center justify-center">
+            <div className="fmm-stable-hero-image-wrap">
               <img
                 src={slide.image_url}
                 alt={slide.title}
@@ -174,6 +175,7 @@ export default function HeroBanner() {
               key={i}
               onClick={() => setCurrent(i)}
               className={`rounded-full transition-all ${i === current ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/50'}`}
+              aria-label={`Go to hero slide ${i + 1}`}
             />
           ))}
         </div>

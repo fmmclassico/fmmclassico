@@ -177,11 +177,11 @@ body {
 
 @media (max-width: 767px) {
   .fmm-stable-hero {
-    min-height: 320px;
+    min-height: 230px;
     gap: 0.5rem;
   }
 
-  .fmm-stable-hero-copy {
+  .fmm-stable-hero-copy { 
     padding: 1.25rem 1rem 2rem;
   }
 

@@ -175,23 +175,59 @@ body {
   object-position: center;
 }
 
+.fmm-stable-hero {
+  min-height: 240px;
+}
+
+.fmm-stable-hero-copy {
+  padding: 2rem 1.5rem;
+}
+
+.fmm-stable-hero-title {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.fmm-stable-hero-subtitle {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  max-width: 24rem;
+}
+
+.fmm-stable-hero-image-wrap {
+  width: clamp(135px, 18vw, 210px);
+  padding-right: 1rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fmm-stable-hero-image {
+  width: 100%;
+  height: clamp(130px, 16vw, 185px);
+  max-height: 185px;
+  object-fit: contain;
+  object-position: center;
+}
+
 @media (max-width: 767px) {
   .fmm-stable-hero {
-    min-height: 130px;
-    gap: 0.5rem;
+    min-height: 240px;
   }
 
   .fmm-stable-hero-copy {
-    padding: 1.25rem 1rem 2rem;
+    padding: 1.25rem 1rem;
   }
 
   .fmm-stable-hero-image-wrap {
-    width: min(42vw, 180px);
+    width: min(38vw, 145px);
     padding-right: 0.75rem;
   }
 
   .fmm-stable-hero-image {
-    max-height: 190px;
+    height: min(36vw, 145px);
+    max-height: 145px;
   }
 }
 

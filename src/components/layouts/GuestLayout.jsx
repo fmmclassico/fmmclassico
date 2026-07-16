@@ -103,7 +103,7 @@ export default function GuestLayout({ children, currentPageName }) {
     <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full" style={{maxWidth:'100vw', boxSizing:'border-box'}}>
       {/* Guest Header — dark ash */}
       <header className="sticky top-0 z-50 shadow-lg" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
-        <div className="container mx-auto px-4">
+        <div className="w-full px-4 md:px-8 xl:px-[2cm]">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to={createPageUrl('Home')} className="flex items-center">
@@ -113,7 +113,7 @@ export default function GuestLayout({ children, currentPageName }) {
             </Link>
 
             {/* Search Bar - Desktop */}
-            <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl mx-8">
+            <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl mx-4 lg:mx-6 xl:mx-8">
               <div className="relative w-full">
                 <Input
                   type="text"

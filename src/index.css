@@ -181,7 +181,7 @@ body {
     gap: 0.5rem;
   }
 
-  .fmm-stable-hero-copy { 
+  .fmm-stable-hero-copy {
     padding: 1.25rem 1rem 2rem;
   }
 
@@ -194,7 +194,6 @@ body {
     max-height: 190px;
   }
 }
-
 
 /* Ensure images don't overflow on mobile */
 img { max-width: 100%; }

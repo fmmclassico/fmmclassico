@@ -225,8 +225,8 @@ export default function HeroBanner() {
             <h2 className="fmm-stable-hero-title">{slide.title}</h2>
             {slide.subtitle && <p className="fmm-stable-hero-subtitle">{slide.subtitle}</p>}
             <Link to={ctaHref} className="fmm-stable-hero-cta-wrap">
-              <Button className="fmm-stable-hero-cta bg-white text-[#0A2E60] hover:bg-gray-100 font-semibold rounded-full">
-                {slide.cta_text || 'Shop Now'} <ArrowRight className="h-4 w-4" />
+              <Button className="fmm-stable-hero-cta bg-white text-[#0A2E60] hover:bg-gray-100 font-semibold">
+                {slide.cta_text || 'Shop Now'}
               </Button>
             </Link>
           </div>

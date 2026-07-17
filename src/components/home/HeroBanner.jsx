@@ -4,7 +4,6 @@ import { createPageUrl } from '../../utils';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const NAVY_GRADIENT = 'from-[#031725] via-[#0A2E60] to-[#102C54]';

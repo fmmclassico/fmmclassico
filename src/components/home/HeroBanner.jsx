@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +25,7 @@ const DEFAULT_SLIDES = [
     title: 'Phone Accessories',
     subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
     bg_gradient: NAVY_GRADIENT,
+    cta_link: createPageUrl('Shop?category=phone_accessories'),
     cta_text: 'Shop Now',
   },
   {
@@ -72,14 +75,111 @@ const DEFAULT_SLIDES = [
   },
 ];
 
+function normalizeQueryResult(result) {
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result?.data)) return result.data;
+  return [];
+}
+
+function getSettingValue(settings, key) {
+  const value = settings.find((setting) => setting?.key === key)?.value;
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeBannerLink(link) {
+  if (!link) return createPageUrl('Shop');
+  if (link.startsWith('http')) return link;
+  if (link.startsWith('/')) return link;
+  return createPageUrl(link);
+}
+
 export default function HeroBanner() {
   const [current, setCurrent] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
 
-  const slides = DEFAULT_SLIDES;
+  const { data: promoBanners = [] } = useQuery({
+    queryKey: ['promoBanners'],
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.PromoBanner.list('order', 50);
+        return normalizeQueryResult(result);
+      } catch (error) {
+        return [];
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: appSettings = [] } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.AppSetting.list();
+        return normalizeQueryResult(result);
+      } catch (error) {
+        return [];
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const slides = useMemo(() => {
+    const safePromoBanners = Array.isArray(promoBanners) ? promoBanners : [];
+    const safeSettings = Array.isArray(appSettings) ? appSettings : [];
+
+    const activePromoSlides = safePromoBanners
+      .filter((banner) => banner?.is_active !== false)
+      .sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0))
+      .map((banner) => ({
+        id: banner.id,
+        badge: banner.badge || '',
+        title: banner.title || 'FMM CLASSICO',
+        subtitle: banner.subtitle || '',
+        image_url: banner.image_url || '',
+        bg_gradient: banner.bg_gradient || NAVY_GRADIENT,
+        cta_link: banner.cta_link || 'Shop',
+        cta_text: banner.cta_text || 'Shop Now',
+      }))
+      .filter((banner) => banner.title || banner.image_url);
+
+    if (activePromoSlides.length > 0) {
+      return activePromoSlides;
+    }
+
+    const heroImage = getSettingValue(safeSettings, 'hero_bg_image');
+    const heroTitle = getSettingValue(safeSettings, 'hero_title');
+    const heroSubtitle = getSettingValue(safeSettings, 'hero_subtitle');
+    const heroCtaText = getSettingValue(safeSettings, 'hero_cta');
+    const heroCtaLink = getSettingValue(safeSettings, 'hero_cta_link');
+
+    if (heroImage || heroTitle || heroSubtitle || heroCtaText) {
+      return [
+        {
+          id: 'app-setting-hero',
+          badge: '',
+          title: heroTitle || 'FMM CLASSICO',
+          subtitle:
+            heroSubtitle ||
+            'Shop quality phones, accessories, electronics and home appliances at great prices.',
+          image_url: heroImage || '',
+          bg_gradient: NAVY_GRADIENT,
+          cta_link: heroCtaLink || 'Shop',
+          cta_text: heroCtaText || 'Shop Now',
+        },
+      ];
+    }
+
+    return DEFAULT_SLIDES;
+  }, [promoBanners, appSettings]);
 
   useEffect(() => {
-    if (slides.length <= 1) return;
+    if (current >= slides.length) {
+      setCurrent(0);
+    }
+  }, [current, slides.length]);
+
+  useEffect(() => {
+    if (slides.length <= 1) return undefined;
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % slides.length);
     }, 7000);
@@ -100,14 +200,7 @@ export default function HeroBanner() {
   };
 
   const slide = slides[current % slides.length];
-
-  const ctaHref = (() => {
-    const link = slide.cta_link;
-    if (!link) return createPageUrl('Shop');
-    if (link.startsWith('http')) return link;
-    if (link.startsWith('/')) return link;
-    return '/' + link;
-  })();
+  const ctaHref = normalizeBannerLink(slide.cta_link);
 
   const NAVY_BACKGROUND = 'linear-gradient(90deg, #031725 0%, #0A2E60 50%, #102C54 100%)';
 
@@ -128,19 +221,9 @@ export default function HeroBanner() {
           className="fmm-stable-hero"
         >
           <div className="fmm-stable-hero-copy">
-            {slide.badge && (
-              <span className="fmm-stable-hero-badge">
-                {slide.badge}
-              </span>
-            )}
-            <h2 className="fmm-stable-hero-title">
-              {slide.title}
-            </h2>
-            {slide.subtitle && (
-              <p className="fmm-stable-hero-subtitle">
-                {slide.subtitle}
-              </p>
-            )}
+            {slide.badge && <span className="fmm-stable-hero-badge">{slide.badge}</span>}
+            <h2 className="fmm-stable-hero-title">{slide.title}</h2>
+            {slide.subtitle && <p className="fmm-stable-hero-subtitle">{slide.subtitle}</p>}
             <Link to={ctaHref} className="fmm-stable-hero-cta-wrap">
               <Button className="fmm-stable-hero-cta bg-white text-[#0A2E60] hover:bg-gray-100 font-semibold rounded-full">
                 {slide.cta_text || 'Shop Now'} <ArrowRight className="h-4 w-4" />

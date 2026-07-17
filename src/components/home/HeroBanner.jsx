@@ -24,7 +24,7 @@ const DEFAULT_SLIDES = [
     title: 'Phone Accessories',
     subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
     bg_gradient: NAVY_GRADIENT,
-    image_url: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784299259/ChatGPT_Image_Jul_17_2026_02_37_29_PM_qlihyw.png,
+    image_url: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784299259/ChatGPT_Image_Jul_17_2026_02_37_29_PM_qlihyw.png',
     cta_link: createPageUrl('Categories'),
     cta_text: 'Shop Now',
   },

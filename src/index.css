@@ -260,40 +260,78 @@ body {
 
 @media (max-width:767px){
 
-.fmm-stable-hero{
-    height:185px;
-    grid-template-columns:1.3fr .7fr;
-    padding:.8rem 1rem;
-    gap:.8rem;
-}
+  .fmm-stable-hero{
+      height:190px;
+      grid-template-columns:1.3fr .7fr;
+      align-items:center;
+      gap:.75rem;
+      padding:.8rem 1rem;
+      text-align:left;
+  }
 
-.fmm-stable-hero-badge{
-    font-size:.65rem;
-    padding:.3rem .65rem;
-    margin-bottom:.35rem;
-}
+  .fmm-stable-hero-copy{
+      align-items:flex-start;
+      max-width:100%;
+  }
 
-.fmm-stable-hero-title{
-    font-size:1.45rem;
-    line-height:1.05;
-}
+  .fmm-stable-hero-badge{
+      font-size:.65rem;
+      padding:.3rem .65rem;
+      margin-bottom:.35rem;
+  }
 
-.fmm-stable-hero-subtitle{
-    font-size:.78rem;
-    margin-top:.3rem;
-    max-width:180px;
-}
+  .fmm-stable-hero-title{
+      font-size:1.45rem;
+      line-height:1.05;
+      letter-spacing:-0.5px;
+  }
 
-.fmm-stable-hero-cta{
-    height:34px;
-    padding:0 .95rem;
-    font-size:.75rem;
-}
+  .fmm-stable-hero-subtitle{
+      font-size:.78rem;
+      line-height:1.4;
+      margin-top:.3rem;
+      max-width:180px;
+  }
 
-.fmm-stable-hero-image-frame{
-    width:auto;
-    height:auto;
-}
+  .fmm-stable-hero-cta-wrap{
+      margin-top:.6rem;
+  }
+
+  .fmm-stable-hero-cta{
+      height:34px;
+      padding:0 .95rem;
+      font-size:.75rem;
+      border-radius:999px;
+  }
+
+  /* Keep image on the right */
+  .fmm-stable-hero-image-wrap{
+      justify-content:flex-end;
+      padding-right:0;
+  }
+
+  /* Remove visible frame/box on mobile */
+  .fmm-stable-hero-image-frame{
+      width:auto;
+      height:auto;
+      padding:0;
+      background:transparent;
+      border:none;
+      border-radius:0;
+      box-shadow:none;
+      overflow:visible;
+  }
+
+  /* Show image naturally without wrapping */
+  .fmm-stable-hero-image{
+      width:auto;
+      height:auto;
+      max-width:120px;
+      max-height:120px;
+      object-fit:contain;
+      object-position:center;
+      border-radius:0;
+  }
 }
 
 /* Ensure images don't overflow on mobile */

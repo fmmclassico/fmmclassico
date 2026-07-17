@@ -158,23 +158,23 @@ export default function Home() {
       <HeroBanner />
 
       {/* CATEGORIES */}
-      <div className="bg-white mt-3 mx-2 md:mx-4 rounded-2xl shadow-sm p-4">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white mt-3 mx-2 md:mx-4 rounded-2xl shadow-sm px-3 py-3 md:px-4 md:py-3.5">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="font-black text-gray-900 text-base">Shop by Category</h2>
           <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center hover:underline">All <ChevronRight className="h-3 w-3" /></Link>
         </div>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-2.5 md:gap-3">
           {HOME_CATEGORIES.map(cat => {
   const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
   const isExpanded = expandedCat === cat.id;
   return (
-    <div key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
-      <div className={`w-20 h-20 rounded-2xl ${cat.color} flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform`}>
+    <div key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-1.5 group">
+      <div className={`w-16 h-16 sm:w-[4.25rem] sm:h-[4.25rem] md:w-[4.5rem] md:h-[4.5rem] rounded-2xl ${cat.color} flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform`}>
         {adminImg
           ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
           : null}
       </div>
-      <span className="text-xs font-medium text-gray-700 text-center">{cat.label}</span>
+      <span className="text-[11px] md:text-xs leading-tight font-medium text-gray-700 text-center">{cat.label}</span>
     </div>
   );
 })}
@@ -183,7 +183,7 @@ export default function Home() {
           var cat = HOME_CATEGORIES.find(function(c) { return c.id === expandedCat; });
           if (!cat?.brands) return null;
           return (
-            <div className="mt-4 pt-3 border-t border-gray-100">
+            <div className="mt-3 pt-3 border-t border-gray-100">
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Shop {cat.label} by Brand</p>
               <div className="flex flex-wrap gap-2">
                 {cat.brands.map(function(b) {

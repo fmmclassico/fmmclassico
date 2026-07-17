@@ -95,23 +95,23 @@ export default function GuestHome() {
       <HeroBanner />
 
       {/* CATEGORIES */}
-      <div className="bg-white mt-3 mx-2 md:mx-4 rounded-2xl shadow-sm p-4">
-        <div className="flex items-center justify-between mb-4">
+      <div className="mt-3 pt-3 border-t border-gray-100">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="font-black text-gray-900 text-base">Shop by Category</h2>
           <Link to="/categories" className="text-[#2E86C1] text-xs font-semibold flex items-center hover:underline">All <ChevronRight className="h-3 w-3" /></Link>
         </div>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-2.5 md:gap-3">
           {HOME_CATEGORIES.map(cat => {
   const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
   const isExpanded = expandedCat === cat.id;
   return (
-    <div key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-2 group">
-      <div className={`w-20 h-20 rounded-2xl ${cat.color} flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform`}>
+    <div key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-1.5 group flex-col items-center gap-2 group">
+      <div className={`w-16 h-16 sm:w-[4.25rem] sm:h-[4.25rem] md:w-[4.5rem] md:h-[4.5rem] rounded-2xl ${cat.color} flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform`}>
         {adminImg
           ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
           : null}
       </div>
-      <span className="text-xs font-medium text-gray-700 text-center">{cat.label}</span>
+      <span className="text-[11px] md:text-xs leading-tight font-medium text-gray-700 text-center">{cat.label}</span>
     </div>
   );
 })}

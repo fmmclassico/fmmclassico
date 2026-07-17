@@ -143,6 +143,7 @@ body {
 
 .fmm-stable-hero {
   height: 280px;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
   align-items: center;
@@ -214,10 +215,16 @@ body {
 }
 
 .fmm-stable-hero-image-frame {
-    width: 280px;
-    height: 220px;
-    padding: 12px;
-    border-radius: 18px;
+  width: 280px;
+  height: 220px;
+  padding: 12px;
+  border-radius: 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,.98),
+    rgba(241,245,249,.94)
+  );
+  box-shadow: 0 20px 45px rgba(3,23,37,.22);
 }
 
 .fmm-stable-hero-image {

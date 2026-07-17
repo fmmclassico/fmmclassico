@@ -1,6 +1,6 @@
 /* eslint-disable */
 import { supabaseNotifications } from '@/lib/supabaseNotifications';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { base44 } from '@/api/base44Client';
@@ -12,7 +12,7 @@ import {
   Menu, 
   X, 
   Search, 
-  Info, 
+  Info, 3.
   Settings, 
   Grid3X3, 
   MessageCircle,
@@ -101,13 +101,161 @@ export default function Layout({ children, currentPageName }) {
   const cartCount = Array.isArray(cartItems) ? cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0) : 0;
   const unreadNotifCount = Array.isArray(userNotifications) ? userNotifications.filter(n => !n.is_read).length : 0;
 
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+
+  const { data: searchProducts = [] } = useQuery({
+    queryKey: ['products-search-suggestions'],
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.Product.list('-created_date', 150);
+        return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
+      } catch (e) {
+        return [];
+      }
+    },
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+
+  const formatCategoryLabel = (value) => {
+    if (!value) return 'Product';
+    return value
+      .split('_')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  };
+
+  const searchSuggestions = useMemo(() => {
+    if (!normalizedSearchQuery) return [];
+
+    return [...searchProducts]
+      .filter((product) => product?.is_visible !== false)
+      .filter((product) => {
+        const name = product?.name?.toLowerCase() || '';
+        const description = product?.description?.toLowerCase() || '';
+        const category = product?.category?.toLowerCase() || '';
+        return (
+          name.includes(normalizedSearchQuery) ||
+          description.includes(normalizedSearchQuery) ||
+          category.includes(normalizedSearchQuery)
+        );
+      })
+      .sort((a, b) => {
+        const aStarts = a?.name?.toLowerCase().startsWith(normalizedSearchQuery) ? 1 : 0;
+        const bStarts = b?.name?.toLowerCase().startsWith(normalizedSearchQuery) ? 1 : 0;
+        return bStarts - aStarts;
+      })
+      .slice(0, 6);
+  }, [normalizedSearchQuery, searchProducts]);
+
+  const submitSearch = (rawValue = searchQuery) => {
+    const value = rawValue.trim();
+    if (!value) return;
+    setSearchQuery(value);
+    setSuggestionsOpen(false);
+    navigate(createPageUrl(`Shop?search=${encodeURIComponent(value)}`));
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(createPageUrl(`Shop?search=${encodeURIComponent(searchQuery)}`));
-      setSearchQuery('');
-    }
+    submitSearch(searchQuery);
   };
+
+  const handleSuggestionSelect = (product) => {
+    if (!product?.id) return;
+    setSearchQuery(product.name || '');
+    setSuggestionsOpen(false);
+    navigate(createPageUrl(`ProductDetail?id=${product.id}`));
+  };
+
+  const renderSearchForm = ({ formClassName, placeholder, inputClassName = '' }) => (
+    <form onSubmit={handleSearch} className={formClassName}>
+      <div className="relative w-full">
+        <Input
+          type="text"
+          placeholder={placeholder}
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setSuggestionsOpen(true);
+          }}
+          onFocus={() => setSuggestionsOpen(true)}
+          onBlur={() => window.setTimeout(() => setSuggestionsOpen(false), 140)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setSuggestionsOpen(false);
+          }}
+          autoComplete="off"
+          className={inputClassName}
+        />
+        <Button
+          type="submit"
+          size="icon"
+          className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-8 w-8 text-white"
+          style={{ background: ASH }}
+        >
+          <Search className="h-4 w-4" />
+        </Button>
+
+        {suggestionsOpen && normalizedSearchQuery && (
+          <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-[80] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+            {searchSuggestions.length > 0 ? (
+              <>
+                <div className="max-h-80 overflow-y-auto py-2">
+                  {searchSuggestions.map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleSuggestionSelect(product)}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50"
+                    >
+                      <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
+                        {product.image_url ? (
+                          <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-gray-400">
+                            FMM
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-gray-800">{product.name}</p>
+                        <p className="truncate text-xs text-gray-500">{formatCategoryLabel(product.category)}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => submitSearch(searchQuery)}
+                  className="flex w-full items-center justify-between border-t border-gray-100 px-3 py-2.5 text-sm font-semibold text-[#0A2E60] hover:bg-blue-50"
+                >
+                  <span>Search for “{searchQuery.trim()}”</span>
+                  <Search className="h-4 w-4" />
+                </button>
+              </>
+            ) : (
+              <div className="px-3 py-3">
+                <p className="text-sm font-medium text-gray-700">No related products yet.</p>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => submitSearch(searchQuery)}
+                  className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#0A2E60] px-3 py-2 text-xs font-semibold text-white"
+                >
+                  Search anyway <Search className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </form>
+  );
 
   // LOGOUT: clears session and returns user to Guest Homepage (not /login)
    const handleLogout = async () => {
@@ -256,43 +404,23 @@ export default function Layout({ children, currentPageName }) {
   const ASH_HOVER = '#2578ae';
 
   // ─── GUEST HEADER (unauthenticated) ───────────────────────────────────────
-  const GuestHeader = () => (
+  const renderGuestHeader = () => (
     <header className="sticky top-0 z-50 shadow-lg" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 gap-2">
-
-          {/* Logo */}
           <Link to={createPageUrl('Home')} className="flex items-center flex-shrink-0">
             <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">
               FMM <span className="text-white">CLASSICO</span>
             </h1>
           </Link>
 
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className="flex flex-1 max-w-xl mx-2 md:mx-6">
-            <div className="relative w-full">
-              <Input
-                type="text"
-                placeholder="Search for products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-4 pr-12 py-2 rounded-full border-0 bg-white/90 focus:bg-white text-sm"
-              />
-              <Button
-                type="submit"
-                size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-8 w-8 text-white"
-                style={{ background: ASH }}
-              >
-                <Search className="h-4 w-4" />
-              </Button>
-            </div>
-          </form>
+          {renderSearchForm({
+            formClassName: 'flex flex-1 max-w-xl mx-2 md:mx-6',
+            placeholder: 'Search for products...',
+            inputClassName: 'w-full pl-4 pr-12 py-2 rounded-full border-0 bg-white/90 focus:bg-white text-sm',
+          })}
 
-          {/* Right icons: Account | Cart | Help */}
           <div className="flex items-center gap-1 flex-shrink-0">
-
-            {/* Account Dropdown */}
             <div className="relative" ref={accountRef}>
               <button
                 className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors"
@@ -335,7 +463,6 @@ export default function Layout({ children, currentPageName }) {
               )}
             </div>
 
-            {/* Cart (guests can view cart but checkout requires login) */}
             <button
               onClick={() => requireAuth('/Cart')}
               className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors relative"
@@ -344,7 +471,6 @@ export default function Layout({ children, currentPageName }) {
               <span className="text-[10px] font-semibold leading-tight">Cart</span>
             </button>
 
-            {/* Help */}
             <div className="relative" ref={helpRef}>
               <button
                 className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors"
@@ -386,12 +512,10 @@ export default function Layout({ children, currentPageName }) {
     </header>
   );
 
-  // ─── AUTHENTICATED HEADER ─────────────────────────────────────────────────
-  const AuthenticatedHeader = () => (
+  const renderAuthenticatedHeader = () => (
     <header className="sticky top-0 z-50 shadow-lg" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
       <div className="w-full px-4 md:px-8 xl:px-[2cm]">
         <div className="flex items-center justify-between h-16">
-          {/* Logo & Menu */}
           <div className="flex items-center gap-2">
             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <SheetTrigger asChild>
@@ -412,9 +536,7 @@ export default function Layout({ children, currentPageName }) {
                       key={item.page}
                       to={createPageUrl(item.page)}
                       onClick={() => setIsMenuOpen(false)}
-                      className={`flex items-center justify-between px-6 py-3 hover:bg-gray-100 transition-colors ${
-                        currentPageName === item.page ? 'bg-gray-100 text-gray-900 border-r-4 border-gray-800' : 'text-gray-700'
-                      }`}
+                      className={`flex items-center justify-between px-6 py-3 hover:bg-gray-100 transition-colors ${currentPageName === item.page ? 'bg-gray-100 text-gray-900 border-r-4 border-gray-800' : 'text-gray-700'}`}
                     >
                       <div className="flex items-center gap-3">
                         <item.icon className="h-5 w-5" />
@@ -426,7 +548,6 @@ export default function Layout({ children, currentPageName }) {
                     </Link>
                   ))}
                   <div className="border-t my-4" />
-               
                 </div>
               </SheetContent>
             </Sheet>
@@ -438,30 +559,13 @@ export default function Layout({ children, currentPageName }) {
             </Link>
           </div>
 
-          {/* Search Bar - Desktop */}
-          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl mx-4 lg:mx-6 xl:mx-8">
-            <div className="relative w-full">
-              <Input
-                type="text"
-                placeholder="Search for phone accessories..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-4 pr-12 py-2 rounded-full border-0 bg-white/90 focus:bg-white"
-              />
-              <Button
-                type="submit"
-                size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-8 w-8 text-white"
-                style={{ background: ASH }}
-              >
-                <Search className="h-4 w-4" />
-              </Button>
-            </div>
-          </form>
+          {renderSearchForm({
+            formClassName: 'hidden md:flex flex-1 max-w-xl mx-4 lg:mx-6 xl:mx-8',
+            placeholder: 'Search for phone accessories...',
+            inputClassName: 'w-full pl-4 pr-12 py-2 rounded-full border-0 bg-white/90 focus:bg-white',
+          })}
 
-          {/* Right Actions */}
           <div className="flex items-center gap-1">
-            {/* Help Button */}
             <div className="relative" ref={helpRef}>
               <button className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors" onClick={() => setHelpOpen(o => !o)}>
                 <Info className="h-5 w-5" />
@@ -481,26 +585,22 @@ export default function Layout({ children, currentPageName }) {
                     { label: '❌ Cancel an Order', page: 'Orders' },
                     { label: '📄 Store Policies', page: 'Policies' },
                   ].map(item => (
-                    <Link key={item.page + item.label} to={createPageUrl(item.page)} onClick={() => setHelpOpen(false)}
-                      className="flex items-center px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
+                    <Link key={item.page + item.label} to={createPageUrl(item.page)} onClick={() => setHelpOpen(false)} className="flex items-center px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
                       {item.label}
                     </Link>
                   ))}
                   <div className="border-t my-1" />
-                  <a href="https://wa.me/233208207543" target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2.5 hover:bg-green-50 text-sm text-green-700 font-medium transition-colors">
+                  <a href="https://wa.me/233208207543" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2.5 hover:bg-green-50 text-sm text-green-700 font-medium transition-colors">
                     <svg className="h-4 w-4 fill-green-600" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                     WhatsApp Support
                   </a>
-                  <Link to={createPageUrl('Chat')} onClick={() => setHelpOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
+                  <Link to={createPageUrl('Chat')} onClick={() => setHelpOpen(false)} className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
                     <Bot className="h-4 w-4" /> Live Chat
                   </Link>
                 </div>
               )}
             </div>
 
-            {/* Notifications */}
             <Link to={createPageUrl('Notifications')} className="relative flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors">
               <div className="relative">
                 <Bell className="h-5 w-5" />
@@ -515,44 +615,23 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </div>
 
-        {/* Search Bar - Mobile (authenticated) */}
-        <form onSubmit={handleSearch} className="md:hidden pb-3">
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-4 pr-12 py-2 rounded-full border-0 bg-white/90"
-            />
-            <Button
-              type="submit"
-              size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-8 w-8 text-white"
-              style={{ background: ASH }}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-        </form>
+        {renderSearchForm({
+          formClassName: 'md:hidden pb-3',
+          placeholder: 'Search products...',
+          inputClassName: 'w-full pl-4 pr-12 py-2 rounded-full border-0 bg-white/90',
+        })}
       </div>
     </header>
   );
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full" style={{maxWidth:'100vw', boxSizing:'border-box'}}>
+      {isAuthenticated ? renderAuthenticatedHeader() : renderGuestHeader()}
 
-      {/* Render the correct header based on auth state */}
-      {isAuthenticated ? <AuthenticatedHeader /> : <GuestHeader />}
-
-      {/* Main Content */}
       <main className="min-h-[calc(100vh-4rem)]">
         {currentPageName !== 'Home' && (
           <div className="container mx-auto px-4 pt-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors group"
-            >
+            <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors group">
               <ChevronRight className="h-4 w-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
               <span>Back</span>
             </button>
@@ -561,7 +640,6 @@ export default function Layout({ children, currentPageName }) {
         {children}
       </main>
 
-      {/* Bottom Navigation — ONLY for authenticated users */}
       {isAuthenticated && (
         <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-40">
           <div className="flex items-center justify-around py-3 max-w-2xl mx-auto">
@@ -592,47 +670,12 @@ export default function Layout({ children, currentPageName }) {
         </nav>
       )}
 
-      {/* Spacer for bottom nav — only needed when authenticated */}
       {isAuthenticated && <div className="h-20" />}
 
-      {/* Scroll to top button */}
       {showScrollTop && currentPageName === 'Home' && (
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className={`fixed ${isAuthenticated ? 'bottom-24 md:bottom-8' : 'bottom-8'} right-4 z-50 text-white rounded-full p-2.5 shadow-xl transition-all hover:scale-110 active:scale-95`}
-          style={{ background: ASH, boxShadow: '0 4px 16px rgba(31,41,55,0.4)' }}
-          aria-label="Back to top"
-        >
+        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className={`fixed ${isAuthenticated ? 'bottom-24 md:bottom-8' : 'bottom-8'} right-4 z-50 text-white rounded-full p-2.5 shadow-xl transition-all hover:scale-110 active:scale-95`} style={{ background: ASH, boxShadow: '0 4px 16px rgba(31,41,55,0.4)' }} aria-label="Back to top">
           <ChevronUp className="h-4 w-4" />
         </button>
-      )}
-
-      {/* Floating WhatsApp + AI Chat Buttons — only on ProductDetail page */}
-      {currentPageName === 'ProductDetail' && (
-        <>
-          <a
-            href="https://wa.me/233208207543"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`fixed ${isAuthenticated ? 'bottom-24 md:bottom-8' : 'bottom-8'} right-1 z-40 flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-full shadow-xl transition-all hover:scale-105 active:scale-95 opacity-80 hover:opacity-100`}
-            style={{ boxShadow: '0 4px 20px rgba(34,197,94,0.5)', fontSize: '10px' }}
-          >
-            <svg className="h-3 w-3 fill-white flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-            </svg>
-            <span className="font-bold">WA</span>
-          </a>
-          {isAuthenticated && (
-            <Link
-              to={createPageUrl('Chat')}
-              className="fixed bottom-36 md:bottom-16 right-1 z-40 flex items-center gap-1 text-white px-2 py-1 rounded-full shadow-xl transition-all hover:scale-105 active:scale-95 opacity-80 hover:opacity-100"
-              style={{ background: ASH, boxShadow: '0 4px 20px rgba(31,41,55,0.5)', fontSize: '10px' }}
-            >
-              <Bot className="h-3 w-3 flex-shrink-0" />
-              <span className="font-bold">AI</span>
-            </Link>
-          )}
-        </>
       )}
     </div>
   );

@@ -78,15 +78,15 @@ export default function Settings() {
   // FIXED: was calling base44.auth.logout() directly, which sends people to the
   // Base44 auth page. Now uses the app's logout(), which clears the session and
   // sends people to the guest homepage instead.
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
   };
 
   const handleDeleteAccount = async () => {
     if (!confirm('Are you sure you want to delete your account? This action cannot be undone and all your data will be lost.')) return;
     if (!confirm('This is permanent. Delete account?')) return;
     await base44.entities.User.delete(user.id);
-    logout();
+    await logout();
   };
 
   if (isLoading) {

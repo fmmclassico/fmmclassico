@@ -95,13 +95,14 @@ const LayoutWrapper = ({ children, currentPageName, isAuthenticated }) => {
   );
 };
 
-const ProtectedLayout = ({ children, currentPageName, isAuthenticated, navigateToLogin }) => {
+const ProtectedLayout = ({ children, currentPageName, isAuthenticated, isLoggingOut, navigateToLogin }) => {
   React.useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated && !isLoggingOut) {
       navigateToLogin();
     }
-  }, [isAuthenticated, navigateToLogin]);
+  }, [isAuthenticated, isLoggingOut, navigateToLogin]);
 
+  if (isLoggingOut) return null;
   if (!isAuthenticated) return null;
 
   return (
@@ -114,6 +115,7 @@ const ProtectedLayout = ({ children, currentPageName, isAuthenticated, navigateT
 const AuthenticatedApp = () => {
   const {
     isLoadingAuth,
+    isLoggingOut,
     authError,
     navigateToLogin,
     verifyAdminPassword,
@@ -213,7 +215,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/Invoices"
         element={
-          <ProtectedLayout currentPageName="Invoices" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="Invoices" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <Invoices />
           </ProtectedLayout>
         }
@@ -222,7 +224,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminInvoice"
         element={
-          <ProtectedLayout currentPageName="AdminInvoice" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminInvoice" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminInvoice />
           </ProtectedLayout>
         }
@@ -230,7 +232,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminReviews"
         element={
-          <ProtectedLayout currentPageName="AdminReviews" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminReviews" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminReviews />
           </ProtectedLayout>
         }
@@ -238,7 +240,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminProducts"
         element={
-          <ProtectedLayout currentPageName="AdminProducts" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminProducts" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminProducts />
           </ProtectedLayout>
         }
@@ -246,7 +248,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminCategoryImages"
         element={
-          <ProtectedLayout currentPageName="AdminCategoryImages" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminCategoryImages" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminCategoryImages />
           </ProtectedLayout>
         }
@@ -254,7 +256,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminAI"
         element={
-          <ProtectedLayout currentPageName="AdminAI" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminAI" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminAI />
           </ProtectedLayout>
         }
@@ -262,7 +264,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminPromoBanners2"
         element={
-          <ProtectedLayout currentPageName="AdminPromoBanners2" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminPromoBanners2" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminPromoBanners2 />
           </ProtectedLayout>
         }
@@ -270,7 +272,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminBrandLogos"
         element={
-          <ProtectedLayout currentPageName="AdminBrandLogos" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminBrandLogos" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminBrandLogos />
           </ProtectedLayout>
         }
@@ -278,7 +280,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminAbout"
         element={
-          <ProtectedLayout currentPageName="AdminAbout" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminAbout" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminAbout />
           </ProtectedLayout>
         }
@@ -286,7 +288,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminPageContent"
         element={
-          <ProtectedLayout currentPageName="AdminPageContent" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminPageContent" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminPageContent />
           </ProtectedLayout>
         }
@@ -294,7 +296,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminHomeEditor"
         element={
-          <ProtectedLayout currentPageName="AdminHomeEditor" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminHomeEditor" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminHomeEditor />
           </ProtectedLayout>
         }
@@ -302,7 +304,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminInterfaceControl"
         element={
-          <ProtectedLayout currentPageName="AdminInterfaceControl" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminInterfaceControl" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminInterfaceControl />
           </ProtectedLayout>
         }
@@ -310,7 +312,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminAccessControl"
         element={
-          <ProtectedLayout currentPageName="AdminAccessControl" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminAccessControl" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminAccessControl />
           </ProtectedLayout>
         }
@@ -318,7 +320,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/AdminContactSettings"
         element={
-          <ProtectedLayout currentPageName="AdminContactSettings" isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+          <ProtectedLayout currentPageName="AdminContactSettings" isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
             <AdminContactSettings />
           </ProtectedLayout>
         }
@@ -332,7 +334,7 @@ const AuthenticatedApp = () => {
             path={`/${path}`}
             element={
               isProtected ? (
-                <ProtectedLayout currentPageName={path} isAuthenticated={isAuthenticated} navigateToLogin={navigateToLogin}>
+                <ProtectedLayout currentPageName={path} isAuthenticated={isAuthenticated} isLoggingOut={isLoggingOut} navigateToLogin={navigateToLogin}>
                   <Page />
                 </ProtectedLayout>
               ) : (

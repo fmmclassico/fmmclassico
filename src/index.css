@@ -248,10 +248,13 @@ body {
     max-width:360px;
     max-height:190px;
 }
+
 .fmm-stable-hero-image-frame{
     width:auto;
     height:auto;
 }
+
+}   /* <-- Add this closing brace */
 
 @media (max-width:767px){
 

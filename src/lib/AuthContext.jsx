@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
@@ -52,6 +53,8 @@ export const AuthProvider = ({ children }) => {
 
   // LOGOUT - clears everything and goes to guest homepage
   const logout = async () => {
+    setIsLoggingOut(true);
+
     try {
       await supabase.auth.signOut();
     } catch (err) {
@@ -61,6 +64,7 @@ export const AuthProvider = ({ children }) => {
     // Clear ALL auth-related storage
     setUser(null);
     setIsAuthenticated(false);
+    setAuthError(null);
 
     // Remove any base44 tokens from localStorage
     try {
@@ -81,8 +85,11 @@ export const AuthProvider = ({ children }) => {
       sessionStorage.clear();
     } catch (e) {}
 
+    // Clear any guest cart data before returning to guest mode
+    guestCart.clear();
+
     // Hard redirect to guest homepage
-    window.location.href = '/';
+    window.location.replace('/');
   };
 
   const refreshUser = () => {
@@ -109,6 +116,7 @@ export const AuthProvider = ({ children }) => {
         user,
         isAuthenticated,
         isLoadingAuth,
+        isLoggingOut,
         authError,
         logout,
         refreshUser,

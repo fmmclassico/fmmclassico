@@ -254,76 +254,7 @@ body {
     height:auto;
 }
 
-}   /* <-- Add this closing brace */
-
-@media (max-width:767px){
-
-.fmm-stable-hero{
-    height:185px;
-    grid-template-columns:1.3fr .7fr;
-    padding:.8rem 1rem;
-    gap:.8rem;
-}
-
-.fmm-stable-hero-copy{
-    align-items:flex-start;
-}
-
-.fmm-stable-hero-badge{
-    font-size:.65rem;
-    padding:.3rem .65rem;
-    margin-bottom:.35rem;
-}
-
-.fmm-stable-hero-title{
-    font-size:1.45rem;
-    line-height:1.05;
-}
-
-.fmm-stable-hero-subtitle{
-    font-size:.78rem;
-    margin-top:.3rem;
-    max-width:180px;
-}
-
-.fmm-stable-hero-cta-wrap{
-    margin-top:.6rem;
-}
-
-.fmm-stable-hero-cta{
-    height:34px;
-    padding:0 1rem;
-    font-size:.75rem;
-    border-radius:999px;
-}
-
-.fmm-stable-hero-image-wrap{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-}
-
-/* No frame on mobile */
-
-.fmm-stable-hero-image-frame{
-    width:auto;
-    height:auto;
-    padding:0;
-    background:transparent;
-    border:none;
-    box-shadow:none;
-}
-
-/* Show original image */
-
-.fmm-stable-hero-image{
-    width:auto;
-    max-width:125px;
-    max-height:125px;
-    height:auto;
-    object-fit:contain;
-    border-radius:0;
-}
+}   
 
 @media (max-width:767px){
 

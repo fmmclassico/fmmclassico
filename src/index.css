@@ -143,16 +143,32 @@ body {
 
 .fmm-flyer-hero-shell {
   width: 100%;
-  padding: 0.5rem 0.5rem 0;
+  padding: 0;
+  margin: 0;
 }
 
 .fmm-flyer-hero-frame {
   position: relative;
   width: 100%;
-  aspect-ratio: 1337 / 321;
-  border-radius: 1rem;
+  height: 12rem;
+  min-height: 12rem;
+  border-radius: 0;
   overflow: hidden;
-  background: linear-gradient(90deg, #031725 0%, #0A2E60 50%, #102C54 100%);
+  background: #031725;
+}
+
+@media (min-width: 640px) {
+  .fmm-flyer-hero-frame {
+    height: 14rem;
+    min-height: 14rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .fmm-flyer-hero-frame {
+    height: 18rem;
+    min-height: 18rem;
+  }
 }
 
 .fmm-flyer-hero-clickable {
@@ -172,6 +188,7 @@ body {
   display: block;
   object-fit: cover;
   object-position: center;
+  background: #031725;
 }
 
 .fmm-flyer-hero-dots {
@@ -202,23 +219,20 @@ body {
   animation: pulse 1.6s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
 @media (max-width: 767px) {
   .fmm-flyer-hero-shell {
-    padding: 0.35rem 0.5rem 0;
+    padding: 0;
   }
 
   .fmm-flyer-hero-frame {
-    border-radius: 0.85rem;
+    height: 12rem;
+    min-height: 12rem;
+    border-radius: 0;
   }
 
   .fmm-flyer-hero-image {
-    object-fit: contain;
-    background: linear-gradient(90deg, #031725 0%, #0A2E60 50%, #102C54 100%);
+    object-fit: cover;
+    object-position: center;
   }
 
   .fmm-flyer-hero-dots {

@@ -9,7 +9,7 @@ import guestCart from '@/lib/guest-cart';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShoppingCart, Star, Plus, Minus, MessageCircle, Phone } from 'lucide-react';
+import { ShoppingCart, Star, Plus, Minus } from 'lucide-react';
 import ReviewSection from '@/components/products/ReviewSection';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -66,14 +66,6 @@ export default function ProductDetail() {
     return match?.setting_value || fallback;
   };
 
-  const supportPhone = getContactValue(
-    ['contact_phone', 'support_phone', 'phone_number', 'customer_support_phone'],
-    DEFAULT_SUPPORT_PHONE
-  );
-  const whatsappLink = normalizeWhatsAppLink(
-    getContactValue(['whatsapp_number', 'support_whatsapp', 'customer_whatsapp'], '')
-  );
-  const telLink = `tel:${String(supportPhone).replace(/\s+/g, '')}`;
 
   const allImages = product
     ? [product.image_url, ...(product.image_urls || [])].filter(Boolean)
@@ -400,14 +392,14 @@ export default function ProductDetail() {
             <h1 className="text-xl font-bold leading-snug text-gray-900 md:text-2xl">{product.name}</h1>
 
             <div className="flex flex-wrap items-end gap-2">
-              <span className="text-2xl font-bold text-[#2E86C1] md:text-3xl">₵{product.price?.toFixed(2)}</span>
+              <span className="text-2xl font-bold text-[#2E86C1] md:text-3xl">â‚µ{product.price?.toFixed(2)}</span>
               {product.original_price && (
-                <span className="text-base text-gray-400 line-through md:text-lg">₵{product.original_price?.toFixed(2)}</span>
+                <span className="text-base text-gray-400 line-through md:text-lg">â‚µ{product.original_price?.toFixed(2)}</span>
               )}
             </div>
 
             <div className="rounded-2xl border border-[#dbeafe] bg-[#f8fbff] p-4">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {stockLabel && (
                   <span
                     className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
@@ -427,29 +419,6 @@ export default function ProductDetail() {
                   </span>
                 )}
               </div>
-
-              <p className="text-sm leading-6 text-gray-600">
-                You can know more about the product from our 24/7 chat support or WhatsApp / call {supportPhone} for any related information.
-              </p>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                <a
-                  href={whatsappLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-full bg-green-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-green-600"
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  WhatsApp
-                </a>
-                <a
-                  href={telLink}
-                  className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:border-[#2E86C1] hover:text-[#2E86C1]"
-                >
-                  <Phone className="h-3.5 w-3.5" />
-                  Call support
-                </a>
-              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -462,7 +431,7 @@ export default function ProductDetail() {
                 ))}
               </div>
               <span className="text-sm text-gray-500">
-                {hasReviews ? `${product.reviews_count} review${Number(product.reviews_count) === 1 ? '' : 's'}` : 'No reviews yet'}
+                {hasReviews && `${product.reviews_count} review${Number(product.reviews_count) === 1 ? '' : 's'}`}
               </span>
             </div>
           </div>
@@ -471,7 +440,7 @@ export default function ProductDetail() {
             <details className="group overflow-hidden rounded-2xl border border-gray-200 bg-white">
               <summary className="flex cursor-pointer list-none items-center justify-between bg-gray-50 px-5 py-3 font-semibold text-gray-700 select-none md:px-6">
                 <span>Product Details</span>
-                <span className="text-[#2E86C1] transition-transform group-open:rotate-180">▼</span>
+                <span className="text-[#2E86C1] transition-transform group-open:rotate-180">â–¼</span>
               </summary>
               <div
                 className="fmm-product-details-content ql-editor px-5 py-4 text-sm leading-7 text-gray-600 md:px-6"

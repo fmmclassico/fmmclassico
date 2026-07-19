@@ -166,8 +166,10 @@ body {
 
 @media (min-width: 1024px) {
   .fmm-flyer-hero-frame {
-    height: 22rem;
+    aspect-ratio: 3.2 / 1;
+    height: auto;
     min-height: 22rem;
+    max-height: 26rem;
   }
 }
 
@@ -189,13 +191,6 @@ body {
   object-fit: cover;
   object-position: center;
   background: #031725;
-}
-
-/* Desktop only - shift banner slightly left */
-@media (min-width: 1024px) {
-  .fmm-flyer-hero-image {
-    object-position: 40% center;
-  }
 }
 
 .fmm-flyer-hero-dots {

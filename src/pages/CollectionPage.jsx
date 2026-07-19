@@ -151,25 +151,20 @@ export default function CollectionPage() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="mb-6">
-        <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-          <Link to={createPageUrl('Home')} className="hover:text-[#0A2E60]">Home</Link>
-          <ChevronRight className="h-3 w-3" />
-          <span>{collection.title}</span>
-        </div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">{collection.title}</h1>
-        <p className="text-gray-500">{collection.description}</p>
-      </div>
+      <div className="mb-5 flex items-center justify-between gap-3">
+  <h1 className="text-2xl md:text-3xl font-bold text-gray-800 leading-tight">{collection.title}</h1>
 
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="text-sm text-gray-500">{filteredProducts.length} product(s) found</div>
-
-        <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" className="rounded-full border-gray-300">
-              <Filter className="h-4 w-4 mr-2" /> Filters
-            </Button>
-          </SheetTrigger>
+  <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+    <SheetTrigger asChild>
+      <Button
+        variant="outline"
+        size="icon"
+        aria-label="Open filters"
+        className="h-10 w-10 rounded-full border-gray-300 shrink-0"
+      >
+        <Filter className="h-4 w-4" />
+      </Button>
+    </SheetTrigger>
           <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
             <SheetHeader>
               <SheetTitle>Filters</SheetTitle>
@@ -242,18 +237,6 @@ export default function CollectionPage() {
         </Sheet>
       </div>
 
-      {activeFilters.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-5">
-          {activeFilters.map((filter) => (
-            <span key={filter} className="inline-flex items-center gap-1 rounded-full bg-white border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700 shadow-sm">
-              {filter}
-            </span>
-          ))}
-          <button onClick={clearFilters} className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-100 px-3 py-1 text-xs font-medium text-red-600">
-            <X className="h-3.5 w-3.5" /> Clear
-          </button>
-        </div>
-      )}
 
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">

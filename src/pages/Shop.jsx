@@ -213,12 +213,9 @@ export default function Shop() {
         )}
       </div>
 
-      {{filteredProducts.length === 0 && !isLoading && (
+      {filteredProducts.length === 0 && !isLoading && (
   <div className="text-center py-16 bg-white border rounded-xl">
-    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-      <Filter className="h-8 w-8 text-gray-400" />
-    </div>
-    <h3 className="text-lg font-medium text-gray-800">No products found</h3>
+    ...
   </div>
 )}
     </div>

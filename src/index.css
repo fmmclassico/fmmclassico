@@ -164,12 +164,20 @@ body {
   }
 }
 
+/* Desktop Hero Banner - Approximately 4 cm */
 @media (min-width: 1024px) {
   .fmm-flyer-hero-frame {
-    aspect-ratio: 3.2 / 1;
-    height: auto;
-    min-height: 22rem;
-    max-height: 26rem;
+    height: 151px;
+    min-height: 151px;
+    max-height: 151px;
+    aspect-ratio: unset;
+  }
+
+  .fmm-flyer-hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
   }
 }
 

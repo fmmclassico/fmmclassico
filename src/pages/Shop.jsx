@@ -111,14 +111,7 @@ export default function Shop() {
     setViewMode('grid');
   };
 
-  const activeFilters = [
-    category ? `Category: ${categoryNames[category] || category}` : null,
-    subcategory ? `Subcategory: ${decodeURIComponent(subcategory)}` : null,
-    search ? `Search: ${search}` : null,
-    featured === 'true' ? 'Featured Only' : null,
-    sortBy !== 'newest' ? `Sort: ${sortBy.replace('_', ' ')}` : null,
-    viewMode !== 'grid' ? `View: ${viewMode}` : null,
-  ].filter(Boolean);
+  
 
   const pageTitle = subcategory
     ? decodeURIComponent(subcategory)
@@ -132,20 +125,20 @@ export default function Shop() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">{pageTitle}</h1>
-        <p className="text-gray-500">Browse products with the same Classico filter layout.</p>
-      </div>
+      <div className="mb-5 flex items-center justify-between gap-3">
+  <h1 className="text-2xl md:text-3xl font-bold text-gray-800 leading-tight">{pageTitle}</h1>
 
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="text-sm text-gray-500">{filteredProducts.length} product(s) found</div>
-
-        <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" className="rounded-full border-gray-300">
-              <Filter className="h-4 w-4 mr-2" /> Filters
-            </Button>
-          </SheetTrigger>
+  <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+    <SheetTrigger asChild>
+      <Button
+        variant="outline"
+        size="icon"
+        aria-label="Open filters"
+        className="h-10 w-10 rounded-full border-gray-300 shrink-0"
+      >
+        <Filter className="h-4 w-4" />
+      </Button>
+    </SheetTrigger>
           <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
             <SheetHeader>
               <SheetTitle>Filters</SheetTitle>
@@ -220,16 +213,14 @@ export default function Shop() {
         )}
       </div>
 
-      {filteredProducts.length === 0 && !isLoading && (
-        <div className="text-center py-16 bg-white border rounded-xl">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-            <Filter className="h-8 w-8 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-800 mb-2">No products found</h3>
-          <p className="text-gray-500 mb-4">Try adjusting your filters or search terms.</p>
-          <Button onClick={clearFilters} variant="outline">Clear Filters</Button>
-        </div>
-      )}
+      {{filteredProducts.length === 0 && !isLoading && (
+  <div className="text-center py-16 bg-white border rounded-xl">
+    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+      <Filter className="h-8 w-8 text-gray-400" />
+    </div>
+    <h3 className="text-lg font-medium text-gray-800">No products found</h3>
+  </div>
+)}
     </div>
   );
 }

@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { createPageUrl } from '../../utils';
 import { useQuery } from '@tanstack/react-query';
+import { AnimatePresence, motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
-import { motion, AnimatePresence } from 'framer-motion';
+import { createPageUrl } from '../../utils';
 
 function normalizeQueryResult(result) {
   if (Array.isArray(result)) return result;
@@ -42,12 +42,11 @@ export default function HeroBanner() {
       }
     },
     staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const slides = useMemo(() => {
-    const safePromoBanners = Array.isArray(promoBanners) ? promoBanners : [];
-
-    return safePromoBanners
+    return (Array.isArray(promoBanners) ? promoBanners : [])
       .filter((banner) => banner?.is_active !== false && banner?.image_url)
       .sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0))
       .map((banner, index) => ({
@@ -120,44 +119,24 @@ export default function HeroBanner() {
   const slide = slides[current];
   const isExternal = slide.href && /^https?:\/\//i.test(slide.href);
 
-  const FlyerContent = (
-    <>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={slide.id}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.28 }}
-          className="fmm-flyer-hero-slide"
-        >
-          <img
-            src={slide.image_url}
-            alt={slide.title}
-            className="fmm-flyer-hero-image"
-            loading="eager"
-          />
-        </motion.div>
-      </AnimatePresence>
-
-      {slides.length > 1 && (
-        <div className="fmm-flyer-hero-dots">
-          {slides.map((item, index) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setCurrent(index);
-              }}
-              className={`fmm-flyer-hero-dot ${index === current ? 'is-active' : ''}`}
-              aria-label={`Go to banner ${index + 1}`}
-            />
-          ))}
-        </div>
-      )}
-    </>
+  const flyerContent = (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={slide.id}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.28 }}
+        className="fmm-flyer-hero-slide"
+      >
+        <img
+          src={slide.image_url}
+          alt={slide.title}
+          className="fmm-flyer-hero-image"
+          loading="eager"
+        />
+      </motion.div>
+    </AnimatePresence>
   );
 
   return (
@@ -166,26 +145,35 @@ export default function HeroBanner() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {slide.href ? (
-        isExternal ? (
-          <a
-            href={slide.href}
-            target="_blank"
-            rel="noreferrer"
-            className="fmm-flyer-hero-frame fmm-flyer-hero-link"
-          >
-            {FlyerContent}
-          </a>
+      <div className="fmm-flyer-hero-frame">
+        {slide.href ? (
+          isExternal ? (
+            <a href={slide.href} target="_blank" rel="noreferrer" className="fmm-flyer-hero-clickable">
+              {flyerContent}
+            </a>
+          ) : (
+            <Link to={slide.href} className="fmm-flyer-hero-clickable">
+              {flyerContent}
+            </Link>
+          )
         ) : (
-          <Link to={slide.href} className="fmm-flyer-hero-frame fmm-flyer-hero-link">
-            {FlyerContent}
-          </Link>
-        )
-      ) : (
-        <div className="fmm-flyer-hero-frame">
-          {FlyerContent}
-        </div>
-      )}
+          <div className="fmm-flyer-hero-clickable">{flyerContent}</div>
+        )}
+
+        {slides.length > 1 && (
+          <div className="fmm-flyer-hero-dots">
+            {slides.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setCurrent(index)}
+                className={`fmm-flyer-hero-dot ${index === current ? 'is-active' : ''}`}
+                aria-label={`Go to flyer ${index + 1}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

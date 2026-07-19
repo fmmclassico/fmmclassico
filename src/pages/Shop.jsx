@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Filter, Grid3X3, LayoutList, X } from 'lucide-react';
@@ -46,90 +45,100 @@ export default function Shop() {
     refetch();
   }, [category, search, featured, refetch]);
 
-  let filteredProducts = allProducts.filter((product) => product.is_visible !== false && !(product.stock != null && product.stock === 0));
+  const filteredProducts = useMemo(() => {
+    let products = [...allProducts].filter((product) => product.is_visible !== false && !(product.stock != null && product.stock === 0));
 
-  if (category) {
-    filteredProducts = filteredProducts.filter((product) => product.category === category);
-  }
+    if (category) {
+      products = products.filter((product) => product.category === category);
+    }
 
-  if (featured === 'true') {
-    filteredProducts = filteredProducts.filter((product) => product.featured);
-  }
+    if (featured === 'true') {
+      products = products.filter((product) => product.featured);
+    }
 
-  if (search) {
-    const searchLower = search.toLowerCase();
-    filteredProducts = filteredProducts.filter((product) =>
-      product.name?.toLowerCase().includes(searchLower) ||
-      product.description?.toLowerCase().includes(searchLower)
-    );
-  }
+    if (search) {
+      const searchLower = search.toLowerCase();
+      products = products.filter((product) =>
+        product.name?.toLowerCase().includes(searchLower) ||
+        product.description?.toLowerCase().includes(searchLower)
+      );
+    }
 
-  switch (sortBy) {
-    case 'price_low':
-      filteredProducts.sort((a, b) => a.price - b.price);
-      break;
-    case 'price_high':
-      filteredProducts.sort((a, b) => b.price - a.price);
-      break;
-    case 'rating':
-      filteredProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-      break;
-    case 'newest':
-    default:
-      break;
-  }
+    switch (sortBy) {
+      case 'price_low':
+        products.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+        break;
+      case 'price_high':
+        products.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+        break;
+      case 'rating':
+        products.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+        break;
+      case 'newest':
+      default:
+        products.sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+        break;
+    }
+
+    return products;
+  }, [allProducts, category, featured, search, sortBy]);
 
   const clearFilters = () => {
     setSearchParams({});
     setSortBy('newest');
+    setViewMode('grid');
   };
 
   const activeFilters = [
     category ? `Category: ${categoryNames[category] || category}` : null,
     search ? `Search: ${search}` : null,
-    featured ? 'Featured Only' : null,
+    featured === 'true' ? 'Featured Only' : null,
     sortBy !== 'newest' ? `Sort: ${sortBy.replace('_', ' ')}` : null,
+    viewMode !== 'grid' ? `View: ${viewMode}` : null,
   ].filter(Boolean);
+
+  const pageTitle = category
+    ? categoryNames[category] || category
+    : search
+      ? `Results for "${search}"`
+      : featured === 'true'
+        ? 'Featured Products'
+        : 'All Products';
 
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
-          {category ? categoryNames[category] : search ? `Results for "${search}"` : featured ? 'Featured Products' : 'All Products'}
-        </h1>
-        <p className="text-gray-500">{filteredProducts.length} products found</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">{pageTitle}</h1>
+        <p className="text-gray-500">Browse products with the same Classico filter layout.</p>
       </div>
 
       <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="text-sm text-gray-500">{filteredProducts.length} product(s) found</div>
+
         <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" className="rounded-full border-gray-300">
-              <Filter className="h-4 w-4 mr-2" /> Filters & Sort
+              <Filter className="h-4 w-4 mr-2" /> Filters
             </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
             <SheetHeader>
-              <SheetTitle>Shop Filters</SheetTitle>
+              <SheetTitle>Filters</SheetTitle>
             </SheetHeader>
 
-            <div className="mt-6 space-y-5">
+            <div className="mt-6 space-y-4">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-2">Sort By</label>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-full rounded-xl">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="price_low">Price: Low to High</SelectItem>
-                    <SelectItem value="price_high">Price: High to Low</SelectItem>
-                    <SelectItem value="rating">Top Rated</SelectItem>
-                  </SelectContent>
-                </Select>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Sort By</label>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white">
+                  <option value="newest">Newest</option>
+                  <option value="price_low">Price: Low to High</option>
+                  <option value="price_high">Price: High to Low</option>
+                  <option value="rating">Top Rated</option>
+                </select>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-2">View Mode</label>
+                <label className="text-xs font-medium text-gray-600 block mb-1">View Mode</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -155,15 +164,6 @@ export default function Shop() {
             </div>
           </SheetContent>
         </Sheet>
-
-        <div className="hidden md:flex items-center gap-1 rounded-full border bg-white p-1 shadow-sm">
-          <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-full" onClick={() => setViewMode('grid')}>
-            <Grid3X3 className="h-4 w-4" />
-          </Button>
-          <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-full" onClick={() => setViewMode('list')}>
-            <LayoutList className="h-4 w-4" />
-          </Button>
-        </div>
       </div>
 
       {activeFilters.length > 0 && (
@@ -196,12 +196,12 @@ export default function Shop() {
       </div>
 
       {filteredProducts.length === 0 && !isLoading && (
-        <div className="text-center py-16">
+        <div className="text-center py-16 bg-white border rounded-xl">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
             <Filter className="h-8 w-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-medium text-gray-800 mb-2">No products found</h3>
-          <p className="text-gray-500 mb-4">Try adjusting your filters or search terms</p>
+          <p className="text-gray-500 mb-4">Try adjusting your filters or search terms.</p>
           <Button onClick={clearFilters} variant="outline">Clear Filters</Button>
         </div>
       )}

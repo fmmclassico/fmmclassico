@@ -24,7 +24,7 @@ export default function GuestLayout({ children, currentPageName }) {
   const helpRef = useRef(null);
   const accountRef = useRef(null);
   const navigate = useNavigate();
-  // FIX: Do not destructure navigateToLogin from useAuth â€” it was undefined and crashed the app.
+  // FIX: Do not destructure navigateToLogin from useAuth — it was undefined and crashed the app.
   // We use navigate() directly instead, which is always safe.
   const { } = useAuth(); // keep useAuth call in case other parts of the tree need the context
 
@@ -89,32 +89,32 @@ export default function GuestLayout({ children, currentPageName }) {
 
   // SEO
   useEffect(() => {
-    document.title = 'FMM CLASSICO';
+    document.title = 'FMM CLASSICO – Phones & Accessories, Home Appliances and Electronics | FMMCLASSICO';
     const setMeta = (attr, key, content) => {
       let el = document.querySelector(`meta[${attr}="${key}"]`);
       if (!el) { el = document.createElement('meta'); el.setAttribute(attr, key); document.head.appendChild(el); }
       el.setAttribute('content', content);
     };
-    setMeta('name', 'description', 'FMM CLASSICO');
+    setMeta('name', 'description', 'FMM CLASSICO – Your trusted online store for premium phone accessories, electronic appliances and home appliances in Ghana. Shop chargers, earphones, phone cases, smart watches and more. Fast delivery to Tarkwa (UMAT Campus), Accra (Ashongman Estate) and across Ghana.');
     setMeta('name', 'keywords', 'FMM CLASSICO, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Ashongman Estate, online shopping Ghana');
     setMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
   }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full" style={{maxWidth:'100vw', boxSizing:'border-box'}}>
-      {/* Guest Header â€” dark ash */}
+      {/* Guest Header — dark ash */}
       <header className="sticky top-0 z-50 shadow-lg" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
         <div className="w-full px-4 md:px-8 xl:px-[2cm]">
-        <div className="flex items-center justify-between h-16 gap-2">
-
+         <div className="flex items-center justify-between h-16 gap-2">
   {/* Logo */}
-  <Link to={createPageUrl('Home')} className="flex items-center flex-shrink-0 -ml-0.5 md:ml-0">
-    <h1 className="text-[1.3rem] sm:text-[1.45rem] md:text-2xl font-black text-white tracking-tight leading-none">
+  <Link to={createPageUrl('Home')} className="flex items-center flex-shrink-0 -ml-1 md:ml-0">
+    <h1 className="text-lg sm:text-xl md:text-3xl font-black text-white tracking-tight">
       FMM <span className="text-white">CLASSICO</span>
     </h1>
   </Link>
 
-  {/* Search Bar */}
+
+            {/* Search Bar - Desktop */}
             <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl mx-4 lg:mx-6 xl:mx-8">
               <div className="relative w-full">
                 <Input
@@ -136,7 +136,7 @@ export default function GuestLayout({ children, currentPageName }) {
             </form>
 
             {/* Right Actions - Guest Mode Order: Account, Cart, Help */}
-            <div className="flex items-center gap-1 flex-shrink-0 ml-1 md:ml-0">
+            <div className="flex items-center gap-1 sm:gap-2 ml-2 md:ml-0 flex-shrink-0">
               {/* Account Button */}
               <div className="relative" ref={accountRef}>
                 <button 
@@ -215,7 +215,7 @@ export default function GuestLayout({ children, currentPageName }) {
                   <div className="absolute right-0 top-12 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 py-2 overflow-hidden">
                     <p className="text-xs font-bold text-gray-400 uppercase px-4 pt-1 pb-2 tracking-wider">Help Center</p>
                     <div className="px-4 py-2 text-xs text-gray-600 bg-gray-50 border-b border-gray-100">
-                      <p className="font-semibold text-gray-700 mb-1">ðŸ‘‹ Need help?</p>
+                      <p className="font-semibold text-gray-700 mb-1">👋 Need help?</p>
                       <p>Browse guides or contact us directly.</p>
                     </div>
                     <Link 
@@ -223,21 +223,21 @@ export default function GuestLayout({ children, currentPageName }) {
                       onClick={() => setHelpOpen(false)}
                       className="flex items-center px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors"
                     >
-                      ðŸ›ï¸ How to Place an Order
+                      🛍️ How to Place an Order
                     </Link>
                     <Link 
                       to={createPageUrl('Policies')} 
                       onClick={() => setHelpOpen(false)}
                       className="flex items-center px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors"
                     >
-                      ðŸ“„ Store Policies
+                      📄 Store Policies
                     </Link>
                     <Link 
                       to={createPageUrl('About')} 
                       onClick={() => setHelpOpen(false)}
                       className="flex items-center px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors"
                     >
-                      â„¹ï¸ About Us
+                      ℹ️ About Us
                     </Link>
                     <div className="border-t my-1" />
                     <a 

@@ -141,8 +141,8 @@ export default function GuestHome() {
           {cat.brands.map(b => {
             return (
               <Link
-                key={b.brand + b.category}
-                to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + b.category)}
+                key={b.brand + (b.category || '')}
+                to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + (b.category || ''))}
                 className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}
               >
                 {b.label}

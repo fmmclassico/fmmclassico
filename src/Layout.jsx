@@ -69,7 +69,7 @@ export default function Layout({ children, currentPageName }) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Cart count â€” only for authenticated users
+  // Cart count — only for authenticated users
   const { data: cartItems = [] } = useQuery({
     queryKey: ['cartItems', user?.email],
    queryFn: async () => { try { const r = await base44.entities.CartItem.filter({ user_email: user?.email }); return Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : []; } catch(e) { return []; } },
@@ -78,7 +78,7 @@ export default function Layout({ children, currentPageName }) {
     gcTime: 5 * 60 * 1000,
   });
 
-  // Notifications â€” only for authenticated users
+  // Notifications — only for authenticated users
       const { data: userNotifications = [] } = useQuery({
     queryKey: ['notifications', user?.email],
     queryFn: () => supabaseNotifications.filter(user.email, 50),
@@ -160,7 +160,7 @@ export default function Layout({ children, currentPageName }) {
     const merchantEmail = 'fmmclassico@gmail.com';
     const merchantWhatsapp = 'https://wa.me/233208207543';
 
-    document.title = 'FMM CLASSICO';
+    document.title = 'FMM Classico – Phones & Accessories, Home Appliances and Electronics';
 
     const setMeta = (attr, key, content) => {
       let el = document.querySelector(`meta[${attr}="${key}"]`);
@@ -168,20 +168,20 @@ export default function Layout({ children, currentPageName }) {
       el.setAttribute('content', content);
     };
 
-    const siteDescription = 'FMM CLASSICO';
+    const siteDescription = 'FMM CLASSICO – Your trusted online store for phones & accessories, home appliances, and electronics in Ghana.';
 
     setMeta('name', 'description', siteDescription);
     setMeta('name', 'keywords', 'FMM Classico, phones & Accessories Ghana, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronics Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Kumasi phone shop, Ashongman Estate, Airport Residential Area, online shopping Ghana, wholesale electronics Ghana');
     setMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
     setMeta('name', 'googlebot', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
-    setMeta('name', 'author', 'FMM CLASSICO');
+    setMeta('name', 'author', 'FMM Classico');
     setMeta('property', 'og:type', 'website');
-    setMeta('property', 'og:site_name', 'FMM CLASSICO');
-    setMeta('property', 'og:title', 'FMM CLASSICO');
+    setMeta('property', 'og:site_name', 'FMM Classico');
+    setMeta('property', 'og:title', 'FMM Classico – Phones & Accessories, Home Appliances and Electronics');
     setMeta('property', 'og:description', siteDescription);
     setMeta('property', 'og:url', window.location.origin);
     setMeta('name', 'twitter:card', 'summary_large_image');
-    setMeta('name', 'twitter:title', 'FMM CLASSICO');
+    setMeta('name', 'twitter:title', 'FMM Classico – Phones & Accessories, Home Appliances and Electronics');
     setMeta('name', 'twitter:description', siteDescription);
 
     let canonical = document.querySelector('link[rel="canonical"]');
@@ -194,8 +194,8 @@ export default function Layout({ children, currentPageName }) {
       {
         "@context": "https://schema.org",
         "@type": "OnlineStore",
-        "name": "FMM CLASSICO",
-        "description": "FMM CLASSICO",
+        "name": "FMM Classico",
+        "description": siteDescription,
         "url": window.location.origin,
         "telephone": "+233208207543",
         "email": "fmmclassico@gmail.com",
@@ -210,7 +210,7 @@ export default function Layout({ children, currentPageName }) {
           { "@type": "PostalAddress", "addressLocality": "Tarkwa", "addressRegion": "Western Region", "addressCountry": "GH" }
         ],
         "areaServed": { "@type": "Country", "name": "Ghana" },
-        "priceRange": "â‚µâ‚µ",
+        "priceRange": "₵₵",
         "openingHours": "Mo-Su 08:00-20:00",
         "currenciesAccepted": "GHS",
         "paymentAccepted": "Mobile Money, Credit Card, Bank Transfer",
@@ -223,7 +223,7 @@ export default function Layout({ children, currentPageName }) {
         "jobTitle": "CEO & Founder",
         "worksFor": {
           "@type": "Organization",
-          "name": "FMM CLASSICO",
+          "name": "FMM Classico",
           "url": window.location.origin
         },
         "description": "Fedra Mensah Martha is the CEO and Founder of FMM Classico, a trusted retail and wholesale store in Accra, Kumasi and Tarkwa, Ghana specializing in phones, phone accessories, electronics, and home appliances.",
@@ -232,7 +232,7 @@ export default function Layout({ children, currentPageName }) {
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
-        "name": "FMM CLASSICO",
+        "name": "FMM Classico",
         "url": window.location.origin,
         "potentialAction": {
           "@type": "SearchAction",
@@ -246,7 +246,7 @@ export default function Layout({ children, currentPageName }) {
   const ASH = '#2E86C1';
   const ASH_HOVER = '#2578ae';
 
-  // â”€â”€â”€ GUEST HEADER (unauthenticated) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── GUEST HEADER (unauthenticated) ───────────────────────────────────────
   const renderGuestHeader = () => (
     <header className="sticky top-0 z-50 shadow-lg" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
       <div className="container mx-auto px-4">
@@ -283,8 +283,8 @@ export default function Layout({ children, currentPageName }) {
                 <div className="absolute right-0 top-12 w-52 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 py-2 overflow-hidden">
                   <p className="text-xs font-bold text-gray-400 uppercase px-4 pt-1 pb-2 tracking-wider">My Account</p>
                   {[
-                    { label: 'ðŸ”‘ Sign In', path: '/login' },
-                    { label: 'ðŸ“ Sign Up', path: '/register' },
+                    { label: '🔑 Sign In', path: '/login' },
+                    { label: '📝 Sign Up', path: '/register' },
                   ].map(item => (
                     <Link
                       key={item.label}
@@ -297,9 +297,9 @@ export default function Layout({ children, currentPageName }) {
                   ))}
                   <div className="border-t my-1" />
                   {[
-                    { label: 'ðŸ‘¤ My Account', path: '/login' },
-                    { label: 'ðŸ“¦ Track Order', path: '/login' },
-                    { label: 'âŒ Cancel Order', path: '/login' },
+                    { label: '👤 My Account', path: '/login' },
+                    { label: '📦 Track Order', path: '/login' },
+                    { label: '❌ Cancel Order', path: '/login' },
                   ].map(item => (
                     <button
                       key={item.label}
@@ -335,14 +335,14 @@ export default function Layout({ children, currentPageName }) {
                 <div className="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 py-2 overflow-hidden">
                   <p className="text-xs font-bold text-gray-400 uppercase px-4 pt-1 pb-2 tracking-wider">Help Center</p>
                   <div className="px-4 py-2 text-xs text-gray-600 bg-gray-50 border-b border-gray-100">
-                    <p className="font-semibold text-gray-700 mb-1">ðŸ‘‹ Need help?</p>
+                    <p className="font-semibold text-gray-700 mb-1">👋 Need help?</p>
                     <p>Browse the guides below or chat with us on WhatsApp.</p>
                   </div>
                   {[
-                    { label: 'ðŸ›ï¸ How to Place an Order', page: 'HowToUse' },
-                    { label: 'ðŸ’³ How to Pay for an Order', page: 'HowToUse' },
-                    { label: 'ðŸ“„ Store Policies', page: 'Policies' },
-                    { label: 'â„¹ï¸ About Us', page: 'About' },
+                    { label: '🛍️ How to Place an Order', page: 'HowToUse' },
+                    { label: '💳 How to Pay for an Order', page: 'HowToUse' },
+                    { label: '📄 Store Policies', page: 'Policies' },
+                    { label: 'ℹ️ About Us', page: 'About' },
                   ].map(item => (
                     <Link key={item.page + item.label} to={createPageUrl(item.page)} onClick={() => setHelpOpen(false)}
                       className="flex items-center px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
@@ -364,13 +364,13 @@ export default function Layout({ children, currentPageName }) {
     </header>
   );
 
-  // â”€â”€â”€ AUTHENTICATED HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── AUTHENTICATED HEADER ─────────────────────────────────────────────────
   const renderAuthenticatedHeader = () => (
     <header className="sticky top-0 z-50 shadow-lg" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
       <div className="w-full px-4 md:px-8 xl:px-[2cm]">
-       <div className="flex items-center justify-between h-16 gap-2">
-  {/* Logo & Menu */}
-  <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo & Menu */}
+          <div className="flex items-center gap-1 md:gap-2">
             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
@@ -409,8 +409,8 @@ export default function Layout({ children, currentPageName }) {
               </SheetContent>
             </Sheet>
 
-            <Link to={createPageUrl('Home')} className="flex items-center -ml-0.5 md:ml-0">
-  <h1 className="text-[1.3rem] sm:text-[1.45rem] md:text-3xl font-black text-white tracking-tight leading-none">
+            <Link to={createPageUrl('Home')} className="flex items-center -ml-1 md:ml-0">
+  <h1 className="text-lg sm:text-xl md:text-3xl font-black text-white tracking-tight">
     FMM <span className="text-white">CLASSICO</span>
   </h1>
 </Link>
@@ -426,7 +426,7 @@ export default function Layout({ children, currentPageName }) {
           />
 
           {/* Right Actions */}
-          <div className="flex items-center gap-1 ml-1 md:ml-0">
+          <div className="flex items-center gap-1 ml-2 md:ml-0">
             {/* Help Button */}
             <div className="relative" ref={helpRef}>
               <button className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors" onClick={() => setHelpOpen(o => !o)}>
@@ -437,15 +437,15 @@ export default function Layout({ children, currentPageName }) {
                 <div className="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 py-2 overflow-hidden">
                   <p className="text-xs font-bold text-gray-400 uppercase px-4 pt-1 pb-2 tracking-wider">Help Center</p>
                   <div className="px-4 py-2 text-xs text-gray-600 bg-gray-50 border-b border-gray-100">
-                    <p className="font-semibold text-gray-700 mb-1">ðŸ‘‹ Need help?</p>
+                    <p className="font-semibold text-gray-700 mb-1">👋 Need help?</p>
                     <p>Browse the guides below or chat with us directly on WhatsApp or our AI Chat.</p>
                   </div>
                   {[
-                    { label: 'ðŸ›ï¸ How to Place an Order', page: 'HowToUse' },
-                    { label: 'ðŸ’³ How to Pay for an Order', page: 'HowToUse' },
-                    { label: 'ðŸ“¦ Track Your Order', page: 'Orders' },
-                    { label: 'âŒ Cancel an Order', page: 'Orders' },
-                    { label: 'ðŸ“„ Store Policies', page: 'Policies' },
+                    { label: '🛍️ How to Place an Order', page: 'HowToUse' },
+                    { label: '💳 How to Pay for an Order', page: 'HowToUse' },
+                    { label: '📦 Track Your Order', page: 'Orders' },
+                    { label: '❌ Cancel an Order', page: 'Orders' },
+                    { label: '📄 Store Policies', page: 'Policies' },
                   ].map(item => (
                     <Link key={item.page + item.label} to={createPageUrl(item.page)} onClick={() => setHelpOpen(false)}
                       className="flex items-center px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
@@ -514,7 +514,7 @@ export default function Layout({ children, currentPageName }) {
         {children}
       </main>
 
-      {/* Bottom Navigation â€” ONLY for authenticated users */}
+      {/* Bottom Navigation — ONLY for authenticated users */}
       {isAuthenticated && (
         <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-40">
           <div className="flex items-center justify-around py-3 max-w-2xl mx-auto">
@@ -545,7 +545,7 @@ export default function Layout({ children, currentPageName }) {
         </nav>
       )}
 
-      {/* Spacer for bottom nav â€” only needed when authenticated */}
+      {/* Spacer for bottom nav — only needed when authenticated */}
       {isAuthenticated && <div className="h-20" />}
 
       {/* Scroll to top button */}
@@ -560,7 +560,7 @@ export default function Layout({ children, currentPageName }) {
         </button>
       )}
 
-      {/* Floating WhatsApp + AI Chat Buttons â€” only on ProductDetail page */}
+      {/* Floating WhatsApp + AI Chat Buttons — only on ProductDetail page */}
       {currentPageName === 'ProductDetail' && (
         <>
           <a

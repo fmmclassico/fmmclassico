@@ -111,7 +111,13 @@ export default function Shop() {
     setViewMode('grid');
   };
 
-  
+  const activeFilters = [
+    category ? `Category: ${categoryNames[category] || category}` : null,
+    subcategory ? `Subcategory: ${decodeURIComponent(subcategory)}` : null,
+    search ? `Search: ${search}` : null,
+    featured === 'true' ? 'Featured' : null,
+    sortBy !== 'newest' ? `Sort: ${sortBy.replace('_', ' ')}` : null,
+  ].filter(Boolean);
 
   const pageTitle = subcategory
     ? decodeURIComponent(subcategory)

@@ -154,8 +154,6 @@ export default function ReviewSection({ product, user }) {
     </div>
   );
 }
-
-{
   "name": "PromoBanner",
   "type": "object",
   "properties": {

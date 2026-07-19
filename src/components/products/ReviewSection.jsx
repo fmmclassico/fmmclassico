@@ -155,11 +155,6 @@ export default function ReviewSection({ product, user }) {
   );
 }
 
-```
-
-## base44/entities/PromoBanner.jsonc
-
-```json
 {
   "name": "PromoBanner",
   "type": "object",

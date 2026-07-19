@@ -105,13 +105,14 @@ export default function GuestLayout({ children, currentPageName }) {
       {/* Guest Header — dark ash */}
       <header className="sticky top-0 z-50 shadow-lg" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
         <div className="w-full px-4 md:px-8 xl:px-[2cm]">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link to={createPageUrl('Home')} className="flex items-center">
-              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-                FMM <span className="text-white">CLASSICO</span>
-              </h1>
-            </Link>
+         <div className="flex items-center justify-between h-16 gap-2">
+  {/* Logo */}
+  <Link to={createPageUrl('Home')} className="flex items-center flex-shrink-0 -ml-1 md:ml-0">
+    <h1 className="text-lg sm:text-xl md:text-3xl font-black text-white tracking-tight">
+      FMM <span className="text-white">CLASSICO</span>
+    </h1>
+  </Link>
+
 
             {/* Search Bar - Desktop */}
             <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl mx-4 lg:mx-6 xl:mx-8">
@@ -135,7 +136,7 @@ export default function GuestLayout({ children, currentPageName }) {
             </form>
 
             {/* Right Actions - Guest Mode Order: Account, Cart, Help */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 ml-2 md:ml-0 flex-shrink-0">
               {/* Account Button */}
               <div className="relative" ref={accountRef}>
                 <button 

@@ -7,6 +7,7 @@ import { ChevronRight, Zap, Star, Tag, Home as HomeIcon, Smartphone, Headphones,
 import { useAuth } from '@/lib/AuthContext';
 import HeroBanner from '../components/home/HeroBanner';
 import FlashSaleTimer from '../components/home/FlashSaleTimer';
+import { getBrandLogo, getSectionLimit, getVisibleBrandDirectory } from '@/lib/brandDirectory';
 
 var CATEGORY_BRANDS = {
   phones: [
@@ -112,7 +113,7 @@ export default function Home() {
     queryKey: ['products'],
     queryFn: async function() {
       try {
-        var result = await base44.entities.Product.list('-created_date', 100);
+        var result = await base44.entities.Product.list('-created_date', 500);
         return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
       } catch (err) { return []; }
     },
@@ -146,6 +147,12 @@ export default function Home() {
   });
 
   var visibleProducts = safeProducts.filter(function(p) { return p.is_visible !== false && !(p.stock != null && p.stock === 0); });
+  var brandEntries = getVisibleBrandDirectory(settings, visibleProducts);
+  var brandRailLimit = getSectionLimit(settings, 'brand_rail', 16);
+  var flashSaleLimit = getSectionLimit(settings, 'flash_sale', 16);
+  var donkomiLimit = getSectionLimit(settings, 'donkomi', 16);
+  var newArrivalsLimit = getSectionLimit(settings, 'new_arrivals', 16);
+  var topSellingLimit = getSectionLimit(settings, 'top_selling', 16);
 
   var flashItems = visibleProducts.filter(function(p) { return p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()); });
   var donkomiDeals = visibleProducts.filter(function(p) { return p.donkomi; });
@@ -282,7 +289,7 @@ export default function Home() {
               ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
               : flashItems.length === 0
                 ? <p className="text-gray-400 text-xs px-2">No products assigned yet.</p>
-                : flashItems.map(function(product) { return (
+                : flashItems.slice(0, flashSaleLimit).map(function(product) { return (
                 <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
@@ -316,7 +323,7 @@ export default function Home() {
               ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
               : donkomiDeals.length === 0
                 ? <p className="text-gray-400 text-xs px-2">No products assigned yet.</p>
-                : donkomiDeals.map(function(product) { return (
+                : donkomiDeals.slice(0, donkomiLimit).map(function(product) { return (
                 <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
@@ -343,24 +350,14 @@ export default function Home() {
               <Link to="/brands" className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
             </div>
             <div className="fmm-stable-rail overflow-x-auto flex gap-4 p-4">
-              {[
-                { name: 'Apple', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124420/SzZdRSkx_400x400_tbfe0u.png'},
-                { name: 'Samsung', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124507/360_197_1_dnlnk4.avif' },
-                { name: 'Tecno', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124576/Tecno_Mobile_logo.svg_q82f72.webp' },
-                { name: 'Hisense', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124629/hisense-logo-png_seeklogo-285063_n8qoro.png' },
-                { name: 'TCL', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124688/images_jwltph.png' },
-                { name: 'Oraimo', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124735/images_puin9l.jpg' },
-                { name: 'Sony', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124971/sony-logo-png_seeklogo-129420_kd8rt7.png' },
-                { name: 'JBL', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784125078/JBL-Logo.svg_a4jkuo.webp' },
-              ].map(function(brand) {
-                var uploadedLogo = settings.find(function(s) { return s.key === 'brand_logo_' + brand.name.toLowerCase().replace(/ /g,'_'); })?.value;
-                var logoSrc = uploadedLogo || brand.fallback;
+              {brandEntries.slice(0, brandRailLimit).map(function(brand) {
+                var logoSrc = getBrandLogo(settings, brand.key);
                 return (
-                  <Link key={brand.name} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.name))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16">
+                  <Link key={brand.key} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.sourceName))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16">
                     <div className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2">
-                      {logoSrc ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={function(e) { e.target.style.display='none'; }} /> : <span className="text-lg font-bold text-gray-400">{brand.name[0]}</span>}
+                      {logoSrc ? <img src={logoSrc} alt={brand.displayName || brand.sourceName} className="max-w-full max-h-full object-contain" onError={function(e) { e.target.style.display='none'; }} /> : <span className="text-lg font-bold text-gray-400">{(brand.displayName || brand.sourceName)[0]}</span>}
                     </div>
-                    <span className="text-[10px] font-semibold text-gray-700 text-center">{brand.name}</span>
+                    {brand.showName !== false && <span className="text-[10px] font-semibold text-gray-700 text-center">{brand.displayName || brand.sourceName}</span>}
                   </Link>
                 );
               })}
@@ -381,7 +378,7 @@ export default function Home() {
               ? Array(6).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
               : newArrivals.length === 0
                 ? <p className="text-gray-400 text-xs px-2">No products assigned yet.</p>
-                : newArrivals.map(function(product) { return (
+                : newArrivals.slice(0, newArrivalsLimit).map(function(product) { return (
                 <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
@@ -411,7 +408,7 @@ export default function Home() {
               ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
               : topSellingFallback.length === 0
                 ? <p className="text-gray-400 text-xs px-2">No products assigned yet.</p>
-                : topSellingFallback.map(function(product) { return (
+                : topSellingFallback.slice(0, topSellingLimit).map(function(product) { return (
                 <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">

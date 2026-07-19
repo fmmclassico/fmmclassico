@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import 'react-quill/dist/quill.snow.css';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -9,19 +9,15 @@ import guestCart from '@/lib/guest-cart';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShoppingCart, Star, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Star, Plus, Minus, ChevronDown } from 'lucide-react';
 import ReviewSection from '@/components/products/ReviewSection';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const DEFAULT_SUPPORT_PHONE = '0208207543';
-const DEFAULT_WHATSAPP_LINK = 'https://wa.me/233208207543';
+const CEDI_SYMBOL = '\u20B5';
 
-const normalizeWhatsAppLink = (value) => {
-  if (!value) return DEFAULT_WHATSAPP_LINK;
-  const digits = String(value).replace(/\D/g, '');
-  if (!digits) return DEFAULT_WHATSAPP_LINK;
-  const formatted = digits.startsWith('233') ? digits : `233${digits.replace(/^0/, '')}`;
-  return `https://wa.me/${formatted}`;
+const formatCurrency = (amount) => {
+  const value = Number(amount || 0);
+  return `${CEDI_SYMBOL}${value.toFixed(2)}`;
 };
 
 export default function ProductDetail() {
@@ -42,30 +38,7 @@ export default function ProductDetail() {
     queryFn: () => base44.entities.Product.list(),
   });
 
-  const { data: contactSettings = [] } = useQuery({
-    queryKey: ['contactSettings-public'],
-    queryFn: async () => {
-      try {
-        const result = await base44.entities.ContactSetting.list();
-        return Array.isArray(result) ? result : result?.data || [];
-      } catch {
-        return [];
-      }
-    },
-  });
-
   const product = products.find((p) => p.id === productId);
-
-  const activeContactSettings = useMemo(
-    () => contactSettings.filter((setting) => setting?.is_active !== false),
-    [contactSettings]
-  );
-
-  const getContactValue = (keys, fallback) => {
-    const match = activeContactSettings.find((setting) => keys.includes(setting?.setting_key));
-    return match?.setting_value || fallback;
-  };
-
 
   const allImages = product
     ? [product.image_url, ...(product.image_urls || [])].filter(Boolean)
@@ -392,14 +365,14 @@ export default function ProductDetail() {
             <h1 className="text-xl font-bold leading-snug text-gray-900 md:text-2xl">{product.name}</h1>
 
             <div className="flex flex-wrap items-end gap-2">
-              <span className="text-2xl font-bold text-[#2E86C1] md:text-3xl">â‚µ{product.price?.toFixed(2)}</span>
+              <span className="text-2xl font-bold text-[#2E86C1] md:text-3xl">{formatCurrency(product.price)}</span>
               {product.original_price && (
-                <span className="text-base text-gray-400 line-through md:text-lg">â‚µ{product.original_price?.toFixed(2)}</span>
+                <span className="text-base text-gray-400 line-through md:text-lg">{formatCurrency(product.original_price)}</span>
               )}
             </div>
 
-            <div className="rounded-2xl border border-[#dbeafe] bg-[#f8fbff] p-4">
-              <div className="flex flex-wrap items-center gap-2">
+            {(stockLabel || discount > 0) && (
+              <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#dbeafe] bg-[#f8fbff] p-4">
                 {stockLabel && (
                   <span
                     className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
@@ -419,7 +392,7 @@ export default function ProductDetail() {
                   </span>
                 )}
               </div>
-            </div>
+            )}
 
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center">
@@ -430,9 +403,11 @@ export default function ProductDetail() {
                   />
                 ))}
               </div>
-              <span className="text-sm text-gray-500">
-                {hasReviews && `${product.reviews_count} review${Number(product.reviews_count) === 1 ? '' : 's'}`}
-              </span>
+              {hasReviews && (
+                <span className="text-sm text-gray-500">
+                  {`${product.reviews_count} review${Number(product.reviews_count) === 1 ? '' : 's'}`}
+                </span>
+              )}
             </div>
           </div>
 
@@ -440,7 +415,7 @@ export default function ProductDetail() {
             <details className="group overflow-hidden rounded-2xl border border-gray-200 bg-white">
               <summary className="flex cursor-pointer list-none items-center justify-between bg-gray-50 px-5 py-3 font-semibold text-gray-700 select-none md:px-6">
                 <span>Product Details</span>
-                <span className="text-[#2E86C1] transition-transform group-open:rotate-180">â–¼</span>
+                <ChevronDown className="h-4 w-4 text-[#2E86C1] transition-transform group-open:rotate-180" />
               </summary>
               <div
                 className="fmm-product-details-content ql-editor px-5 py-4 text-sm leading-7 text-gray-600 md:px-6"

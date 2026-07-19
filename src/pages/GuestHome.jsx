@@ -95,42 +95,73 @@ export default function GuestHome() {
       <HeroBanner />
 
       {/* CATEGORIES */}
-<div className="bg-white mt-2 mx-2 md:mx-4 rounded-2xl shadow-sm px-3 py-2.5 md:px-4 md:py-3">
-  <div className="flex justify-end mb-2">
+<div className="bg-white mt-2 mx-2 md:mx-4 rounded-2xl shadow-sm px-3 pt-1.5 pb-2 md:px-4 md:pt-2 md:pb-2.5">
+  <div className="flex justify-end mb-1">
     <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center hover:underline">
       All <ChevronRight className="h-3 w-3" />
     </Link>
   </div>
-        <div className="grid grid-cols-4 gap-2.5 md:gap-3">
-          {HOME_CATEGORIES.map(cat => {
-  const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
-  const isExpanded = expandedCat === cat.id;
-  return (
-    <div key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-1.5 group flex-col items-center gap-2 group">
-      <div className={`w-16 h-16 sm:w-[4.25rem] sm:h-[4.25rem] md:w-[4.5rem] md:h-[4.5rem] rounded-2xl ${cat.color} flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform`}>
-        {adminImg
-          ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
-          : null}
-      </div>
-      <span className="text-[11px] md:text-xs leading-tight font-medium text-gray-700 text-center">{cat.label}</span>
-    </div>
-  );
-})}
+
+  <div className="grid grid-cols-4 gap-x-2.5 gap-y-1.5 md:gap-x-3 md:gap-y-2">
+    {HOME_CATEGORIES.map(cat => {
+      const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
+      const isExpanded = expandedCat === cat.id;
+
+      return (
+        <div
+          key={cat.id}
+          onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
+          className="flex flex-col items-center gap-1 group"
+        >
+          <div className={`w-16 h-16 sm:w-[4.25rem] sm:h-[4.25rem] md:w-[4.5rem] md:h-[4.5rem] rounded-2xl ${cat.color} flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform`}>
+            {adminImg ? (
+              <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
+            ) : null}
+          </div>
+
+          <span className="text-[11px] md:text-xs leading-tight font-medium text-gray-700 text-center">
+            {cat.label}
+          </span>
         </div>
-        {expandedCat && (function() {
-          var cat = HOME_CATEGORIES.find(function(c) { return c.id === expandedCat; });
-          if (!cat?.brands) return null;
-          return (
-            <div className="mt-4 pt-3 border-t border-gray-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Shop {cat.label} by Brand</p>
-              <div className="flex flex-wrap gap-2">
-                {cat.brands.map(function(b) { return <Link key={b.brand + (b.category || '')} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + (b.category || ''))} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>{b.label}</Link>; })}
-                <Link to={cat.link} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>All {cat.label} →</Link>
-              </div>
-            </div>
-          );
-        })()}
+      );
+    })}
+  </div>
+
+  {expandedCat && (() => {
+    const cat = HOME_CATEGORIES.find(c => c.id === expandedCat);
+    if (!cat?.brands) return null;
+
+    return (
+      <div className="mt-2.5 pt-2 border-t border-gray-100">
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+          Shop {cat.label} by Brand
+        </p>
+
+        <div className="flex flex-wrap gap-1.5">
+          {cat.brands.map(b => {
+            return (
+              <Link
+                key={b.brand + b.category}
+                to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + b.category)}
+                className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}
+              >
+                {b.label}
+              </Link>
+            );
+          })}
+
+          <Link
+            to={cat.link}
+            className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}
+          >
+            All {cat.label} →
+          </Link>
+        </div>
       </div>
+    );
+  })()}
+</div>
+
 
       {/* PROMO CARDS */}
       {(function() {

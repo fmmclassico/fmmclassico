@@ -268,3 +268,39 @@ img { max-width: 100%; }
   position: fixed !important;
   overflow: hidden !important;
 }
+
+
+.fmm-product-details-content.ql-editor {
+  padding: 0 !important;
+}
+
+.fmm-product-details-content p,
+.fmm-product-details-content ul,
+.fmm-product-details-content ol,
+.fmm-product-details-content blockquote {
+  margin-bottom: 0.85rem;
+}
+
+.fmm-product-details-content ul,
+.fmm-product-details-content ol {
+  padding-left: 1.25rem;
+}
+
+.fmm-product-details-content h1,
+.fmm-product-details-content h2,
+.fmm-product-details-content h3,
+.fmm-product-details-content h4 {
+  color: #111827;
+  font-weight: 700;
+  margin-bottom: 0.7rem;
+}
+
+.fmm-product-details-content > *:last-child {
+  margin-bottom: 0;
+}
+
+.fmm-product-details-content table {
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+}

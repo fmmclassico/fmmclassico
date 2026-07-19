@@ -8,7 +8,6 @@ import { ChevronRight, Home as HomeIcon, Smartphone, Headphones, Tv, Gem } from 
 import { toast } from 'sonner';
 import guestCart from '@/lib/guest-cart';
 import HeroBanner from '../components/home/HeroBanner';
-import { getBrandLogo, getSectionLimit, getVisibleBrandDirectory } from '@/lib/brandDirectory';
 
 var CATEGORY_BRANDS = {
   phones: [
@@ -47,10 +46,10 @@ var CATEGORY_BRANDS = {
 };
 
 var HOME_CATEGORIES = [
-  { id: 'phones', label: 'Phones', icon: Smartphone, link: createPageUrl('phones'), match: function(p) { return p.category === 'phones'; }, brands: CATEGORY_BRANDS.phones, chipColor: 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100' },
-  { id: 'phone_accessories', label: 'Phone Accessories', icon: Headphones, link: createPageUrl('phone-accessories'), match: function(p) { return ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category); }, brands: CATEGORY_BRANDS.phone_accessories, chipColor: 'text-[#0093A6] bg-[#0093A6]/5 border-[#0093A6]/30 hover:bg-[#0093A6]/10' },
-  { id: 'electronics', label: 'Electronics', icon: Tv, link: createPageUrl('electronics'), match: function(p) { return ['electronic_appliances','smart_watches'].includes(p.category); }, brands: CATEGORY_BRANDS.electronics, chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100' },
-  { id: 'home_appliances', label: 'Home Appliances', icon: HomeIcon, link: createPageUrl('home-appliances'), match: function(p) { return p.category === 'home_appliances'; }, brands: CATEGORY_BRANDS.home_appliances, chipColor: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100' },
+  { id: 'phones', label: 'Phones', icon: Smartphone, link: createPageUrl('Shop?category=phones'), match: function(p) { return p.category === 'phones'; }, brands: CATEGORY_BRANDS.phones, chipColor: 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100' },
+  { id: 'phone_accessories', label: 'Phone Accessories', icon: Headphones, link: createPageUrl('Shop?category=phone_cases'), match: function(p) { return ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category); }, brands: CATEGORY_BRANDS.phone_accessories, chipColor: 'text-[#0093A6] bg-[#0093A6]/5 border-[#0093A6]/30 hover:bg-[#0093A6]/10' },
+  { id: 'electronics', label: 'Electronics', icon: Tv, link: createPageUrl('Shop?category=electronic_appliances'), match: function(p) { return ['electronic_appliances','smart_watches'].includes(p.category); }, brands: CATEGORY_BRANDS.electronics, chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100' },
+  { id: 'home_appliances', label: 'Home Appliances', icon: HomeIcon, link: createPageUrl('Shop?category=home_appliances'), match: function(p) { return p.category === 'home_appliances'; }, brands: CATEGORY_BRANDS.home_appliances, chipColor: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100' },
 ];
 
 export default function GuestHome() {
@@ -142,8 +141,8 @@ export default function GuestHome() {
           {cat.brands.map(b => {
             return (
               <Link
-                key={b.brand + (b.category || '')}
-                to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + (b.category || ''))}
+                key={b.brand + b.category}
+                to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + b.category)}
                 className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}
               >
                 {b.label}
@@ -186,7 +185,7 @@ export default function GuestHome() {
         <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
           {isLoading ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
             : flashItems.length === 0 ? <p className="text-gray-400 text-xs px-2">No products yet.</p>
-            : flashItems.slice(0, flashSaleLimit).map(function(product) { return (
+            : flashItems.map(function(product) { return (
               <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div>{product.original_price > product.price && <span className="absolute top-1 left-1 bg-red-500 text-white text-[9px] font-bold px-1 py-0.5 rounded">-{Math.round((1 - product.price / product.original_price) * 100)}%</span>}</div>
                 <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}</div>
@@ -200,7 +199,7 @@ export default function GuestHome() {
         <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
           {isLoading ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
             : donkomiDeals.length === 0 ? <p className="text-gray-400 text-xs px-2">No products yet.</p>
-            : donkomiDeals.slice(0, donkomiLimit).map(function(product) { return (
+            : donkomiDeals.map(function(product) { return (
               <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
                 <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}</div>
@@ -213,9 +212,10 @@ export default function GuestHome() {
       {showBrandSection && (
         <div className="mt-3 mx-2 md:mx-4"><div className="bg-white rounded-2xl shadow-sm overflow-hidden"><div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100"><h2 className="font-black text-gray-900 text-sm">Shop by Brand</h2><Link to="/brands" className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link></div>
           <div className="fmm-stable-rail overflow-x-auto flex gap-4 p-4">
-            {brandEntries.slice(0, brandRailLimit).map(function(brand) {
-              var logoSrc = getBrandLogo(settings, brand.key);
-              return <Link key={brand.key} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.sourceName))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16"><div className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2">{logoSrc ? <img src={logoSrc} alt={brand.displayName || brand.sourceName} className="max-w-full max-h-full object-contain" onError={function(e) { e.target.style.display='none'; }} /> : <span className="text-lg font-bold text-gray-400">{(brand.displayName || brand.sourceName)[0]}</span>}</div>{brand.showName !== false && <span className="text-[10px] font-semibold text-gray-700 text-center">{brand.displayName || brand.sourceName}</span>}</Link>;
+            {[{ name: 'Apple', fallback: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },{ name: 'Samsung', fallback: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },{ name: 'Tecno', fallback: 'https://upload.wikimedia.org/wikipedia/commons/a/a8/TECNO_Mobile_Logo.svg' },{ name: 'Hisense', fallback: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Hisense_logo.svg' },{ name: 'TCL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/1/16/TCL_Logo.svg' },{ name: 'Oraimo', fallback: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },{ name: 'Sony', fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },{ name: 'JBL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' }].map(function(brand) {
+              var uploadedLogo = settings.find(function(s) { return s.key === 'brand_logo_' + brand.name.toLowerCase().replace(/ /g,'_'); })?.value;
+              var logoSrc = uploadedLogo || brand.fallback;
+              return <Link key={brand.name} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.name))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16"><div className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2">{logoSrc ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={function(e) { e.target.style.display='none'; }} /> : <span className="text-lg font-bold text-gray-400">{brand.name[0]}</span>}</div><span className="text-[10px] font-semibold text-gray-700 text-center">{brand.name}</span></Link>;
             })}
           </div>
         </div></div>
@@ -226,7 +226,7 @@ export default function GuestHome() {
         <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
           {isLoading ? Array(6).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
             : newArrivals.length === 0 ? <p className="text-gray-400 text-xs px-2">No products yet.</p>
-            : newArrivals.slice(0, newArrivalsLimit).map(function(product) { return (
+            : newArrivals.map(function(product) { return (
               <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
                 <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}</div>
@@ -240,7 +240,7 @@ export default function GuestHome() {
         <div className="fmm-stable-rail overflow-x-auto flex gap-2 p-3">
           {isLoading ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
             : topSellingFallback.length === 0 ? <p className="text-gray-400 text-xs px-2">No products yet.</p>
-            : topSellingFallback.slice(0, topSellingLimit).map(function(product) { return (
+            : topSellingFallback.map(function(product) { return (
               <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
                 <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.reviews_count > 0 && <p className="text-[10px] text-gray-400">{product.reviews_count} sold</p>}</div>

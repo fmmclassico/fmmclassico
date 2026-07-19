@@ -12,11 +12,19 @@
     },
     "badge": {
       "type": "string",
-      "description": "Small badge text e.g. \ud83c\udf89 Christmas Sale"
+      "description": "Small badge text e.g. 🎉 Christmas Sale"
     },
     "image_url": {
       "type": "string",
-      "description": "Banner image \u2014 uploaded file URL (upload from computer only)"
+      "description": "Legacy banner image fallback"
+    },
+    "desktop_image_url": {
+      "type": "string",
+      "description": "Desktop hero image uploaded by admin"
+    },
+    "mobile_image_url": {
+      "type": "string",
+      "description": "Mobile hero image uploaded by admin"
     },
     "bg_gradient": {
       "type": "string",

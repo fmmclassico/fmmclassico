@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
@@ -59,22 +59,26 @@ export default function BrandProducts() {
   const settings = Array.isArray(appSettings) ? appSettings : [];
   const safeProducts = Array.isArray(allProducts) ? allProducts : [];
 
-  let brandProducts = safeProducts.filter((product) => {
-    if (product.is_visible === false) return false;
-    if (product.stock != null && product.stock === 0) return false;
-    const matchBrand = product.brand?.toLowerCase() === brand?.toLowerCase();
-    if (!matchBrand) return false;
+  const brandProducts = useMemo(() => {
+    let products = safeProducts.filter((product) => {
+      if (product.is_visible === false) return false;
+      if (product.stock != null && product.stock === 0) return false;
+      const matchBrand = product.brand?.toLowerCase() === brand?.toLowerCase();
+      if (!matchBrand) return false;
 
-    if (categoryFilter) {
-      return product.category === categoryFilter;
-    }
+      if (categoryFilter) {
+        return product.category === categoryFilter;
+      }
 
-    return true;
-  });
+      return true;
+    });
 
-  if (sortBy === 'price_low') brandProducts = [...brandProducts].sort((a, b) => a.price - b.price);
-  else if (sortBy === 'price_high') brandProducts = [...brandProducts].sort((a, b) => b.price - a.price);
-  else brandProducts = [...brandProducts].sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+    if (sortBy === 'price_low') products = [...products].sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+    else if (sortBy === 'price_high') products = [...products].sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+    else products = [...products].sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+
+    return products;
+  }, [safeProducts, brand, categoryFilter, sortBy]);
 
   const availableCategories = [...new Set(
     safeProducts
@@ -101,16 +105,22 @@ export default function BrandProducts() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       <div className="max-w-5xl mx-auto px-4 pt-6">
-        <div className="flex items-center gap-4 mb-5">
-          {uploadedLogo && (
-            <div className="w-14 h-14 rounded-xl bg-white border flex items-center justify-center p-2">
-              <img src={uploadedLogo} alt={brand} className="w-10 h-10 object-contain" />
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-3">
+            {uploadedLogo && (
+              <div className="w-14 h-14 rounded-xl bg-white border flex items-center justify-center p-2">
+                <img src={uploadedLogo} alt={brand} className="w-10 h-10 object-contain" />
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{brand}</h1>
+              <p className="text-gray-500">Browse {brand} products with the Classico filter layout.</p>
             </div>
-          )}
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-gray-900">{brand}</h1>
-            <p className="text-xs text-gray-500">{brandProducts.length} product{brandProducts.length !== 1 ? 's' : ''} available</p>
           </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="text-sm text-gray-500">{brandProducts.length} product(s) found</div>
 
           <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
             <SheetTrigger asChild>
@@ -120,7 +130,7 @@ export default function BrandProducts() {
             </SheetTrigger>
             <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
               <SheetHeader>
-                <SheetTitle>Brand Filters</SheetTitle>
+                <SheetTitle>Filters</SheetTitle>
               </SheetHeader>
 
               <div className="mt-6 space-y-4">
@@ -153,7 +163,7 @@ export default function BrandProducts() {
         </div>
 
         {activeFilters.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-5">
             {activeFilters.map((filter) => (
               <span key={filter} className="inline-flex items-center gap-1 rounded-full bg-white border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700 shadow-sm">
                 {filter}
@@ -170,7 +180,10 @@ export default function BrandProducts() {
             {Array(8).fill(0).map((_, i) => (
               <div key={i} className="bg-white rounded-xl overflow-hidden border">
                 <Skeleton className="h-36 w-full" />
-                <div className="p-3"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2 mt-2" /></div>
+                <div className="p-3">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2 mt-2" />
+                </div>
               </div>
             ))}
           </div>
@@ -205,11 +218,11 @@ export default function BrandProducts() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
+          <div className="text-center py-16 bg-white border rounded-xl">
             <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 font-medium">No {brand} products found</p>
-            <p className="text-sm text-gray-400 mt-1">Try adjusting the filters</p>
-            <button onClick={clearFilters} className="mt-3 text-sm text-[#0A2E60] font-medium">Clear filter</button>
+            <p className="text-sm text-gray-400 mt-1">Try adjusting the filters.</p>
+            <button onClick={clearFilters} className="mt-3 text-sm text-[#0A2E60] font-medium">Clear filters</button>
           </div>
         )}
       </div>

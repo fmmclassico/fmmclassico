@@ -166,8 +166,8 @@ body {
 
 @media (min-width: 1024px) {
   .fmm-flyer-hero-frame {
-    height: clamp(22rem, 34vw, 32rem);
-    min-height: 22rem;
+    height: 12rem;
+    min-height: 12rem;
   }
 }
 

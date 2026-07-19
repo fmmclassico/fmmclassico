@@ -11,6 +11,32 @@ function normalizeQueryResult(result) {
   return [];
 }
 
+const MAIN_CATEGORY_ROUTES = {
+  phones: '/phones',
+  'phone accessories': '/phone-accessories',
+  'phone-accessories': '/phone-accessories',
+  phone_accessories: '/phone-accessories',
+  electronics: '/electronics',
+  'home appliances': '/home-appliances',
+  'home-appliances': '/home-appliances',
+  home_appliances: '/home-appliances',
+};
+
+const SHOP_CATEGORY_TO_MAIN_ROUTE = {
+  phones: '/phones',
+  phone_cases: '/phone-accessories',
+  chargers: '/phone-accessories',
+  earphones: '/phone-accessories',
+  cables: '/phone-accessories',
+  power_banks: '/phone-accessories',
+  screen_protectors: '/phone-accessories',
+  holders: '/phone-accessories',
+  speakers: '/phone-accessories',
+  smart_watches: '/electronics',
+  electronic_appliances: '/electronics',
+  home_appliances: '/home-appliances',
+};
+
 function normalizeBannerLink(link) {
   if (!link || !String(link).trim()) return null;
 
@@ -18,6 +44,23 @@ function normalizeBannerLink(link) {
 
   if (safeLink.startsWith('http://') || safeLink.startsWith('https://')) {
     return safeLink;
+  }
+
+  const withoutLeadingSlash = safeLink.replace(/^\//, '');
+  const lowerLink = withoutLeadingSlash.toLowerCase();
+
+  if (lowerLink.startsWith('shop?category=')) {
+    const params = new URLSearchParams(withoutLeadingSlash.split('?')[1] || '');
+    const category = String(params.get('category') || '').replace(/^\//, '');
+    const mappedRoute = SHOP_CATEGORY_TO_MAIN_ROUTE[category];
+    if (mappedRoute && !params.get('sub')) {
+      return mappedRoute;
+    }
+    return safeLink.startsWith('/') ? safeLink : `/${withoutLeadingSlash}`;
+  }
+
+  if (MAIN_CATEGORY_ROUTES[lowerLink]) {
+    return MAIN_CATEGORY_ROUTES[lowerLink];
   }
 
   if (safeLink.startsWith('/')) {

@@ -137,7 +137,7 @@ export default function ReviewSection({ product, user }) {
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm">{review.user_name}</span>
                   {review.verified_purchase && (
-                    <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">âœ“ Verified</span>
+                    <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Verified</span>
                   )}
                 </div>
                 <div className="flex">
@@ -153,4 +153,83 @@ export default function ReviewSection({ product, user }) {
       )}
     </div>
   );
+}
+
+```
+
+## base44/entities/PromoBanner.jsonc
+
+```json
+{
+  "name": "PromoBanner",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Banner headline"
+    },
+    "subtitle": {
+      "type": "string",
+      "description": "Banner subtitle/description"
+    },
+    "badge": {
+      "type": "string",
+      "description": "Small badge text e.g. ðŸŽ‰ Christmas Sale"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Legacy banner image fallback"
+    },
+    "desktop_image_url": {
+      "type": "string",
+      "description": "Desktop hero image uploaded by admin"
+    },
+    "mobile_image_url": {
+      "type": "string",
+      "description": "Mobile hero image uploaded by admin"
+    },
+    "bg_gradient": {
+      "type": "string",
+      "description": "Tailwind gradient class e.g. from-red-600 via-red-500 to-pink-400"
+    },
+    "cta_text": {
+      "type": "string",
+      "description": "Call-to-action button text"
+    },
+    "cta_link": {
+      "type": "string",
+      "description": "Link for CTA button"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this banner is visible"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

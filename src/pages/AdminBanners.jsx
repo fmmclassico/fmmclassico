@@ -10,11 +10,33 @@ import { Loader2, Plus, Trash2, Eye, EyeOff, Pencil, X, Check, Upload } from 'lu
 import { toast } from 'sonner';
 
 const MAIN_CATEGORY_OPTIONS = [
+  { label: 'Phones', value: 'phones', route: '/phones' },
+  { label: 'Phone Accessories', value: 'phone-accessories', route: '/phone-accessories' },
+  { label: 'Home Appliances', value: 'home-appliances', route: '/home-appliances' },
+  { label: 'Electronics', value: 'electronics', route: '/electronics' },
+];
+
+const SHOP_CATEGORY_OPTIONS = [
   { label: 'Phones', value: 'phones' },
   { label: 'Phone Accessories', value: 'phone_cases' },
   { label: 'Home Appliances', value: 'home_appliances' },
   { label: 'Electronics', value: 'electronic_appliances' },
 ];
+
+const SHOP_CATEGORY_TO_MAIN_SLUG = {
+  phones: 'phones',
+  phone_cases: 'phone-accessories',
+  chargers: 'phone-accessories',
+  earphones: 'phone-accessories',
+  cables: 'phone-accessories',
+  power_banks: 'phone-accessories',
+  screen_protectors: 'phone-accessories',
+  holders: 'phone-accessories',
+  speakers: 'phone-accessories',
+  smart_watches: 'electronics',
+  electronic_appliances: 'electronics',
+  home_appliances: 'home-appliances',
+};
 
 const PAGE_OPTIONS = [
   { label: 'Home', value: '/' },
@@ -55,8 +77,10 @@ function normalizeRoute(route) {
 
 function buildBannerLink(form) {
   switch (form.destinationType) {
-    case 'main_category':
-      return `/Shop?category=${encodeURIComponent(form.mainCategory)}`;
+    case 'main_category': {
+      const match = MAIN_CATEGORY_OPTIONS.find((item) => item.value === form.mainCategory);
+      return match?.route || `/` + encodeURIComponent(form.mainCategory);
+    }
 
     case 'brand':
       return form.brandName.trim()
@@ -90,7 +114,7 @@ function destinationSummary(form) {
     case 'brand':
       return form.brandName ? `Brand: ${form.brandName}` : 'Brand';
     case 'sub_category': {
-      const match = MAIN_CATEGORY_OPTIONS.find((item) => item.value === form.subCategoryParent);
+      const match = SHOP_CATEGORY_OPTIONS.find((item) => item.value === form.subCategoryParent);
       return form.subCategoryName
         ? `Subcategory: ${form.subCategoryName} (${match?.label || 'Main Category'})`
         : 'Subcategory';
@@ -132,6 +156,15 @@ function parseStoredLink(link) {
     };
   }
 
+  const matchingMainCategory = MAIN_CATEGORY_OPTIONS.find((item) => item.route === safeLink);
+  if (matchingMainCategory) {
+    return {
+      ...EMPTY_FORM,
+      destinationType: 'main_category',
+      mainCategory: matchingMainCategory.value,
+    };
+  }
+
   if (cleaned.startsWith('Shop?category=')) {
     const params = new URLSearchParams(cleaned.split('?')[1] || '');
     const category = params.get('category') || 'phones';
@@ -149,7 +182,7 @@ function parseStoredLink(link) {
     return {
       ...EMPTY_FORM,
       destinationType: 'main_category',
-      mainCategory: category,
+      mainCategory: SHOP_CATEGORY_TO_MAIN_SLUG[category] || 'phones',
     };
   }
 
@@ -272,7 +305,7 @@ function DestinationFields({ form, setForm }) {
                 <SelectValue placeholder="Choose parent category" />
               </SelectTrigger>
               <SelectContent>
-                {MAIN_CATEGORY_OPTIONS.map((item) => (
+                {SHOP_CATEGORY_OPTIONS.map((item) => (
                   <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
                 ))}
               </SelectContent>

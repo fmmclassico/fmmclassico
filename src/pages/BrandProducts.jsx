@@ -105,29 +105,20 @@ export default function BrandProducts() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       <div className="max-w-5xl mx-auto px-4 pt-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-4 mb-3">
-            {uploadedLogo && (
-              <div className="w-14 h-14 rounded-xl bg-white border flex items-center justify-center p-2">
-                <img src={uploadedLogo} alt={brand} className="w-10 h-10 object-contain" />
-              </div>
-            )}
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{brand}</h1>
-              <p className="text-gray-500">Browse {brand} products with the Classico filter layout.</p>
-            </div>
-          </div>
-        </div>
+        <div className="mb-5 flex items-center justify-between gap-3">
+  <h1 className="text-2xl md:text-3xl font-bold text-gray-800 leading-tight">{brand}</h1>
 
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="text-sm text-gray-500">{brandProducts.length} product(s) found</div>
-
-          <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" className="rounded-full border-gray-300">
-                <Filter className="h-4 w-4 mr-2" /> Filters
-              </Button>
-            </SheetTrigger>
+  <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+    <SheetTrigger asChild>
+      <Button
+        variant="outline"
+        size="icon"
+        aria-label="Open filters"
+        className="h-10 w-10 rounded-full border-gray-300 shrink-0"
+      >
+        <Filter className="h-4 w-4" />
+      </Button>
+    </SheetTrigger>
             <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
               <SheetHeader>
                 <SheetTitle>Filters</SheetTitle>
@@ -161,19 +152,6 @@ export default function BrandProducts() {
             </SheetContent>
           </Sheet>
         </div>
-
-        {activeFilters.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-5">
-            {activeFilters.map((filter) => (
-              <span key={filter} className="inline-flex items-center gap-1 rounded-full bg-white border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700 shadow-sm">
-                {filter}
-              </span>
-            ))}
-            <button onClick={clearFilters} className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-100 px-3 py-1 text-xs font-medium text-red-600">
-              <X className="h-3.5 w-3.5" /> Clear
-            </button>
-          </div>
-        )}
 
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -221,8 +199,6 @@ export default function BrandProducts() {
           <div className="text-center py-16 bg-white border rounded-xl">
             <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 font-medium">No {brand} products found</p>
-            <p className="text-sm text-gray-400 mt-1">Try adjusting the filters.</p>
-            <button onClick={clearFilters} className="mt-3 text-sm text-[#0A2E60] font-medium">Clear filters</button>
           </div>
         )}
       </div>

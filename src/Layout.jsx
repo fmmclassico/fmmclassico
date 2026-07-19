@@ -368,9 +368,9 @@ export default function Layout({ children, currentPageName }) {
   const renderAuthenticatedHeader = () => (
     <header className="sticky top-0 z-50 shadow-lg" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
       <div className="w-full px-4 md:px-8 xl:px-[2cm]">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo & Menu */}
-          <div className="flex items-center gap-1 md:gap-2">
+       <div className="flex items-center justify-between h-16 gap-2">
+  {/* Logo & Menu */}
+  <div className="flex items-center gap-1.5">
             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
@@ -409,8 +409,8 @@ export default function Layout({ children, currentPageName }) {
               </SheetContent>
             </Sheet>
 
-            <Link to={createPageUrl('Home')} className="flex items-center -ml-1 md:ml-0">
-  <h1 className="text-lg sm:text-xl md:text-3xl font-black text-white tracking-tight">
+            <Link to={createPageUrl('Home')} className="flex items-center -ml-0.5 md:ml-0">
+  <h1 className="text-[1.3rem] sm:text-[1.45rem] md:text-3xl font-black text-white tracking-tight leading-none">
     FMM <span className="text-white">CLASSICO</span>
   </h1>
 </Link>
@@ -426,7 +426,7 @@ export default function Layout({ children, currentPageName }) {
           />
 
           {/* Right Actions */}
-          <div className="flex items-center gap-1 ml-2 md:ml-0">
+          <div className="flex items-center gap-1 ml-1 md:ml-0">
             {/* Help Button */}
             <div className="relative" ref={helpRef}>
               <button className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors" onClick={() => setHelpOpen(o => !o)}>

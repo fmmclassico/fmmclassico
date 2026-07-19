@@ -95,9 +95,21 @@ export default function GuestLayout({ children, currentPageName }) {
       if (!el) { el = document.createElement('meta'); el.setAttribute(attr, key); document.head.appendChild(el); }
       el.setAttribute('content', content);
     };
-    setMeta('name', 'description', 'FMM CLASSICO – Your trusted online store for premium phone accessories, electronic appliances and home appliances in Ghana. Shop chargers, earphones, phone cases, smart watches and more. Fast delivery to Tarkwa (UMAT Campus), Accra (Ashongman Estate) and across Ghana.');
-    setMeta('name', 'keywords', 'FMM CLASSICO, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Ashongman Estate, online shopping Ghana');
+    const siteDescription = 'FMM CLASSICO – Your trusted online store for premium phone accessories, electronic appliances and home appliances in Ghana. Shop chargers, earphones, phone cases, smart watches and more. Fast delivery to Tarkwa (UMAT Campus), Accra (Ashongman Estate) and across Ghana.';
+    setMeta('name', 'description', siteDescription);
+    setMeta('name', 'keywords', 'FMM CLASSICO, FMMCLASSICO, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Ashongman Estate, online shopping Ghana');
     setMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+    setMeta('name', 'author', 'FMM CLASSICO');
+    setMeta('name', 'application-name', 'FMM CLASSICO');
+    setMeta('name', 'apple-mobile-web-app-title', 'FMM CLASSICO');
+    setMeta('property', 'og:type', 'website');
+    setMeta('property', 'og:site_name', 'FMM CLASSICO');
+    setMeta('property', 'og:title', 'FMM CLASSICO – Phones & Accessories, Home Appliances and Electronics');
+    setMeta('property', 'og:description', siteDescription);
+    setMeta('property', 'og:url', window.location.origin);
+    setMeta('name', 'twitter:card', 'summary_large_image');
+    setMeta('name', 'twitter:title', 'FMM CLASSICO – Phones & Accessories, Home Appliances and Electronics');
+    setMeta('name', 'twitter:description', siteDescription);
   }, []);
 
   return (

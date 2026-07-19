@@ -19,9 +19,18 @@ const categoryNames = {
   holders: 'Holders & Mounts',
   speakers: 'Speakers',
   smart_watches: 'Smart Watches',
-  electronic_appliances: 'Electronic Appliances',
+  electronic_appliances: 'Electronics',
   home_appliances: 'Home Appliances',
 };
+
+function slugify(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -29,7 +38,9 @@ export default function Shop() {
   const [viewMode, setViewMode] = useState('grid');
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const category = searchParams.get('category');
+  const rawCategory = searchParams.get('category') || '';
+  const category = rawCategory.replace(/^\//, '') || null;
+  const subcategory = searchParams.get('sub');
   const search = searchParams.get('search');
   const featured = searchParams.get('featured');
 
@@ -43,13 +54,24 @@ export default function Shop() {
 
   React.useEffect(() => {
     refetch();
-  }, [category, search, featured, refetch]);
+  }, [category, subcategory, search, featured, refetch]);
 
   const filteredProducts = useMemo(() => {
     let products = [...allProducts].filter((product) => product.is_visible !== false && !(product.stock != null && product.stock === 0));
 
     if (category) {
       products = products.filter((product) => product.category === category);
+    }
+
+    if (subcategory) {
+      const wantedSub = decodeURIComponent(subcategory).trim();
+      const wantedSlug = slugify(wantedSub);
+
+      products = products.filter((product) => {
+        const productSub = String(product.subcategory || '').trim();
+        if (!productSub) return false;
+        return productSub.toLowerCase() === wantedSub.toLowerCase() || slugify(productSub) === wantedSlug;
+      });
     }
 
     if (featured === 'true') {
@@ -81,7 +103,7 @@ export default function Shop() {
     }
 
     return products;
-  }, [allProducts, category, featured, search, sortBy]);
+  }, [allProducts, category, subcategory, featured, search, sortBy]);
 
   const clearFilters = () => {
     setSearchParams({});
@@ -91,19 +113,22 @@ export default function Shop() {
 
   const activeFilters = [
     category ? `Category: ${categoryNames[category] || category}` : null,
+    subcategory ? `Subcategory: ${decodeURIComponent(subcategory)}` : null,
     search ? `Search: ${search}` : null,
     featured === 'true' ? 'Featured Only' : null,
     sortBy !== 'newest' ? `Sort: ${sortBy.replace('_', ' ')}` : null,
     viewMode !== 'grid' ? `View: ${viewMode}` : null,
   ].filter(Boolean);
 
-  const pageTitle = category
-    ? categoryNames[category] || category
-    : search
-      ? `Results for "${search}"`
-      : featured === 'true'
-        ? 'Featured Products'
-        : 'All Products';
+  const pageTitle = subcategory
+    ? decodeURIComponent(subcategory)
+    : category
+      ? categoryNames[category] || category
+      : search
+        ? `Results for "${search}"`
+        : featured === 'true'
+          ? 'Featured Products'
+          : 'All Products';
 
   return (
     <div className="container mx-auto px-4 py-6">

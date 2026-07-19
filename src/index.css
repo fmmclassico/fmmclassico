@@ -166,8 +166,8 @@ body {
 
 @media (min-width: 1024px) {
   .fmm-flyer-hero-frame {
-    height: 17rem;
-    min-height: 17rem;
+    height: 22rem;
+    min-height: 22rem;
   }
 }
 
@@ -189,6 +189,13 @@ body {
   object-fit: cover;
   object-position: center;
   background: #031725;
+}
+
+/* Desktop only - shift banner slightly left */
+@media (min-width: 1024px) {
+  .fmm-flyer-hero-image {
+    object-position: 40% center;
+  }
 }
 
 .fmm-flyer-hero-dots {

@@ -90,6 +90,13 @@ const subColorClasses = {
   amber:  { bg: 'bg-amber-50',  border: 'border-amber-200',  hover: 'hover:bg-amber-100',  text: 'text-amber-800',  allBg: 'bg-amber-100',  allBorder: 'border-amber-300' },
 };
 
+const MAIN_CATEGORY_LINKS = {
+  phones: createPageUrl('phones'),
+  phone_accessories: createPageUrl('phone-accessories'),
+  electronics: createPageUrl('electronics'),
+  home_appliances: createPageUrl('home-appliances'),
+};
+
 function getSubLink(sub) {
   if (sub.brand && sub.category) {
     return createPageUrl(`BrandProducts?brand=${encodeURIComponent(sub.brand)}&category=${sub.category}`);
@@ -211,9 +218,7 @@ export default function Categories() {
         {CATEGORIES.map((cat, i) => {
           const sc = subColorClasses[cat.subColor];
           const isOpen = !!expanded[cat.id];
-          const allLink = cat.shopCategory
-            ? createPageUrl(`Shop?category=${cat.shopCategory}`)
-            : createPageUrl(`Shop`);
+          const allLink = MAIN_CATEGORY_LINKS[cat.id] || createPageUrl('Shop');
 
           return (
             <motion.div

@@ -298,8 +298,8 @@ function BannerForm({ initial, onSave, onCancel, isSaving, isNew }) {
           <p className="font-semibold text-gray-900 mb-1">Recommended strategy</p>
           <p>Upload <strong>two separate flyers</strong> for the same banner:</p>
           <ul className="list-disc pl-5 mt-1 space-y-1">
-            <li><strong>Desktop:</strong> around <strong>1600 Ã— 520 px</strong></li>
-            <li><strong>Mobile:</strong> around <strong>1080 Ã— 640 px</strong></li>
+            <li><strong>Desktop:</strong> around <strong>1600 x 520 px</strong></li>
+            <li><strong>Mobile:</strong> around <strong>1080 x 640 px</strong></li>
           </ul>
           <p className="mt-2">This gives a cleaner fit than forcing one flyer to work on both screens.</p>
         </div>
@@ -331,7 +331,7 @@ function BannerForm({ initial, onSave, onCancel, isSaving, isNew }) {
 
         <div className="rounded-lg border bg-white px-3 py-2 text-xs text-gray-600">
           <span className="font-semibold text-gray-800">Preview destination:</span> {destinationSummary(form)}
-          <div className="mt-1 break-all text-[11px] text-blue-700">{buildBannerLink(form) || 'â€”'}</div>
+          <div className="mt-1 break-all text-[11px] text-blue-700">{buildBannerLink(form) || 'Ã¢â‚¬â€'}</div>
         </div>
 
         <div className="flex gap-3 pt-1">
@@ -421,7 +421,7 @@ export default function AdminBanners() {
     <div className="container mx-auto px-4 py-6 max-w-3xl">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-black text-gray-800">ðŸ–¼ï¸ Hero Flyers</h1>
+          <h1 className="text-2xl font-black text-gray-800">Hero Flyers</h1>
           <p className="text-gray-500 text-sm mt-1">Use separate desktop and mobile flyers for the cleanest hero banner result.</p>
         </div>
         <Button onClick={() => { setShowCreateForm((prev) => !prev); setEditingId(null); }} className="bg-[#2E86C1] hover:bg-[#2578ae] text-white">
@@ -485,7 +485,7 @@ export default function AdminBanners() {
                         <p className="text-xs text-blue-700 break-all mt-1">{banner.cta_link || 'No link'}</p>
                         <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
                           <span>Order: {Number(banner.order ?? 0)}</span>
-                          <span>â€¢</span>
+                          <span>Ã¢â‚¬Â¢</span>
                           <span>{banner.is_active !== false ? 'Visible' : 'Hidden'}</span>
                         </div>
                       </div>

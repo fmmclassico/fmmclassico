@@ -259,12 +259,13 @@ body {
 @media (max-width:767px){
 
 .fmm-stable-hero{
-    height:185px;
+    min-height:185px;
+    height:auto;
     display:grid;
-    grid-template-columns:1.3fr .7fr;
+    grid-template-columns:minmax(0,1fr) auto;
     align-items:center;
-    gap:.8rem;
-    padding:.8rem 1rem;
+    gap:.75rem;
+    padding:.9rem 1rem;
 }
 
 .fmm-stable-hero-copy{
@@ -272,6 +273,8 @@ body {
     flex-direction:column;
     justify-content:center;
     align-items:flex-start;
+    min-width:0;
+    max-width:none;
 }
 
 .fmm-stable-hero-badge{
@@ -280,17 +283,25 @@ body {
     margin-bottom:.35rem;
 }
 
+.fmm-stable-hero-title,
+.fmm-stable-hero-subtitle{
+    word-break:keep-all;
+    overflow-wrap:normal;
+    hyphens:none;
+}
+
 .fmm-stable-hero-title{
     font-size:1.45rem;
-    line-height:1.05;
-    letter-spacing:-.4px;
+    line-height:1.12;
+    letter-spacing:-.35px;
+    max-width:none;
 }
 
 .fmm-stable-hero-subtitle{
     font-size:.78rem;
     line-height:1.35;
-    margin-top:.3rem;
-    max-width:180px;
+    margin-top:.35rem;
+    max-width:none;
 }
 
 .fmm-stable-hero-cta-wrap{
@@ -309,6 +320,7 @@ body {
     display:flex;
     justify-content:center;
     align-items:center;
+    flex-shrink:0;
 }
 
 .fmm-stable-hero-image-frame{
@@ -318,8 +330,8 @@ body {
 .fmm-stable-hero-image{
     width:auto;
     height:auto;
-    max-width:120px;
-    max-height:120px;
+    max-width:88px;
+    max-height:88px;
     object-fit:contain;
     object-position:center;
     border-radius:0;

@@ -95,11 +95,12 @@ export default function GuestHome() {
       <HeroBanner />
 
       {/* CATEGORIES */}
-      <div className="mt-3 pt-3 border-t border-gray-100">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-black text-gray-900 text-base">Shop by Category</h2>
-          <Link to="/categories" className="text-[#2E86C1] text-xs font-semibold flex items-center hover:underline">All <ChevronRight className="h-3 w-3" /></Link>
-        </div>
+<div className="bg-white mt-2 mx-2 md:mx-4 rounded-2xl shadow-sm px-3 py-2.5 md:px-4 md:py-3">
+  <div className="flex justify-end mb-2">
+    <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center hover:underline">
+      All <ChevronRight className="h-3 w-3" />
+    </Link>
+  </div>
         <div className="grid grid-cols-4 gap-2.5 md:gap-3">
           {HOME_CATEGORIES.map(cat => {
   const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;

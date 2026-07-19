@@ -370,7 +370,7 @@ export default function Layout({ children, currentPageName }) {
       <div className="w-full px-4 md:px-8 xl:px-[2cm]">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Menu */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
@@ -409,11 +409,12 @@ export default function Layout({ children, currentPageName }) {
               </SheetContent>
             </Sheet>
 
-            <Link to={createPageUrl('Home')} className="flex items-center">
-              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-                FMM <span className="text-white">CLASSICO</span>
-              </h1>
-            </Link>
+            <Link to={createPageUrl('Home')} className="flex items-center -ml-1 md:ml-0">
+  <h1 className="text-lg sm:text-xl md:text-3xl font-black text-white tracking-tight">
+    FMM <span className="text-white">CLASSICO</span>
+  </h1>
+</Link>
+
           </div>
 
           {/* Search Bar - Desktop */}
@@ -425,7 +426,7 @@ export default function Layout({ children, currentPageName }) {
           />
 
           {/* Right Actions */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 ml-2 md:ml-0">
             {/* Help Button */}
             <div className="relative" ref={helpRef}>
               <button className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors" onClick={() => setHelpOpen(o => !o)}>

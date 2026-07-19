@@ -26,7 +26,8 @@ const PAGE_LINK_OPTIONS = [
   { label: '📺 Shop — Electronics', value: 'Shop?category=electronic_appliances' },
   { label: '🏡 Shop — Home Appliances', value: 'Shop?category=home_appliances' },
   { label: '📂 Categories Page', value: 'Categories' },
-  { label: '⚡ Flash Sales', value: 'Shop?flash=true' },
+  { label: '⭐ Featured Products', value: 'Shop?featured=true' },
+  { label: '📝 Custom Link / Route', value: '' },
 ];
 
 const GRADIENTS = [
@@ -41,7 +42,7 @@ const GRADIENTS = [
 ];
 
 const EMPTY_FORM = {
-  title: '', subtitle: '', badge: '', image_url: '',
+  title: '', Optional Admin Note: '', badge: '', image_url: '',
   bg_gradient: 'from-[#031725] via-[#0A2E60] to-[#102C54]',
   cta_text: 'Shop Now', cta_link: '', is_active: true, order: 0
 };
@@ -49,42 +50,42 @@ const EMPTY_FORM = {
 const DEFAULT_SLIDES = [
   {
     badge: '🔥 New Arrivals', title: 'Phones & Accessories',
-    subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
+    Optional Admin Note: 'Cases, chargers, earphones & more at unbeatable prices',
     bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
     image_url: 'https://i.pinimg.com/1200x/99/64/a2/9964a202c67115b1f40714082848c312.jpg',
     cta_link: 'Shop?category=phones', cta_text: 'Shop Now', is_active: true, order: 1,
   },
   {
     badge: '⚡ Best Deals', title: 'Electronic Appliances',
-    subtitle: 'Top quality electronics for your everyday needs',
+    Optional Admin Note: 'Top quality electronics for your everyday needs',
     bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
     image_url: 'https://m.media-amazon.com/images/I/519qw7On-vL.jpg',
     cta_link: 'Shop?category=electronic_appliances', cta_text: 'Shop Now', is_active: true, order: 2,
   },
   {
     badge: '🏡 Home Deals', title: 'Home Appliances',
-    subtitle: 'Quality home appliances delivered to your door',
+    Optional Admin Note: 'Quality home appliances delivered to your door',
     bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
     image_url: 'https://i.pinimg.com/1200x/60/53/2f/60532f215514eb6e5068ec232e1428c1.jpg',
     cta_link: 'Shop?category=home_appliances', cta_text: 'Shop Now', is_active: true, order: 3,
   },
   {
     badge: '📱 Top Brands', title: 'Samsung & Apple',
-    subtitle: 'Genuine Samsung & Apple products at great prices',
+    Optional Admin Note: 'Genuine Samsung & Apple products at great prices',
     bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
     image_url: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=600&q=80',
     cta_link: 'BrandProducts?brand=Samsung', cta_text: 'Shop Brands', is_active: true, order: 4,
   },
   {
     badge: '🎧 Accessories', title: 'Earphones & Speakers',
-    subtitle: 'Premium sound at affordable prices — Oraimo, JBL & more',
+    Optional Admin Note: 'Premium sound at affordable prices — Oraimo, JBL & more',
     bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
     image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80',
     cta_link: 'Shop?category=earphones', cta_text: 'Shop Now', is_active: true, order: 5,
   },
   {
     badge: '⌚ Smart Wear', title: 'Smart Watches',
-    subtitle: 'Stay connected with the latest smartwatches',
+    Optional Admin Note: 'Stay connected with the latest smartwatches',
     bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
     image_url: 'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=600&q=80',
     cta_link: 'Shop?category=smart_watches', cta_text: 'Shop Now', is_active: true, order: 6,
@@ -120,7 +121,7 @@ function BannerForm({ initial, onSave, onCancel, isSaving, isNew }) {
     if (!form.title) { toast.error('Enter a title first'); return; }
     setIsGenerating(true);
     const { url } = await base44.integrations.Core.GenerateImage({
-      prompt: `A vibrant, high-quality promotional banner image for an online store in Ghana called FMM CLASSICO. The theme is: "${form.title}". ${form.subtitle || ''}. Colorful, festive, professional e-commerce style. No text overlay.`
+      prompt: `A vibrant, high-quality promotional banner image for an online store in Ghana called FMM CLASSICO. The theme is: "${form.title}". ${form.Optional Admin Note || ''}. Colorful, festive, professional e-commerce style. No text overlay.`
     });
     setForm(f => ({ ...f, image_url: url }));
     setIsGenerating(false);
@@ -142,8 +143,8 @@ function BannerForm({ initial, onSave, onCancel, isSaving, isNew }) {
           </div>
         </div>
         <div>
-          <Label className="text-xs mb-1 block">Subtitle</Label>
-          <Input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))} placeholder="Short description..." />
+          <Label className="text-xs mb-1 block">Optional Admin Note</Label>
+          <Input value={form.Optional Admin Note} onChange={e => setForm(f => ({ ...f, Optional Admin Note: e.target.value }))} placeholder="Short description..." />
         </div>
         <div>
           <Label className="text-xs mb-1 block">Banner Image</Label>
@@ -175,11 +176,11 @@ function BannerForm({ initial, onSave, onCancel, isSaving, isNew }) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label className="text-xs mb-1 block">Button Text</Label>
+            <Label className="text-xs mb-1 block">Internal Label</Label>
             <Input value={form.cta_text} onChange={e => setForm(f => ({ ...f, cta_text: e.target.value }))} placeholder="Shop Now" />
           </div>
           <div>
-            <Label className="text-xs mb-1 block">Where does the button go?</Label>
+            <Label className="text-xs mb-1 block">Where should users go when they click this flyer?</Label>
             <Select value={form.cta_link} onValueChange={v => setForm(f => ({ ...f, cta_link: v }))}>
               <SelectTrigger className="text-xs h-9">
                 <SelectValue placeholder="Pick a page/category..." />
@@ -194,7 +195,10 @@ function BannerForm({ initial, onSave, onCancel, isSaving, isNew }) {
               className="mt-1 text-xs h-8"
               value={form.cta_link}
               onChange={e => setForm(f => ({ ...f, cta_link: e.target.value }))}
-              placeholder="Or type a custom link..."
+              placeholder="Type a custom page, category, route, or full external URL"
+              <p className="text-[11px] text-gray-500 mt-1">
+  Example: `Shop?category=phones`, `BrandProducts?brand=Samsung`, `Categories`, or a full external URL.
+</p>
             />
           </div>
         </div>
@@ -231,7 +235,7 @@ export default function AdminBanners() {
 
   const { data: banners = [], isLoading } = useQuery({
     queryKey: ['promoBanners'],
-    queryFn: () => base44.entities.PromoBanner.list('order', 50),
+    queryFn: () => base44.entities.PromoBanner.list('order', 500),
     enabled: isAdmin,
   });
 
@@ -283,8 +287,8 @@ export default function AdminBanners() {
     <div className="container mx-auto px-4 py-6 max-w-2xl">
       <div className="flex items-center justify-between mb-2">
         <div>
-          <h1 className="text-2xl font-black text-gray-800">🖼️ Hero Banner Slides</h1>
-          <p className="text-gray-500 text-sm mt-1">Control all 6 homepage banner slides — edit, hide, or delete any slide</p>
+          <h1 className="text-2xl font-black text-gray-800">🖼️ Hero Flyer Slides</h1>
+          <p className="text-gray-500 text-sm mt-1">Upload flyer posters, choose where each flyer sends users, and manage as many hero slides as you want.</p>
         </div>
         <Button onClick={() => { setShowCreateForm(s => !s); setEditingId(null); }} className="bg-[#2E86C1] hover:bg-[#2578ae] text-white">
           <Plus className="h-4 w-4 mr-1" /> New Slide
@@ -337,7 +341,7 @@ export default function AdminBanners() {
                     <div className="flex-1 min-w-0">
                       {banner.badge && <p className="text-xs text-gray-400">{banner.badge}</p>}
                       <p className="font-bold text-gray-800 truncate">{banner.title}</p>
-                      {banner.subtitle && <p className="text-xs text-gray-500 truncate">{banner.subtitle}</p>}
+                      {banner.Optional Admin Note && <p className="text-xs text-gray-500 truncate">{banner.Optional Admin Note}</p>}
                       <Badge className={`mt-1 text-xs ${banner.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                         {banner.is_active ? '👁 Visible' : '🙈 Hidden'}
                       </Badge>

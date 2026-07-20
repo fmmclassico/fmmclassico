@@ -1,5 +1,45 @@
 import { supabase } from '@/lib/supabase';
 
+const PROMO_BANNER_RESPONSIVE_FIELDS = ['desktop_image_url', 'mobile_image_url'];
+
+function getErrorMessage(error) {
+  return [
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.error_description,
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function isMissingColumnError(error, fields = []) {
+  const message = getErrorMessage(error).toLowerCase();
+  return fields.some((field) => message.includes(field.toLowerCase()));
+}
+
+function stripFields(record = {}, fields = []) {
+  const clone = { ...record };
+  fields.forEach((field) => {
+    delete clone[field];
+  });
+  return clone;
+}
+
+async function runWriteWithLegacyPromoBannerFallback(tableName, writeFn, payload) {
+  try {
+    return await writeFn(payload);
+  } catch (error) {
+    if (
+      tableName === 'promo_banners'
+      && isMissingColumnError(error, PROMO_BANNER_RESPONSIVE_FIELDS)
+    ) {
+      return writeFn(stripFields(payload, PROMO_BANNER_RESPONSIVE_FIELDS));
+    }
+    throw error;
+  }
+}
+
 // Helper: convert entity name to table name
 function toTableName(name) {
   return name
@@ -9,7 +49,7 @@ function toTableName(name) {
     .replace(/([^s])$/, '$1s');
 }
 
-// Create a proxy entity that maps calls to Supabase
+// Create a compatibility entity client that maps calls to Supabase
 function createEntity(tableName) {
   return {
     async list(orderBy, limit) {
@@ -47,14 +87,38 @@ function createEntity(tableName) {
       return data;
     },
     async create(record) {
-      const { data, error } = await supabase.from(tableName).insert(record).select().single();
-      if (error) { console.error('create ' + tableName + ':', error); throw error; }
-      return data;
+      try {
+        const data = await runWriteWithLegacyPromoBannerFallback(
+          tableName,
+          async (payload) => {
+            const { data, error } = await supabase.from(tableName).insert(payload).select().single();
+            if (error) throw error;
+            return data;
+          },
+          record
+        );
+        return data;
+      } catch (error) {
+        console.error('create ' + tableName + ':', error);
+        throw error;
+      }
     },
     async update(id, updates) {
-      const { data, error } = await supabase.from(tableName).update(updates).eq('id', id).select().single();
-      if (error) { console.error('update ' + tableName + ':', error); throw error; }
-      return data;
+      try {
+        const data = await runWriteWithLegacyPromoBannerFallback(
+          tableName,
+          async (payload) => {
+            const { data, error } = await supabase.from(tableName).update(payload).eq('id', id).select().single();
+            if (error) throw error;
+            return data;
+          },
+          updates
+        );
+        return data;
+      } catch (error) {
+        console.error('update ' + tableName + ':', error);
+        throw error;
+      }
     },
     async delete(id) {
       const { error } = await supabase.from(tableName).delete().eq('id', id);
@@ -128,11 +192,11 @@ const appLogs = {
   logUserInApp() { return Promise.resolve(); }
 };
 
-// Supabase config for edge functions
+// Supabase config for edge functions and storage uploads
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://kptlejtauwqvaapsrjfx.supabase.co';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Integrations with REAL email sending via Supabase edge function
+// Integrations backed by Supabase
 const integrations = {
   Core: {
     async UploadFile({ file }) {
@@ -172,7 +236,8 @@ const integrations = {
   }
 };
 
-export const base44 = { entities: entitiesProxy, auth, appLogs, integrations };
+export const appClient = { entities: entitiesProxy, auth, appLogs, integrations };
+export const base44 = appClient;
 
 export function redirectLoginWithProvider(provider, returnUrl) {
   if (typeof window === 'undefined') return;

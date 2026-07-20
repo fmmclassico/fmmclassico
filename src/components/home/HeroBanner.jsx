@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Smartphone, Headphones, Home as HomeIcon, Tv, ShieldCheck, Truck, Bot, Headset, Sparkles, CreditCard, ChevronRight } from 'lucide-react';
-import { appClient } from '@/api/appClient';
+import { appClient } from '@/api/base44Client.js';
 import { createPageUrl } from '@/lib/utils';
 
 function normalizeQueryResult(result) {
-  if (Array.isArray(result)) return result;
+  if (Array.isArray(resimport { appClient } from '@/api/appClient';ult)) return result;
   if (Array.isArray(result?.data)) return result.data;
   return [];
 }

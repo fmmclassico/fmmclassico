@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -39,9 +39,9 @@ export default function Settings() {
 
   useEffect(() => {
     const getUser = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
+      const isAuth = await appClient.auth.isAuthenticated();
       if (isAuth) {
-        const userData = await base44.auth.me();
+        const userData = await appClient.auth.me();
         setUser(userData);
         setFormData({
           full_name: userData.full_name || '',
@@ -52,7 +52,7 @@ export default function Settings() {
           newsletter_enabled: userData.newsletter_enabled ?? true
         });
       } else {
-        base44.auth.redirectToLogin('/');
+        appClient.auth.redirectToLogin('/');
       }
       setIsLoading(false);
     };
@@ -70,13 +70,13 @@ export default function Settings() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    await base44.auth.updateMe(formData);
+    await appClient.auth.updateMe(formData);
     setIsSaving(false);
     toast.success('Settings saved successfully!');
   };
 
-  // FIXED: was calling base44.auth.logout() directly, which sends people to the
-  // Base44 auth page. Now uses the app's logout(), which clears the session and
+  // FIXED: was calling appClient.auth.logout() directly, which sends people to the
+  // legacy auth page. Now uses the app's logout(), which clears the session and
   // sends people to the guest homepage instead.
   const handleLogout = async () => {
     await logout();
@@ -85,8 +85,7 @@ export default function Settings() {
   const handleDeleteAccount = async () => {
     if (!confirm('Are you sure you want to delete your account? This action cannot be undone and all your data will be lost.')) return;
     if (!confirm('This is permanent. Delete account?')) return;
-    await base44.entities.User.delete(user.id);
-    await logout();
+    toast.error('Account deletion needs a secure server-side function. Contact support or add a Supabase Edge Function for user deletion.');
   };
 
   if (isLoading) {

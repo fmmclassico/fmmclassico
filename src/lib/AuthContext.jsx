@@ -66,12 +66,12 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
     setAuthError(null);
 
-    // Remove any base44 tokens from localStorage
+    // Remove any stale auth tokens from localStorage
     try {
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.includes('base44') || key.includes('supabase') || key.includes('sb-') || key.includes('auth'))) {
+        if (key && (key.includes('fmmclassico') || key.includes('supabase') || key.includes('sb-') || key.includes('auth'))) {
           keysToRemove.push(key);
         }
       }

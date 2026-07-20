@@ -1,7 +1,10 @@
 {
+  "id": "/",
   "name": "FMM CLASSICO",
   "short_name": "FMM CLASSICO",
+  "description": "FMM CLASSICO online store for phones, accessories, electronics, and home appliances in Ghana.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0A2E60",
@@ -18,4 +21,3 @@
     }
   ]
 }
-

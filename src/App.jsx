@@ -158,9 +158,9 @@ const AuthenticatedApp = () => {
     return (
       <>
         <AdminAuthModal
-          open={true}
-          onCancel={() => navigateToLogin()}
-          onSuccess={verifyAdminPassword}
+          isOpen={true}
+          onClose={() => navigateToLogin()}
+          onSuccess={() => window.location.reload()}
           userEmail={authError.email}
         />
         <Routes>

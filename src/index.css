@@ -260,23 +260,8 @@ body {
   }
 }
 
-  
 /* Ensure images don't overflow on mobile */
 img { max-width: 100%; }
-
-/* Hide Base44 platform badge */
-#base44-badge,
-[id="base44-badge"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: fixed !important;
-  overflow: hidden !important;
-}
-
 
 .fmm-product-details-content.ql-editor {
   padding: 0 !important;
@@ -311,4 +296,12 @@ img { max-width: 100%; }
   width: 100%;
   display: block;
   overflow-x: auto;
+}
+
+.fmm-flyer-hero-frame {
+  background: #020817;
+}
+
+.fmm-flyer-hero-clickable {
+  background: transparent;
 }

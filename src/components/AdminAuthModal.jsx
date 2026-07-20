@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Lock } from 'lucide-react';
@@ -45,6 +45,9 @@ export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }
             <Lock className="w-5 h-5" />
             Admin Access Required
           </DialogTitle>
+          <DialogDescription>
+            Enter the admin password to continue managing protected content.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -75,6 +76,9 @@ export default function DeliveryInfoModal({ trigger }) {
             <Truck className="h-5 w-5 text-orange-500" />
             Delivery & Pickup Information
           </DialogTitle>
+          <DialogDescription>
+            View pickup points, delivery fees, and how to share your location for accurate delivery.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 mt-2">

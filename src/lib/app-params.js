@@ -10,7 +10,7 @@ const getAppParamValue = (paramName, { defaultValue = undefined, removeFromUrl =
 	if (isNode) {
 		return defaultValue;
 	}
-	const storageKey = `base44_${toSnakeCase(paramName)}`;
+	const storageKey = `fmmclassico_${toSnakeCase(paramName)}`;
 	const urlParams = new URLSearchParams(window.location.search);
 	const searchParam = urlParams.get(paramName);
 	if (removeFromUrl) {
@@ -36,15 +36,15 @@ const getAppParamValue = (paramName, { defaultValue = undefined, removeFromUrl =
 
 const getAppParams = () => {
 	if (getAppParamValue("clear_access_token") === 'true') {
-		storage.removeItem('base44_access_token');
+		storage.removeItem('fmmclassico_access_token');
 		storage.removeItem('token');
 	}
 	return {
-		appId: getAppParamValue("app_id", { defaultValue: import.meta.env.VITE_BASE44_APP_ID }),
+		appId: getAppParamValue("app_id"),
 		token: getAppParamValue("access_token", { removeFromUrl: true }),
 		fromUrl: getAppParamValue("from_url", { defaultValue: window.location.href }),
-		functionsVersion: getAppParamValue("functions_version", { defaultValue: import.meta.env.VITE_BASE44_FUNCTIONS_VERSION }),
-		appBaseUrl: getAppParamValue("app_base_url", { defaultValue: import.meta.env.VITE_BASE44_APP_BASE_URL || window.location.origin }),
+		functionsVersion: getAppParamValue("functions_version"),
+		appBaseUrl: getAppParamValue("app_base_url", { defaultValue: import.meta.env.VITE_APP_BASE_URL || window.location.origin }),
 	}
 }
 
@@ -53,6 +53,4 @@ export const appParams = {
 	...getAppParams()
 }
 console.log("APP PARAMS:", appParams);
-console.log("VITE_BASE44_APP_ID =", import.meta.env.VITE_BASE44_APP_ID);
-console.log("VITE_BASE44_FUNCTIONS_VERSION =", import.meta.env.VITE_BASE44_FUNCTIONS_VERSION);
-console.log("VITE_BASE44_APP_BASE_URL =", import.meta.env.VITE_BASE44_APP_BASE_URL);
+console.log("VITE_APP_BASE_URL =", import.meta.env.VITE_APP_BASE_URL);

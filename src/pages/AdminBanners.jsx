@@ -331,7 +331,7 @@ function BannerForm({ initial, onSave, onCancel, isSaving, isNew }) {
 
         <div className="rounded-lg border bg-white px-3 py-2 text-xs text-gray-600">
           <span className="font-semibold text-gray-800">Preview destination:</span> {destinationSummary(form)}
-          <div className="mt-1 break-all text-[11px] text-blue-700">{buildBannerLink(form) || 'Ã¢â‚¬â€'}</div>
+          <div className="mt-1 break-all text-[11px] text-blue-700">{buildBannerLink(form) || '—'}</div>
         </div>
 
         <div className="flex gap-3 pt-1">
@@ -485,7 +485,7 @@ export default function AdminBanners() {
                         <p className="text-xs text-blue-700 break-all mt-1">{banner.cta_link || 'No link'}</p>
                         <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
                           <span>Order: {Number(banner.order ?? 0)}</span>
-                          <span>Ã¢â‚¬Â¢</span>
+                          <span>•</span>
                           <span>{banner.is_active !== false ? 'Visible' : 'Hidden'}</span>
                         </div>
                       </div>

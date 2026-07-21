@@ -23,6 +23,9 @@ function pickHeroImage(slide, isMobile) {
   return slide.desktop_image_url || slide.image_url || slide.mobile_image_url || '';
 }
 
+const BLUE_GRADIENT = 'from-[#03143f] via-[#0a2f82] to-[#1259d6]';
+const BLUE_TITLE = 'text-[#8dc3ff]';
+
 const BUILT_IN_BANNERS = [
   {
     id: 'fixed-phones',
@@ -31,19 +34,19 @@ const BUILT_IN_BANNERS = [
     subtitle: 'Latest models. Top performance. Unbeatable prices.',
     href: '/phones',
     imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784561540/ChatGPT_Image_Jul_20_2026_03_19_56_PM_vje886.png',
-    gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]',
-    titleClass: 'text-[#8dc3ff]',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
   },
   {
-  id: 'fixed-accessories',
-  type: 'built_in',
-  title: 'PHONE ACCESSORIES',
-  subtitle: 'Chargers, earbuds, cases, speakers and more for everyday use.',
-  href: '/phone-accessories',
-  imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784299259/ChatGPT_Image_Jul_17_2026_02_37_29_PM_qlihyw.png',
-  gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]',
-  titleClass: 'text-[#8dc3ff]',
-},
+    id: 'fixed-accessories',
+    type: 'built_in',
+    title: 'PHONE ACCESSORIES',
+    subtitle: 'Chargers, earbuds, cases, speakers and more for everyday use.',
+    href: '/phone-accessories',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784299259/ChatGPT_Image_Jul_17_2026_02_37_29_PM_qlihyw.png',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
+  },
   {
     id: 'fixed-home',
     type: 'built_in',
@@ -51,8 +54,8 @@ const BUILT_IN_BANNERS = [
     subtitle: 'Quality appliances for your kitchen, comfort and daily living.',
     href: '/home-appliances',
     imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784300533/ChatGPT_Image_Jul_17_2026_03_01_53_PM_hne4gq.png',
-    gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]',
-    titleClass: 'text-[#8dc3ff]',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
   },
   {
     id: 'fixed-electronics',
@@ -61,55 +64,85 @@ const BUILT_IN_BANNERS = [
     subtitle: 'Smart gadgets and everyday electronics at trusted prices.',
     href: '/electronics',
     imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784301769/ChatGPT_Image_Jul_17_2026_03_20_50_PM_b8mhgl.png',
-    gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]',
-    titleClass: 'text-[#8dc3ff]',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
   },
-  
-  {
-    id: 'fixed-television',
-    type: 'built_in',
-    title: 'Television',
-    subtitle: 'Latest models. Top performance. Unbeatable prices.',
-    href: '/electronics',
-    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784561540/ChatGPT_Image_Jul_20_2026_03_19_56_PM_vje886.png',
-    gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]',
-    titleClass: 'text-[#8dc3ff]',
-  },
-  
   {
     id: 'fixed-smartwatch',
     type: 'built_in',
     title: 'SMART WATCH',
     subtitle: 'Stay connected with stylish smart watches and wearables.',
     href: '/electronics',
-    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1783605377/SLE32S700TCS-2_mowhla.jpg',
-    gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]',
-    titleClass: 'text-[#8dc3ff]',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784302040/ChatGPT_Image_Jul_17_2026_03_27_00_PM_tv3lay.png',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
   },
- 
+  {
+    id: 'fixed-television',
+    type: 'built_in',
+    title: 'TELEVISION',
+    subtitle: 'Big-screen viewing with sharp picture and dependable performance.',
+    href: '/electronics',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1783605377/SLE32S700TCS-2_mowhla.jpg',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
+  },
+  {
+    id: 'fixed-projectors',
+    type: 'built_in',
+    title: 'PROJECTORS',
+    subtitle: 'Project larger, brighter visuals for home and office use.',
+    href: '/electronics',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1783605199/519qw7On-vL_b03hux.jpg',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
+  },
+  {
+    id: 'fixed-laptops',
+    type: 'built_in',
+    title: 'LAPTOPS',
+    subtitle: 'Affordable and high-quality laptops for work, school and business.',
+    href: '/electronics',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784634806/laptop-new-arrivals-cheap-price-laptops-high-quality-core-i7-laptops-brand-new-b0c29e0018_qehdjx.jpg',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
+  },
+  {
+    id: 'fixed-infrared-cooker',
+    type: 'built_in',
+    title: 'INFRARED COOKER',
+    subtitle: 'Fast, compact cooking made easy for modern kitchens.',
+    href: '/home-appliances',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784635290/Single-Burner-Electric-Infrared-Cooker-Ceramic-Stove-Hob-Cooktop-Electrical_ucsfgz.jpg',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
+  },
 ];
 
 function BuiltInBannerSlide({ slide }) {
   return (
     <div className={`relative h-full w-full overflow-hidden bg-gradient-to-r ${slide.gradient}`}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.08),transparent_35%)]" />
-      <div className="relative z-10 grid h-full grid-cols-1 items-center gap-4 px-4 py-5 md:grid-cols-[1.05fr_0.95fr] md:px-8 md:py-7">
-        <div className="min-w-0">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_20%,rgba(255,255,255,0.10),transparent_35%)]" />
+      <div className="relative z-10 grid h-full grid-cols-1 items-center gap-2 px-4 py-4 md:grid-cols-[1.05fr_0.95fr] md:gap-4 md:px-8 md:py-7">
+        <div className="min-w-0 self-center">
           <h2 className={`text-4xl font-black tracking-tight md:text-6xl ${slide.titleClass}`}>
             {slide.title}
           </h2>
-          <p className="mt-3 max-w-xl text-base text-white/90 md:text-2xl">
+          <p className="mt-2 max-w-xl text-base leading-snug text-white/92 md:mt-3 md:text-2xl">
             {slide.subtitle}
           </p>
         </div>
 
-        <div className="hidden h-full items-center justify-end md:flex">
+        <div className="flex h-full items-center justify-center md:justify-end">
           <img
             src={slide.imageUrl}
             alt={slide.title}
-            className="max-h-[220px] w-auto object-contain drop-shadow-[0_18px_32px_rgba(0,0,0,0.35)]"
+            className="max-h-[115px] w-auto object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.30)] md:max-h-[220px]"
             loading="eager"
             fetchPriority="high"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
           />
         </div>
       </div>
@@ -119,6 +152,7 @@ function BuiltInBannerSlide({ slide }) {
 
 function UploadedBannerSlide({ slide, isMobile }) {
   const imageSrc = pickHeroImage(slide, isMobile);
+  if (!imageSrc) return null;
   return (
     <div className="fmm-flyer-hero-slide">
       <img
@@ -127,6 +161,9 @@ function UploadedBannerSlide({ slide, isMobile }) {
         className="fmm-flyer-hero-image"
         loading="eager"
         fetchPriority="high"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
       />
     </div>
   );
@@ -160,7 +197,10 @@ export default function HeroBanner() {
 
   const uploadedSlides = useMemo(() => {
     return (Array.isArray(promoBanners) ? promoBanners : [])
-      .filter((banner) => banner?.is_active !== false && (banner?.desktop_image_url || banner?.mobile_image_url || banner?.image_url))
+      .filter((banner) => {
+        const hasImage = !!(banner?.desktop_image_url || banner?.mobile_image_url || banner?.image_url);
+        return banner?.is_active !== false && hasImage;
+      })
       .sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0))
       .map((banner, index) => ({
         id: banner.id || `hero-flyer-${index}`,

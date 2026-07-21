@@ -419,7 +419,7 @@ const integrations = {
           },
           body: JSON.stringify({
             to,
-            from_name: from_name || 'FMM CLASSICO',
+            from_name: from_name || 'FMM CLASSICO';
             subject,
             body,
           }),

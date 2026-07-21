@@ -229,21 +229,38 @@ body {
   animation: pulse 1.6s ease-in-out infinite;
 }
 
-@media (max-width: 767px) {
-  .fmm-flyer-hero-frame {
-    height: auto;
-    min-height: unset;
-    aspect-ratio: 16 / 5;
-    background: #020817;
-  }
+@media (max-width:767px){
 
-  .fmm-flyer-hero-image {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: center;
-    background: #020817;
-  }
+.fmm-flyer-hero-frame{
+
+height:170px;
+min-height:170px;
+
+background:linear-gradient(
+135deg,
+#03143f,
+#06286d,
+#0b3ea9
+);
+
+}
+
+.fmm-flyer-hero-image{
+
+width:100%;
+height:100%;
+
+object-fit:contain;
+
+object-position:center;
+
+padding:6px;
+
+background:transparent;
+
+}
+
+}
 
   .fmm-flyer-hero-dots {
     bottom: 0.45rem;

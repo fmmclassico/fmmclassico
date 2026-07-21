@@ -123,12 +123,12 @@ function BuiltInBannerSlide({ slide }) {
   return (
     <div className={`relative h-full w-full overflow-hidden bg-gradient-to-r ${slide.gradient}`}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_20%,rgba(255,255,255,0.10),transparent_35%)]" />
-      <div className="relative z-10 grid h-full grid-cols-1 items-center gap-2 px-4 py-4 md:grid-cols-[1.05fr_0.95fr] md:gap-4 md:px-8 md:py-7">
+      <div className="relative z-10 grid h-full grid-cols-2 items-center gap-2 px-3 py-3 sm:px-5 md:grid-cols-[1.05fr_0.95fr] md:px-8 md:py-7">
         <div className="min-w-0 self-center">
-          <h2 className={`text-4xl font-black tracking-tight md:text-6xl ${slide.titleClass}`}>
+          <h2 className={`text-2xl sm:text-3xl md:text-6xl font-black tracking-tight leading-none ${slide.titleClass}`}>
             {slide.title}
           </h2>
-          <p className="mt-2 max-w-xl text-base leading-snug text-white/92 md:mt-3 md:text-2xl">
+          <p className="mt-2 max-w-xl text-xs sm:text-sm md:text-2xl leading-snug text-white/90">
             {slide.subtitle}
           </p>
         </div>
@@ -137,7 +137,7 @@ function BuiltInBannerSlide({ slide }) {
           <img
             src={slide.imageUrl}
             alt={slide.title}
-            className="max-h-[115px] w-auto object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.30)] md:max-h-[220px]"
+            className="max-h-[80px] sm:max-h-[105px] md:max-h-[220px] w-auto object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.30)] "
             loading="eager"
             fetchPriority="high"
             onError={(e) => {

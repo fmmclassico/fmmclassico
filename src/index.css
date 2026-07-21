@@ -167,9 +167,9 @@ body {
 /* Desktop Hero Banner - 5.5cm height */
 @media (min-width: 1024px) {
   .fmm-flyer-hero-frame {
-    height: 295px;
-    min-height: 295px;
-    max-height: 295px;
+    height: 320px;
+    min-height: 320px;
+    max-height: 320px;
     aspect-ratio: unset;
   }
 

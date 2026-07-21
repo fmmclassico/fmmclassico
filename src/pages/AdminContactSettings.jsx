@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,12 +29,12 @@ export default function AdminContactSettings() {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
+      const isAuth = await appClient.auth.isAuthenticated();
       if (!isAuth) {
         toast.error('Please login');
         return;
       }
-      const userData = await base44.auth.me();
+      const userData = await appClient.auth.me();
       if (userData.role !== 'admin') {
         toast.error('Admin access required');
         return;
@@ -46,13 +46,13 @@ export default function AdminContactSettings() {
 
   const { data: contactSettings = [], isLoading } = useQuery({
     queryKey: ['contactSettings'],
-    queryFn: () => base44.entities.ContactSetting.list(),
+    queryFn: () => appClient.entities.ContactSetting.list(),
     enabled: !!user,
   });
 
   const updateSettingMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      return await base44.entities.ContactSetting.update(id, data);
+      return await appClient.entities.ContactSetting.update(id, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contactSettings'] });
@@ -77,7 +77,7 @@ export default function AdminContactSettings() {
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, isActive }) => {
-      return await base44.entities.ContactSetting.update(id, { is_active: !isActive });
+      return await appClient.entities.ContactSetting.update(id, { is_active: !isActive });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contactSettings'] });

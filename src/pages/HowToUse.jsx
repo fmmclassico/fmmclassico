@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,9 @@ export default function HowToUse() {
 
   useEffect(() => {
     const getUser = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
+      const isAuth = await appClient.auth.isAuthenticated();
       if (isAuth) {
-        const userData = await base44.auth.me();
+        const userData = await appClient.auth.me();
         setUser(userData);
         setIsAdmin(userData.role === 'admin');
       }
@@ -36,7 +36,7 @@ export default function HowToUse() {
 
   const { data: settings = [], refetch } = useQuery({
     queryKey: ['appSettings', 'tutorial_video'],
-    queryFn: () => base44.entities.AppSetting.filter({ key: 'tutorial_video' }),
+    queryFn: () => appClient.entities.AppSetting.filter({ key: 'tutorial_video' }),
   });
 
   const videoUrl = settings?.[0]?.value || null;
@@ -50,11 +50,11 @@ export default function HowToUse() {
     }
     setUploadError('');
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await appClient.integrations.Core.UploadFile({ file });
     if (settings?.[0]?.id) {
-      await base44.entities.AppSetting.update(settings[0].id, { value: file_url });
+      await appClient.entities.AppSetting.update(settings[0].id, { value: file_url });
     } else {
-      await base44.entities.AppSetting.create({ key: 'tutorial_video', value: file_url });
+      await appClient.entities.AppSetting.create({ key: 'tutorial_video', value: file_url });
     }
     setUploading(false);
     refetch();

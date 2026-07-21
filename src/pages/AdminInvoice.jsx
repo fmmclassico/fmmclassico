@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -29,7 +29,7 @@ export default function AdminInvoice() {
     queryKey: ['adminOrders'],
     queryFn: async () => {
       try {
-        const result = await base44.entities.Order.list('-created_date', 100);
+        const result = await appClient.entities.Order.list('-created_date', 100);
         return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
       } catch (err) {
         console.error('Failed to load orders:', err);
@@ -51,7 +51,7 @@ export default function AdminInvoice() {
   }, [orders]);
 
   const deleteOrdersMutation = useMutation({
-    mutationFn: async (ids) => { await Promise.all(ids.map(id => base44.entities.Order.delete(id))); },
+    mutationFn: async (ids) => { await Promise.all(ids.map(id => appClient.entities.Order.delete(id))); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
       setSelectedInvoices([]);
@@ -89,7 +89,7 @@ export default function AdminInvoice() {
 
       const emailBody = '<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;background:#f8fafc;padding:20px"><div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.08)"><div style="background:linear-gradient(135deg,#031725,#0A2E60);color:white;padding:30px;text-align:center"><h1 style="margin:0;font-size:22px">FMM CLASSICO</h1><p style="opacity:0.8;font-size:12px;margin-top:4px">Phones & Accessories · Electronics · Home Appliances</p><p style="opacity:0.7;font-size:11px;margin-top:4px">Tarkwa (UMAT Campus) & Accra (Ashongman Estate)</p></div><div style="padding:24px"><div style="display:flex;justify-content:space-between;margin-bottom:16px"><div><h3 style="color:#0A2E60;font-size:16px;margin-bottom:4px">INVOICE</h3><p style="font-size:13px"><strong>#' + selectedOrder.order_number + '</strong></p><p style="font-size:12px;color:#6b7280">Date: ' + (selectedOrder.created_date ? format(new Date(selectedOrder.created_date), 'dd MMM yyyy, h:mm a') : format(new Date(), 'dd MMM yyyy')) + '</p></div></div><div style="background:#f1f5f9;padding:12px;border-radius:8px;margin-bottom:16px"><p style="font-size:12px;font-weight:bold;color:#374151">Bill To:</p><p style="font-size:13px">' + (selectedOrder.customer_name || '') + '</p><p style="font-size:12px;color:#6b7280">' + (selectedOrder.customer_email || '') + '</p><p style="font-size:12px;color:#6b7280">' + (selectedOrder.customer_phone || '') + '</p></div><table><thead><tr style="background:#f1f5f9"><th style="padding:10px;text-align:left;font-size:12px">Product</th><th style="padding:10px;text-align:center;font-size:12px">Qty</th><th style="padding:10px;text-align:right;font-size:12px">Price</th><th style="padding:10px;text-align:right;font-size:12px">Total</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><div style="margin-top:16px;text-align:right;border-top:2px solid #e5e7eb;padding-top:12px"><p style="font-size:12px;color:#6b7280">Subtotal: ₵' + subtotal.toFixed(2) + '</p>' + (shipping > 0 ? '<p style="font-size:12px;color:#6b7280">Delivery: ₵' + shipping.toFixed(2) + '</p>' : '') + '<p style="font-size:18px;font-weight:bold;color:#0A2E60;margin-top:8px">TOTAL: ₵' + selectedOrder.total_amount?.toFixed(2) + '</p></div>' + (editableNote ? '<div style="margin-top:16px;padding:12px;background:#fffbeb;border-radius:8px;border:1px solid #fde68a"><p style="font-size:12px;color:#92400e">' + editableNote + '</p></div>' : '') + '<div style="margin-top:20px;text-align:center;padding:16px;background:#f8fafc;border-radius:8px"><p style="font-size:13px;color:#6b7280">' + editableFooter + '</p><p style="font-size:11px;color:#9ca3af;margin-top:4px">WhatsApp: 0208207543 | fmmclassico@gmail.com</p></div></div></div></div>';
 
-      await base44.integrations.Core.SendEmail({
+      await appClient.integrations.Core.SendEmail({
         to: selectedOrder.customer_email,
         from_name: 'FMM CLASSICO',
         subject: '🧾 Your Invoice – FMM CLASSICO Order #' + selectedOrder.order_number,

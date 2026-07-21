@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,12 +16,12 @@ export default function AdminInterfaceControl() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    appClient.auth.me().then(setUser).catch(() => {});
   }, []);
 
   const { data: settings = [] } = useQuery({
     queryKey: ['appSettings'],
-    queryFn: () => base44.entities.AppSetting.list(),
+    queryFn: () => appClient.entities.AppSetting.list(),
     staleTime: 30000,
   });
 
@@ -47,9 +47,9 @@ export default function AdminInterfaceControl() {
     try {
       const existing = settings.find(s => s.key === key);
       if (existing) {
-        await base44.entities.AppSetting.update(existing.id, { value: String(value) });
+        await appClient.entities.AppSetting.update(existing.id, { value: String(value) });
       } else {
-        await base44.entities.AppSetting.create({ key, value: String(value) });
+        await appClient.entities.AppSetting.create({ key, value: String(value) });
       }
       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
       toast.success('Updated!');
@@ -65,9 +65,9 @@ export default function AdminInterfaceControl() {
       const config = { end_time: flashEndTime, show_timer: showFlashTimer };
       const existing = settings.find(s => s.key === 'flash_sale_config');
       if (existing) {
-        await base44.entities.AppSetting.update(existing.id, { value: JSON.stringify(config) });
+        await appClient.entities.AppSetting.update(existing.id, { value: JSON.stringify(config) });
       } else {
-        await base44.entities.AppSetting.create({ key: 'flash_sale_config', value: JSON.stringify(config) });
+        await appClient.entities.AppSetting.create({ key: 'flash_sale_config', value: JSON.stringify(config) });
       }
       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
       toast.success('Flash sale settings updated!');

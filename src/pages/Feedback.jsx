@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -49,9 +49,9 @@ export default function Feedback() {
 
   useEffect(() => {
     const getUser = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
+      const isAuth = await appClient.auth.isAuthenticated();
       if (isAuth) {
-        const userData = await base44.auth.me();
+        const userData = await appClient.auth.me();
         setUser(userData);
         setIsAdmin(userData.role === 'admin');
         setFormData(prev => ({
@@ -66,13 +66,13 @@ export default function Feedback() {
 
   const { data: myFeedbacks = [] } = useQuery({
     queryKey: ['myFeedbacks', user?.email],
-    queryFn: () => base44.entities.Feedback.filter({ customer_email: user?.email }),
+    queryFn: () => appClient.entities.Feedback.filter({ customer_email: user?.email }),
     enabled: !!user?.email && !isAdmin,
   });
 
   const { data: allFeedbacks = [] } = useQuery({
     queryKey: ['allFeedbacks'],
-    queryFn: () => base44.entities.Feedback.list('-created_date', 100),
+    queryFn: () => appClient.entities.Feedback.list('-created_date', 100),
     enabled: isAdmin,
   });
 
@@ -83,7 +83,7 @@ export default function Feedback() {
     const urls = [];
     for (const file of files) {
       try {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        const { file_url } = await appClient.integrations.Core.UploadFile({ file });
         urls.push(file_url);
       } catch (err) {
         console.error('Upload failed:', err);
@@ -97,12 +97,12 @@ export default function Feedback() {
   const submitMutation = useMutation({
     mutationFn: async (data) => {
       // Save feedback to database
-      var feedback = await base44.entities.Feedback.create(data);
+      var feedback = await appClient.entities.Feedback.create(data);
 
       // Send notification to admin notification page
       var adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(function(e) { return e.trim(); }).filter(Boolean);
       for (var i = 0; i < adminEmails.length; i++) {
-        await base44.entities.Notification.create({
+        await appClient.entities.Notification.create({
           user_email: adminEmails[i],
           title: 'New Customer Feedback: ' + (data.type || 'General'),
           message: 'From: ' + data.customer_name + ' (' + data.customer_email + ')' + (data.customer_phone ? ' Phone: ' + data.customer_phone : '') + (data.order_number ? ' Order: #' + data.order_number : '') + (data.subject ? ' Subject: ' + data.subject : '') + ' Message: ' + data.message,
@@ -119,7 +119,7 @@ export default function Feedback() {
       }
 
       var feedbackEmail = import.meta.env.VITE_FEEDBACK_EMAIL || import.meta.env.VITE_MERCHANT_EMAIL || 'fmmclassico@gmail.com';
-      await base44.integrations.Core.SendEmail({
+      await appClient.integrations.Core.SendEmail({
         to: feedbackEmail,
         from_name: 'FMM CLASSICO',
         subject: 'New Feedback: ' + (data.type ? data.type.toUpperCase() : 'GENERAL') + ' - ' + (data.subject || 'No subject'),
@@ -140,7 +140,7 @@ export default function Feedback() {
 
   const respondMutation = useMutation({
     mutationFn: ({ id, response, status }) =>
-      base44.entities.Feedback.update(id, { admin_response: response, status }),
+      appClient.entities.Feedback.update(id, { admin_response: response, status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allFeedbacks'] });
       toast.success('Response saved!');

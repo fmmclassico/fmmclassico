@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Zap, Star, Tag, Home as HomeIcon, Smartphone, Headphones, Tv, ShoppingBag, Gem, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import HeroBanner from '../components/home/HeroBanner';
 import FlashSaleTimer from '../components/home/FlashSaleTimer';
-import { getBrandLogo, getSectionLimit, getVisibleBrandDirectory } from '@/lib/brandDirectory';
 
 var CATEGORY_BRANDS = {
   phones: [
@@ -50,7 +49,7 @@ var HOME_CATEGORIES = [
     id: 'phones',
     label: 'Phones',
     icon: Smartphone,
-    link: createPageUrl('phones'),
+    link: createPageUrl('Shop?category=/phones'),
     image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
     match: function(p) { return p.category === 'phones'; },
     brands: CATEGORY_BRANDS.phones,
@@ -60,7 +59,7 @@ var HOME_CATEGORIES = [
     id: 'phone_accessories',
     label: 'Phone Accessories',
     icon: Headphones,
-    link: createPageUrl('phone-accessories'),
+    link: createPageUrl('Shop?category=/phone-accessories'),
     image: 'https://mate.net.in/public/uploads/all/UsReqZvujmEjMUb27qlTtRcCG8Pf18SyULO4HW7U.jpg',
     match: function(p) { return ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category); },
     brands: CATEGORY_BRANDS.phone_accessories,
@@ -70,7 +69,7 @@ var HOME_CATEGORIES = [
     id: 'electronics',
     label: 'Electronics',
     icon: Tv,
-    link: createPageUrl('electronics'),
+    link: createPageUrl('Shop?category=/electronics'),
     image: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=160&q=50',
     match: function(p) { return ['electronic_appliances','smart_watches'].includes(p.category); },
     brands: CATEGORY_BRANDS.electronics,
@@ -80,7 +79,7 @@ var HOME_CATEGORIES = [
     id: 'home_appliances',
     label: 'Home Appliances',
     icon: HomeIcon,
-    link: createPageUrl('home-appliances'),
+    link: createPageUrl('Shop?category=/home-appliances'),
     image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=160&q=50',
     match: function(p) { return p.category === 'home_appliances'; },
     brands: CATEGORY_BRANDS.home_appliances,
@@ -98,7 +97,7 @@ export default function Home() {
     queryKey: ['appSettings'],
     queryFn: async function() {
       try {
-        var result = await base44.entities.AppSetting.list();
+        var result = await appClient.entities.AppSetting.list();
         return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
       } catch (err) { return []; }
     },
@@ -113,7 +112,7 @@ export default function Home() {
     queryKey: ['products'],
     queryFn: async function() {
       try {
-        var result = await base44.entities.Product.list('-created_date', 500);
+        var result = await appClient.entities.Product.list('-created_date', 100);
         return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
       } catch (err) { return []; }
     },
@@ -134,11 +133,11 @@ export default function Home() {
         if (existing) return safeOld.map(function(i) { return i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i; });
         return safeOld.concat([{ id: 'optimistic-' + product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1, user_email: user.email }]);
       });
-      var rawExisting = await base44.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
+      var rawExisting = await appClient.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
       var existingItems = Array.isArray(rawExisting) ? rawExisting : Array.isArray(rawExisting?.data) ? rawExisting.data : [];
-      if (existingItems.length > 0) { await base44.entities.CartItem.update(existingItems[0].id, { quantity: existingItems[0].quantity + 1 }); }
-      else { await base44.entities.CartItem.create({ product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1, user_email: user.email }); }
-      if (product.stock != null) base44.entities.Product.update(product.id, { stock: Math.max(0, product.stock - 1) });
+      if (existingItems.length > 0) { await appClient.entities.CartItem.update(existingItems[0].id, { quantity: existingItems[0].quantity + 1 }); }
+      else { await appClient.entities.CartItem.create({ product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1, user_email: user.email }); }
+      if (product.stock != null) appClient.entities.Product.update(product.id, { stock: Math.max(0, product.stock - 1) });
     },
     onSuccess: function() {
       queryClient.invalidateQueries({ queryKey: ['cartItems', user?.email] });
@@ -147,12 +146,6 @@ export default function Home() {
   });
 
   var visibleProducts = safeProducts.filter(function(p) { return p.is_visible !== false && !(p.stock != null && p.stock === 0); });
-  var brandEntries = getVisibleBrandDirectory(settings, visibleProducts);
-  var brandRailLimit = getSectionLimit(settings, 'brand_rail', 16);
-  var flashSaleLimit = getSectionLimit(settings, 'flash_sale', 16);
-  var donkomiLimit = getSectionLimit(settings, 'donkomi', 16);
-  var newArrivalsLimit = getSectionLimit(settings, 'new_arrivals', 16);
-  var topSellingLimit = getSectionLimit(settings, 'top_selling', 16);
 
   var flashItems = visibleProducts.filter(function(p) { return p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()); });
   var donkomiDeals = visibleProducts.filter(function(p) { return p.donkomi; });
@@ -165,73 +158,43 @@ export default function Home() {
       <HeroBanner />
 
       {/* CATEGORIES */}
-<div className="bg-white mt-2 mx-2 md:mx-4 rounded-2xl shadow-sm px-3 pt-1.5 pb-2 md:px-4 md:pt-2 md:pb-2.5">
-  <div className="flex justify-end mb-1">
-    <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center hover:underline">
-      All <ChevronRight className="h-3 w-3" />
-    </Link>
-  </div>
-
-  <div className="grid grid-cols-4 gap-x-2.5 gap-y-1.5 md:gap-x-3 md:gap-y-2">
-    {HOME_CATEGORIES.map(cat => {
-      const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
-      const isExpanded = expandedCat === cat.id;
-
-      return (
-        <div
-          key={cat.id}
-          onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
-          className="flex flex-col items-center gap-1 group"
-        >
-          <div className={`w-16 h-16 sm:w-[4.25rem] sm:h-[4.25rem] md:w-[4.5rem] md:h-[4.5rem] rounded-2xl ${cat.color} flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform`}>
-            {adminImg ? (
-              <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
-            ) : null}
-          </div>
-
-          <span className="text-[11px] md:text-xs leading-tight font-medium text-gray-700 text-center">
-            {cat.label}
-          </span>
+      <div className="bg-white mt-3 mx-2 md:mx-4 rounded-2xl shadow-sm px-3 py-3 md:px-4 md:py-3.5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-black text-gray-900 text-base">Shop by Category</h2>
+          <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center hover:underline">All <ChevronRight className="h-3 w-3" /></Link>
         </div>
-      );
-    })}
-  </div>
-
-  {expandedCat && (() => {
-    const cat = HOME_CATEGORIES.find(c => c.id === expandedCat);
-    if (!cat?.brands) return null;
-
-    return (
-      <div className="mt-2.5 pt-2 border-t border-gray-100">
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-          Shop {cat.label} by Brand
-        </p>
-
-        <div className="flex flex-wrap gap-1.5">
-          {cat.brands.map(b => {
-            return (
-              <Link
-                key={b.brand + b.category}
-                to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + b.category)}
-                className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}
-              >
-                {b.label}
-              </Link>
-            );
-          })}
-
-          <Link
-            to={cat.link}
-            className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}
-          >
-            All {cat.label} →
-          </Link>
-        </div>
+        <div className="grid grid-cols-4 gap-2.5 md:gap-3">
+          {HOME_CATEGORIES.map(cat => {
+  const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
+  const isExpanded = expandedCat === cat.id;
+  return (
+    <div key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-1.5 group">
+      <div className={`w-16 h-16 sm:w-[4.25rem] sm:h-[4.25rem] md:w-[4.5rem] md:h-[4.5rem] rounded-2xl ${cat.color} flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform`}>
+        {adminImg
+          ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
+          : null}
       </div>
-    );
-  })()}
-</div>
-
+      <span className="text-[11px] md:text-xs leading-tight font-medium text-gray-700 text-center">{cat.label}</span>
+    </div>
+  );
+})}
+        </div>
+        {expandedCat && (function() {
+          var cat = HOME_CATEGORIES.find(function(c) { return c.id === expandedCat; });
+          if (!cat?.brands) return null;
+          return (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Shop {cat.label} by Brand</p>
+              <div className="flex flex-wrap gap-2">
+                {cat.brands.map(function(b) {
+                  return <Link key={b.brand + b.category} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + b.category)} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>{b.label}</Link>;
+                })}
+                <Link to={cat.link} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>All {cat.label} →</Link>;
+              </div>
+            </div>
+          );
+        })()}
+      </div>
 
       {/* PROMO CARDS */}
       {(function() {
@@ -289,7 +252,7 @@ export default function Home() {
               ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
               : flashItems.length === 0
                 ? <p className="text-gray-400 text-xs px-2">No products assigned yet.</p>
-                : flashItems.slice(0, flashSaleLimit).map(function(product) { return (
+                : flashItems.map(function(product) { return (
                 <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
@@ -323,7 +286,7 @@ export default function Home() {
               ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
               : donkomiDeals.length === 0
                 ? <p className="text-gray-400 text-xs px-2">No products assigned yet.</p>
-                : donkomiDeals.slice(0, donkomiLimit).map(function(product) { return (
+                : donkomiDeals.map(function(product) { return (
                 <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
@@ -350,14 +313,24 @@ export default function Home() {
               <Link to="/brands" className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
             </div>
             <div className="fmm-stable-rail overflow-x-auto flex gap-4 p-4">
-              {brandEntries.slice(0, brandRailLimit).map(function(brand) {
-                var logoSrc = getBrandLogo(settings, brand.key);
+              {[
+                { name: 'Apple', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124420/SzZdRSkx_400x400_tbfe0u.png'},
+                { name: 'Samsung', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124507/360_197_1_dnlnk4.avif' },
+                { name: 'Tecno', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124576/Tecno_Mobile_logo.svg_q82f72.webp' },
+                { name: 'Hisense', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124629/hisense-logo-png_seeklogo-285063_n8qoro.png' },
+                { name: 'TCL', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124688/images_jwltph.png' },
+                { name: 'Oraimo', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124735/images_puin9l.jpg' },
+                { name: 'Sony', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124971/sony-logo-png_seeklogo-129420_kd8rt7.png' },
+                { name: 'JBL', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784125078/JBL-Logo.svg_a4jkuo.webp' },
+              ].map(function(brand) {
+                var uploadedLogo = settings.find(function(s) { return s.key === 'brand_logo_' + brand.name.toLowerCase().replace(/ /g,'_'); })?.value;
+                var logoSrc = uploadedLogo || brand.fallback;
                 return (
-                  <Link key={brand.key} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.sourceName))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16">
+                  <Link key={brand.name} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.name))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16">
                     <div className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2">
-                      {logoSrc ? <img src={logoSrc} alt={brand.displayName || brand.sourceName} className="max-w-full max-h-full object-contain" onError={function(e) { e.target.style.display='none'; }} /> : <span className="text-lg font-bold text-gray-400">{(brand.displayName || brand.sourceName)[0]}</span>}
+                      {logoSrc ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={function(e) { e.target.style.display='none'; }} /> : <span className="text-lg font-bold text-gray-400">{brand.name[0]}</span>}
                     </div>
-                    {brand.showName !== false && <span className="text-[10px] font-semibold text-gray-700 text-center">{brand.displayName || brand.sourceName}</span>}
+                    <span className="text-[10px] font-semibold text-gray-700 text-center">{brand.name}</span>
                   </Link>
                 );
               })}
@@ -378,7 +351,7 @@ export default function Home() {
               ? Array(6).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
               : newArrivals.length === 0
                 ? <p className="text-gray-400 text-xs px-2">No products assigned yet.</p>
-                : newArrivals.slice(0, newArrivalsLimit).map(function(product) { return (
+                : newArrivals.map(function(product) { return (
                 <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
@@ -408,7 +381,7 @@ export default function Home() {
               ? Array(5).fill(0).map(function(_, i) { return <div key={i} className="flex-shrink-0 w-32 bg-gray-100 rounded-xl animate-pulse"><div className="w-full aspect-square rounded-t-xl bg-gray-200" /><div className="p-2 space-y-2"><div className="h-3 bg-gray-200 rounded" /><div className="h-3 w-16 bg-gray-200 rounded" /></div></div>; })
               : topSellingFallback.length === 0
                 ? <p className="text-gray-400 text-xs px-2">No products assigned yet.</p>
-                : topSellingFallback.slice(0, topSellingLimit).map(function(product) { return (
+                : topSellingFallback.map(function(product) { return (
                 <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">

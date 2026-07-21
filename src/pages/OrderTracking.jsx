@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,12 +15,12 @@ export default function OrderTracking() {
   var orderId = urlParams.get('id');
 
   useEffect(function() {
-    base44.auth.me().then(setUser).catch(function() { base44.auth.redirectToLogin(createPageUrl('Orders')); });
+    appClient.auth.me().then(setUser).catch(function() { appClient.auth.redirectToLogin(createPageUrl('Orders')); });
   }, []);
 
   var { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', user?.email],
-    queryFn: function() { return base44.entities.Order.filter({ customer_email: user?.email }); },
+    queryFn: function() { return appClient.entities.Order.filter({ customer_email: user?.email }); },
     enabled: !!user?.email
   });
 

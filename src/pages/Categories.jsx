@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Settings, Upload, X, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -121,12 +121,12 @@ export default function Categories() {
   const fileRefs = useRef({});
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    appClient.auth.me().then(setUser).catch(() => {});
   }, []);
 
   const { data: settings = [] } = useQuery({
     queryKey: ['appSettings'],
-    queryFn: () => base44.entities.AppSetting.list(),
+    queryFn: () => appClient.entities.AppSetting.list(),
   });
 
   const isAdmin = user?.role === 'admin';
@@ -145,9 +145,9 @@ export default function Categories() {
   const saveSetting = async (key, value) => {
     const existing = settings.find(s => s.key === key);
     if (existing) {
-      await base44.entities.AppSetting.update(existing.id, { value });
+      await appClient.entities.AppSetting.update(existing.id, { value });
     } else {
-      await base44.entities.AppSetting.create({ key, value });
+      await appClient.entities.AppSetting.create({ key, value });
     }
     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
   };
@@ -155,7 +155,7 @@ export default function Categories() {
   const handleImageUpload = async (catId, file) => {
     setUploading(u => ({ ...u, [catId]: true }));
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await appClient.integrations.Core.UploadFile({ file });
       await saveSetting(`cat_bg_${catId}`, file_url);
       toast.success('Background image updated!');
     } catch {

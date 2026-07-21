@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -57,16 +57,16 @@ export default function AdminOrders() {
   var queryClient = useQueryClient();
 
   useEffect(function() {
-    base44.auth.isAuthenticated().then(function(isAuth) {
+    appClient.auth.isAuthenticated().then(function(isAuth) {
       if (isAuth) {
-        base44.auth.me().then(function(userData) { setUser(userData); setIsAdmin(userData.role === 'admin'); });
+        appClient.auth.me().then(function(userData) { setUser(userData); setIsAdmin(userData.role === 'admin'); });
       }
     });
   }, []);
 
   var { data: orders = [], isLoading } = useQuery({
     queryKey: ['adminOrders'],
-    queryFn: function() { return base44.entities.Order.list('-created_date', 100); },
+    queryFn: function() { return appClient.entities.Order.list('-created_date', 100); },
     enabled: isAdmin,
     refetchInterval: 30000,
   });
@@ -78,8 +78,8 @@ export default function AdminOrders() {
     mutationFn: async function({ order, message }) {
       var emailBody = 'Hi ' + order.customer_name + ',' + NL + NL + message + NL + NL + 'FMM CLASSICO' + NL + '0208207543';
       await Promise.all([
-        base44.entities.Notification.create({ user_email: order.customer_email, title: 'Message from FMM CLASSICO', message: message, type: 'general', order_id: order.id, order_number: order.order_number, is_read: false }),
-        base44.integrations.Core.SendEmail({ to: order.customer_email, from_name: 'FMM CLASSICO', subject: 'Message - Order #' + order.order_number, body: emailBody })
+        appClient.entities.Notification.create({ user_email: order.customer_email, title: 'Message from FMM CLASSICO', message: message, type: 'general', order_id: order.id, order_number: order.order_number, is_read: false }),
+        appClient.integrations.Core.SendEmail({ to: order.customer_email, from_name: 'FMM CLASSICO', subject: 'Message - Order #' + order.order_number, body: emailBody })
       ]);
     },
     onSuccess: function(_, variables) { setAdminMessages(function(p) { return { ...p, [variables.order.id]: '' }; }); toast.success('Message sent!'); }
@@ -88,7 +88,7 @@ export default function AdminOrders() {
   var updateStatusMutation = useMutation({
     mutationFn: async function({ order, newStatus, message }) {
       var newTracking = (order.tracking_updates || []).concat([{ status: statusConfig[newStatus]?.label || newStatus, message: message, timestamp: new Date().toISOString() }]);
-      await base44.entities.Order.update(order.id, { status: newStatus, tracking_updates: newTracking });
+      await appClient.entities.Order.update(order.id, { status: newStatus, tracking_updates: newTracking });
       var notifMap = {
         processing: { title: 'Order Being Prepared', msg: 'Your order #' + order.order_number + ' is being prepared.' },
         packed: { title: 'Order Packed', msg: 'Your order #' + order.order_number + ' has been packed.' },
@@ -101,8 +101,8 @@ export default function AdminOrders() {
       if (notif) {
         var emailBody = 'Hi ' + order.customer_name + ',' + NL + NL + notif.msg + NL + NL + 'Order: #' + order.order_number + NL + 'FMM CLASSICO | 0208207543';
         await Promise.all([
-          base44.entities.Notification.create({ user_email: order.customer_email, title: notif.title, message: notif.msg, type: 'order_processing', order_id: order.id, order_number: order.order_number, is_read: false }),
-          base44.integrations.Core.SendEmail({ to: order.customer_email, from_name: 'FMM CLASSICO', subject: notif.title + ' - #' + order.order_number, body: emailBody })
+          appClient.entities.Notification.create({ user_email: order.customer_email, title: notif.title, message: notif.msg, type: 'order_processing', order_id: order.id, order_number: order.order_number, is_read: false }),
+          appClient.integrations.Core.SendEmail({ to: order.customer_email, from_name: 'FMM CLASSICO', subject: notif.title + ' - #' + order.order_number, body: emailBody })
         ]);
       }
     },
@@ -111,13 +111,13 @@ export default function AdminOrders() {
 
   var updateDeliveryDateMutation = useMutation({
     mutationFn: async function({ order, date }) {
-      await base44.entities.Order.update(order.id, { estimated_delivery: date });
+      await appClient.entities.Order.update(order.id, { estimated_delivery: date });
     },
     onSuccess: function() { queryClient.invalidateQueries({ queryKey: ['adminOrders'] }); toast.success('Delivery date set!'); }
   });
 
   var deleteOrdersMutation = useMutation({
-    mutationFn: async function(orderIds) { await Promise.all(orderIds.map(function(id) { return base44.entities.Order.delete(id); })); },
+    mutationFn: async function(orderIds) { await Promise.all(orderIds.map(function(id) { return appClient.entities.Order.delete(id); })); },
     onSuccess: function() { queryClient.invalidateQueries({ queryKey: ['adminOrders'] }); setSelectedOrders([]); toast.success('Deleted'); }
   });
 

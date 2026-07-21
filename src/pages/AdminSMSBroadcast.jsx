@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -90,7 +90,7 @@ export default function AdminSMSBroadcast() {
   var fileInputRef = useRef(null);
 
   useEffect(function() {
-    base44.auth.me().then(function(u) { setUser(u); setIsAdmin(u.role === 'admin'); }).catch(function() {});
+    appClient.auth.me().then(function(u) { setUser(u); setIsAdmin(u.role === 'admin'); }).catch(function() {});
   }, []);
 
   var handleFileUpload = async function(e) {

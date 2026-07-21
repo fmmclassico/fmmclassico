@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -22,7 +22,7 @@ export default function Chat() {
     queryKey: ['products-chat'],
     queryFn: async () => {
       try {
-        const result = await base44.entities.Product.list('-created_date', 100);
+        const result = await appClient.entities.Product.list('-created_date', 100);
         return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
       } catch (e) { return []; }
     },
@@ -40,7 +40,7 @@ export default function Chat() {
 
   const loadChatHistory = async (email) => {
     try {
-      const history = await base44.entities.ChatMessage.filter({ user_email: email }, 'created_date', 50);
+      const history = await appClient.entities.ChatMessage.filter({ user_email: email }, 'created_date', 50);
       const data = Array.isArray(history) ? history : Array.isArray(history?.data) ? history.data : [];
       setMessages(data.map(m => ({ role: m.role, content: m.content })));
     } catch (err) {
@@ -92,7 +92,7 @@ export default function Chat() {
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
 
     try {
-      await base44.entities.ChatMessage.create({ user_email: user.email, role: 'user', content: userMessage });
+      await appClient.entities.ChatMessage.create({ user_email: user.email, role: 'user', content: userMessage });
     } catch (err) {
       console.error('Failed to save message:', err);
     }
@@ -155,7 +155,7 @@ Try again or contact us directly!`;
     setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
 
     try {
-      await base44.entities.ChatMessage.create({ user_email: user.email, role: 'assistant', content: assistantMessage });
+      await appClient.entities.ChatMessage.create({ user_email: user.email, role: 'assistant', content: assistantMessage });
     } catch (err) {
       console.error('Failed to save AI response:', err);
     }

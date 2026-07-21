@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -44,12 +44,12 @@ export default function AdminPromoBanners2() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    base44.auth.me().then(u => { setUser(u); setIsAdmin(u?.role === 'admin'); }).catch(() => {});
+    appClient.auth.me().then(u => { setUser(u); setIsAdmin(u?.role === 'admin'); }).catch(() => {});
   }, []);
 
   const { data: settings = [] } = useQuery({
     queryKey: ['appSettings'],
-    queryFn: () => base44.entities.AppSetting.list(),
+    queryFn: () => appClient.entities.AppSetting.list(),
     enabled: isAdmin,
   });
 
@@ -71,8 +71,8 @@ export default function AdminPromoBanners2() {
     mutationFn: async ({ key, value }) => {
       const existing = settings.find(s => s.key === key);
       const serialized = JSON.stringify(value);
-      if (existing) return base44.entities.AppSetting.update(existing.id, { value: serialized });
-      return base44.entities.AppSetting.create({ key, value: serialized });
+      if (existing) return appClient.entities.AppSetting.update(existing.id, { value: serialized });
+      return appClient.entities.AppSetting.create({ key, value: serialized });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['appSettings'] }),
   });
@@ -86,7 +86,7 @@ export default function AdminPromoBanners2() {
   const handleUpload = async (key, file) => {
     if (!file) return;
     setUploading(u => ({ ...u, [key]: true }));
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await appClient.integrations.Core.UploadFile({ file });
     const updated = { ...(localData[key] || defaultBanner()), image_url: file_url };
     setLocalData(d => ({ ...d, [key]: updated }));
     await saveMutation.mutateAsync({ key, value: updated });

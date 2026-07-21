@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ export default function Invoices() {
     queryKey: ['user-invoices', user?.email],
     queryFn: async () => {
       try {
-        const result = await base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 100);
+        const result = await appClient.entities.Order.filter({ customer_email: user.email }, '-created_date', 100);
         return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
       } catch (err) {
         console.error('Failed to load invoices:', err);

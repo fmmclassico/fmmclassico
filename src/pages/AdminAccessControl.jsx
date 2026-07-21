@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,9 +26,9 @@ export default function AdminAccessControl() {
 
   useEffect(function() {
     var checkAdmin = async function() {
-      var isAuth = await base44.auth.isAuthenticated();
+      var isAuth = await appClient.auth.isAuthenticated();
       if (!isAuth) { toast.error('Please login'); return; }
-      var userData = await base44.auth.me();
+      var userData = await appClient.auth.me();
       if (userData.role !== 'admin') { toast.error('Admin access required'); return; }
       setUser(userData);
     };
@@ -37,7 +37,7 @@ export default function AdminAccessControl() {
 
   var { data: adminPasswordData = [] } = useQuery({
     queryKey: ['adminPassword'],
-    queryFn: function() { return base44.entities.AdminPassword.list(); },
+    queryFn: function() { return appClient.entities.AdminPassword.list(); },
     enabled: !!user,
   });
 
@@ -52,9 +52,9 @@ export default function AdminAccessControl() {
     try {
       var existing = adminPasswordData.length > 0 ? adminPasswordData[0] : null;
       if (existing) {
-        await base44.entities.AdminPassword.update(existing.id, { password_hash: newPassword, created_by: user.email, last_changed: new Date().toISOString() });
+        await appClient.entities.AdminPassword.update(existing.id, { password_hash: newPassword, created_by: user.email, last_changed: new Date().toISOString() });
       } else {
-        await base44.entities.AdminPassword.create({ password_hash: newPassword, created_by: user.email, last_changed: new Date().toISOString() });
+        await appClient.entities.AdminPassword.create({ password_hash: newPassword, created_by: user.email, last_changed: new Date().toISOString() });
       }
       toast.success('Admin password changed successfully!');
       setShowChangePassword(false);

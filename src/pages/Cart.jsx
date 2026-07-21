@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import guestCart from '@/lib/guest-cart';
 import { useAuth } from '@/lib/AuthContext';
@@ -22,7 +22,7 @@ export default function Cart() {
 
   const { data: cartItems = [], isLoading } = useQuery({
     queryKey: ['cartItems', user?.email],
-    queryFn: () => base44.entities.CartItem.filter({ user_email: user?.email }),
+    queryFn: () => appClient.entities.CartItem.filter({ user_email: user?.email }),
     enabled: !!user?.email
   });
 
@@ -43,9 +43,9 @@ export default function Cart() {
       if (user) {
         const newQty = item.quantity + delta;
         if (newQty < 1) {
-          await base44.entities.CartItem.delete(item.id);
+          await appClient.entities.CartItem.delete(item.id);
         } else {
-          await base44.entities.CartItem.update(item.id, { quantity: newQty });
+          await appClient.entities.CartItem.update(item.id, { quantity: newQty });
         }
       } else {
         const newQty = (item.quantity || 1) + delta;
@@ -61,7 +61,7 @@ export default function Cart() {
   const removeItemMutation = useMutation({
     mutationFn: async (item) => {
       if (user) {
-        await base44.entities.CartItem.delete(item.id);
+        await appClient.entities.CartItem.delete(item.id);
       } else {
         guestCart.removeItem(item.product_id || item.id);
         setGuestItems(guestCart.getItems());

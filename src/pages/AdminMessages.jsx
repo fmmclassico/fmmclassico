@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,9 +34,9 @@ export default function AdminMessages() {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
+      const isAuth = await appClient.auth.isAuthenticated();
       if (isAuth) {
-        const userData = await base44.auth.me();
+        const userData = await appClient.auth.me();
         setUser(userData);
         setIsAdmin(userData.role === 'admin');
       }
@@ -47,7 +47,7 @@ export default function AdminMessages() {
   // Fetch all chat messages
   const { data: allMessages = [], isLoading: messagesLoading, refetch } = useQuery({
     queryKey: ['adminChatMessages'],
-    queryFn: () => base44.entities.ChatMessage.list('created_date', 200),
+    queryFn: () => appClient.entities.ChatMessage.list('created_date', 200),
     enabled: isAdmin,
     refetchInterval: 10000,
   });
@@ -84,7 +84,7 @@ export default function AdminMessages() {
 
   const deleteMessageMutation = useMutation({
     mutationFn: async (msgId) => {
-      await base44.entities.ChatMessage.delete(msgId);
+      await appClient.entities.ChatMessage.delete(msgId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminChatMessages'] });
@@ -95,7 +95,7 @@ export default function AdminMessages() {
   const deleteConversationMutation = useMutation({
     mutationFn: async (email) => {
       const msgs = allMessages.filter(m => m.user_email === email);
-      await Promise.all(msgs.map(m => base44.entities.ChatMessage.delete(m.id)));
+      await Promise.all(msgs.map(m => appClient.entities.ChatMessage.delete(m.id)));
     },
     onSuccess: () => {
       setSelectedConversation(null);
@@ -107,7 +107,7 @@ export default function AdminMessages() {
   const replyMutation = useMutation({
     mutationFn: async () => {
       if (!replyText.trim() || !selectedConversation) return;
-      await base44.entities.ChatMessage.create({
+      await appClient.entities.ChatMessage.create({
         user_email: selectedConversation,
         role: 'assistant',
         content: replyText.trim(),
@@ -126,7 +126,7 @@ export default function AdminMessages() {
       const target = notifTarget.trim();
       if (target) {
         // Send to specific email
-        await base44.entities.Notification.create({
+        await appClient.entities.Notification.create({
           user_email: target,
           title: notifTitle.trim(),
           message: notifMessage.trim(),
@@ -135,10 +135,10 @@ export default function AdminMessages() {
         });
       } else {
         // Broadcast to all recent customers (from orders)
-        const orders = await base44.entities.Order.list('-created_date', 100);
+        const orders = await appClient.entities.Order.list('-created_date', 100);
         const emails = [...new Set(orders.map(o => o.customer_email).filter(Boolean))];
         await Promise.all(emails.map(email =>
-          base44.entities.Notification.create({
+          appClient.entities.Notification.create({
             user_email: email,
             title: notifTitle.trim(),
             message: notifMessage.trim(),

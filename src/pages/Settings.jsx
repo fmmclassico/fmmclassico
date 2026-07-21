@@ -76,16 +76,17 @@ export default function Settings() {
   };
 
   // FIXED: was calling appClient.auth.logout() directly, which sends people to the
-  // legacy auth page. Now uses the app's logout(), which clears the session and
+  // Base44 auth page. Now uses the app's logout(), which clears the session and
   // sends people to the guest homepage instead.
-  const handleLogout = async () => {
-    await logout();
+  const handleLogout = () => {
+    logout();
   };
 
   const handleDeleteAccount = async () => {
     if (!confirm('Are you sure you want to delete your account? This action cannot be undone and all your data will be lost.')) return;
     if (!confirm('This is permanent. Delete account?')) return;
-    toast.error('Account deletion needs a secure server-side function. Contact support or add a Supabase Edge Function for user deletion.');
+    await appClient.entities.User.delete(user.id);
+    logout();
   };
 
   if (isLoading) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,9 +33,9 @@ export default function AdminBroadcast() {
 
   useEffect(() => {
     const init = async () => {
-      const auth = await base44.auth.isAuthenticated();
+      const auth = await appClient.auth.isAuthenticated();
       if (auth) {
-        const userData = await base44.auth.me();
+        const userData = await appClient.auth.me();
         setUser(userData);
         setIsAdmin(userData.role === 'admin');
       }
@@ -46,7 +46,7 @@ export default function AdminBroadcast() {
   // Fetch all orders to get unique customer emails + phones
   const { data: orders = [] } = useQuery({
     queryKey: ['allOrdersBroadcast'],
-    queryFn: () => base44.entities.Order.list('-created_date', 500),
+    queryFn: () => appClient.entities.Order.list('-created_date', 500),
     enabled: isAdmin,
   });
 
@@ -91,7 +91,7 @@ export default function AdminBroadcast() {
     Also generate a short email subject line (5-8 words).
     Return JSON: {"subject": "...", "message": "..."}`;
 
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await appClient.integrations.Core.InvokeLLM({
       prompt,
       response_json_schema: {
         type: 'object',
@@ -122,7 +122,7 @@ export default function AdminBroadcast() {
     let count = 0;
     // Send in batches to avoid timeout
     for (const customer of uniqueCustomers) {
-      await base44.integrations.Core.SendEmail({
+      await appClient.integrations.Core.SendEmail({
         to: customer.email,
         subject: emailSubject,
         body: `Hi ${customer.name},\n\n${generatedMessage}\n\n– FMM CLASSICO Team\n📞 0509896035\n🛒 Shop: ${window.location.origin}`
@@ -160,7 +160,7 @@ export default function AdminBroadcast() {
     let count = 0;
     for (const c of targets) {
       if (c.email) {
-        await base44.integrations.Core.SendEmail({
+        await appClient.integrations.Core.SendEmail({
           to: c.email,
           subject: 'Message from FMM CLASSICO',
           body: `Hi ${c.name},\n\n${smsMessage}\n\n– FMM CLASSICO\n📞 0509896035`

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { checkPaymentStatus } from '@/api/hubtelClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -81,9 +81,9 @@ export default function Orders() {
           var isPaid = hubtelStatus.toLowerCase() === 'paid' || hubtelStatus.toLowerCase() === 'success';
 
           if (isPaid || status === 'success') {
-            base44.entities.CartItem.filter({ user_email: user.email }).then(function(items) {
+            appClient.entities.CartItem.filter({ user_email: user.email }).then(function(items) {
               var arr = Array.isArray(items) ? items : Array.isArray(items?.data) ? items.data : [];
-              arr.forEach(function(item) { base44.entities.CartItem.delete(item.id).catch(function() {}); });
+              arr.forEach(function(item) { appClient.entities.CartItem.delete(item.id).catch(function() {}); });
               queryClient.invalidateQueries({ queryKey: ['cartItems', user.email] });
               queryClient.invalidateQueries({ queryKey: ['cartItems'] });
             }).catch(function() {});
@@ -101,9 +101,9 @@ export default function Orders() {
         })
         .catch(function() {
           if (status === 'success') {
-            base44.entities.CartItem.filter({ user_email: user.email }).then(function(items) {
+            appClient.entities.CartItem.filter({ user_email: user.email }).then(function(items) {
               var arr = Array.isArray(items) ? items : Array.isArray(items?.data) ? items.data : [];
-              arr.forEach(function(item) { base44.entities.CartItem.delete(item.id).catch(function() {}); });
+              arr.forEach(function(item) { appClient.entities.CartItem.delete(item.id).catch(function() {}); });
               queryClient.invalidateQueries({ queryKey: ['cartItems'] });
             }).catch(function() {});
             queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -124,7 +124,7 @@ export default function Orders() {
     queryKey: ['orders', user?.email],
     queryFn: async function() {
       try {
-        var result = await base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 200);
+        var result = await appClient.entities.Order.filter({ customer_email: user.email }, '-created_date', 200);
         return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
       } catch (err) {
         console.error('Failed to load orders:', err);
@@ -140,7 +140,7 @@ export default function Orders() {
   // REAL-TIME: Auto-refresh when admin updates orders
   useEffect(function() {
     if (!user?.email) return;
-    var unsubscribe = base44.entities.Order.subscribe(function(event) {
+    var unsubscribe = appClient.entities.Order.subscribe(function(event) {
       if (event.data?.customer_email === user.email) {
         queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
       }
@@ -149,15 +149,15 @@ export default function Orders() {
   }, [user?.email, queryClient]);
 
   var deleteOrdersMutation = useMutation({
-    mutationFn: async function(orderIds) { await Promise.all(orderIds.map(function(id) { return base44.entities.Order.delete(id); })); },
+    mutationFn: async function(orderIds) { await Promise.all(orderIds.map(function(id) { return appClient.entities.Order.delete(id); })); },
     onSuccess: function() { queryClient.invalidateQueries({ queryKey: ['orders'] }); setSelectedOrders([]); toast.success('Deleted'); }
   });
 
   var cancelOrderMutation = useMutation({
     mutationFn: async function({ order, reason }) {
       var newTracking = (order.tracking_updates || []).concat([{ status: 'Cancelled', message: 'Cancelled by customer. Reason: ' + (reason || 'No reason'), timestamp: new Date().toISOString() }]);
-      await base44.entities.Order.update(order.id, { status: 'cancelled', tracking_updates: newTracking });
-      await base44.entities.Notification.create({ user_email: order.customer_email, title: 'Order Cancelled', message: 'Your order #' + order.order_number + ' has been cancelled. Contact 0208207543 for refund.', type: 'order_cancelled', order_id: order.id, order_number: order.order_number, is_read: false });
+      await appClient.entities.Order.update(order.id, { status: 'cancelled', tracking_updates: newTracking });
+      await appClient.entities.Notification.create({ user_email: order.customer_email, title: 'Order Cancelled', message: 'Your order #' + order.order_number + ' has been cancelled. Contact 0208207543 for refund.', type: 'order_cancelled', order_id: order.id, order_number: order.order_number, is_read: false });
     },
     onSuccess: function() { queryClient.invalidateQueries({ queryKey: ['orders'] }); setCancellingOrder(null); setCancelReason(''); toast.success('Order cancelled.'); }
   });

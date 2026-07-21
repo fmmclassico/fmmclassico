@@ -1,342 +1,206 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { appClient } from '@/api/appClient.js';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Trash2, Eye, EyeOff, Pencil, X, Check, Upload, Monitor, Smartphone } from 'lucide-react';
+import { Loader2, Plus, Trash2, Sparkles, Eye, EyeOff, Pencil, X, Check, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
-const MAIN_CATEGORY_OPTIONS = [
-  { label: 'Phones', value: 'phones', route: '/phones' },
-  { label: 'Phone Accessories', value: 'phone-accessories', route: '/phone-accessories' },
-  { label: 'Home Appliances', value: 'home-appliances', route: '/home-appliances' },
-  { label: 'Electronics', value: 'electronics', route: '/electronics' },
+const PAGE_LINK_OPTIONS = [
+  { label: '🏠 Home', value: 'Home' },
+  { label: '🛒 Shop — All Products', value: 'Shop' },
+  { label: '📱 Shop — Phones', value: 'Shop?category=phones' },
+  { label: '📦 Shop — Phone Cases', value: 'Shop?category=phone_cases' },
+  { label: '🔌 Shop — Chargers', value: 'Shop?category=chargers' },
+  { label: '🎧 Shop — Earphones', value: 'Shop?category=earphones' },
+  { label: '🔗 Shop — Cables', value: 'Shop?category=cables' },
+  { label: '🔋 Shop — Power Banks', value: 'Shop?category=power_banks' },
+  { label: '🛡️ Shop — Screen Protectors', value: 'Shop?category=screen_protectors' },
+  { label: '📡 Shop — Holders & Mounts', value: 'Shop?category=holders' },
+  { label: '🔊 Shop — Speakers', value: 'Shop?category=speakers' },
+  { label: '⌚ Shop — Smart Watches', value: 'Shop?category=smart_watches' },
+  { label: '📺 Shop — Electronics', value: 'Shop?category=electronic_appliances' },
+  { label: '🏡 Shop — Home Appliances', value: 'Shop?category=home_appliances' },
+  { label: '📂 Categories Page', value: 'Categories' },
+  { label: '⚡ Flash Sales', value: 'Shop?flash=true' },
 ];
 
-const SHOP_CATEGORY_OPTIONS = [
-  { label: 'Phones', value: 'phones' },
-  { label: 'Phone Accessories', value: 'phone_cases' },
-  { label: 'Home Appliances', value: 'home_appliances' },
-  { label: 'Electronics', value: 'electronic_appliances' },
-];
-
-const SHOP_CATEGORY_TO_MAIN_SLUG = {
-  phones: 'phones',
-  phone_cases: 'phone-accessories',
-  chargers: 'phone-accessories',
-  earphones: 'phone-accessories',
-  cables: 'phone-accessories',
-  power_banks: 'phone-accessories',
-  screen_protectors: 'phone-accessories',
-  holders: 'phone-accessories',
-  speakers: 'phone-accessories',
-  smart_watches: 'electronics',
-  electronic_appliances: 'electronics',
-  home_appliances: 'home-appliances',
-};
-
-const PAGE_OPTIONS = [
-  { label: 'Home', value: '/' },
-  { label: 'Categories', value: '/Categories' },
-  { label: 'Shop', value: '/Shop' },
-  { label: 'About', value: '/About' },
-  { label: 'How To Use', value: '/HowToUse' },
-  { label: 'Policies', value: '/Policies' },
-  { label: 'Chat', value: '/Chat' },
-  { label: 'Custom Route', value: '__custom__' },
+const GRADIENTS = [
+  { label: '🌑 Navy (Default)', value: 'from-[#031725] via-[#0A2E60] to-[#102C54]' },
+  { label: '🔴 Red/Pink', value: 'from-red-600 via-red-500 to-pink-400' },
+  { label: '🟠 Orange', value: 'from-orange-600 via-orange-500 to-amber-400' },
+  { label: '🟡 Gold', value: 'from-yellow-500 via-amber-500 to-orange-400' },
+  { label: '🟢 Green', value: 'from-green-600 via-green-500 to-emerald-400' },
+  { label: '🔵 Blue', value: 'from-blue-600 via-blue-500 to-indigo-400' },
+  { label: '🟣 Purple', value: 'from-purple-600 via-purple-500 to-pink-400' },
+  { label: '⚫ Dark', value: 'from-gray-800 via-gray-700 to-gray-600' },
 ];
 
 const EMPTY_FORM = {
-  image_url: '',
-  desktop_image_url: '',
-  mobile_image_url: '',
-  destinationType: 'main_category',
-  mainCategory: 'phones',
-  brandName: '',
-  subCategoryParent: 'phone_cases',
-  subCategoryName: '',
-  pageChoice: '/',
-  customPageRoute: '',
-  externalUrl: '',
-  order: 0,
-  is_active: true,
+  title: '', subtitle: '', badge: '', image_url: '',
+  bg_gradient: 'from-[#031725] via-[#0A2E60] to-[#102C54]',
+  cta_text: 'Shop Now', cta_link: '', is_active: true, order: 0
 };
 
-function normalizeQueryResult(result) {
-  if (Array.isArray(result)) return result;
-  if (Array.isArray(result?.data)) return result.data;
-  return [];
-}
+const DEFAULT_SLIDES = [
+  {
+    badge: '🔥 New Arrivals', title: 'Phones & Accessories',
+    subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
+    bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
+    image_url: 'https://i.pinimg.com/1200x/99/64/a2/9964a202c67115b1f40714082848c312.jpg',
+    cta_link: 'Shop?category=phones', cta_text: 'Shop Now', is_active: true, order: 1,
+  },
+  {
+    badge: '⚡ Best Deals', title: 'Electronic Appliances',
+    subtitle: 'Top quality electronics for your everyday needs',
+    bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
+    image_url: 'https://m.media-amazon.com/images/I/519qw7On-vL.jpg',
+    cta_link: 'Shop?category=electronic_appliances', cta_text: 'Shop Now', is_active: true, order: 2,
+  },
+  {
+    badge: '🏡 Home Deals', title: 'Home Appliances',
+    subtitle: 'Quality home appliances delivered to your door',
+    bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
+    image_url: 'https://i.pinimg.com/1200x/60/53/2f/60532f215514eb6e5068ec232e1428c1.jpg',
+    cta_link: 'Shop?category=home_appliances', cta_text: 'Shop Now', is_active: true, order: 3,
+  },
+  {
+    badge: '📱 Top Brands', title: 'Samsung & Apple',
+    subtitle: 'Genuine Samsung & Apple products at great prices',
+    bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
+    image_url: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=600&q=80',
+    cta_link: 'BrandProducts?brand=Samsung', cta_text: 'Shop Brands', is_active: true, order: 4,
+  },
+  {
+    badge: '🎧 Accessories', title: 'Earphones & Speakers',
+    subtitle: 'Premium sound at affordable prices — Oraimo, JBL & more',
+    bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
+    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80',
+    cta_link: 'Shop?category=earphones', cta_text: 'Shop Now', is_active: true, order: 5,
+  },
+  {
+    badge: '⌚ Smart Wear', title: 'Smart Watches',
+    subtitle: 'Stay connected with the latest smartwatches',
+    bg_gradient: 'from-[#00A3A6] via-[#0093A6] to-[#007a8a]',
+    image_url: 'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=600&q=80',
+    cta_link: 'Shop?category=smart_watches', cta_text: 'Shop Now', is_active: true, order: 6,
+  },
+];
 
-function normalizeRoute(route) {
-  if (!route || !String(route).trim()) return '';
-  const safeRoute = String(route).trim();
-  return safeRoute.startsWith('/') ? safeRoute : `/${safeRoute}`;
-}
-
-function buildBannerLink(form) {
-  switch (form.destinationType) {
-    case 'main_category': {
-      const match = MAIN_CATEGORY_OPTIONS.find((item) => item.value === form.mainCategory);
-      return match?.route || `/${encodeURIComponent(form.mainCategory)}`;
-    }
-    case 'brand':
-      return form.brandName.trim() ? `/BrandProducts?brand=${encodeURIComponent(form.brandName.trim())}` : '';
-    case 'sub_category':
-      return form.subCategoryName.trim()
-        ? `/Shop?category=${encodeURIComponent(form.subCategoryParent)}&sub=${encodeURIComponent(form.subCategoryName.trim())}`
-        : '';
-    case 'page':
-      return form.pageChoice === '__custom__' ? normalizeRoute(form.customPageRoute) : form.pageChoice;
-    case 'external':
-      return form.externalUrl.trim();
-    default:
-      return '';
-  }
-}
-
-function destinationSummary(form) {
-  switch (form.destinationType) {
-    case 'main_category': {
-      const match = MAIN_CATEGORY_OPTIONS.find((item) => item.value === form.mainCategory);
-      return match?.label || 'Main Category';
-    }
-    case 'brand':
-      return form.brandName ? `Brand: ${form.brandName}` : 'Brand';
-    case 'sub_category': {
-      const match = SHOP_CATEGORY_OPTIONS.find((item) => item.value === form.subCategoryParent);
-      return form.subCategoryName ? `Subcategory: ${form.subCategoryName} (${match?.label || 'Main Category'})` : 'Subcategory';
-    }
-    case 'page':
-      return form.pageChoice === '__custom__' ? `Page: ${normalizeRoute(form.customPageRoute) || '/'}` : `Page: ${form.pageChoice}`;
-    case 'external':
-      return form.externalUrl ? `External: ${form.externalUrl}` : 'External Link';
-    default:
-      return 'Destination';
-  }
-}
-
-function parseStoredLink(link) {
-  const safeLink = String(link || '').trim();
-  if (!safeLink) return { ...EMPTY_FORM };
-  if (/^https?:\/\//i.test(safeLink)) return { ...EMPTY_FORM, destinationType: 'external', externalUrl: safeLink };
-
-  const cleaned = safeLink.startsWith('/') ? safeLink.slice(1) : safeLink;
-  if (cleaned.startsWith('BrandProducts?brand=')) {
-    const params = new URLSearchParams(cleaned.split('?')[1] || '');
-    return { ...EMPTY_FORM, destinationType: 'brand', brandName: decodeURIComponent(params.get('brand') || '') };
-  }
-
-  const matchingMainCategory = MAIN_CATEGORY_OPTIONS.find((item) => item.route === safeLink);
-  if (matchingMainCategory) return { ...EMPTY_FORM, destinationType: 'main_category', mainCategory: matchingMainCategory.value };
-
-  if (cleaned.startsWith('Shop?category=')) {
-    const params = new URLSearchParams(cleaned.split('?')[1] || '');
-    const category = params.get('category') || 'phones';
-    const sub = params.get('sub') || '';
-    if (sub) {
-      return { ...EMPTY_FORM, destinationType: 'sub_category', subCategoryParent: category, subCategoryName: decodeURIComponent(sub) };
-    }
-    return { ...EMPTY_FORM, destinationType: 'main_category', mainCategory: SHOP_CATEGORY_TO_MAIN_SLUG[category] || 'phones' };
-  }
-
-  if (safeLink === '/' || PAGE_OPTIONS.some((item) => item.value === safeLink)) return { ...EMPTY_FORM, destinationType: 'page', pageChoice: safeLink };
-  if (safeLink.startsWith('/')) return { ...EMPTY_FORM, destinationType: 'page', pageChoice: '__custom__', customPageRoute: safeLink };
-  return { ...EMPTY_FORM, destinationType: 'page', pageChoice: '__custom__', customPageRoute: `/${safeLink}` };
-}
-
-function ImageUploadButton({ label, imageUrl, onUpload, icon }) {
+function ImageUploadButton({ imageUrl, onUpload }) {
   const [uploading, setUploading] = useState(false);
-  const Icon = icon;
-
   const handleChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      onUpload(file_url);
-      toast.success(`${label} uploaded`);
-    } catch {
-      toast.error('Upload failed');
-    }
+    const { file_url } = await appClient.integrations.Core.UploadFile({ file });
+    onUpload(file_url);
     setUploading(false);
-    e.target.value = '';
   };
-
   return (
-    <label className="cursor-pointer block">
+    <label className="cursor-pointer flex-1">
       <div className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold w-full transition-colors ${uploading ? 'bg-gray-100 text-gray-400' : 'bg-blue-50 border border-blue-300 text-blue-700 hover:bg-blue-100'}`}>
-        {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icon className="h-3.5 w-3.5" />}
-        {uploading ? 'Uploading...' : imageUrl ? `Replace ${label}` : `Upload ${label}`}
+        {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+        {uploading ? 'Uploading...' : imageUrl ? 'Replace Image' : 'Upload Image from Computer'}
       </div>
       <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleChange} />
     </label>
   );
 }
 
-function DestinationFields({ form, setForm }) {
-  return (
-    <div className="space-y-3">
-      <div>
-        <Label className="text-xs mb-1 block">Where should users go when they click this flyer?</Label>
-        <Select value={form.destinationType} onValueChange={(value) => setForm((prev) => ({ ...prev, destinationType: value }))}>
-          <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Choose destination type" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="main_category">Main Category</SelectItem>
-            <SelectItem value="brand">Brand</SelectItem>
-            <SelectItem value="sub_category">Sub Category</SelectItem>
-            <SelectItem value="page">Certain Page</SelectItem>
-            <SelectItem value="external">External Link</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {form.destinationType === 'main_category' && (
-        <div>
-          <Label className="text-xs mb-1 block">Choose Main Category</Label>
-          <Select value={form.mainCategory} onValueChange={(value) => setForm((prev) => ({ ...prev, mainCategory: value }))}>
-            <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Choose category" /></SelectTrigger>
-            <SelectContent>
-              {MAIN_CATEGORY_OPTIONS.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {form.destinationType === 'brand' && (
-        <div>
-          <Label className="text-xs mb-1 block">Brand Name</Label>
-          <Input value={form.brandName} onChange={(e) => setForm((prev) => ({ ...prev, brandName: e.target.value }))} placeholder="Example: Samsung" />
-        </div>
-      )}
-
-      {form.destinationType === 'sub_category' && (
-        <>
-          <div>
-            <Label className="text-xs mb-1 block">Main Category</Label>
-            <Select value={form.subCategoryParent} onValueChange={(value) => setForm((prev) => ({ ...prev, subCategoryParent: value }))}>
-              <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Choose parent category" /></SelectTrigger>
-              <SelectContent>
-                {SHOP_CATEGORY_OPTIONS.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs mb-1 block">Sub Category Name</Label>
-            <Input value={form.subCategoryName} onChange={(e) => setForm((prev) => ({ ...prev, subCategoryName: e.target.value }))} placeholder="Example: Rice Cookers or Phone Cases" />
-          </div>
-        </>
-      )}
-
-      {form.destinationType === 'page' && (
-        <>
-          <div>
-            <Label className="text-xs mb-1 block">Choose Page</Label>
-            <Select value={form.pageChoice} onValueChange={(value) => setForm((prev) => ({ ...prev, pageChoice: value }))}>
-              <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Choose page" /></SelectTrigger>
-              <SelectContent>
-                {PAGE_OPTIONS.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          {form.pageChoice === '__custom__' && (
-            <div>
-              <Label className="text-xs mb-1 block">Custom Route</Label>
-              <Input value={form.customPageRoute} onChange={(e) => setForm((prev) => ({ ...prev, customPageRoute: e.target.value }))} placeholder="Example: /Policies" />
-            </div>
-          )}
-        </>
-      )}
-
-      {form.destinationType === 'external' && (
-        <div>
-          <Label className="text-xs mb-1 block">External Link</Label>
-          <Input value={form.externalUrl} onChange={(e) => setForm((prev) => ({ ...prev, externalUrl: e.target.value }))} placeholder="https://..." />
-        </div>
-      )}
-    </div>
-  );
-}
-
 function BannerForm({ initial, onSave, onCancel, isSaving, isNew }) {
   const [form, setForm] = useState(initial);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleSubmit = () => {
-    const ctaLink = buildBannerLink(form);
-    const fallbackImage = form.desktop_image_url || form.mobile_image_url || form.image_url;
-
-    if (!fallbackImage) {
-      toast.error('Upload at least one flyer image first');
-      return;
-    }
-    if (!ctaLink) {
-      toast.error('Choose where users should go');
-      return;
-    }
-
-    onSave({
-      title: destinationSummary(form),
-      image_url: fallbackImage,
-      desktop_image_url: form.desktop_image_url || fallbackImage,
-      mobile_image_url: form.mobile_image_url || fallbackImage,
-      cta_link: ctaLink,
-      order: Number(form.order || 0),
-      is_active: form.is_active !== false,
+  const handleGenerateImage = async () => {
+    if (!form.title) { toast.error('Enter a title first'); return; }
+    setIsGenerating(true);
+    const { url } = await appClient.integrations.Core.GenerateImage({
+      prompt: `A vibrant, high-quality promotional banner image for an online store in Ghana called FMM CLASSICO. The theme is: "${form.title}". ${form.subtitle || ''}. Colorful, festive, professional e-commerce style. No text overlay.`
     });
+    setForm(f => ({ ...f, image_url: url }));
+    setIsGenerating(false);
+    toast.success('Image generated!');
   };
 
   return (
     <Card className="p-5 mb-4 border-2 border-blue-200 bg-blue-50">
-      <h2 className="font-bold text-gray-800 mb-4">{isNew ? 'Create Flyer' : 'Edit Flyer'}</h2>
-
-      <div className="space-y-4">
-        <div className="rounded-xl border border-blue-200 bg-white p-3 text-xs text-gray-700">
-          <p className="font-semibold text-gray-900 mb-1">Recommended strategy</p>
-          <p>Upload <strong>two separate flyers</strong> for the same banner:</p>
-          <ul className="list-disc pl-5 mt-1 space-y-1">
-            <li><strong>Desktop:</strong> around <strong>1600 x 520 px</strong></li>
-            <li><strong>Mobile:</strong> around <strong>1080 x 640 px</strong></li>
-          </ul>
-          <p className="mt-2">This gives a cleaner fit than forcing one flyer to work on both screens.</p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
+      <h2 className="font-bold text-gray-800 mb-4">{isNew ? 'Create New Banner' : 'Edit Banner'}</h2>
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label className="text-xs mb-1 block">Desktop Flyer</Label>
-            <ImageUploadButton label="Desktop Flyer" imageUrl={form.desktop_image_url || form.image_url} onUpload={(url) => setForm((prev) => ({ ...prev, desktop_image_url: url, image_url: prev.image_url || url }))} icon={Monitor} />
-            {(form.desktop_image_url || form.image_url) && <img src={form.desktop_image_url || form.image_url} alt="desktop preview" className="mt-2 h-24 w-full object-cover rounded-lg border" />}
+            <Label className="text-xs mb-1 block">Badge</Label>
+            <Input value={form.badge} onChange={e => setForm(f => ({ ...f, badge: e.target.value }))} placeholder="🎉 Special Offer" />
           </div>
           <div>
-            <Label className="text-xs mb-1 block">Mobile Flyer</Label>
-            <ImageUploadButton label="Mobile Flyer" imageUrl={form.mobile_image_url || form.image_url} onUpload={(url) => setForm((prev) => ({ ...prev, mobile_image_url: url, image_url: prev.image_url || url }))} icon={Smartphone} />
-            {(form.mobile_image_url || form.image_url) && <img src={form.mobile_image_url || form.image_url} alt="mobile preview" className="mt-2 h-24 w-full object-cover rounded-lg border" />}
+            <Label className="text-xs mb-1 block">Title *</Label>
+            <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Banner Title" />
           </div>
         </div>
-
-        <DestinationFields form={form} setForm={setForm} />
-
         <div>
-          <Label className="text-xs mb-1 block">Display Order</Label>
-          <Input type="number" value={form.order} onChange={(e) => setForm((prev) => ({ ...prev, order: e.target.value }))} placeholder="0" />
+          <Label className="text-xs mb-1 block">Subtitle</Label>
+          <Input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))} placeholder="Short description..." />
         </div>
-
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-          <input type="checkbox" checked={form.is_active !== false} onChange={(e) => setForm((prev) => ({ ...prev, is_active: e.target.checked }))} />
-          Show this flyer on the hero banner
-        </label>
-
-        <div className="rounded-lg border bg-white px-3 py-2 text-xs text-gray-600">
-          <span className="font-semibold text-gray-800">Preview destination:</span> {destinationSummary(form)}
-          <div className="mt-1 break-all text-[11px] text-blue-700">{buildBannerLink(form) || '—'}</div>
+        <div>
+          <Label className="text-xs mb-1 block">Banner Image</Label>
+          <div className="flex gap-2 mb-2">
+            <ImageUploadButton
+              imageUrl={form.image_url}
+              onUpload={(url) => setForm(f => ({ ...f, image_url: url }))}
+            />
+            <Button type="button" variant="outline" onClick={handleGenerateImage} disabled={isGenerating} className="flex-shrink-0 border-blue-300 text-blue-600 text-xs gap-1">
+              {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              AI Generate
+            </Button>
+          </div>
+          {form.image_url && (
+            <img src={form.image_url} alt="preview" className="mt-1 h-24 w-full object-cover rounded-lg" />
+          )}
         </div>
-
-        <div className="flex gap-3 pt-1">
-          <Button onClick={handleSubmit} disabled={isSaving} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold">
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1" /> {isNew ? 'Create Flyer' : 'Save Changes'}</>}
+        <div>
+          <Label className="text-xs mb-1 block">Background Color</Label>
+          <div className="flex flex-wrap gap-2 mt-1">
+            {GRADIENTS.map(g => (
+              <button key={g.value} onClick={() => setForm(f => ({ ...f, bg_gradient: g.value }))}
+                className={`text-xs px-2 py-1 rounded-full border transition-all ${form.bg_gradient === g.value ? 'ring-2 ring-blue-500 border-blue-500 font-bold' : 'border-gray-300'}`}>
+                {g.label}
+              </button>
+            ))}
+          </div>
+          <div className={`mt-2 h-8 rounded-lg bg-gradient-to-r ${form.bg_gradient}`} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs mb-1 block">Button Text</Label>
+            <Input value={form.cta_text} onChange={e => setForm(f => ({ ...f, cta_text: e.target.value }))} placeholder="Shop Now" />
+          </div>
+          <div>
+            <Label className="text-xs mb-1 block">Where does the button go?</Label>
+            <Select value={form.cta_link} onValueChange={v => setForm(f => ({ ...f, cta_link: v }))}>
+              <SelectTrigger className="text-xs h-9">
+                <SelectValue placeholder="Pick a page/category..." />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_LINK_OPTIONS.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              className="mt-1 text-xs h-8"
+              value={form.cta_link}
+              onChange={e => setForm(f => ({ ...f, cta_link: e.target.value }))}
+              placeholder="Or type a custom link..."
+            />
+          </div>
+        </div>
+        <div className="flex gap-3 pt-2">
+          <Button onClick={() => onSave(form)} disabled={isSaving || !form.title} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold">
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1" /> {isNew ? 'Create Banner' : 'Save Changes'}</>}
           </Button>
           <Button variant="outline" onClick={onCancel} className="flex-1"><X className="h-4 w-4 mr-1" /> Cancel</Button>
         </div>
@@ -350,88 +214,97 @@ export default function AdminBanners() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [seeding, setSeeding] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     const init = async () => {
-      try {
-        const auth = await base44.auth.isAuthenticated();
-        if (!auth) return;
-        const userData = await base44.auth.me();
+      const auth = await appClient.auth.isAuthenticated();
+      if (auth) {
+        const userData = await appClient.auth.me();
         setUser(userData);
-        setIsAdmin(userData?.role === 'admin');
-      } catch {}
+        setIsAdmin(userData.role === 'admin');
+      }
     };
     init();
   }, []);
 
-  const { data: promoBanners = [], isLoading } = useQuery({
+  const { data: banners = [], isLoading } = useQuery({
     queryKey: ['promoBanners'],
-    queryFn: async () => {
-      const result = await base44.entities.PromoBanner.list('order', 500);
-      return normalizeQueryResult(result);
-    },
+    queryFn: () => appClient.entities.PromoBanner.list('order', 50),
     enabled: isAdmin,
-    staleTime: 60 * 1000,
   });
 
-  const safeBanners = useMemo(() => {
-    return (Array.isArray(promoBanners) ? promoBanners : []).slice().sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0));
-  }, [promoBanners]);
-
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.PromoBanner.create(data),
+    mutationFn: (data) => appClient.entities.PromoBanner.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promoBanners'] });
       setShowCreateForm(false);
-      toast.success('Flyer created');
-    },
-    onError: () => toast.error('Could not create flyer'),
+      toast.success('Banner created!');
+    }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.PromoBanner.update(id, data),
+    mutationFn: ({ id, data }) => appClient.entities.PromoBanner.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promoBanners'] });
       setEditingId(null);
-      toast.success('Flyer updated');
-    },
-    onError: () => toast.error('Could not update flyer'),
+      toast.success('Banner updated!');
+    }
   });
 
   const toggleMutation = useMutation({
-    mutationFn: ({ id, is_active }) => base44.entities.PromoBanner.update(id, { is_active }),
+    mutationFn: ({ id, is_active }) => appClient.entities.PromoBanner.update(id, { is_active }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['promoBanners'] }),
-    onError: () => toast.error('Could not update flyer visibility'),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.PromoBanner.delete(id),
+    mutationFn: (id) => appClient.entities.PromoBanner.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promoBanners'] });
-      toast.success('Flyer deleted');
-    },
-    onError: () => toast.error('Could not delete flyer'),
+      toast.success('Banner deleted');
+    }
   });
+
+  const handleSeedDefaults = async () => {
+    setSeeding(true);
+    for (const slide of DEFAULT_SLIDES) {
+      await appClient.entities.PromoBanner.create(slide);
+    }
+    queryClient.invalidateQueries({ queryKey: ['promoBanners'] });
+    setSeeding(false);
+    toast.success('All 6 default slides added!');
+  };
 
   if (!user) return <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-blue-500" /></div>;
   if (!isAdmin) return <div className="text-center py-20 text-red-500 font-semibold">Admin access only.</div>;
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-3xl">
-      <div className="flex items-center justify-between mb-4">
+    <div className="container mx-auto px-4 py-6 max-w-2xl">
+      <div className="flex items-center justify-between mb-2">
         <div>
-          <h1 className="text-2xl font-black text-gray-800">Hero Flyers</h1>
-          <p className="text-gray-500 text-sm mt-1">Use separate desktop and mobile flyers for the cleanest hero banner result.</p>
+          <h1 className="text-2xl font-black text-gray-800">🖼️ Hero Banner Slides</h1>
+          <p className="text-gray-500 text-sm mt-1">Control all 6 homepage banner slides — edit, hide, or delete any slide</p>
         </div>
-        <Button onClick={() => { setShowCreateForm((prev) => !prev); setEditingId(null); }} className="bg-[#2E86C1] hover:bg-[#2578ae] text-white">
-          <Plus className="h-4 w-4 mr-1" /> New Flyer
+        <Button onClick={() => { setShowCreateForm(s => !s); setEditingId(null); }} className="bg-[#2E86C1] hover:bg-[#2578ae] text-white">
+          <Plus className="h-4 w-4 mr-1" /> New Slide
         </Button>
       </div>
 
+      {banners.length === 0 && !isLoading && (
+        <Card className="p-5 mb-5 border-dashed border-2 border-gray-300 text-center">
+          <p className="text-gray-600 font-semibold mb-1">No slides in database yet</p>
+          <p className="text-gray-400 text-sm mb-3">The app is currently showing the built-in default slides. Click below to load all 6 into the database so you can edit them.</p>
+          <Button onClick={handleSeedDefaults} disabled={seeding} className="bg-[#2E86C1] hover:bg-[#2578ae] text-white">
+            {seeding ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+            Load All 6 Default Slides for Editing
+          </Button>
+        </Card>
+      )}
+
       {showCreateForm && (
         <BannerForm
-          initial={{ ...EMPTY_FORM, order: safeBanners.length + 1 }}
+          initial={EMPTY_FORM}
           onSave={(data) => createMutation.mutate(data)}
           onCancel={() => setShowCreateForm(false)}
           isSaving={createMutation.isPending}
@@ -440,72 +313,51 @@ export default function AdminBanners() {
       )}
 
       {isLoading ? (
-        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-blue-500" /></div>
-      ) : safeBanners.length === 0 ? (
-        <Card className="p-8 text-center border-dashed border-2 border-gray-300">
-          <p className="font-semibold text-gray-700">No flyers yet</p>
-          <p className="text-sm text-gray-500 mt-1">Create your first responsive hero flyer above.</p>
-        </Card>
+        <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-blue-500" /></div>
       ) : (
         <div className="space-y-3">
-          {safeBanners.map((banner, index) => {
-            const parsed = {
-              ...EMPTY_FORM,
-              ...parseStoredLink(banner.cta_link),
-              image_url: banner.image_url || '',
-              desktop_image_url: banner.desktop_image_url || banner.image_url || '',
-              mobile_image_url: banner.mobile_image_url || banner.image_url || '',
-              order: Number(banner.order ?? index + 1),
-              is_active: banner.is_active !== false,
-            };
-
-            if (editingId === banner.id) {
-              return <BannerForm key={banner.id} initial={parsed} onSave={(data) => updateMutation.mutate({ id: banner.id, data })} onCancel={() => setEditingId(null)} isSaving={updateMutation.isPending} />;
-            }
-
-            return (
-              <Card key={banner.id} className="p-4 rounded-2xl shadow-sm">
-                <div className="grid gap-4 md:grid-cols-[1fr_1fr_1.2fr]">
-                  <div>
-                    <p className="mb-2 text-xs font-semibold text-gray-500">Desktop</p>
-                    <div className="aspect-[1600/520] rounded-xl overflow-hidden border bg-gray-100">
-                      {(banner.desktop_image_url || banner.image_url) ? <img src={banner.desktop_image_url || banner.image_url} alt={banner.title || 'Desktop flyer'} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">No image</div>}
+          {banners.map((banner, idx) => (
+            <div key={banner.id}>
+              {editingId === banner.id ? (
+                <BannerForm
+                  initial={{ ...banner }}
+                  onSave={(data) => updateMutation.mutate({ id: banner.id, data })}
+                  onCancel={() => setEditingId(null)}
+                  isSaving={updateMutation.isPending}
+                  isNew={false}
+                />
+              ) : (
+                <Card className={`p-4 transition-opacity ${!banner.is_active ? 'opacity-50' : ''}`}>
+                  <div className="flex gap-3 items-center">
+                    <span className="text-gray-400 font-bold text-sm w-5 text-center">{idx + 1}</span>
+                    {banner.image_url && (
+                      <img src={banner.image_url} alt={banner.title} className="w-16 h-14 object-cover rounded-lg flex-shrink-0" />
+                    )}
+                    <div className={`flex-shrink-0 w-2 self-stretch rounded-full bg-gradient-to-b ${banner.bg_gradient}`} />
+                    <div className="flex-1 min-w-0">
+                      {banner.badge && <p className="text-xs text-gray-400">{banner.badge}</p>}
+                      <p className="font-bold text-gray-800 truncate">{banner.title}</p>
+                      {banner.subtitle && <p className="text-xs text-gray-500 truncate">{banner.subtitle}</p>}
+                      <Badge className={`mt-1 text-xs ${banner.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {banner.is_active ? '👁 Visible' : '🙈 Hidden'}
+                      </Badge>
                     </div>
-                  </div>
-                  <div>
-                    <p className="mb-2 text-xs font-semibold text-gray-500">Mobile</p>
-                    <div className="aspect-[1080/640] rounded-xl overflow-hidden border bg-gray-100">
-                      {(banner.mobile_image_url || banner.image_url) ? <img src={banner.mobile_image_url || banner.image_url} alt={banner.title || 'Mobile flyer'} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">No image</div>}
-                    </div>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-gray-800">{destinationSummary(parsed)}</p>
-                        <p className="text-xs text-blue-700 break-all mt-1">{banner.cta_link || 'No link'}</p>
-                        <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-                          <span>Order: {Number(banner.order ?? 0)}</span>
-                          <span>•</span>
-                          <span>{banner.is_active !== false ? 'Visible' : 'Hidden'}</span>
-                        </div>
-                      </div>
-                      <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${banner.is_active !== false ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {banner.is_active !== false ? 'Active' : 'Hidden'}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      <Button variant="outline" size="sm" onClick={() => { setEditingId(banner.id); setShowCreateForm(false); }}><Pencil className="h-3.5 w-3.5 mr-1" /> Edit</Button>
-                      <Button variant="outline" size="sm" onClick={() => toggleMutation.mutate({ id: banner.id, is_active: banner.is_active === false })}>
-                        {banner.is_active !== false ? <EyeOff className="h-3.5 w-3.5 mr-1" /> : <Eye className="h-3.5 w-3.5 mr-1" />}
-                        {banner.is_active !== false ? 'Hide' : 'Show'}
+                    <div className="flex flex-col gap-1.5 flex-shrink-0">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingId(banner.id); setShowCreateForm(false); }}>
+                        <Pencil className="h-4 w-4 text-blue-500" />
                       </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => deleteMutation.mutate(banner.id)}><Trash2 className="h-3.5 w-3.5 mr-1" /> Delete</Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleMutation.mutate({ id: banner.id, is_active: !banner.is_active })}>
+                        {banner.is_active ? <EyeOff className="h-4 w-4 text-gray-500" /> : <Eye className="h-4 w-4 text-green-600" />}
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { if (confirm('Delete this slide?')) deleteMutation.mutate(banner.id); }}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </div>
                   </div>
-                </div>
-              </Card>
-            );
-          })}
+                </Card>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

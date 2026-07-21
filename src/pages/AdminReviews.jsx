@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,7 +16,7 @@ export default function AdminReviews() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    base44.auth.me().then(u => {
+    appClient.auth.me().then(u => {
       setUser(u);
       setIsAdmin(u.role === 'admin');
     }).catch(() => {});
@@ -24,7 +24,7 @@ export default function AdminReviews() {
 
   const { data: settings = [] } = useQuery({
     queryKey: ['appSettings'],
-    queryFn: () => base44.entities.AppSetting.list(),
+    queryFn: () => appClient.entities.AppSetting.list(),
     enabled: isAdmin,
   });
 
@@ -37,8 +37,8 @@ export default function AdminReviews() {
   const saveAutoApproveMutation = useMutation({
     mutationFn: async (enabled) => {
       const existing = settings.find(s => s.key === 'auto_approve_reviews');
-      if (existing) return base44.entities.AppSetting.update(existing.id, { value: String(enabled) });
-      return base44.entities.AppSetting.create({ key: 'auto_approve_reviews', value: String(enabled) });
+      if (existing) return appClient.entities.AppSetting.update(existing.id, { value: String(enabled) });
+      return appClient.entities.AppSetting.create({ key: 'auto_approve_reviews', value: String(enabled) });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['appSettings'] }),
   });
@@ -50,7 +50,7 @@ export default function AdminReviews() {
     if (val) {
       const pending = reviews.filter(r => !r.approved);
       if (pending.length > 0) {
-        Promise.all(pending.map(r => base44.entities.Review.update(r.id, { approved: true }))).then(() => {
+        Promise.all(pending.map(r => appClient.entities.Review.update(r.id, { approved: true }))).then(() => {
           queryClient.invalidateQueries({ queryKey: ['adminReviews'] });
         });
       }
@@ -59,18 +59,18 @@ export default function AdminReviews() {
 
   const { data: reviews = [], isLoading: loadingReviews } = useQuery({
     queryKey: ['adminReviews'],
-    queryFn: () => base44.entities.Review.list('-created_date', 200),
+    queryFn: () => appClient.entities.Review.list('-created_date', 200),
     enabled: isAdmin,
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
-    queryFn: () => base44.entities.Product.list(),
+    queryFn: () => appClient.entities.Product.list(),
     enabled: isAdmin,
   });
 
   const approveMutation = useMutation({
-    mutationFn: (review) => base44.entities.Review.update(review.id, { approved: !review.approved }),
+    mutationFn: (review) => appClient.entities.Review.update(review.id, { approved: !review.approved }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminReviews'] });
       toast.success('Review updated!');
@@ -80,7 +80,7 @@ export default function AdminReviews() {
   const approveAllMutation = useMutation({
     mutationFn: async () => {
       const pendingReviews = reviews.filter(r => !r.approved);
-      await Promise.all(pendingReviews.map(r => base44.entities.Review.update(r.id, { approved: true })));
+      await Promise.all(pendingReviews.map(r => appClient.entities.Review.update(r.id, { approved: true })));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminReviews'] });
@@ -89,7 +89,7 @@ export default function AdminReviews() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Review.delete(id),
+    mutationFn: (id) => appClient.entities.Review.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminReviews'] });
       toast.success('Review deleted.');
@@ -97,7 +97,7 @@ export default function AdminReviews() {
   });
 
   const toggleReviewsMutation = useMutation({
-    mutationFn: ({ productId, enabled }) => base44.entities.Product.update(productId, { review_enabled: enabled }),
+    mutationFn: ({ productId, enabled }) => appClient.entities.Product.update(productId, { review_enabled: enabled }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Review setting updated!');

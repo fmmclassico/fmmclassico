@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -30,14 +30,14 @@ function CategoryCard({ catKey, label, desc, settings, saveMutation, queryClient
   const saveHistory = async (newHistory) => {
     const existing = settings.find(s => s.key === `cat_img_history_${catKey}`);
     const value = JSON.stringify(newHistory);
-    if (existing) return base44.entities.AppSetting.update(existing.id, { value });
-    return base44.entities.AppSetting.create({ key: `cat_img_history_${catKey}`, value });
+    if (existing) return appClient.entities.AppSetting.update(existing.id, { value });
+    return appClient.entities.AppSetting.create({ key: `cat_img_history_${catKey}`, value });
   };
 
   const handleUpload = async (file) => {
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await appClient.integrations.Core.UploadFile({ file });
     // save old image to history
     const newHistory = currentImg ? [currentImg, ...history.filter(h => h !== file_url)].slice(0, 10) : history;
     await Promise.all([
@@ -122,20 +122,20 @@ export default function AdminCategoryImages() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    base44.auth.me().then(u => { setUser(u); setIsAdmin(u?.role === 'admin'); }).catch(() => {});
+    appClient.auth.me().then(u => { setUser(u); setIsAdmin(u?.role === 'admin'); }).catch(() => {});
   }, []);
 
   const { data: settings = [] } = useQuery({
     queryKey: ['appSettings'],
-    queryFn: () => base44.entities.AppSetting.list(),
+    queryFn: () => appClient.entities.AppSetting.list(),
     enabled: isAdmin,
   });
 
   const saveMutation = useMutation({
     mutationFn: async ({ key, value }) => {
       const existing = settings.find(s => s.key === key);
-      if (existing) return base44.entities.AppSetting.update(existing.id, { value });
-      return base44.entities.AppSetting.create({ key, value });
+      if (existing) return appClient.entities.AppSetting.update(existing.id, { value });
+      return appClient.entities.AppSetting.create({ key, value });
     },
   });
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,12 @@ export default function AdminPageContent() {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const isAuth = await base44.auth.isAuthenticated();
+      const isAuth = await appClient.auth.isAuthenticated();
       if (!isAuth) {
         toast.error('Please login as admin');
         return;
       }
-      const userData = await base44.auth.me();
+      const userData = await appClient.auth.me();
       if (userData.role !== 'admin') {
         toast.error('Admin access required');
         return;
@@ -34,7 +34,7 @@ export default function AdminPageContent() {
 
   const { data: settings = [], refetch: refetchSettings } = useQuery({
     queryKey: ['appSettings'],
-    queryFn: () => base44.entities.AppSetting.list(),
+    queryFn: () => appClient.entities.AppSetting.list(),
     enabled: !!user,
   });
 
@@ -76,11 +76,11 @@ export default function AdminPageContent() {
     }
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await appClient.integrations.Core.UploadFile({ file });
       if (videoSetting?.id) {
-        await base44.entities.AppSetting.update(videoSetting.id, { value: file_url });
+        await appClient.entities.AppSetting.update(videoSetting.id, { value: file_url });
       } else {
-        await base44.entities.AppSetting.create({ key: 'tutorial_video', value: file_url });
+        await appClient.entities.AppSetting.create({ key: 'tutorial_video', value: file_url });
       }
       refetchSettings();
       toast.success('Video uploaded successfully!');
@@ -100,9 +100,9 @@ export default function AdminPageContent() {
   const handleSaveSteps = async () => {
     const stepsSetting = settings.find(s => s.key === 'howto_steps');
     if (stepsSetting?.id) {
-      await base44.entities.AppSetting.update(stepsSetting.id, { value: JSON.stringify(steps) });
+      await appClient.entities.AppSetting.update(stepsSetting.id, { value: JSON.stringify(steps) });
     } else {
-      await base44.entities.AppSetting.create({ key: 'howto_steps', value: JSON.stringify(steps) });
+      await appClient.entities.AppSetting.create({ key: 'howto_steps', value: JSON.stringify(steps) });
     }
     refetchSettings();
     toast.success('Steps saved! Changes are now live.');

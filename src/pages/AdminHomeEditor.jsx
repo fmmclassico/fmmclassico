@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,17 +38,17 @@ export default function AdminHomeEditor() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    appClient.auth.me().then(setUser).catch(() => {});
   }, []);
 
   const { data: settings = [] } = useQuery({
     queryKey: ['appSettings'],
-    queryFn: () => base44.entities.AppSetting.list(),
+    queryFn: () => appClient.entities.AppSetting.list(),
   });
 
   const { data: banners = [] } = useQuery({
     queryKey: ['promoBanners'],
-    queryFn: () => base44.entities.PromoBanner.list(),
+    queryFn: () => appClient.entities.PromoBanner.list(),
   });
 
   // Load custom categories from settings
@@ -79,9 +79,9 @@ export default function AdminHomeEditor() {
     try {
       const existing = settings.find(s => s.key === key);
       if (existing) {
-        await base44.entities.AppSetting.update(existing.id, { value });
+        await appClient.entities.AppSetting.update(existing.id, { value });
       } else {
-        await base44.entities.AppSetting.create({ key, value });
+        await appClient.entities.AppSetting.create({ key, value });
       }
       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
       toast.success('Saved!');
@@ -94,7 +94,7 @@ export default function AdminHomeEditor() {
   const handleUpload = async (key, file) => {
     setUploading(u => ({ ...u, [key]: true }));
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await appClient.integrations.Core.UploadFile({ file });
       setLocalSettings(l => ({ ...l, [key]: file_url }));
       await saveSetting(key, file_url);
     } catch {
@@ -110,7 +110,7 @@ export default function AdminHomeEditor() {
 
   const handleAddBanner = async () => {
     if (!bannerUrl.trim()) return;
-    await base44.entities.PromoBanner.create({
+    await appClient.entities.PromoBanner.create({
       title: 'New Banner',
       subtitle: '',
       image_url: bannerUrl.trim(),
@@ -123,13 +123,13 @@ export default function AdminHomeEditor() {
   };
 
   const handleDeleteBanner = async (id) => {
-    await base44.entities.PromoBanner.delete(id);
+    await appClient.entities.PromoBanner.delete(id);
     queryClient.invalidateQueries({ queryKey: ['promoBanners'] });
     toast.success('Removed');
   };
 
   const handleBannerFieldSave = async (banner, field, value) => {
-    await base44.entities.PromoBanner.update(banner.id, { [field]: value });
+    await appClient.entities.PromoBanner.update(banner.id, { [field]: value });
     queryClient.invalidateQueries({ queryKey: ['promoBanners'] });
     toast.success('Saved!');
   };
@@ -138,7 +138,7 @@ export default function AdminHomeEditor() {
     if (!newHeroTitle.trim()) return;
     const newCat = { id: `custom_${Date.now()}`, name: newHeroTitle, image: '', desc: '' };
     const key = `custom_cat_${newCat.id}`;
-    await base44.entities.AppSetting.create({ key, value: JSON.stringify(newCat) });
+    await appClient.entities.AppSetting.create({ key, value: JSON.stringify(newCat) });
     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
     setCustomCategories([...customCategories, newCat]);
     setNewHeroTitle('');
@@ -150,7 +150,7 @@ export default function AdminHomeEditor() {
     const key = `custom_cat_${cat.id}`;
     const existing = settings.find(s => s.key === key);
     if (existing) {
-      await base44.entities.AppSetting.update(existing.id, { value: JSON.stringify(updated) });
+      await appClient.entities.AppSetting.update(existing.id, { value: JSON.stringify(updated) });
     }
     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
     setCustomCategories(customCategories.map(c => c.id === cat.id ? updated : c));
@@ -161,7 +161,7 @@ export default function AdminHomeEditor() {
     const key = `custom_cat_${catId}`;
     const existing = settings.find(s => s.key === key);
     if (existing) {
-      await base44.entities.AppSetting.delete(existing.id);
+      await appClient.entities.AppSetting.delete(existing.id);
     }
     queryClient.invalidateQueries({ queryKey: ['appSettings'] });
     setCustomCategories(customCategories.filter(c => c.id !== catId));
@@ -171,7 +171,7 @@ export default function AdminHomeEditor() {
   const addCustomSection = async () => {
     if (!newSectionTitle.trim()) return;
     const idx = CORE_SECTIONS.length + customCategories.length;
-    await base44.entities.AppSetting.create({
+    await appClient.entities.AppSetting.create({
       key: `custom_section_${idx}`,
       value: newSectionTitle,
     });
@@ -197,9 +197,9 @@ export default function AdminHomeEditor() {
       const key = `custom_section_${idx}`;
       const existing = settings.find(s => s.key === key);
       if (existing) {
-        await base44.entities.AppSetting.update(existing.id, { value });
+        await appClient.entities.AppSetting.update(existing.id, { value });
       } else {
-        await base44.entities.AppSetting.create({ key, value });
+        await appClient.entities.AppSetting.create({ key, value });
       }
       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
     }
@@ -210,7 +210,7 @@ export default function AdminHomeEditor() {
     const key = `custom_section_${idx}`;
     const existing = settings.find(s => s.key === key);
     if (existing) {
-      await base44.entities.AppSetting.delete(existing.id);
+      await appClient.entities.AppSetting.delete(existing.id);
       queryClient.invalidateQueries({ queryKey: ['appSettings'] });
       toast.success('Removed!');
     }
@@ -367,8 +367,8 @@ export default function AdminHomeEditor() {
                     if (!e.target.files?.[0]) return;
                     setUploading(u => ({ ...u, banner_upload: true }));
                     try {
-                      const { file_url } = await base44.integrations.Core.UploadFile({ file: e.target.files[0] });
-                      await base44.entities.PromoBanner.create({
+                      const { file_url } = await appClient.integrations.Core.UploadFile({ file: e.target.files[0] });
+                      await appClient.entities.PromoBanner.create({
                         title: 'New Banner',
                         subtitle: '',
                         image_url: file_url,
@@ -411,8 +411,8 @@ export default function AdminHomeEditor() {
                           if (!e.target.files?.[0]) return;
                           setUploading(u => ({ ...u, [`banner_${b.id}`]: true }));
                           try {
-                            const { file_url } = await base44.integrations.Core.UploadFile({ file: e.target.files[0] });
-                            await base44.entities.PromoBanner.update(b.id, { image_url: file_url });
+                            const { file_url } = await appClient.integrations.Core.UploadFile({ file: e.target.files[0] });
+                            await appClient.entities.PromoBanner.update(b.id, { image_url: file_url });
                             queryClient.invalidateQueries({ queryKey: ['promoBanners'] });
                             toast.success('Image updated!');
                           } catch {
@@ -538,7 +538,7 @@ export default function AdminHomeEditor() {
                             if (!e.target.files?.[0]) return;
                             setUploading(u => ({ ...u, [`custom_${cat.id}`]: true }));
                             try {
-                              const { file_url } = await base44.integrations.Core.UploadFile({ file: e.target.files[0] });
+                              const { file_url } = await appClient.integrations.Core.UploadFile({ file: e.target.files[0] });
                               await updateCustomCategory(cat, 'image', file_url);
                             } catch {
                               toast.error('Upload failed');

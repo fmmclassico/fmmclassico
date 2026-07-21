@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -141,12 +141,12 @@ export default function AdminAbout() {
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
-    base44.auth.me().then(u => { setUser(u); setIsAdmin(u?.role === 'admin'); }).catch(() => {});
+    appClient.auth.me().then(u => { setUser(u); setIsAdmin(u?.role === 'admin'); }).catch(() => {});
   }, []);
 
   const { data: settings = [] } = useQuery({
     queryKey: ['appSettings'],
-    queryFn: () => base44.entities.AppSetting.list(),
+    queryFn: () => appClient.entities.AppSetting.list(),
     enabled: isAdmin,
   });
 
@@ -166,9 +166,9 @@ export default function AdminAbout() {
     for (const key of dirtyKeys) {
       const existing = settings.find(s => s.key === key);
       if (existing) {
-        await base44.entities.AppSetting.update(existing.id, { value: localValues[key] });
+        await appClient.entities.AppSetting.update(existing.id, { value: localValues[key] });
       } else {
-        await base44.entities.AppSetting.create({ key, value: localValues[key] });
+        await appClient.entities.AppSetting.create({ key, value: localValues[key] });
       }
     }
     queryClient.invalidateQueries({ queryKey: ['appSettings'] });

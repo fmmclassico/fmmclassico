@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -20,7 +20,7 @@ export default function HeaderSearchBar({
     queryKey: ['header-search-products'],
     queryFn: async () => {
       try {
-        const result = await base44.entities.Product.list('-created_date', 150);
+        const result = await appClient.entities.Product.list('-created_date', 150);
         return Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
       } catch (error) {
         return [];

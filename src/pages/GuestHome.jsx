@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/lib/utils';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { ChevronRight, Home as HomeIcon, Smartphone, Headphones, Tv, Gem } from 'lucide-react';
 import { toast } from 'sonner';
@@ -58,7 +58,7 @@ export default function GuestHome() {
   var { data: appSettings = [] } = useQuery({
     queryKey: ['appSettings'],
     queryFn: async function() {
-      try { var r = await base44.entities.AppSetting.list(); return Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : []; }
+      try { var r = await appClient.entities.AppSetting.list(); return Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : []; }
       catch (e) { return []; }
     },
     staleTime: 5 * 60 * 1000,
@@ -67,7 +67,7 @@ export default function GuestHome() {
   var { data: products = [], isLoading } = useQuery({
     queryKey: ['products'],
     queryFn: async function() {
-      try { var r = await base44.entities.Product.list('-created_date', 100); return Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : []; }
+      try { var r = await appClient.entities.Product.list('-created_date', 100); return Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : []; }
       catch (e) { return []; }
     },
     staleTime: 2 * 60 * 1000,

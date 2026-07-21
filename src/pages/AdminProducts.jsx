@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -166,7 +166,7 @@ export default function AdminProducts() {
   React.useEffect(() => {
     const envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || "";
     const adminList = envAdminEmails.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-    base44.auth.me().then(u => {
+    appClient.auth.me().then(u => {
       setUser(u);
       const emailMatch = adminList.includes(u?.email?.toLowerCase());
       setIsAdmin(u?.role === 'admin' || emailMatch);
@@ -177,7 +177,7 @@ export default function AdminProducts() {
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products-admin'],
-    queryFn: () => base44.entities.Product.list('-created_date', 200),
+    queryFn: () => appClient.entities.Product.list('-created_date', 200),
     enabled: isAdmin,
     staleTime: 60000,
     gcTime: 5 * 60 * 1000,
@@ -223,9 +223,9 @@ export default function AdminProducts() {
     };
 
     if (editingProduct) {
-      return base44.entities.Product.update(editingProduct.id, payload);
+      return appClient.entities.Product.update(editingProduct.id, payload);
     }
-    return base44.entities.Product.create(payload);
+    return appClient.entities.Product.create(payload);
   },
   onSuccess: () => {
     queryClient.removeQueries({ queryKey: ['products'] });
@@ -245,7 +245,7 @@ export default function AdminProducts() {
 
   // Quick visibility toggle from the product list (no form needed)
   const toggleVisibilityMutation = useMutation({
-    mutationFn: ({ id, is_visible }) => base44.entities.Product.update(id, { is_visible }),
+    mutationFn: ({ id, is_visible }) => appClient.entities.Product.update(id, { is_visible }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products-admin'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -256,7 +256,7 @@ export default function AdminProducts() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingMain(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await appClient.integrations.Core.UploadFile({ file });
     setForm(f => ({ ...f, image_url: file_url }));
     setUploadingMain(false);
     toast.success('Main image uploaded!');
@@ -266,7 +266,7 @@ export default function AdminProducts() {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     setUploadingExtra(true);
-    const urls = await Promise.all(files.map(f => base44.integrations.Core.UploadFile({ file: f }).then(r => r.file_url)));
+    const urls = await Promise.all(files.map(f => appClient.integrations.Core.UploadFile({ file: f }).then(r => r.file_url)));
     setForm(f => ({ ...f, image_urls: [...(f.image_urls || []), ...urls] }));
     setUploadingExtra(false);
     toast.success(`${urls.length} image(s) uploaded!`);
@@ -276,7 +276,7 @@ export default function AdminProducts() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingVideo(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await appClient.integrations.Core.UploadFile({ file });
     setForm(f => ({ ...f, video_url: file_url }));
     setUploadingVideo(false);
     toast.success('Video uploaded!');

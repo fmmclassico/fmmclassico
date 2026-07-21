@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from "@/components/ui/card";
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { 
   Smartphone, Shield, Truck, HeadphonesIcon,
   MapPin, Phone, Mail, Clock, Award, Users, Target, Heart
@@ -54,7 +54,7 @@ const DEFAULTS = {
 export default function About() {
   const { data: settings = [] } = useQuery({
     queryKey: ['appSettings'],
-    queryFn: () => base44.entities.AppSetting.list(),
+    queryFn: () => appClient.entities.AppSetting.list(),
     staleTime: 60000,
   });
 

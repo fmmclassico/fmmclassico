@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -86,7 +86,7 @@ export default function Policies() {
   const [cancellationPolicy, setCancellationPolicy] = useState('');
 
   useEffect(() => {
-    base44.auth.me().then(u => {
+    appClient.auth.me().then(u => {
       setUser(u);
       setIsAdmin(u?.role === 'admin');
     }).catch(() => {});
@@ -96,8 +96,8 @@ export default function Policies() {
     queryKey: ['appPolicies'],
     queryFn: async () => {
       const results = await Promise.all([
-        base44.entities.AppSetting.filter({ key: 'return_policy' }).then(r => r[0]),
-        base44.entities.AppSetting.filter({ key: 'cancellation_policy' }).then(r => r[0]),
+        appClient.entities.AppSetting.filter({ key: 'return_policy' }).then(r => r[0]),
+        appClient.entities.AppSetting.filter({ key: 'cancellation_policy' }).then(r => r[0]),
       ]);
       return {
         return_policy: results[0],
@@ -123,11 +123,11 @@ export default function Policies() {
 
   const savePolicyMutation = useMutation({
     mutationFn: async ({ key, value }) => {
-      const existing = await base44.entities.AppSetting.filter({ key }).then(r => r[0]);
+      const existing = await appClient.entities.AppSetting.filter({ key }).then(r => r[0]);
       if (existing) {
-        return base44.entities.AppSetting.update(existing.id, { value });
+        return appClient.entities.AppSetting.update(existing.id, { value });
       } else {
-        return base44.entities.AppSetting.create({ key, value });
+        return appClient.entities.AppSetting.create({ key, value });
       }
     },
     onSuccess: () => {

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,7 +46,7 @@ export default function Shop() {
 
   const { data: allProducts = [], isLoading, refetch } = useQuery({
     queryKey: ['products'],
-    queryFn: () => base44.entities.Product.list('-created_date', 100),
+    queryFn: () => appClient.entities.Product.list('-created_date', 100),
     staleTime: 30000,
     refetchOnWindowFocus: true,
     gcTime: 10 * 60 * 1000,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { initiatePayment } from '@/api/hubtelClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -56,17 +56,17 @@ export default function Checkout() {
 
   useEffect(() => {
     setIsSubmitting(false);
-    base44.auth.me()
+    appClient.auth.me()
       .then(userData => {
         setUser(userData);
         setFormData(prev => ({ ...prev, customer_name: userData.full_name || '' }));
       })
-      .catch(() => base44.auth.redirectToLogin(createPageUrl('Home')));
+      .catch(() => appClient.auth.redirectToLogin(createPageUrl('Home')));
   }, []);
 
   const { data: cartItems = [] } = useQuery({
     queryKey: ['cartItems', user?.email],
-    queryFn: () => base44.entities.CartItem.filter({ user_email: user?.email }),
+    queryFn: () => appClient.entities.CartItem.filter({ user_email: user?.email }),
     enabled: !!user?.email,
     staleTime: 30000,
   });
@@ -212,7 +212,7 @@ export default function Checkout() {
         tracking_updates: [{ status: 'Order Placed', message: 'Payment method: ' + payMethodLabel + '. Amount charged: GHS ' + orderSummary.total.toFixed(2) + (orderSummary.balanceDue > 0 ? '. Balance GHS ' + orderSummary.balanceDue.toFixed(2) + ' due on delivery.' : ''), timestamp: new Date().toISOString() }],
       };
 
-      await base44.entities.Order.create(orderPayload);
+      await appClient.entities.Order.create(orderPayload);
       queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
 
       const callbackUrl = 'https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback';

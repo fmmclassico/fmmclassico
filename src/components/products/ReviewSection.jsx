@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +17,7 @@ export default function ReviewSection({ product, user }) {
   const { data: reviews = [] } = useQuery({
     queryKey: ['reviews', product.id],
     queryFn: async () => {
-      const result = await base44.entities.Review.filter({ product_id: product.id, approved: true });
+      const result = await appClient.entities.Review.filter({ product_id: product.id, approved: true });
       return Array.isArray(result) ? result : result?.data || [];
     },
     enabled: !!product.id,
@@ -26,7 +26,7 @@ export default function ReviewSection({ product, user }) {
   const { data: settings = [] } = useQuery({
     queryKey: ['appSettings'],
     queryFn: async () => {
-      const result = await base44.entities.AppSetting.list();
+      const result = await appClient.entities.AppSetting.list();
       return Array.isArray(result) ? result : result?.data || [];
     },
   });
@@ -35,8 +35,8 @@ export default function ReviewSection({ product, user }) {
 
   const submitMutation = useMutation({
   mutationFn: async () => {
-    if (!user) { base44.auth.redirectToLogin(window.location.href); return; }
-    await base44.entities.Review.create({
+    if (!user) { appClient.auth.redirectToLogin(window.location.href); return; }
+    await appClient.entities.Review.create({
       product_id: product.id,
       user_name: user.full_name || user.email.split('@')[0],
       user_email: user.email,

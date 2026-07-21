@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload, X, Pencil, Plus, ImagePlus, Loader2, Check, Video, Eye, EyeOff } from 'lucide-react';
+import { Upload, X, Pencil, Plus, ImagePlus, Loader2, Check, Video, Eye, EyeOff, Link2 } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import { toast } from 'sonner';
 
-// ── STRICT CATEGORY STRUCTURE ──────────────────────────────────────────────────
 const MAIN_CATEGORY_GROUPS = [
   { label: 'Phones', id: 'phones' },
   { label: 'Phone Accessories', id: 'phone_accessories' },
@@ -44,7 +44,6 @@ const GROUP_BRANDS = {
   home_appliances_group: ['Samsung', 'LG', 'Hisense', 'TCL', 'Midea', 'Roch', 'Silver Crest', 'Nasco', 'Hoffman', 'Other (type below)'],
 };
 
-// All subcategories per category (not brand-dependent — show all options + "Other")
 const CATEGORY_SUBCATEGORIES = {
   phones: [
     'iPhone SE', 'iPhone 11', 'iPhone 12 Series', 'iPhone 13 Series', 'iPhone 14 Series', 'iPhone 15 Series', 'iPhone 16 Series',
@@ -120,8 +119,8 @@ const CATEGORY_SUBCATEGORIES = {
 
 const HOME_SECTIONS = [
   { key: 'flash_sale', label: '⚡ CLASSICO Deals (Flash Sale)' },
-  { key: 'featured',   label: '⭐ Featured / Classico Picks' },
-  { key: 'donkomi',    label: '🔥 Donkomi Deals (Best Prices)' },
+  { key: 'featured', label: '⭐ Featured / Classico Picks' },
+  { key: 'donkomi', label: '🔥 Donkomi Deals (Best Prices)' },
   { key: 'new_arrival', label: '🆕 New Arrivals' },
   { key: 'top_selling', label: '📈 Top Selling' },
 ];
@@ -140,17 +139,85 @@ const QUILL_MODULES = {
   ],
 };
 
-const PRESET_COLORS = ['Black','White','Red','Blue','Green','Yellow','Gold','Silver','Rose Gold','Purple','Orange','Pink','Navy','Grey','Clear/Transparent'];
+const PRESET_COLORS = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Gold', 'Silver', 'Rose Gold', 'Purple', 'Orange', 'Pink', 'Navy', 'Grey', 'Clear/Transparent'];
 
 const EMPTY_FORM = {
-  name: '', description: '', price: '', original_price: '',
-  main_group: '', category: '', brand: '', custom_brand: '', subcategory: '', custom_subcategory: '',
-  stock: '', home_sections: [], review_enabled: true, rating: '', reviews_count: '',
-  image_url: '', image_urls: [], video_url: '', is_visible: true,
-  show_colors: false, available_colors: [], color_input: '',
-  show_wattage: false, available_wattage: [], wattage_input: '',
-  show_type: false, available_types: [], type_input: '',
+  name: '',
+  description: '',
+  price: '',
+  original_price: '',
+  main_group: '',
+  category: '',
+  brand: '',
+  custom_brand: '',
+  subcategory: '',
+  custom_subcategory: '',
+  stock: '',
+  home_sections: [],
+  review_enabled: true,
+  rating: '',
+  reviews_count: '',
+  image_url: '',
+  image_urls: [],
+  video_url: '',
+  flash_sale_end: '',
+  is_visible: true,
+  show_colors: false,
+  available_colors: [],
+  color_input: '',
+  show_wattage: false,
+  available_wattage: [],
+  wattage_input: '',
+  show_type: false,
+  available_types: [],
+  type_input: '',
 };
+
+function isHttpUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch (_) {
+    return false;
+  }
+}
+
+function splitUrlList(value) {
+  return [...new Set(
+    String(value || '')
+      .split(/[
+,]+/)
+      .map((item) => item.trim())
+      .filter((item) => isHttpUrl(item))
+  )];
+}
+
+function normalizeProductMedia(mainImage, extraImages) {
+  const merged = [...new Set([mainImage, ...(extraImages || [])].map((item) => String(item || '').trim()).filter(Boolean))];
+  return {
+    image_url: merged[0] || '',
+    image_urls: merged.slice(1),
+  };
+}
+
+function normalizeStringArray(value) {
+  if (Array.isArray(value)) {
+    return [...new Set(value.map((item) => String(item || '').trim()).filter(Boolean))];
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return normalizeStringArray(parsed);
+      }
+    } catch (_) {
+      return splitUrlList(trimmed).length > 0 ? splitUrlList(trimmed) : [trimmed];
+    }
+  }
+  return [];
+}
 
 export default function AdminProducts() {
   const [user, setUser] = React.useState(null);
@@ -161,18 +228,19 @@ export default function AdminProducts() {
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [extraImageUrlInput, setExtraImageUrlInput] = useState('');
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
-    const envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || "";
-    const adminList = envAdminEmails.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-    appClient.auth.me().then(u => {
-      setUser(u);
-      const emailMatch = adminList.includes(u?.email?.toLowerCase());
-      setIsAdmin(u?.role === 'admin' || emailMatch);
-    }).catch(() => {
-      setIsAdmin(true);
-    });
+    appClient.auth.me()
+      .then((authUser) => {
+        setUser(authUser);
+        setIsAdmin(authUser?.role === 'admin');
+      })
+      .catch(() => {
+        setUser(null);
+        setIsAdmin(false);
+      });
   }, []);
 
   const { data: products = [], isLoading } = useQuery({
@@ -183,67 +251,78 @@ export default function AdminProducts() {
     gcTime: 5 * 60 * 1000,
   });
 
+  const displayProducts = useMemo(() => (
+    products.map((product) => {
+      const normalizedImages = normalizeProductMedia(product.image_url, normalizeStringArray(product.image_urls));
+      return {
+        ...product,
+        ...normalizedImages,
+      };
+    })
+  ), [products]);
+
   const saveMutation = useMutation({
-  mutationFn: async (data) => {
-    const { main_group, home_sections, custom_brand, custom_subcategory, color_input, wattage_input, type_input, ...rest } = data;
-    const sections = home_sections || [];
-    const finalBrand = rest.brand === 'Other (type below)' ? (custom_brand || 'Other') : rest.brand;
-    const finalSubcategory = rest.subcategory === '__custom__' ? (custom_subcategory || '') : rest.subcategory;
-    const stockValue = typeof data.stock === 'string' ? data.stock.trim() : data.stock;
-    const stockNumber = stockValue === '' ? null : parseInt(stockValue, 10);
+    mutationFn: async (data) => {
+      const { main_group, home_sections, custom_brand, custom_subcategory, color_input, wattage_input, type_input, ...rest } = data;
+      const sections = home_sections || [];
+      const finalBrand = rest.brand === 'Other (type below)' ? (custom_brand || 'Other') : rest.brand;
+      const finalSubcategory = rest.subcategory === '__custom__' ? (custom_subcategory || '') : rest.subcategory;
+      const stockValue = typeof data.stock === 'string' ? data.stock.trim() : data.stock;
+      const stockNumber = stockValue === '' ? null : parseInt(stockValue, 10);
+      const media = normalizeProductMedia(rest.image_url, normalizeStringArray(rest.image_urls));
 
-    const payload = {
-      name: rest.name,
-      description: rest.description,
-      price: parseFloat(data.price) || 0,
-      original_price: data.original_price ? parseFloat(data.original_price) : null,
-      category: rest.category,
-      brand: finalBrand,
-      subcategory: finalSubcategory,
-      stock: stockValue === '' ? null : Number.isNaN(stockNumber) ? null : stockNumber,
-      rating: data.rating ? parseFloat(data.rating) : null,
-      reviews_count: data.reviews_count ? parseInt(data.reviews_count) : null,
-      review_enabled: rest.review_enabled !== false,
-      is_visible: data.is_visible !== false,
-      image_url: rest.image_url || null,
-      image_urls: rest.image_urls || [],
-      video_url: rest.video_url || null,
-      flash_sale_end: rest.flash_sale_end || null,
-      featured: sections.includes('featured'),
-      flash_sale: sections.includes('flash_sale'),
-      donkomi: sections.includes('donkomi'),
-      new_arrival: sections.includes('new_arrival'),
-      top_selling: sections.includes('top_selling'),
-      show_colors: rest.show_colors || false,
-      available_colors: rest.available_colors || [],
-      show_wattage: rest.show_wattage || false,
-      available_wattage: rest.available_wattage || [],
-      show_type: rest.show_type || false,
-      available_types: rest.available_types || [],
-    };
+      const payload = {
+        name: rest.name?.trim(),
+        description: rest.description,
+        price: parseFloat(data.price) || 0,
+        original_price: data.original_price ? parseFloat(data.original_price) : null,
+        category: rest.category,
+        brand: finalBrand,
+        subcategory: finalSubcategory,
+        stock: stockValue === '' ? null : Number.isNaN(stockNumber) ? null : stockNumber,
+        rating: data.rating ? parseFloat(data.rating) : null,
+        reviews_count: data.reviews_count ? parseInt(data.reviews_count, 10) : null,
+        review_enabled: rest.review_enabled !== false,
+        is_visible: data.is_visible !== false,
+        image_url: media.image_url || null,
+        image_urls: media.image_urls,
+        video_url: rest.video_url?.trim() || null,
+        flash_sale_end: rest.flash_sale_end || null,
+        featured: sections.includes('featured'),
+        flash_sale: sections.includes('flash_sale'),
+        donkomi: sections.includes('donkomi'),
+        new_arrival: sections.includes('new_arrival'),
+        top_selling: sections.includes('top_selling'),
+        show_colors: rest.show_colors || false,
+        available_colors: normalizeStringArray(rest.available_colors),
+        show_wattage: rest.show_wattage || false,
+        available_wattage: normalizeStringArray(rest.available_wattage),
+        show_type: rest.show_type || false,
+        available_types: normalizeStringArray(rest.available_types),
+      };
 
-    if (editingProduct) {
-      return appClient.entities.Product.update(editingProduct.id, payload);
+      if (editingProduct) {
+        return appClient.entities.Product.update(editingProduct.id, payload);
+      }
+      return appClient.entities.Product.create(payload);
+    },
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ['products'] });
+      queryClient.removeQueries({ queryKey: ['products-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['products-admin'] });
+      toast.success(editingProduct ? 'Product updated!' : 'Product created!');
+      setShowForm(false);
+      setEditingProduct(null);
+      setForm(EMPTY_FORM);
+      setExtraImageUrlInput('');
+    },
+    onError: (error) => {
+      console.error('Save product error:', error);
+      toast.error(`Failed to save: ${error.message || 'Unknown error'}`);
     }
-    return appClient.entities.Product.create(payload);
-  },
-  onSuccess: () => {
-    queryClient.removeQueries({ queryKey: ['products'] });
-    queryClient.removeQueries({ queryKey: ['products-admin'] });
-    queryClient.invalidateQueries({ queryKey: ['products'] });
-    queryClient.invalidateQueries({ queryKey: ['products-admin'] });
-    toast.success(editingProduct ? 'Product updated!' : 'Product created!');
-    setShowForm(false);
-    setEditingProduct(null);
-    setForm(EMPTY_FORM);
-  },
-  onError: (error) => {
-    console.error('Save product error:', error);
-    toast.error(`Failed to save: ${error.message || 'Unknown error'}`);
-  }
-});
+  });
 
-  // Quick visibility toggle from the product list (no form needed)
   const toggleVisibilityMutation = useMutation({
     mutationFn: ({ id, is_visible }) => appClient.entities.Product.update(id, { is_visible }),
     onSuccess: () => {
@@ -256,30 +335,69 @@ export default function AdminProducts() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingMain(true);
-    const { file_url } = await appClient.integrations.Core.UploadFile({ file });
-    setForm(f => ({ ...f, image_url: file_url }));
-    setUploadingMain(false);
-    toast.success('Main image uploaded!');
+    try {
+      const { file_url } = await appClient.integrations.Core.UploadFile({ file });
+      setForm((current) => ({
+        ...current,
+        ...normalizeProductMedia(file_url, current.image_urls),
+      }));
+      toast.success('Main image uploaded!');
+    } catch (error) {
+      toast.error(error?.message || 'Main image upload failed.');
+    } finally {
+      setUploadingMain(false);
+      e.target.value = '';
+    }
   };
 
   const handleUploadExtra = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     setUploadingExtra(true);
-    const urls = await Promise.all(files.map(f => appClient.integrations.Core.UploadFile({ file: f }).then(r => r.file_url)));
-    setForm(f => ({ ...f, image_urls: [...(f.image_urls || []), ...urls] }));
-    setUploadingExtra(false);
-    toast.success(`${urls.length} image(s) uploaded!`);
+    try {
+      const urls = await Promise.all(files.map((file) => appClient.integrations.Core.UploadFile({ file }).then((result) => result.file_url)));
+      setForm((current) => ({
+        ...current,
+        ...normalizeProductMedia(current.image_url, [...current.image_urls, ...urls]),
+      }));
+      toast.success(`${urls.length} image(s) uploaded!`);
+    } catch (error) {
+      toast.error(error?.message || 'Extra image upload failed.');
+    } finally {
+      setUploadingExtra(false);
+      e.target.value = '';
+    }
   };
 
   const handleUploadVideo = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingVideo(true);
-    const { file_url } = await appClient.integrations.Core.UploadFile({ file });
-    setForm(f => ({ ...f, video_url: file_url }));
-    setUploadingVideo(false);
-    toast.success('Video uploaded!');
+    try {
+      const { file_url } = await appClient.integrations.Core.UploadFile({ file });
+      setForm((current) => ({ ...current, video_url: file_url }));
+      toast.success('Video uploaded!');
+    } catch (error) {
+      toast.error(error?.message || 'Video upload failed.');
+    } finally {
+      setUploadingVideo(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleAddImageUrls = () => {
+    const urls = splitUrlList(extraImageUrlInput);
+    if (urls.length === 0) {
+      toast.error('Paste at least one valid image URL.');
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      ...normalizeProductMedia(current.image_url, [...current.image_urls, ...urls]),
+    }));
+    setExtraImageUrlInput('');
+    toast.success(`${urls.length} image URL${urls.length > 1 ? 's' : ''} added.`);
   };
 
   const handleEdit = (product) => {
@@ -292,14 +410,14 @@ export default function AdminProducts() {
     else if (cat) main_group = 'phone_accessories';
 
     const home_sections = [];
-    if (product.featured)    home_sections.push('featured');
-    if (product.flash_sale)  home_sections.push('flash_sale');
-    if (product.donkomi)     home_sections.push('donkomi');
+    if (product.featured) home_sections.push('featured');
+    if (product.flash_sale) home_sections.push('flash_sale');
+    if (product.donkomi) home_sections.push('donkomi');
     if (product.new_arrival) home_sections.push('new_arrival');
     if (product.top_selling) home_sections.push('top_selling');
 
     const knownBrands = GROUP_BRANDS[main_group] || [];
-    const knownBrandNames = knownBrands.map(b => b.replace(' (type below)', ''));
+    const knownBrandNames = knownBrands.map((brand) => brand.replace(' (type below)', ''));
     const brandIsKnown = knownBrandNames.includes(product.brand);
     const brandValue = brandIsKnown ? product.brand : 'Other (type below)';
     const customBrand = brandIsKnown ? '' : (product.brand || '');
@@ -308,6 +426,7 @@ export default function AdminProducts() {
     const subIsKnown = knownSubs.includes(product.subcategory);
     const subValue = subIsKnown ? product.subcategory : (product.subcategory ? '__custom__' : '');
     const customSub = subIsKnown ? '' : (product.subcategory || '');
+    const media = normalizeProductMedia(product.image_url, normalizeStringArray(product.image_urls));
 
     setForm({
       name: product.name || '',
@@ -325,21 +444,22 @@ export default function AdminProducts() {
       review_enabled: product.review_enabled !== false,
       rating: product.rating ?? '',
       reviews_count: product.reviews_count ?? '',
-      image_url: product.image_url || '',
-      image_urls: product.image_urls || [],
+      image_url: media.image_url || '',
+      image_urls: media.image_urls,
       video_url: product.video_url || '',
       flash_sale_end: product.flash_sale_end || '',
       is_visible: product.is_visible !== false,
       show_colors: product.show_colors || false,
-      available_colors: product.available_colors || [],
+      available_colors: normalizeStringArray(product.available_colors),
       color_input: '',
       show_wattage: product.show_wattage || false,
-      available_wattage: product.available_wattage || [],
+      available_wattage: normalizeStringArray(product.available_wattage),
       wattage_input: '',
       show_type: product.show_type || false,
-      available_types: product.available_types || [],
+      available_types: normalizeStringArray(product.available_types),
       type_input: '',
     });
+    setExtraImageUrlInput('');
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -347,6 +467,7 @@ export default function AdminProducts() {
   const handleNew = () => {
     setEditingProduct(null);
     setForm(EMPTY_FORM);
+    setExtraImageUrlInput('');
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -366,7 +487,6 @@ export default function AdminProducts() {
         </Button>
       </div>
 
-      {/* Form */}
       {showForm && (
         <Card className="p-5 mb-8 border-2 border-blue-200 shadow-lg">
           <div className="flex items-center justify-between mb-4">
@@ -375,7 +495,6 @@ export default function AdminProducts() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            {/* Main Image Upload */}
             <div className="md:col-span-2">
               <Label className="font-semibold mb-2 block">Main Product Image</Label>
               <div className="flex items-start gap-4">
@@ -384,7 +503,7 @@ export default function AdminProducts() {
                     ? <img src={form.image_url} alt="" className="w-full h-full object-cover" />
                     : <ImagePlus className="h-8 w-8 text-gray-300" />}
                 </div>
-                <div className="flex-1 space-y-2">
+                <div className="flex-1 space-y-3">
                   <label className="cursor-pointer">
                     <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors w-fit">
                       {uploadingMain ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
@@ -392,20 +511,40 @@ export default function AdminProducts() {
                     </div>
                     <input type="file" accept="image/*" className="hidden" onChange={handleUploadMain} disabled={uploadingMain} />
                   </label>
-                  {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Main image uploaded</p>}
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-gray-600">Or paste main image URL</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={form.image_url}
+                        onChange={(e) => setForm((current) => ({
+                          ...current,
+                          ...normalizeProductMedia(e.target.value, current.image_urls),
+                        }))}
+                        placeholder="https://...main-product-image.jpg"
+                      />
+                      {form.image_url && (
+                        <Button type="button" variant="outline" onClick={() => setForm((current) => ({ ...current, image_url: '' }))}>
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Main image ready</p>}
                 </div>
               </div>
             </div>
 
-            {/* Extra Images */}
             <div className="md:col-span-2">
               <Label className="font-semibold mb-2 block">Extra Product Images (upload as many as you want)</Label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {(form.image_urls || []).map((url, i) => (
-                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
+              <div className="flex flex-wrap gap-2 mb-3">
+                {(form.image_urls || []).map((url, index) => (
+                  <div key={`${url}-${index}`} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
                     <img src={url} alt="" className="w-full h-full object-cover" />
                     <button
-                      onClick={() => setForm(f => ({ ...f, image_urls: f.image_urls.filter((_, j) => j !== i) }))}
+                      type="button"
+                      onClick={() => setForm((current) => ({ ...current, image_urls: current.image_urls.filter((_, itemIndex) => itemIndex !== index) }))}
                       className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg px-1"
                     >
                       <X className="h-3 w-3" />
@@ -417,25 +556,36 @@ export default function AdminProducts() {
                   <input type="file" accept="image/*" multiple className="hidden" onChange={handleUploadExtra} disabled={uploadingExtra} />
                 </label>
               </div>
-              <p className="text-xs text-gray-400">Click + to add images. No limit. Click X on an image to remove it.</p>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-gray-600 flex items-center gap-1"><Link2 className="h-3.5 w-3.5" />Paste one or many extra image URLs</Label>
+                <Textarea
+                  value={extraImageUrlInput}
+                  onChange={(e) => setExtraImageUrlInput(e.target.value)}
+                  placeholder="Paste one URL per line, or separate them with commas"
+                  rows={3}
+                />
+                <div className="flex flex-wrap gap-2 items-center">
+                  <Button type="button" variant="outline" onClick={handleAddImageUrls}>Add URL Images</Button>
+                  <p className="text-xs text-gray-400">If you leave the main image empty, the first URL added becomes the main product image automatically.</p>
+                </div>
+              </div>
             </div>
 
-            {/* Video Upload or URL */}
             <div className="md:col-span-2">
               <Label className="font-semibold mb-2 block">Product Video (optional)</Label>
-              
-              {/* Video URL paste — supports YouTube, TikTok, Instagram, Pinterest, Snapchat, etc. */}
+
               <div className="mb-3">
-                <p className="text-xs text-gray-500 mb-1.5">📎 Paste a video link from YouTube, TikTok, Instagram, Pinterest, Snapchat, or any platform:</p>
+                <p className="text-xs text-gray-500 mb-1.5">Paste a video link from YouTube, TikTok, Instagram, Facebook, Vimeo, Cloudinary, or a direct MP4/WebM file.</p>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="e.g. https://www.youtube.com/watch?v=... or https://www.tiktok.com/..."
-                    value={form.video_url && !form.video_url.startsWith('http') ? '' : (form.video_url || '')}
-                    onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))}
+                    placeholder="e.g. https://www.youtube.com/watch?v=... or https://res.cloudinary.com/.../video/upload/..."
+                    value={form.video_url || ''}
+                    onChange={(e) => setForm((current) => ({ ...current, video_url: e.target.value }))}
                     className="text-sm"
                   />
                   {form.video_url && (
-                    <button onClick={() => setForm(f => ({ ...f, video_url: '' }))} className="text-red-400 hover:text-red-600 flex-shrink-0">
+                    <button type="button" onClick={() => setForm((current) => ({ ...current, video_url: '' }))} className="text-red-400 hover:text-red-600 flex-shrink-0">
                       <X className="h-4 w-4" />
                     </button>
                   )}
@@ -449,12 +599,6 @@ export default function AdminProducts() {
               </div>
 
               <div className="flex items-start gap-4">
-                {form.video_url && (form.video_url.startsWith('blob:') || (!form.video_url.includes('youtube') && !form.video_url.includes('tiktok') && !form.video_url.includes('youtu.be') && !form.video_url.includes('instagram') && !form.video_url.includes('pinterest') && !form.video_url.includes('snapchat') && !form.video_url.includes('vimeo') && !form.video_url.includes('facebook') && form.video_url.startsWith('https://') && !form.video_url.startsWith('https://www.youtube') && !form.video_url.startsWith('https://youtu'))) && (
-                  <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                    <Video className="h-5 w-5 text-green-600" />
-                    <span className="text-xs text-green-700 font-medium">Video file uploaded ✓</span>
-                  </div>
-                )}
                 <label className="cursor-pointer">
                   <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-300 text-purple-700 rounded-lg text-sm font-semibold hover:bg-purple-100 transition-colors w-fit">
                     {uploadingVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
@@ -465,52 +609,49 @@ export default function AdminProducts() {
               </div>
 
               {form.video_url && (
-                <p className="text-xs text-green-600 mt-2 font-medium">✓ Video set: {form.video_url.length > 60 ? form.video_url.slice(0, 60) + '...' : form.video_url}</p>
+                <p className="text-xs text-green-600 mt-2 font-medium">✓ Video ready: {form.video_url.length > 80 ? `${form.video_url.slice(0, 80)}...` : form.video_url}</p>
               )}
             </div>
 
             <div className="md:col-span-2">
               <Label>Product Name *</Label>
-              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. iPhone 14 Pro Max" />
+              <Input value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} placeholder="e.g. iPhone 14 Pro Max" />
             </div>
 
-            {/* ── STEP 1: Main Category Group ── */}
             <div>
               <Label>Step 1 — Main Category *</Label>
-              <Select value={form.main_group} onValueChange={v => setForm(f => ({ ...f, main_group: v, category: '', brand: '', custom_brand: '', subcategory: '', custom_subcategory: '' }))}>
+              <Select value={form.main_group} onValueChange={(value) => setForm((current) => ({ ...current, main_group: value, category: '', brand: '', custom_brand: '', subcategory: '', custom_subcategory: '' }))}>
                 <SelectTrigger><SelectValue placeholder="Select main category" /></SelectTrigger>
                 <SelectContent>
-                  {MAIN_CATEGORY_GROUPS.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
+                  {MAIN_CATEGORY_GROUPS.map((group) => <SelectItem key={group.id} value={group.id}>{group.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* ── STEP 2: Category ── */}
             <div>
               <Label>Step 2 — Category *</Label>
               <Select
                 value={form.category}
-                onValueChange={v => setForm(f => ({ ...f, category: v, brand: '', custom_brand: '', subcategory: '', custom_subcategory: '' }))}
+                onValueChange={(value) => setForm((current) => ({ ...current, category: value, brand: '', custom_brand: '', subcategory: '', custom_subcategory: '' }))}
                 disabled={!form.main_group}
               >
                 <SelectTrigger><SelectValue placeholder={form.main_group ? 'Select category' : 'Select main category first'} /></SelectTrigger>
                 <SelectContent>
-                  {(GROUP_CATEGORIES[form.main_group] || []).map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  {(GROUP_CATEGORIES[form.main_group] || []).map((category) => <SelectItem key={category.value} value={category.value}>{category.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* ── STEP 3: Brand ── */}
             <div>
               <Label>Step 3 — Brand *</Label>
               <Select
                 value={form.brand}
-                onValueChange={v => setForm(f => ({ ...f, brand: v, custom_brand: '', subcategory: '', custom_subcategory: '' }))}
+                onValueChange={(value) => setForm((current) => ({ ...current, brand: value, custom_brand: '', subcategory: '', custom_subcategory: '' }))}
                 disabled={!form.category}
               >
                 <SelectTrigger><SelectValue placeholder={form.category ? 'Select brand' : 'Select category first'} /></SelectTrigger>
                 <SelectContent>
-                  {(GROUP_BRANDS[form.main_group] || []).map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                  {(GROUP_BRANDS[form.main_group] || []).map((brand) => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
                 </SelectContent>
               </Select>
               {form.brand === 'Other (type below)' && (
@@ -518,23 +659,22 @@ export default function AdminProducts() {
                   className="mt-2"
                   placeholder="Type your brand name..."
                   value={form.custom_brand}
-                  onChange={e => setForm(f => ({ ...f, custom_brand: e.target.value }))}
+                  onChange={(e) => setForm((current) => ({ ...current, custom_brand: e.target.value }))}
                 />
               )}
             </div>
 
-            {/* ── STEP 4: Product Type / Subcategory ── */}
             <div>
               <Label>Step 4 — Product Type / Subcategory</Label>
               <Select
                 value={form.subcategory}
-                onValueChange={v => setForm(f => ({ ...f, subcategory: v, custom_subcategory: '' }))}
+                onValueChange={(value) => setForm((current) => ({ ...current, subcategory: value, custom_subcategory: '' }))}
                 disabled={!form.category}
               >
                 <SelectTrigger><SelectValue placeholder={form.category ? 'Select product type' : 'Select category first'} /></SelectTrigger>
                 <SelectContent className="max-h-72 overflow-y-auto">
-                  {availableSubcategories.map(s => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  {availableSubcategories.map((subcategory) => (
+                    <SelectItem key={subcategory} value={subcategory}>{subcategory}</SelectItem>
                   ))}
                   <SelectItem value="__custom__">✏️ Other (type my own...)</SelectItem>
                 </SelectContent>
@@ -544,30 +684,28 @@ export default function AdminProducts() {
                   className="mt-2"
                   placeholder="Type product type / subcategory..."
                   value={form.custom_subcategory}
-                  onChange={e => setForm(f => ({ ...f, custom_subcategory: e.target.value }))}
+                  onChange={(e) => setForm((current) => ({ ...current, custom_subcategory: e.target.value }))}
                 />
               )}
             </div>
 
             <div>
               <Label>Price (₵) *</Label>
-              <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
+              <Input type="number" value={form.price} onChange={(e) => setForm((current) => ({ ...current, price: e.target.value }))} placeholder="0.00" />
             </div>
             <div>
               <Label>Original Price (₵) — for discount display</Label>
-              <Input type="number" value={form.original_price} onChange={e => setForm(f => ({ ...f, original_price: e.target.value }))} placeholder="0.00" />
+              <Input type="number" value={form.original_price} onChange={(e) => setForm((current) => ({ ...current, original_price: e.target.value }))} placeholder="0.00" />
             </div>
 
-            {/* Stock — with 0-stock explanation */}
             <div className="md:col-span-2">
               <Label>Stock Quantity</Label>
-              <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="Leave empty = unlimited / no stock tracking" className="mb-1" />
+              <Input type="number" value={form.stock} onChange={(e) => setForm((current) => ({ ...current, stock: e.target.value }))} placeholder="Leave empty = unlimited / no stock tracking" className="mb-1" />
               <p className="text-xs text-gray-400">
                 <strong>Empty</strong> = no stock tracking (always shown). <strong>0</strong> = out of stock (hidden from customers). <strong>1+</strong> = shown with that quantity available.
               </p>
             </div>
 
-            {/* Description — Rich Text Editor */}
             <div className="md:col-span-2">
               <Label className="font-semibold block mb-2">Description (Rich Text)</Label>
               <p className="text-xs text-gray-500 mb-2">Use the toolbar to format text with bold, bullets, headings, font size, and more.</p>
@@ -575,14 +713,13 @@ export default function AdminProducts() {
                 <ReactQuill
                   theme="snow"
                   value={form.description}
-                  onChange={val => setForm(f => ({ ...f, description: val }))}
+                  onChange={(value) => setForm((current) => ({ ...current, description: value }))}
                   modules={QUILL_MODULES}
                   placeholder="Write a detailed, well-formatted product description..."
                 />
               </div>
             </div>
 
-            {/* Homepage Sections */}
             <div className="md:col-span-2">
               <Label className="font-semibold block mb-1">📍 Homepage Sections</Label>
               <p className="text-xs text-gray-500 mb-3">Select which sections this product appears in.</p>
@@ -591,9 +728,9 @@ export default function AdminProducts() {
                   const checked = (form.home_sections || []).includes(key);
                   return (
                     <label key={key} className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors ${checked ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
-                      onClick={() => setForm(f => {
-                        const sections = f.home_sections || [];
-                        return { ...f, home_sections: checked ? sections.filter(s => s !== key) : [...sections, key] };
+                      onClick={() => setForm((current) => {
+                        const sections = current.home_sections || [];
+                        return { ...current, home_sections: checked ? sections.filter((section) => section !== key) : [...sections, key] };
                       })}>
                       <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${checked ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                         {checked && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
@@ -606,20 +743,17 @@ export default function AdminProducts() {
               {(form.home_sections || []).includes('flash_sale') && (
                 <div className="mt-3">
                   <Label>Flash Sale End Date/Time (optional)</Label>
-                  <Input type="datetime-local" value={form.flash_sale_end || ''} onChange={e => setForm(f => ({ ...f, flash_sale_end: e.target.value }))} />
+                  <Input type="datetime-local" value={form.flash_sale_end || ''} onChange={(e) => setForm((current) => ({ ...current, flash_sale_end: e.target.value }))} />
                 </div>
               )}
             </div>
 
-            {/* ── CUSTOMER OPTIONS: Colors / Wattage / Type ── */}
             <div className="md:col-span-2 space-y-4">
               <Label className="font-semibold block">🎨 Customer Options (optional)</Label>
               <p className="text-xs text-gray-400 -mt-3">Enable any option to let customers choose before adding to cart. Leave off if not applicable.</p>
 
-              {/* Colors */}
               <div className="border rounded-xl p-3 space-y-2">
-                <label className={`flex items-center gap-2 cursor-pointer`}
-                  onClick={() => setForm(f => ({ ...f, show_colors: !f.show_colors }))}>
+                <label className="flex items-center gap-2 cursor-pointer" onClick={() => setForm((current) => ({ ...current, show_colors: !current.show_colors }))}>
                   <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${form.show_colors ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                     {form.show_colors && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                   </div>
@@ -628,25 +762,25 @@ export default function AdminProducts() {
                 {form.show_colors && (
                   <div className="pt-1 space-y-2">
                     <div className="flex flex-wrap gap-1.5">
-                      {PRESET_COLORS.map(c => (
-                        <button key={c} type="button"
-                          onClick={() => setForm(f => ({
-                            ...f,
-                            available_colors: f.available_colors.includes(c)
-                              ? f.available_colors.filter(x => x !== c)
-                              : [...f.available_colors, c]
+                      {PRESET_COLORS.map((color) => (
+                        <button key={color} type="button"
+                          onClick={() => setForm((current) => ({
+                            ...current,
+                            available_colors: current.available_colors.includes(color)
+                              ? current.available_colors.filter((item) => item !== color)
+                              : [...current.available_colors, color]
                           }))}
-                          className={`text-xs px-2 py-1 rounded-full border transition-all ${form.available_colors.includes(c) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
-                          {c}
+                          className={`text-xs px-2 py-1 rounded-full border transition-all ${form.available_colors.includes(color) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
+                          {color}
                         </button>
                       ))}
                     </div>
                     <div className="flex gap-2">
-                      <Input value={form.color_input || ''} onChange={e => setForm(f => ({ ...f, color_input: e.target.value }))}
+                      <Input value={form.color_input || ''} onChange={(e) => setForm((current) => ({ ...current, color_input: e.target.value }))}
                         placeholder="Add custom color..." className="h-8 text-xs flex-1" />
                       <Button type="button" size="sm" className="h-8 text-xs" onClick={() => {
                         if (!form.color_input?.trim()) return;
-                        setForm(f => ({ ...f, available_colors: [...new Set([...f.available_colors, f.color_input.trim()])], color_input: '' }));
+                        setForm((current) => ({ ...current, available_colors: [...new Set([...current.available_colors, current.color_input.trim()])], color_input: '' }));
                       }}>Add</Button>
                     </div>
                     {form.available_colors.length > 0 && (
@@ -656,10 +790,8 @@ export default function AdminProducts() {
                 )}
               </div>
 
-              {/* Wattage */}
               <div className="border rounded-xl p-3 space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer"
-                  onClick={() => setForm(f => ({ ...f, show_wattage: !f.show_wattage }))}>
+                <label className="flex items-center gap-2 cursor-pointer" onClick={() => setForm((current) => ({ ...current, show_wattage: !current.show_wattage }))}>
                   <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${form.show_wattage ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                     {form.show_wattage && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                   </div>
@@ -668,25 +800,25 @@ export default function AdminProducts() {
                 {form.show_wattage && (
                   <div className="pt-1 space-y-2">
                     <div className="flex flex-wrap gap-1.5">
-                      {['5W','10W','18W','20W','25W','33W','45W','65W','100W','120W','150W'].map(w => (
-                        <button key={w} type="button"
-                          onClick={() => setForm(f => ({
-                            ...f,
-                            available_wattage: f.available_wattage.includes(w)
-                              ? f.available_wattage.filter(x => x !== w)
-                              : [...f.available_wattage, w]
+                      {['5W', '10W', '18W', '20W', '25W', '33W', '45W', '65W', '100W', '120W', '150W'].map((wattage) => (
+                        <button key={wattage} type="button"
+                          onClick={() => setForm((current) => ({
+                            ...current,
+                            available_wattage: current.available_wattage.includes(wattage)
+                              ? current.available_wattage.filter((item) => item !== wattage)
+                              : [...current.available_wattage, wattage]
                           }))}
-                          className={`text-xs px-2 py-1 rounded-full border transition-all ${form.available_wattage.includes(w) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
-                          {w}
+                          className={`text-xs px-2 py-1 rounded-full border transition-all ${form.available_wattage.includes(wattage) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
+                          {wattage}
                         </button>
                       ))}
                     </div>
                     <div className="flex gap-2">
-                      <Input value={form.wattage_input || ''} onChange={e => setForm(f => ({ ...f, wattage_input: e.target.value }))}
+                      <Input value={form.wattage_input || ''} onChange={(e) => setForm((current) => ({ ...current, wattage_input: e.target.value }))}
                         placeholder="Custom wattage e.g. 30W..." className="h-8 text-xs flex-1" />
                       <Button type="button" size="sm" className="h-8 text-xs" onClick={() => {
                         if (!form.wattage_input?.trim()) return;
-                        setForm(f => ({ ...f, available_wattage: [...new Set([...f.available_wattage, f.wattage_input.trim()])], wattage_input: '' }));
+                        setForm((current) => ({ ...current, available_wattage: [...new Set([...current.available_wattage, current.wattage_input.trim()])], wattage_input: '' }));
                       }}>Add</Button>
                     </div>
                     {form.available_wattage.length > 0 && (
@@ -696,10 +828,8 @@ export default function AdminProducts() {
                 )}
               </div>
 
-              {/* Type */}
               <div className="border rounded-xl p-3 space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer"
-                  onClick={() => setForm(f => ({ ...f, show_type: !f.show_type }))}>
+                <label className="flex items-center gap-2 cursor-pointer" onClick={() => setForm((current) => ({ ...current, show_type: !current.show_type }))}>
                   <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${form.show_type ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                     {form.show_type && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                   </div>
@@ -708,25 +838,25 @@ export default function AdminProducts() {
                 {form.show_type && (
                   <div className="pt-1 space-y-2">
                     <div className="flex flex-wrap gap-1.5">
-                      {['USB-C','Lightning','Micro USB','Type-A','Wireless','Original','Compatible','Standard','Pro','Plus','Max'].map(t => (
-                        <button key={t} type="button"
-                          onClick={() => setForm(f => ({
-                            ...f,
-                            available_types: f.available_types.includes(t)
-                              ? f.available_types.filter(x => x !== t)
-                              : [...f.available_types, t]
+                      {['USB-C', 'Lightning', 'Micro USB', 'Type-A', 'Wireless', 'Original', 'Compatible', 'Standard', 'Pro', 'Plus', 'Max'].map((type) => (
+                        <button key={type} type="button"
+                          onClick={() => setForm((current) => ({
+                            ...current,
+                            available_types: current.available_types.includes(type)
+                              ? current.available_types.filter((item) => item !== type)
+                              : [...current.available_types, type]
                           }))}
-                          className={`text-xs px-2 py-1 rounded-full border transition-all ${form.available_types.includes(t) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
-                          {t}
+                          className={`text-xs px-2 py-1 rounded-full border transition-all ${form.available_types.includes(type) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
+                          {type}
                         </button>
                       ))}
                     </div>
                     <div className="flex gap-2">
-                      <Input value={form.type_input || ''} onChange={e => setForm(f => ({ ...f, type_input: e.target.value }))}
+                      <Input value={form.type_input || ''} onChange={(e) => setForm((current) => ({ ...current, type_input: e.target.value }))}
                         placeholder="Custom type e.g. 256GB..." className="h-8 text-xs flex-1" />
                       <Button type="button" size="sm" className="h-8 text-xs" onClick={() => {
                         if (!form.type_input?.trim()) return;
-                        setForm(f => ({ ...f, available_types: [...new Set([...f.available_types, f.type_input.trim()])], type_input: '' }));
+                        setForm((current) => ({ ...current, available_types: [...new Set([...current.available_types, current.type_input.trim()])], type_input: '' }));
                       }}>Add</Button>
                     </div>
                     {form.available_types.length > 0 && (
@@ -737,22 +867,19 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            {/* Other Settings */}
             <div className="md:col-span-2">
               <Label className="font-semibold block mb-2">Other Settings</Label>
               <div className="flex flex-wrap gap-3">
-                {/* Reviews toggle */}
                 <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors ${form.review_enabled ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
-                  onClick={() => setForm(f => ({ ...f, review_enabled: !f.review_enabled }))}>
+                  onClick={() => setForm((current) => ({ ...current, review_enabled: !current.review_enabled }))}>
                   <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form.review_enabled ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                     {form.review_enabled && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                   </div>
                   <span className="text-sm font-medium text-gray-700">💬 Reviews Enabled</span>
                 </label>
 
-                {/* Visibility toggle */}
                 <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors ${form.is_visible ? 'border-green-400 bg-green-50' : 'border-red-300 bg-red-50'}`}
-                  onClick={() => setForm(f => ({ ...f, is_visible: !f.is_visible }))}>
+                  onClick={() => setForm((current) => ({ ...current, is_visible: !current.is_visible }))}>
                   <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form.is_visible ? 'bg-green-600 border-green-600' : 'border-red-400 bg-red-100'}`}>
                     {form.is_visible ? <Eye className="h-3 w-3 text-white" /> : <EyeOff className="h-3 w-3 text-red-500" />}
                   </div>
@@ -773,21 +900,20 @@ export default function AdminProducts() {
               {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               {editingProduct ? 'Save Changes' : 'Create Product'}
             </Button>
-            <Button variant="outline" onClick={() => { setShowForm(false); setEditingProduct(null); setForm(EMPTY_FORM); }}>
+            <Button variant="outline" onClick={() => { setShowForm(false); setEditingProduct(null); setForm(EMPTY_FORM); setExtraImageUrlInput(''); }}>
               Cancel
             </Button>
           </div>
         </Card>
       )}
 
-      {/* Products List */}
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {Array(8).fill(0).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
+          {Array(8).fill(0).map((_, index) => <Skeleton key={index} className="h-48 rounded-xl" />)}
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {products.map(product => {
+          {displayProducts.map((product) => {
             const isHidden = product.is_visible === false;
             const isOutOfStock = product.stock != null && product.stock === 0;
             return (
@@ -797,16 +923,17 @@ export default function AdminProducts() {
                     ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>}
                   <div className="absolute top-1 left-1 flex flex-col gap-1">
-                    {product.featured    && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
-                    {product.flash_sale  && <Badge className="text-[9px] px-1 py-0 bg-orange-500">Flash</Badge>}
-                    {product.donkomi     && <Badge className="text-[9px] px-1 py-0 bg-green-500">Donkomi</Badge>}
+                    {product.featured && <Badge className="text-[9px] px-1 py-0 bg-purple-500">Featured</Badge>}
+                    {product.flash_sale && <Badge className="text-[9px] px-1 py-0 bg-orange-500">Flash</Badge>}
+                    {product.donkomi && <Badge className="text-[9px] px-1 py-0 bg-green-500">Donkomi</Badge>}
                     {product.new_arrival && <Badge className="text-[9px] px-1 py-0 bg-yellow-500">New</Badge>}
                     {product.top_selling && <Badge className="text-[9px] px-1 py-0 bg-blue-500">Top</Badge>}
                   </div>
-                  {/* Visibility / stock badge */}
                   <div className="absolute top-1 right-1 flex flex-col gap-1 items-end">
                     {isHidden && <Badge className="text-[9px] px-1 py-0 bg-red-500">Hidden</Badge>}
                     {isOutOfStock && !isHidden && <Badge className="text-[9px] px-1 py-0 bg-gray-500">Out of Stock</Badge>}
+                    {product.image_urls?.length > 0 && <Badge className="text-[9px] px-1 py-0 bg-slate-700">+{product.image_urls.length} images</Badge>}
+                    {product.video_url && <Badge className="text-[9px] px-1 py-0 bg-indigo-600">Video</Badge>}
                   </div>
                 </div>
                 <div className="p-2">
@@ -818,7 +945,6 @@ export default function AdminProducts() {
                     </p>
                   )}
                   <div className="flex gap-1 mt-2">
-                    {/* Visibility toggle button */}
                     <Button
                       size="sm"
                       variant="outline"
@@ -838,7 +964,7 @@ export default function AdminProducts() {
           })}
         </div>
       )}
-      {!isLoading && products.length === 0 && (
+      {!isLoading && displayProducts.length === 0 && (
         <div className="text-center py-16 text-gray-400">
           <p>No products yet. Click "Add Product" to get started.</p>
         </div>

@@ -185,9 +185,8 @@ function isHttpUrl(value) {
 function splitUrlList(value) {
   return [...new Set(
     String(value || '')
-      .replace(/\r/g, '')
-      .split('
-')
+      .split(String.fromCharCode(13)).join('')
+      .split(String.fromCharCode(10))
       .flatMap((item) => item.split(','))
       .map((item) => item.trim())
       .filter((item) => isHttpUrl(item))

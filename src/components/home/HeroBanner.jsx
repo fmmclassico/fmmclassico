@@ -41,7 +41,7 @@ const BUILT_IN_BANNERS = [
     subtitle: 'Chargers, earbuds, cases, speakers and more for everyday use.',
     href: '/phone-accessories',
     imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784299259/ChatGPT_Image_Jul_17_2026_02_37_29_PM_qlihyw.png',
-    gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]
+    gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]',
     titleClass: 'text-[#8dc3ff]',
   },
   {

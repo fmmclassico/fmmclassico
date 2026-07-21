@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import 'react-quill/dist/quill.snow.css';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -9,10 +9,9 @@ import guestCart from '@/lib/guest-cart';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShoppingCart, Star, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Star, Plus, Minus, ExternalLink, PlayCircle } from 'lucide-react';
 import ReviewSection from '@/components/products/ReviewSection';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
 
 const categoryNames = {
   phone_cases: 'Phone Cases',
@@ -28,8 +27,81 @@ const categoryNames = {
   home_appliances: 'Home Appliances',
 };
 
+const DIRECT_VIDEO_PATTERN = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i;
+
+function normalizeUrl(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function parseArrayValue(value) {
+  if (Array.isArray(value)) {
+    return [...new Set(value.map((item) => normalizeUrl(item)).filter(Boolean))];
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parseArrayValue(parsed);
+      }
+    } catch (_) {
+      // Fall back to manual splitting below.
+    }
+
+    return [...new Set(trimmed.split(/[
+,]+/).map((item) => normalizeUrl(item)).filter(Boolean))];
+  }
+
+  return [];
+}
+
+function getVideoPresentation(url) {
+  const normalized = normalizeUrl(url);
+  if (!normalized) return null;
+
+  const youtubeMatch = normalized.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  if (youtubeMatch) {
+    return { kind: 'embed', url: normalized, embedUrl: `https://www.youtube.com/embed/${youtubeMatch[1]}?autoplay=0&rel=0` };
+  }
+
+  const vimeoMatch = normalized.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) {
+    return { kind: 'embed', url: normalized, embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}` };
+  }
+
+  if (normalized.includes('facebook.com') || normalized.includes('fb.watch')) {
+    return { kind: 'embed', url: normalized, embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(normalized)}&show_text=false` };
+  }
+
+  if (DIRECT_VIDEO_PATTERN.test(normalized) || normalized.includes('/video/upload/') || normalized.includes('/video/fetch/')) {
+    return { kind: 'file', url: normalized };
+  }
+
+  return { kind: 'external', url: normalized };
+}
+
+function buildGalleryItems(product) {
+  const images = [...new Set([
+    normalizeUrl(product?.image_url),
+    ...parseArrayValue(product?.image_urls),
+  ].filter(Boolean))].map((url) => ({ type: 'image', url }));
+
+  const video = getVideoPresentation(product?.video_url);
+  if (!video) return images;
+
+  return [
+    ...images,
+    { type: 'video', ...video },
+  ];
+}
+
 export default function ProductDetail() {
-  const { user, isAuthenticated, navigateToLogin } = useAuth();
+  const { user } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
@@ -37,7 +109,7 @@ export default function ProductDetail() {
   const [selectedWattage, setSelectedWattage] = useState(null);
   const [selectedType, setSelectedType] = useState(null);
   const queryClient = useQueryClient();
-  
+
   const urlParams = new URLSearchParams(window.location.search);
   const productId = urlParams.get('id');
 
@@ -46,50 +118,18 @@ export default function ProductDetail() {
     queryFn: () => appClient.entities.Product.list(),
   });
 
-  const product = products.find(p => p.id === productId);
+  const product = products.find((item) => item.id === productId);
+  const galleryItems = useMemo(() => buildGalleryItems(product), [product]);
 
-  // Build image gallery from uploaded images only — no placeholders
-  const allImages = product ? [
-    product.image_url,
-    ...(product.image_urls || [])
-  ].filter(Boolean) : [];
-
-  const videoUrl = product?.video_url || null;
-
-  // Detect if a video URL is a social embed (YouTube, TikTok, etc.) or a direct file
-  const getSocialEmbedUrl = (url) => {
-    if (!url) return null;
-    // YouTube
-    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
-    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=0&rel=0`;
-    // TikTok — use oembed page
-    if (url.includes('tiktok.com')) return url; // render as link fallback
-    // Pinterest video pin
-    if (url.includes('pinterest.com/pin/')) return null; // no embed support, treat as direct
-    // Vimeo
-    const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
-    // Instagram — no public embed without login, treat as direct
-    // Facebook
-    if (url.includes('facebook.com') || url.includes('fb.watch')) {
-      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false`;
+  useEffect(() => {
+    if (selectedImageIndex > galleryItems.length - 1) {
+      setSelectedImageIndex(0);
     }
-    return null; // direct video file
-  };
-
-  // gallery = images + video (if exists)
-  const galleryItems = [
-    ...allImages.map(u => ({ type: 'image', url: u })),
-    ...(videoUrl ? [{ type: 'video', url: videoUrl, embedUrl: getSocialEmbedUrl(videoUrl) }] : []),
-  ];
-
-  const isVideo = (item) => typeof item === 'object' && item?.type === 'video';
-  const getUrl = (item) => typeof item === 'string' ? item : item?.url;
+  }, [galleryItems.length, selectedImageIndex]);
 
   const addToCartMutation = useMutation({
     mutationFn: async () => {
       if (!user) {
-        // Guest: add to local cart only
         guestCart.addItem({
           id: product.id,
           product_id: product.id,
@@ -98,28 +138,30 @@ export default function ProductDetail() {
           product_price: product.price,
           quantity
         });
-       
         return;
       }
-      // Authenticated: Optimistic update + backend persistence
+
       queryClient.setQueryData(['cartItems', user.email], (old = []) => {
-        const existing = old.find(i => i.product_id === product.id);
-        if (existing) return old.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + quantity } : i);
+        const existing = old.find((item) => item.product_id === product.id);
+        if (existing) {
+          return old.map((item) => item.product_id === product.id ? { ...item, quantity: item.quantity + quantity } : item);
+        }
         return [...old, { id: 'opt-' + product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity, user_email: user.email }];
       });
+
       if (product.stock != null) {
-        queryClient.setQueryData(['products'], (old = []) =>
-          old.map(p => p.id === product.id ? { ...p, stock: Math.max(0, p.stock - quantity) } : p)
-        );
+        queryClient.setQueryData(['products'], (old = []) => (
+          old.map((item) => item.id === product.id ? { ...item, stock: Math.max(0, item.stock - quantity) } : item)
+        ));
       }
-      
-      // Persist in background
+
       const existingItems = await appClient.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
       if (existingItems.length > 0) {
         await appClient.entities.CartItem.update(existingItems[0].id, { quantity: existingItems[0].quantity + quantity });
       } else {
         await appClient.entities.CartItem.create({ product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity, user_email: user.email });
       }
+
       if (product.stock != null) {
         await appClient.entities.Product.update(product.id, { stock: Math.max(0, product.stock - quantity) });
       }
@@ -130,36 +172,37 @@ export default function ProductDetail() {
     }
   });
 
-  const discount = product?.original_price 
+  const discount = product?.original_price
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
 
   const nextImage = () => {
+    if (galleryItems.length === 0) return;
     setSelectedImageIndex((prev) => (prev + 1) % galleryItems.length);
   };
 
   const prevImage = () => {
+    if (galleryItems.length === 0) return;
     setSelectedImageIndex((prev) => (prev - 1 + galleryItems.length) % galleryItems.length);
   };
 
-  const handleTouchStart = (e) => {
-    setTouchStart(e.touches[0].clientX);
+  const handleTouchStart = (event) => {
+    setTouchStart(event.touches[0].clientX);
   };
 
-  const handleTouchEnd = (e) => {
+  const handleTouchEnd = (event) => {
     if (touchStart === null) return;
-    const diff = touchStart - e.changedTouches[0].clientX;
+    const diff = touchStart - event.changedTouches[0].clientX;
     if (Math.abs(diff) > 40) {
       if (diff > 0) nextImage(); else prevImage();
     }
     setTouchStart(null);
   };
 
-  // Auto-scroll product images every 10 seconds
   useEffect(() => {
-    if (galleryItems.length <= 1) return;
+    if (galleryItems.length <= 1) return undefined;
     const interval = setInterval(() => {
-      setSelectedImageIndex(prev => (prev + 1) % galleryItems.length);
+      setSelectedImageIndex((prev) => (prev + 1) % galleryItems.length);
     }, 10000);
     return () => clearInterval(interval);
   }, [galleryItems.length]);
@@ -191,62 +234,84 @@ export default function ProductDetail() {
     );
   }
 
+  const selectedGalleryItem = galleryItems[selectedImageIndex];
+
   return (
     <div className="container mx-auto px-4 py-6">
-
-
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Product Image Gallery */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="space-y-4"
         >
-          {/* Main display with swipe */}
           <div
             className="relative w-full max-w-[280px] sm:max-w-md mx-auto aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-lg cursor-grab active:cursor-grabbing"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            <AnimatePresence mode="wait">
-              {isVideo(galleryItems[selectedImageIndex]) ? (
-                galleryItems[selectedImageIndex].embedUrl ? (
-                  <motion.iframe
-                    key={`embed-${selectedImageIndex}`}
-                    src={galleryItems[selectedImageIndex].embedUrl}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    style={{ border: 'none' }}
-                  />
+            {galleryItems.length === 0 ? (
+              <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 gap-3 px-6 text-center">
+                <PlayCircle className="h-10 w-10" />
+                <p className="text-sm font-medium">No product media has been added yet.</p>
+              </div>
+            ) : (
+              <AnimatePresence mode="wait">
+                {selectedGalleryItem?.type === 'video' ? (
+                  selectedGalleryItem.kind === 'embed' ? (
+                    <motion.iframe
+                      key={`embed-${selectedImageIndex}`}
+                      src={selectedGalleryItem.embedUrl}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      style={{ border: 'none' }}
+                    />
+                  ) : selectedGalleryItem.kind === 'file' ? (
+                    <motion.video
+                      key={`video-${selectedImageIndex}`}
+                      src={selectedGalleryItem.url}
+                      className="w-full h-full object-cover"
+                      controls
+                      playsInline
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    />
+                  ) : (
+                    <motion.div
+                      key={`external-${selectedImageIndex}`}
+                      className="w-full h-full flex flex-col items-center justify-center gap-4 text-center px-6 bg-slate-900 text-white"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <PlayCircle className="h-12 w-12 text-sky-300" />
+                      <div>
+                        <p className="font-semibold">This video opens on its original platform.</p>
+                        <p className="text-sm text-slate-300 mt-1">Tap below to view it in a new tab.</p>
+                      </div>
+                      <a href={selectedGalleryItem.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white text-slate-900 px-4 py-2 text-sm font-semibold">
+                        Open Video <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </motion.div>
+                  )
                 ) : (
-                  <motion.video
-                    key={`video-${selectedImageIndex}`}
-                    src={getUrl(galleryItems[selectedImageIndex])}
+                  <motion.img
+                    key={selectedImageIndex}
+                    src={selectedGalleryItem?.url}
+                    alt={product.name}
                     className="w-full h-full object-cover"
-                    controls
-                    playsInline
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                    initial={{ opacity: 0, x: 30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -30 }}
+                    transition={{ duration: 0.25 }}
                   />
-                )
-              ) : (
-                <motion.img
-                  key={selectedImageIndex}
-                  src={getUrl(galleryItems[selectedImageIndex])}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -30 }}
-                  transition={{ duration: 0.25 }}
-                />
-              )}
-            </AnimatePresence>
+                )}
+              </AnimatePresence>
+            )}
 
             {discount > 0 && (
               <Badge className="absolute top-4 left-4 bg-[#2E86C1] hover:bg-[#2E86C1] text-white text-lg px-3 py-1">
@@ -254,61 +319,60 @@ export default function ProductDetail() {
               </Badge>
             )}
 
-            {/* Dot indicators */}
             {galleryItems.length > 1 && (
               <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
-                {galleryItems.map((_, idx) => (
-                  <button key={idx} onClick={() => setSelectedImageIndex(idx)}
-                    className={`rounded-full transition-all ${idx === selectedImageIndex ? 'bg-[#2E86C1] w-4 h-2' : 'bg-white/70 w-2 h-2'}`}
+                {galleryItems.map((_, index) => (
+                  <button key={index} onClick={() => setSelectedImageIndex(index)}
+                    className={`rounded-full transition-all ${index === selectedImageIndex ? 'bg-[#2E86C1] w-4 h-2' : 'bg-white/70 w-2 h-2'}`}
                   />
                 ))}
               </div>
             )}
           </div>
 
-          {/* Thumbnail Gallery — 4 images + video */}
-          <div className="grid grid-cols-5 gap-2 max-w-[280px] sm:max-w-md mx-auto">
-            {galleryItems.map((item, idx) => (
-              <button
-                key={idx}
-                onClick={() => setSelectedImageIndex(idx)}
-                className={`aspect-square rounded-lg overflow-hidden border-2 transition-all relative ${
-                  selectedImageIndex === idx 
-                    ? 'border-[#2E86C1] shadow-md' 
-                    : 'border-transparent hover:border-gray-300'
-                }`}
-              >
-                {isVideo(item) ? (
-                  <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                    <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                  </div>
-                ) : (
-                  <img
-                    src={getUrl(item)}
-                    alt={`${product.name} view ${idx + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-              </button>
-            ))}
-          </div>
+          {galleryItems.length > 0 && (
+            <div className="grid grid-cols-5 gap-2 max-w-[280px] sm:max-w-md mx-auto">
+              {galleryItems.map((item, index) => (
+                <button
+                  key={`${item.type}-${index}`}
+                  onClick={() => setSelectedImageIndex(index)}
+                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-all relative ${
+                    selectedImageIndex === index
+                      ? 'border-[#2E86C1] shadow-md'
+                      : 'border-transparent hover:border-gray-300'
+                  }`}
+                >
+                  {item.type === 'video' ? (
+                    <div className="w-full h-full bg-gray-800 flex items-center justify-center text-white">
+                      <PlayCircle className="h-6 w-6" />
+                    </div>
+                  ) : (
+                    <img
+                      src={item.url}
+                      alt={`${product.name} view ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </motion.div>
 
-        {/* Product Info */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           className="space-y-4"
         >
           <div>
-            <Badge variant="outline" className="mb-1.5 text-xs">{categoryNames[product.category]}</Badge>
+            <Badge variant="outline" className="mb-1.5 text-xs">{categoryNames[product.category] || product.category}</Badge>
             <h1 className="text-base md:text-lg font-bold text-gray-800 mb-1.5 leading-snug">{product.name}</h1>
             <div className="flex items-center gap-1.5">
               <div className="flex items-center">
-                {[1,2,3,4,5].map(i => (
-                  <Star 
-                    key={i} 
-                    className={`h-3.5 w-3.5 ${i <= (product.rating || 4) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
+                {[1, 2, 3, 4, 5].map((index) => (
+                  <Star
+                    key={index}
+                    className={`h-3.5 w-3.5 ${index <= (product.rating || 4) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
                   />
                 ))}
               </div>
@@ -336,45 +400,42 @@ export default function ProductDetail() {
             </details>
           )}
 
-          {/* Color selector */}
           {product.show_colors && product.available_colors?.length > 0 && (
             <div>
               <p className="text-sm font-semibold text-gray-700 mb-1.5">Color: {selectedColor && <span className="text-[#2E86C1]">{selectedColor}</span>}</p>
               <div className="flex flex-wrap gap-2">
-                {product.available_colors.map(c => (
-                  <button key={c} onClick={() => setSelectedColor(c === selectedColor ? null : c)}
-                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedColor === c ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
-                    {c}
+                {product.available_colors.map((color) => (
+                  <button key={color} onClick={() => setSelectedColor(color === selectedColor ? null : color)}
+                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedColor === color ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
+                    {color}
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Wattage selector */}
           {product.show_wattage && product.available_wattage?.length > 0 && (
             <div>
               <p className="text-sm font-semibold text-gray-700 mb-1.5">Wattage: {selectedWattage && <span className="text-[#2E86C1]">{selectedWattage}</span>}</p>
               <div className="flex flex-wrap gap-2">
-                {product.available_wattage.map(w => (
-                  <button key={w} onClick={() => setSelectedWattage(w === selectedWattage ? null : w)}
-                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedWattage === w ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
-                    {w}
+                {product.available_wattage.map((wattage) => (
+                  <button key={wattage} onClick={() => setSelectedWattage(wattage === selectedWattage ? null : wattage)}
+                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedWattage === wattage ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
+                    {wattage}
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Type selector */}
           {product.show_type && product.available_types?.length > 0 && (
             <div>
               <p className="text-sm font-semibold text-gray-700 mb-1.5">Type: {selectedType && <span className="text-[#2E86C1]">{selectedType}</span>}</p>
               <div className="flex flex-wrap gap-2">
-                {product.available_types.map(t => (
-                  <button key={t} onClick={() => setSelectedType(t === selectedType ? null : t)}
-                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedType === t ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
-                    {t}
+                {product.available_types.map((type) => (
+                  <button key={type} onClick={() => setSelectedType(type === selectedType ? null : type)}
+                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedType === type ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
+                    {type}
                   </button>
                 ))}
               </div>
@@ -384,18 +445,18 @@ export default function ProductDetail() {
           <div className="flex items-center gap-3">
             <span className="text-gray-600 font-medium text-sm">Quantity:</span>
             <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
-              <Button 
-                size="icon" 
-                variant="ghost" 
+              <Button
+                size="icon"
+                variant="ghost"
                 className="h-8 w-8 rounded-full"
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
               >
                 <Minus className="h-4 w-4" />
               </Button>
               <span className="w-8 text-center font-semibold">{quantity}</span>
-              <Button 
-                size="icon" 
-                variant="ghost" 
+              <Button
+                size="icon"
+                variant="ghost"
                 className="h-8 w-8 rounded-full"
                 onClick={() => setQuantity(quantity + 1)}
               >
@@ -410,8 +471,8 @@ export default function ProductDetail() {
           </div>
 
           <div className="flex gap-3">
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="flex-1 bg-[#2E86C1] hover:bg-[#2578ae] text-white font-bold shadow-lg"
               onClick={() => addToCartMutation.mutate()}
               disabled={addToCartMutation.isPending}
@@ -420,12 +481,9 @@ export default function ProductDetail() {
               {addToCartMutation.isPending ? 'Adding...' : 'Add to Cart'}
             </Button>
           </div>
-
-
         </motion.div>
       </div>
 
-      {/* Review Section */}
       <ReviewSection product={product} user={user} />
     </div>
   );

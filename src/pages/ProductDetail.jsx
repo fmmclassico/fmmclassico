@@ -50,11 +50,17 @@ function parseArrayValue(value) {
         return parseArrayValue(parsed);
       }
     } catch (_) {
-      // Fall back to manual splitting below.
+      // fall through
     }
 
-    return [...new Set(trimmed.split(/[
-,]+/).map((item) => normalizeUrl(item)).filter(Boolean))];
+    return [...new Set(
+      trimmed
+        .split(String.fromCharCode(13)).join('')
+        .split(String.fromCharCode(10)).join(',')
+        .split(',')
+        .map((item) => normalizeUrl(item))
+        .filter(Boolean)
+    )];
   }
 
   return [];

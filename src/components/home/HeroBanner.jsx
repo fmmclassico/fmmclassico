@@ -41,8 +41,8 @@ const BUILT_IN_BANNERS = [
     subtitle: 'Chargers, earbuds, cases, speakers and more for everyday use.',
     href: '/phone-accessories',
     imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784299259/ChatGPT_Image_Jul_17_2026_02_37_29_PM_qlihyw.png',
-    gradient: 'from-[#042126] via-[#0a4d59] to-[#12a1b7]',
-    titleClass: 'text-[#8ef2ff]',
+    gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]
+    titleClass: 'text-[#8dc3ff]',
   },
   {
     id: 'fixed-home',
@@ -51,8 +51,8 @@ const BUILT_IN_BANNERS = [
     subtitle: 'Quality appliances for your kitchen, comfort and daily living.',
     href: '/home-appliances',
     imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784300533/ChatGPT_Image_Jul_17_2026_03_01_53_PM_hne4gq.png',
-    gradient: 'from-[#0b2010] via-[#225329] to-[#6cb33f]',
-    titleClass: 'text-[#b8f28c]',
+    gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]',
+    titleClass: 'text-[#8dc3ff]',
   },
   {
     id: 'fixed-electronics',
@@ -61,28 +61,32 @@ const BUILT_IN_BANNERS = [
     subtitle: 'Smart gadgets and everyday electronics at trusted prices.',
     href: '/electronics',
     imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784301769/ChatGPT_Image_Jul_17_2026_03_20_50_PM_b8mhgl.png',
-    gradient: 'from-[#160926] via-[#38207c] to-[#5c33d6]',
-    titleClass: 'text-[#c0b6ff]',
+    gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]',
+    titleClass: 'text-[#8dc3ff]',
   },
+  
+  {
+    id: 'fixed-television',
+    type: 'built_in',
+    title: 'Television',
+    subtitle: 'Latest models. Top performance. Unbeatable prices.',
+    href: '/electronics',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784561540/ChatGPT_Image_Jul_20_2026_03_19_56_PM_vje886.png',
+    gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]',
+    titleClass: 'text-[#8dc3ff]',
+  },
+  
   {
     id: 'fixed-smartwatch',
     type: 'built_in',
     title: 'SMART WATCH',
     subtitle: 'Stay connected with stylish smart watches and wearables.',
     href: '/electronics',
-    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784302040/ChatGPT_Image_Jul_17_2026_03_27_00_PM_tv3lay.png',
-    gradient: 'from-[#1b1207] via-[#6d4312] to-[#d58a1f]',
-    titleClass: 'text-[#ffd48a]',
-  },
-  {
-    id: 'fixed-television',
-    type: 'Television',
-    subtitle: 'Big-screen entertainment and presentation solutions made simple.',
-    href: '/electronics',
     imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1783605377/SLE32S700TCS-2_mowhla.jpg',
-    gradient: 'from-[#111827] via-[#1f2937] to-[#374151]',
-    titleClass: 'text-[#d6e4ff]',
+    gradient: 'from-[#03143f] via-[#06286d] to-[#0b3ea9]',
+    titleClass: 'text-[#8dc3ff]',
   },
+ 
 ];
 
 function BuiltInBannerSlide({ slide }) {

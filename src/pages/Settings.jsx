@@ -76,7 +76,7 @@ export default function Settings() {
   };
 
   // FIXED: was calling appClient.auth.logout() directly, which sends people to the
-  // Base44 auth page. Now uses the app's logout(), which clears the session and
+  // App auth page. Now uses the app's logout(), which clears the session and
   // sends people to the guest homepage instead.
   const handleLogout = () => {
     logout();

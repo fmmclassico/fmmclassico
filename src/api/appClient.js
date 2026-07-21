@@ -62,13 +62,15 @@ function parseArrayValue(value) {
         return uniqueStrings(parsed);
       }
     } catch (_) {
-      // Fall back to delimiter parsing below.
+      // fall through
     }
 
-    if (trimmed.includes('
-') || trimmed.includes(',')) {
-      return uniqueStrings(trimmed.split(/[
-,]+/));
+    const normalized = trimmed
+      .split(String.fromCharCode(13)).join('')
+      .split(String.fromCharCode(10)).join(',');
+
+    if (normalized.includes(',')) {
+      return uniqueStrings(normalized.split(','));
     }
 
     return [trimmed];

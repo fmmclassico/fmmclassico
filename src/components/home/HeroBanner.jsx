@@ -23,7 +23,7 @@ function pickHeroImage(slide, isMobile) {
   return slide.desktop_image_url || slide.image_url || slide.mobile_image_url || '';
 }
 
-const BLUE_GRADIENT = 'from-[#03143f] via-[#0a2f82] to-[#1259d6]';
+const BLUE_GRADIENT = 'from-[#03143f] via-[#06286d] to-[#0b3ea9]';
 const BLUE_TITLE = 'text-[#8dc3ff]';
 
 const BUILT_IN_BANNERS = [

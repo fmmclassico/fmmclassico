@@ -4,6 +4,16 @@ import guestCart from "@/lib/guest-cart";
 
 const AuthContext = createContext();
 
+function getAdminEmailList() {
+  return [...new Set([
+    ...(import.meta.env.VITE_ADMIN_EMAILS || '').split(','),
+    ...(import.meta.env.VITE_ALLOWED_ADMIN_EMAILS || '').split(','),
+    import.meta.env.VITE_MASTER_ADMIN_EMAIL || '',
+  ]
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean))];
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -28,13 +38,8 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      const envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || "";
-      const ADMIN_EMAILS = envAdminEmails
-        .split(",")
-        .map((e) => e.trim().toLowerCase())
-        .filter(Boolean);
-
-      const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase());
+      const adminEmails = getAdminEmailList();
+      const isAdmin = adminEmails.includes(user.email?.toLowerCase());
 
       setUser({
         ...user,
@@ -42,6 +47,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       setIsAuthenticated(true);
+      setAuthError(null);
     } catch (err) {
       console.error("Auth error:", err);
       setUser(null);
@@ -51,7 +57,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // LOGOUT - clears everything and goes to guest homepage
   const logout = async () => {
     setIsLoggingOut(true);
 
@@ -61,12 +66,10 @@ export const AuthProvider = ({ children }) => {
       console.error('Supabase signOut error:', err);
     }
 
-    // Clear ALL auth-related storage
     setUser(null);
     setIsAuthenticated(false);
     setAuthError(null);
 
-    // Remove any stale auth tokens from localStorage
     try {
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -80,15 +83,13 @@ export const AuthProvider = ({ children }) => {
       console.error('Storage clear error:', e);
     }
 
-    // Also clear sessionStorage
     try {
       sessionStorage.clear();
-    } catch (e) {}
+    } catch (e) {
+      // ignore
+    }
 
-    // Clear any guest cart data before returning to guest mode
     guestCart.clear();
-
-    // Hard redirect to guest homepage
     window.location.replace('/');
   };
 
@@ -100,7 +101,9 @@ export const AuthProvider = ({ children }) => {
     const target = redirectPath || window.location.pathname + window.location.search;
     try {
       sessionStorage.setItem('redirectAfterLogin', target);
-    } catch (_) {}
+    } catch (_) {
+      // ignore
+    }
     window.location.href = '/login';
   };
 

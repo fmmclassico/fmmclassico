@@ -3,7 +3,12 @@ import { supabase } from '@/lib/supabase';
 const PROMO_BANNER_RESPONSIVE_FIELDS = ['desktop_image_url', 'mobile_image_url'];
 
 function getErrorMessage(error) {
-  return [error?.message, error?.details, error?.hint, error?.error_description]
+  return [
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.error_description,
+  ]
     .filter(Boolean)
     .join(' ');
 }
@@ -25,13 +30,17 @@ async function runWriteWithLegacyPromoBannerFallback(tableName, writeFn, payload
   try {
     return await writeFn(payload);
   } catch (error) {
-    if (tableName === 'promo_banners' && isMissingColumnError(error, PROMO_BANNER_RESPONSIVE_FIELDS)) {
+    if (
+      tableName === 'promo_banners'
+      && isMissingColumnError(error, PROMO_BANNER_RESPONSIVE_FIELDS)
+    ) {
       return writeFn(stripFields(payload, PROMO_BANNER_RESPONSIVE_FIELDS));
     }
     throw error;
   }
 }
 
+// Helper: convert entity name to table name
 function toTableName(name) {
   return name
     .replace(/([A-Z])/g, '_$1')
@@ -40,6 +49,7 @@ function toTableName(name) {
     .replace(/([^s])$/, '$1s');
 }
 
+// Create a compatibility entity client that maps calls to Supabase
 function createEntity(tableName) {
   return {
     async list(orderBy, limit) {
@@ -51,10 +61,7 @@ function createEntity(tableName) {
       }
       if (limit) query = query.limit(limit);
       const { data, error } = await query;
-      if (error) {
-        console.error('list ' + tableName + ':', error);
-        return [];
-      }
+      if (error) { console.error('list ' + tableName + ':', error); return []; }
       return data || [];
     },
     async filter(filters, orderBy, limit) {
@@ -71,23 +78,17 @@ function createEntity(tableName) {
       }
       if (limit) query = query.limit(limit);
       const { data, error } = await query;
-      if (error) {
-        console.error('filter ' + tableName + ':', error);
-        return [];
-      }
+      if (error) { console.error('filter ' + tableName + ':', error); return []; }
       return data || [];
     },
     async get(id) {
       const { data, error } = await supabase.from(tableName).select('*').eq('id', id).single();
-      if (error) {
-        console.error('get ' + tableName + ':', error);
-        return null;
-      }
+      if (error) { console.error('get ' + tableName + ':', error); return null; }
       return data;
     },
     async create(record) {
       try {
-        return await runWriteWithLegacyPromoBannerFallback(
+        const data = await runWriteWithLegacyPromoBannerFallback(
           tableName,
           async (payload) => {
             const { data, error } = await supabase.from(tableName).insert(payload).select().single();
@@ -96,6 +97,7 @@ function createEntity(tableName) {
           },
           record
         );
+        return data;
       } catch (error) {
         console.error('create ' + tableName + ':', error);
         throw error;
@@ -103,7 +105,7 @@ function createEntity(tableName) {
     },
     async update(id, updates) {
       try {
-        return await runWriteWithLegacyPromoBannerFallback(
+        const data = await runWriteWithLegacyPromoBannerFallback(
           tableName,
           async (payload) => {
             const { data, error } = await supabase.from(tableName).update(payload).eq('id', id).select().single();
@@ -112,6 +114,7 @@ function createEntity(tableName) {
           },
           updates
         );
+        return data;
       } catch (error) {
         console.error('update ' + tableName + ':', error);
         throw error;
@@ -119,10 +122,7 @@ function createEntity(tableName) {
     },
     async delete(id) {
       const { error } = await supabase.from(tableName).delete().eq('id', id);
-      if (error) {
-        console.error('delete ' + tableName + ':', error);
-        throw error;
-      }
+      if (error) { console.error('delete ' + tableName + ':', error); throw error; }
     },
     subscribe(callback) {
       const channel = supabase.channel(tableName + '-changes')
@@ -135,6 +135,7 @@ function createEntity(tableName) {
   };
 }
 
+// Entity name mapping
 const TABLE_MAP = {
   Product: 'products',
   CartItem: 'cart_items',
@@ -145,143 +146,97 @@ const TABLE_MAP = {
   Feedback: 'feedbacks',
   Review: 'reviews',
   ChatMessage: 'chat_messages',
-  AdminPassword: 'admin_passwords',
-  ContactSetting: 'contact_settings',
-  SMSContact: 'sms_contacts',
-  SMSTemplate: 'sms_templates'
 };
 
+// Auto-proxy
 const entitiesProxy = new Proxy({}, {
   get(target, prop) {
     const tableName = TABLE_MAP[prop] || toTableName(prop);
-    if (!target[prop]) target[prop] = createEntity(tableName);
+    if (!target[prop]) {
+      target[prop] = createEntity(tableName);
+    }
     return target[prop];
   }
 });
 
-async function getCurrentUser() {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error) throw error;
-  return user;
-}
-
+// Auth uses Supabase
 const auth = {
   async me() {
-    const user = await getCurrentUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
     const envAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || '';
-    const adminList = envAdminEmails.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+    const adminList = envAdminEmails.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    const isAdmin = adminList.includes(user.email?.toLowerCase());
     return {
-      id: user.id,
       email: user.email,
-      role: adminList.includes(user.email?.toLowerCase()) ? 'admin' : 'user',
-      full_name: user.user_metadata?.full_name || '',
-      phone: user.user_metadata?.phone || '',
-      address: user.user_metadata?.address || '',
-      city: user.user_metadata?.city || '',
-      notifications_enabled: user.user_metadata?.notifications_enabled ?? true,
-      newsletter_enabled: user.user_metadata?.newsletter_enabled ?? true,
+      role: isAdmin ? 'admin' : 'user',
+      id: user.id,
+      full_name: user.user_metadata?.full_name || ''
     };
   },
   async isAuthenticated() {
-    const user = await getCurrentUser();
+    const { data: { user } } = await supabase.auth.getUser();
     return !!user;
   },
-  async updateMe(formData) {
-    const { data, error } = await supabase.auth.updateUser({ data: { ...formData } });
-    if (error) throw error;
-    return data?.user || data;
-  },
-  async resetPasswordRequest(email) {
-    const redirectTo = `${window.location.origin}/reset-password`;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-    if (error) throw error;
-    return { success: true };
-  },
-  async resetPassword({ newPassword }) {
-    const { data, error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) throw error;
-    return data;
-  },
   loginWithProvider(provider, returnUrl) {
-    return supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: window.location.origin + (returnUrl || '/') }
-    });
+    supabase.auth.signInWithOAuth({ provider, options: { redirectTo: window.location.origin + (returnUrl || '/') } });
   },
   redirectToLogin(returnUrl) {
-    try { sessionStorage.setItem('redirectAfterLogin', returnUrl || '/'); } catch (_) {}
+    try { sessionStorage.setItem('redirectAfterLogin', returnUrl || '/'); } catch (e) { /* ignore */ }
     window.location.href = '/login';
   }
 };
 
+// App logs (no-op)
 const appLogs = {
   logUserInApp() { return Promise.resolve(); }
 };
 
+// Supabase config for edge functions and storage uploads
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://kptlejtauwqvaapsrjfx.supabase.co';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-function fallbackMarketingCopy(prompt = '') {
-  const text = String(prompt || '').toLowerCase();
-  let subject = 'Message from FMM CLASSICO';
-  if (text.includes('christmas')) subject = 'Christmas Deals from FMM CLASSICO';
-  else if (text.includes('new year')) subject = 'New Year Offers from FMM CLASSICO';
-  else if (text.includes('valentine')) subject = 'Valentine Offers from FMM CLASSICO';
-  else if (text.includes('flash sale')) subject = 'Flash Sale at FMM CLASSICO';
-  else if (text.includes('promo')) subject = 'Special Promo from FMM CLASSICO';
-  const message = 'Hello from FMM CLASSICO. We have exciting offers waiting for you on phones, accessories, electronics, and home appliances. Visit our store today for trusted products, secure payment, and fast delivery.';
-  return { subject, message };
-}
-
+// Integrations backed by Supabase
 const integrations = {
   Core: {
     async UploadFile({ file }) {
-      const fileName = `${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage.from('uploads').upload(fileName, file);
+      const fileName = Date.now() + '-' + file.name;
+      const { data, error } = await supabase.storage.from('uploads').upload(fileName, file);
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
       return { file_url: publicUrl };
     },
     async SendEmail({ to, from_name, subject, body }) {
       try {
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+        const response = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
           },
-          body: JSON.stringify({ to, from_name: from_name || 'FMM CLASSICO', subject, body }),
+          body: JSON.stringify({
+            to: to,
+            from_name: from_name || 'FMM CLASSICO',
+            subject: subject,
+            body: body
+          }),
         });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) return { success: false, error: result?.error || 'Email sending failed' };
-        return { success: true, result };
+        const result = await response.json();
+        if (!response.ok) {
+          console.error('[SendEmail] Failed:', result);
+          return { success: false, error: result.error };
+        }
+        console.log('[SendEmail] Sent to:', to);
+        return { success: true };
       } catch (error) {
+        console.error('[SendEmail] Error:', error);
         return { success: false, error: error.message };
       }
-    },
-    async InvokeLLM({ prompt }) {
-      try {
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/invoke-llm`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ prompt }),
-        });
-        const result = await response.json().catch(() => null);
-        if (response.ok && result) return result;
-      } catch (error) {
-        console.warn('[InvokeLLM fallback]', error);
-      }
-      return fallbackMarketingCopy(prompt);
     }
   }
 };
 
 export const appClient = { entities: entitiesProxy, auth, appLogs, integrations };
-export default appClient;
 export function redirectLoginWithProvider(provider, returnUrl) {
   if (typeof window === 'undefined') return;
   return auth.loginWithProvider(provider || 'google', returnUrl || '/');

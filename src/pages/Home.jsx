@@ -44,12 +44,21 @@ var CATEGORY_BRANDS = {
   ],
 };
 
+function slugifyCollection(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 var HOME_CATEGORIES = [
   {
     id: 'phones',
     label: 'Phones',
     icon: Smartphone,
-    link: createPageUrl('Shop?category=/phones'),
+    link: createPageUrl('phones'),
     image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
     match: function(p) { return p.category === 'phones'; },
     brands: CATEGORY_BRANDS.phones,
@@ -59,7 +68,7 @@ var HOME_CATEGORIES = [
     id: 'phone_accessories',
     label: 'Phone Accessories',
     icon: Headphones,
-    link: createPageUrl('Shop?category=/phone-accessories'),
+    link: createPageUrl('phone-accessories'),
     image: 'https://mate.net.in/public/uploads/all/UsReqZvujmEjMUb27qlTtRcCG8Pf18SyULO4HW7U.jpg',
     match: function(p) { return ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category); },
     brands: CATEGORY_BRANDS.phone_accessories,
@@ -69,7 +78,7 @@ var HOME_CATEGORIES = [
     id: 'electronics',
     label: 'Electronics',
     icon: Tv,
-    link: createPageUrl('Shop?category=/electronics'),
+    link: createPageUrl('electronics'),
     image: 'https://images.unsplash.com/photo-1593640408182-31c228f30ca0?w=160&q=50',
     match: function(p) { return ['electronic_appliances','smart_watches'].includes(p.category); },
     brands: CATEGORY_BRANDS.electronics,
@@ -79,7 +88,7 @@ var HOME_CATEGORIES = [
     id: 'home_appliances',
     label: 'Home Appliances',
     icon: HomeIcon,
-    link: createPageUrl('Shop?category=/home-appliances'),
+    link: createPageUrl('home-appliances'),
     image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=160&q=50',
     match: function(p) { return p.category === 'home_appliances'; },
     brands: CATEGORY_BRANDS.home_appliances,
@@ -187,9 +196,9 @@ export default function Home() {
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Shop {cat.label} by Brand</p>
               <div className="flex flex-wrap gap-2">
                 {cat.brands.map(function(b) {
-                  return <Link key={b.brand + b.category} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + b.category)} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>{b.label}</Link>;
+                  return <Link key={b.brand + (b.category || '')} to={createPageUrl(slugifyCollection(b.brand))} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>{b.label}</Link>;
                 })}
-                <Link to={cat.link} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>All {cat.label} →</Link>;
+                <Link to={cat.link} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>All {cat.label}</Link>;
               </div>
             </div>
           );

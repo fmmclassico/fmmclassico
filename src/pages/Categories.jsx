@@ -97,9 +97,18 @@ const MAIN_CATEGORY_LINKS = {
   home_appliances: createPageUrl('home-appliances'),
 };
 
+function slugifyCollection(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 function getSubLink(sub) {
   if (sub.brand && sub.category) {
-    return createPageUrl(`BrandProducts?brand=${encodeURIComponent(sub.brand)}&category=${sub.category}`);
+    return createPageUrl(slugifyCollection(sub.brand));
   }
   if (sub.sub) {
     return createPageUrl(`Shop?category=${sub.shopCategory}&sub=${sub.sub}`);

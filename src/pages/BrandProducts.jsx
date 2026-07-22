@@ -26,7 +26,7 @@ const CATEGORY_LABELS = {
 export default function BrandProducts() {
   const [searchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState('newest');
-  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || '');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const brand = searchParams.get('brand');
 

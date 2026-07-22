@@ -45,11 +45,20 @@ var CATEGORY_BRANDS = {
   ],
 };
 
+function slugifyCollection(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 var HOME_CATEGORIES = [
-  { id: 'phones', label: 'Phones', icon: Smartphone, link: createPageUrl('Shop?category=phones'), match: function(p) { return p.category === 'phones'; }, brands: CATEGORY_BRANDS.phones, chipColor: 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100' },
-  { id: 'phone_accessories', label: 'Phone Accessories', icon: Headphones, link: createPageUrl('Shop?category=phone_cases'), match: function(p) { return ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category); }, brands: CATEGORY_BRANDS.phone_accessories, chipColor: 'text-[#0093A6] bg-[#0093A6]/5 border-[#0093A6]/30 hover:bg-[#0093A6]/10' },
-  { id: 'electronics', label: 'Electronics', icon: Tv, link: createPageUrl('Shop?category=electronic_appliances'), match: function(p) { return ['electronic_appliances','smart_watches'].includes(p.category); }, brands: CATEGORY_BRANDS.electronics, chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100' },
-  { id: 'home_appliances', label: 'Home Appliances', icon: HomeIcon, link: createPageUrl('Shop?category=home_appliances'), match: function(p) { return p.category === 'home_appliances'; }, brands: CATEGORY_BRANDS.home_appliances, chipColor: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100' },
+  { id: 'phones', label: 'Phones', icon: Smartphone, link: createPageUrl('phones'), match: function(p) { return p.category === 'phones'; }, brands: CATEGORY_BRANDS.phones, chipColor: 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100' },
+  { id: 'phone_accessories', label: 'Phone Accessories', icon: Headphones, link: createPageUrl('phone-accessories'), match: function(p) { return ['phone_cases','chargers','earphones','cables','power_banks','screen_protectors','holders','speakers'].includes(p.category); }, brands: CATEGORY_BRANDS.phone_accessories, chipColor: 'text-[#0093A6] bg-[#0093A6]/5 border-[#0093A6]/30 hover:bg-[#0093A6]/10' },
+  { id: 'electronics', label: 'Electronics', icon: Tv, link: createPageUrl('electronics'), match: function(p) { return ['electronic_appliances','smart_watches'].includes(p.category); }, brands: CATEGORY_BRANDS.electronics, chipColor: 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100' },
+  { id: 'home_appliances', label: 'Home Appliances', icon: HomeIcon, link: createPageUrl('home-appliances'), match: function(p) { return p.category === 'home_appliances'; }, brands: CATEGORY_BRANDS.home_appliances, chipColor: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100' },
 ];
 
 export default function GuestHome() {
@@ -141,8 +150,8 @@ export default function GuestHome() {
           {cat.brands.map(b => {
             return (
               <Link
-                key={b.brand + b.category}
-                to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + b.category)}
+                key={b.brand + (b.category || '')}
+                to={createPageUrl(slugifyCollection(b.brand))}
                 className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}
               >
                 {b.label}
@@ -154,7 +163,7 @@ export default function GuestHome() {
             to={cat.link}
             className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}
           >
-            All {cat.label} →
+            All {cat.label}
           </Link>
         </div>
       </div>

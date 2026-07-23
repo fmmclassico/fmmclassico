@@ -16,21 +16,47 @@
           "product_name": { "type": "string" },
           "product_image": { "type": "string" },
           "price": { "type": "number" },
-          "quantity": { "type": "number" }
+          "quantity": { "type": "number" },
+          "selected_color": { "type": "string" },
+          "selected_wattage": { "type": "string" },
+          "selected_type": { "type": "string" },
+          "variant_summary": { "type": "string" },
+          "options_signature": { "type": "string" }
         }
       }
     },
-    "total_amount": {
+    "product_subtotal": {
       "type": "number",
-      "description": "Total order amount charged to Hubtel"
+      "description": "Total of products before delivery"
     },
     "delivery_fee": {
       "type": "number",
       "description": "Delivery fee charged"
     },
+    "grand_total": {
+      "type": "number",
+      "description": "Full order value including delivery"
+    },
+    "amount_paid_now": {
+      "type": "number",
+      "description": "Amount charged immediately at checkout"
+    },
+    "total_amount": {
+      "type": "number",
+      "description": "Legacy total field kept for compatibility; store the full order value here"
+    },
     "balance_due": {
       "type": "number",
-      "description": "Amount to be paid on delivery (0 for full payment)"
+      "description": "Amount still to be paid on delivery (0 for full payment)"
+    },
+    "remaining_balance_paid": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the remaining delivery-side balance has been confirmed by admin"
+    },
+    "remaining_balance_paid_at": {
+      "type": "string",
+      "description": "Timestamp when the remaining balance was confirmed"
     },
     "payment_method": {
       "type": "string",
@@ -45,13 +71,13 @@
       "type": "string",
       "enum": ["pending_payment", "paid", "failed", "cancelled", "refunded"],
       "default": "pending_payment",
-      "description": "Payment status. Initially pending_payment - update to 'paid' when payment is confirmed."
+      "description": "Initial online payment status from Hubtel"
     },
     "status": {
       "type": "string",
       "enum": ["confirmed", "processing", "packed", "shipped", "out_for_delivery", "delivered", "cancelled", "returned"],
       "default": "confirmed",
-      "description": "Fulfillment status. IMPORTANT: Do NOT change to 'processing' unless payment_status is 'paid'. Check BOTH payment_status AND status before fulfilling orders."
+      "description": "Fulfillment status"
     },
     "customer_name": { "type": "string" },
     "customer_email": { "type": "string" },

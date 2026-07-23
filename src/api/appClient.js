@@ -114,7 +114,7 @@ function normalizeProductRecord(record = {}) {
   });
 
   PRODUCT_BOOLEAN_FIELDS.forEach((field) => {
-    const defaultValue = field === 'is_visible' || field === 'review_enabled' ? true : false;
+    const defaultValue = field === 'is_visible' || field === 'review_enabled';
     product[field] = parseBooleanValue(product[field], defaultValue);
   });
 
@@ -151,6 +151,32 @@ function getAdminEmailList() {
     ...(import.meta.env.VITE_ALLOWED_ADMIN_EMAILS || '').split(','),
     import.meta.env.VITE_MASTER_ADMIN_EMAIL || '',
   ]).map((email) => email.toLowerCase());
+}
+
+function getUserMetadata(user) {
+  if (!user || typeof user !== 'object') return {};
+  return user.user_metadata && typeof user.user_metadata === 'object' ? user.user_metadata : {};
+}
+
+function buildAuthUser(user) {
+  if (!user) return null;
+
+  const adminList = getAdminEmailList();
+  const metadata = getUserMetadata(user);
+  const isAdmin = adminList.includes(user.email?.toLowerCase());
+
+  return {
+    id: user.id,
+    email: user.email || '',
+    role: isAdmin ? 'admin' : 'user',
+    isAdmin,
+    full_name: metadata.full_name || '',
+    phone: metadata.phone || '',
+    address: metadata.address || '',
+    city: metadata.city || '',
+    notifications_enabled: parseBooleanValue(metadata.notifications_enabled, true),
+    newsletter_enabled: parseBooleanValue(metadata.newsletter_enabled, true),
+  };
 }
 
 async function executeQueryWithOrderFallback(createQuery, orderBy) {
@@ -338,6 +364,10 @@ const TABLE_MAP = {
 
 const entitiesProxy = new Proxy({}, {
   get(target, prop) {
+    if (typeof prop !== 'string') {
+      return target[prop];
+    }
+
     const tableName = TABLE_MAP[prop] || toTableName(prop);
     if (!target[prop]) {
       target[prop] = createEntity(tableName);
@@ -347,7 +377,7 @@ const entitiesProxy = new Proxy({}, {
 });
 
 function toTableName(name) {
-  return name
+  return String(name)
     .replace(/([A-Z])/g, '_$1')
     .toLowerCase()
     .replace(/^_/, '')
@@ -356,22 +386,45 @@ function toTableName(name) {
 
 const auth = {
   async me() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-    const adminList = getAdminEmailList();
-    const isAdmin = adminList.includes(user.email?.toLowerCase());
-    return {
-      email: user.email,
-      role: isAdmin ? 'admin' : 'user',
-      isAdmin,
-      id: user.id,
-      full_name: user.user_metadata?.full_name || ''
-    };
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) {
+      console.error('auth me:', error);
+      return null;
+    }
+    return buildAuthUser(user);
   },
 
   async isAuthenticated() {
     const { data: { user } } = await supabase.auth.getUser();
     return !!user;
+  },
+
+  async updateMe(updates = {}) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!user) throw new Error('You must be logged in to update your account.');
+
+    const currentMetadata = getUserMetadata(user);
+    const nextMetadata = {
+      ...currentMetadata,
+      full_name: typeof updates.full_name === 'string' ? updates.full_name.trim() : (currentMetadata.full_name || ''),
+      phone: typeof updates.phone === 'string' ? updates.phone.trim() : (currentMetadata.phone || ''),
+      address: typeof updates.address === 'string' ? updates.address.trim() : (currentMetadata.address || ''),
+      city: typeof updates.city === 'string' ? updates.city.trim() : (currentMetadata.city || ''),
+      notifications_enabled: parseBooleanValue(updates.notifications_enabled, parseBooleanValue(currentMetadata.notifications_enabled, true)),
+      newsletter_enabled: parseBooleanValue(updates.newsletter_enabled, parseBooleanValue(currentMetadata.newsletter_enabled, true)),
+    };
+
+    const { data, error } = await supabase.auth.updateUser({
+      data: nextMetadata,
+    });
+
+    if (error) throw error;
+    return buildAuthUser(data.user);
+  },
+
+  async deleteMe() {
+    throw new Error('Self-service account deletion is not configured yet. Add a secure server-side function with service-role permissions before enabling this action.');
   },
 
   loginWithProvider(provider, returnUrl) {

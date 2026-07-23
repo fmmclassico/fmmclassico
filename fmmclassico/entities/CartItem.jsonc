@@ -23,6 +23,26 @@
       "default": 1,
       "description": "Quantity in cart"
     },
+    "selected_color": {
+      "type": "string",
+      "description": "Selected color option, if applicable"
+    },
+    "selected_wattage": {
+      "type": "string",
+      "description": "Selected wattage option, if applicable"
+    },
+    "selected_type": {
+      "type": "string",
+      "description": "Selected type/variant option, if applicable"
+    },
+    "variant_summary": {
+      "type": "string",
+      "description": "Readable summary of selected options for display"
+    },
+    "options_signature": {
+      "type": "string",
+      "description": "Stable signature for distinguishing cart rows with different option combinations"
+    },
     "user_email": {
       "type": "string",
       "description": "User who owns this cart item"

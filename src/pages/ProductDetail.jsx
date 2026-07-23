@@ -6,12 +6,13 @@ import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
 import guestCart from '@/lib/guest-cart';
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ShoppingCart, Star, Plus, Minus, ExternalLink, PlayCircle } from 'lucide-react';
 import ReviewSection from '@/components/products/ReviewSection';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 const categoryNames = {
   phone_cases: 'Phone Cases',
@@ -106,6 +107,39 @@ function buildGalleryItems(product) {
   ];
 }
 
+function getMissingSelections(product, selections) {
+  const missing = [];
+
+  if (product?.show_colors && Array.isArray(product?.available_colors) && product.available_colors.length > 0 && !selections.selectedColor) {
+    missing.push('Color');
+  }
+  if (product?.show_wattage && Array.isArray(product?.available_wattage) && product.available_wattage.length > 0 && !selections.selectedWattage) {
+    missing.push('Wattage');
+  }
+  if (product?.show_type && Array.isArray(product?.available_types) && product.available_types.length > 0 && !selections.selectedType) {
+    missing.push('Type');
+  }
+
+  return missing;
+}
+
+function buildVariantPayload({ selectedColor, selectedWattage, selectedType }) {
+  const parts = [];
+  if (selectedColor) parts.push(`Color: ${selectedColor}`);
+  if (selectedWattage) parts.push(`Wattage: ${selectedWattage}`);
+  if (selectedType) parts.push(`Type: ${selectedType}`);
+
+  const signature = [selectedColor || '', selectedWattage || '', selectedType || ''].join('|');
+
+  return {
+    selected_color: selectedColor || null,
+    selected_wattage: selectedWattage || null,
+    selected_type: selectedType || null,
+    variant_summary: parts.join(' • '),
+    options_signature: signature,
+  };
+}
+
 export default function ProductDetail() {
   const { user } = useAuth();
   const [quantity, setQuantity] = useState(1);
@@ -126,6 +160,7 @@ export default function ProductDetail() {
 
   const product = products.find((item) => item.id === productId);
   const galleryItems = useMemo(() => buildGalleryItems(product), [product]);
+  const variantPayload = useMemo(() => buildVariantPayload({ selectedColor, selectedWattage, selectedType }), [selectedColor, selectedWattage, selectedType]);
 
   useEffect(() => {
     if (selectedImageIndex > galleryItems.length - 1) {
@@ -135,24 +170,47 @@ export default function ProductDetail() {
 
   const addToCartMutation = useMutation({
     mutationFn: async () => {
+      const missingSelections = getMissingSelections(product, { selectedColor, selectedWattage, selectedType });
+      if (missingSelections.length > 0) {
+        throw new Error(`Please choose: ${missingSelections.join(', ')}`);
+      }
+
       if (!user) {
         guestCart.addItem({
-          id: product.id,
+          id: `${product.id}-${variantPayload.options_signature || 'default'}`,
           product_id: product.id,
           product_name: product.name,
           product_image: product.image_url,
           product_price: product.price,
-          quantity
+          quantity,
+          ...variantPayload,
         });
         return;
       }
 
       queryClient.setQueryData(['cartItems', user.email], (old = []) => {
-        const existing = old.find((item) => item.product_id === product.id);
+        const existing = old.find((item) => item.product_id === product.id && (item.options_signature || '') === (variantPayload.options_signature || ''));
         if (existing) {
-          return old.map((item) => item.product_id === product.id ? { ...item, quantity: item.quantity + quantity } : item);
+          return old.map((item) => (
+            item.product_id === product.id && (item.options_signature || '') === (variantPayload.options_signature || '')
+              ? { ...item, quantity: item.quantity + quantity }
+              : item
+          ));
         }
-        return [...old, { id: 'opt-' + product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity, user_email: user.email }];
+
+        return [
+          ...old,
+          {
+            id: `opt-${product.id}-${variantPayload.options_signature || 'default'}`,
+            product_id: product.id,
+            product_name: product.name,
+            product_image: product.image_url,
+            product_price: product.price,
+            quantity,
+            user_email: user.email,
+            ...variantPayload,
+          },
+        ];
       });
 
       if (product.stock != null) {
@@ -161,11 +219,27 @@ export default function ProductDetail() {
         ));
       }
 
-      const existingItems = await appClient.entities.CartItem.filter({ user_email: user.email, product_id: product.id });
+      const existingItems = await appClient.entities.CartItem.filter({
+        user_email: user.email,
+        product_id: product.id,
+        options_signature: variantPayload.options_signature,
+      });
+
       if (existingItems.length > 0) {
-        await appClient.entities.CartItem.update(existingItems[0].id, { quantity: existingItems[0].quantity + quantity });
+        await appClient.entities.CartItem.update(existingItems[0].id, {
+          quantity: existingItems[0].quantity + quantity,
+          ...variantPayload,
+        });
       } else {
-        await appClient.entities.CartItem.create({ product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity, user_email: user.email });
+        await appClient.entities.CartItem.create({
+          product_id: product.id,
+          product_name: product.name,
+          product_image: product.image_url,
+          product_price: product.price,
+          quantity,
+          user_email: user.email,
+          ...variantPayload,
+        });
       }
 
       if (product.stock != null) {
@@ -175,7 +249,11 @@ export default function ProductDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems', user?.email] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
-    }
+      toast.success('Added to cart!');
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Could not add item to cart.');
+    },
   });
 
   const discount = product?.original_price
@@ -328,9 +406,7 @@ export default function ProductDetail() {
             {galleryItems.length > 1 && (
               <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
                 {galleryItems.map((_, index) => (
-                  <button key={index} onClick={() => setSelectedImageIndex(index)}
-                    className={`rounded-full transition-all ${index === selectedImageIndex ? 'bg-[#2E86C1] w-4 h-2' : 'bg-white/70 w-2 h-2'}`}
-                  />
+                  <button key={index} onClick={() => setSelectedImageIndex(index)} className={`rounded-full transition-all ${index === selectedImageIndex ? 'bg-[#2E86C1] w-4 h-2' : 'bg-white/70 w-2 h-2'}`} />
                 ))}
               </div>
             )}
@@ -342,22 +418,14 @@ export default function ProductDetail() {
                 <button
                   key={`${item.type}-${index}`}
                   onClick={() => setSelectedImageIndex(index)}
-                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-all relative ${
-                    selectedImageIndex === index
-                      ? 'border-[#2E86C1] shadow-md'
-                      : 'border-transparent hover:border-gray-300'
-                  }`}
+                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-all relative ${selectedImageIndex === index ? 'border-[#2E86C1] shadow-md' : 'border-transparent hover:border-gray-300'}`}
                 >
                   {item.type === 'video' ? (
                     <div className="w-full h-full bg-gray-800 flex items-center justify-center text-white">
                       <PlayCircle className="h-6 w-6" />
                     </div>
                   ) : (
-                    <img
-                      src={item.url}
-                      alt={`${product.name} view ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={item.url} alt={`${product.name} view ${index + 1}`} className="w-full h-full object-cover" />
                   )}
                 </button>
               ))}
@@ -365,21 +433,14 @@ export default function ProductDetail() {
           )}
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="space-y-4"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
           <div>
             <Badge variant="outline" className="mb-1.5 text-xs">{categoryNames[product.category] || product.category}</Badge>
             <h1 className="text-base md:text-lg font-bold text-gray-800 mb-1.5 leading-snug">{product.name}</h1>
             <div className="flex items-center gap-1.5">
               <div className="flex items-center">
                 {[1, 2, 3, 4, 5].map((index) => (
-                  <Star
-                    key={index}
-                    className={`h-3.5 w-3.5 ${index <= (product.rating || 4) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-                  />
+                  <Star key={index} className={`h-3.5 w-3.5 ${index <= (product.rating || 4) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
                 ))}
               </div>
               <span className="text-gray-500 text-xs">({product.reviews_count || 0} reviews)</span>
@@ -388,9 +449,7 @@ export default function ProductDetail() {
 
           <div className="flex items-baseline gap-2">
             <span className="text-xl font-bold text-[#2E86C1]">₵{product.price?.toFixed(2)}</span>
-            {product.original_price && (
-              <span className="text-base text-gray-400 line-through">₵{product.original_price?.toFixed(2)}</span>
-            )}
+            {product.original_price && <span className="text-base text-gray-400 line-through">₵{product.original_price?.toFixed(2)}</span>}
           </div>
 
           {product.description && (
@@ -399,10 +458,7 @@ export default function ProductDetail() {
                 <span>Product Details</span>
                 <span className="text-[#2E86C1] group-open:rotate-180 transition-transform">▼</span>
               </summary>
-              <div
-                className="px-4 py-3 text-gray-600 leading-relaxed text-sm product-description ql-editor"
-                dangerouslySetInnerHTML={{ __html: product.description }}
-              />
+              <div className="px-4 py-3 text-gray-600 leading-relaxed text-sm product-description ql-editor" dangerouslySetInnerHTML={{ __html: product.description }} />
             </details>
           )}
 
@@ -411,8 +467,7 @@ export default function ProductDetail() {
               <p className="text-sm font-semibold text-gray-700 mb-1.5">Color: {selectedColor && <span className="text-[#2E86C1]">{selectedColor}</span>}</p>
               <div className="flex flex-wrap gap-2">
                 {product.available_colors.map((color) => (
-                  <button key={color} onClick={() => setSelectedColor(color === selectedColor ? null : color)}
-                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedColor === color ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
+                  <button key={color} onClick={() => setSelectedColor(color === selectedColor ? null : color)} className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedColor === color ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
                     {color}
                   </button>
                 ))}
@@ -425,8 +480,7 @@ export default function ProductDetail() {
               <p className="text-sm font-semibold text-gray-700 mb-1.5">Wattage: {selectedWattage && <span className="text-[#2E86C1]">{selectedWattage}</span>}</p>
               <div className="flex flex-wrap gap-2">
                 {product.available_wattage.map((wattage) => (
-                  <button key={wattage} onClick={() => setSelectedWattage(wattage === selectedWattage ? null : wattage)}
-                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedWattage === wattage ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
+                  <button key={wattage} onClick={() => setSelectedWattage(wattage === selectedWattage ? null : wattage)} className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedWattage === wattage ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
                     {wattage}
                   </button>
                 ))}
@@ -439,8 +493,7 @@ export default function ProductDetail() {
               <p className="text-sm font-semibold text-gray-700 mb-1.5">Type: {selectedType && <span className="text-[#2E86C1]">{selectedType}</span>}</p>
               <div className="flex flex-wrap gap-2">
                 {product.available_types.map((type) => (
-                  <button key={type} onClick={() => setSelectedType(type === selectedType ? null : type)}
-                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedType === type ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
+                  <button key={type} onClick={() => setSelectedType(type === selectedType ? null : type)} className={`text-xs px-3 py-1.5 rounded-full border-2 font-medium transition-all ${selectedType === type ? 'border-[#2E86C1] bg-[#2E86C1]/10 text-[#2E86C1]' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-400'}`}>
                     {type}
                   </button>
                 ))}
@@ -448,41 +501,29 @@ export default function ProductDetail() {
             </div>
           )}
 
+          {variantPayload.variant_summary && (
+            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
+              <p className="text-xs font-semibold text-blue-800">Selected options</p>
+              <p className="text-sm text-blue-700 mt-1">{variantPayload.variant_summary}</p>
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
             <span className="text-gray-600 font-medium text-sm">Quantity:</span>
             <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 rounded-full"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-              >
+              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
                 <Minus className="h-4 w-4" />
               </Button>
               <span className="w-8 text-center font-semibold">{quantity}</span>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 rounded-full"
-                onClick={() => setQuantity(quantity + 1)}
-              >
+              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full" onClick={() => setQuantity(quantity + 1)}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            {product.stock != null && (
-              <span className={`text-xs font-semibold ${product.stock <= 5 ? 'text-red-500' : 'text-gray-500'}`}>
-                {product.stock} in stock
-              </span>
-            )}
+            {product.stock != null && <span className={`text-xs font-semibold ${product.stock <= 5 ? 'text-red-500' : 'text-gray-500'}`}>{product.stock} in stock</span>}
           </div>
 
           <div className="flex gap-3">
-            <Button
-              size="lg"
-              className="flex-1 bg-[#2E86C1] hover:bg-[#2578ae] text-white font-bold shadow-lg"
-              onClick={() => addToCartMutation.mutate()}
-              disabled={addToCartMutation.isPending}
-            >
+            <Button size="lg" className="flex-1 bg-[#2E86C1] hover:bg-[#2578ae] text-white font-bold shadow-lg" onClick={() => addToCartMutation.mutate()} disabled={addToCartMutation.isPending}>
               <ShoppingCart className="mr-2 h-5 w-5" />
               {addToCartMutation.isPending ? 'Adding...' : 'Add to Cart'}
             </Button>

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { appClient } from '@/api/appClient.js';
 import { useAuth } from '@/lib/AuthContext';
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
-import { 
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import {
   User,
   Mail,
   Phone,
@@ -17,16 +17,17 @@ import {
   LogOut,
   Save,
   Loader2,
-  Trash2
+  Trash2,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function Settings() {
-  const { logout } = useAuth();
+  const { logout, refreshUser } = useAuth();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showDangerZone, setShowDangerZone] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
@@ -34,50 +35,76 @@ export default function Settings() {
     address: '',
     city: '',
     notifications_enabled: true,
-    newsletter_enabled: true
+    newsletter_enabled: true,
   });
 
   useEffect(() => {
+    let isMounted = true;
+
     const getUser = async () => {
-      const isAuth = await appClient.auth.isAuthenticated();
-      if (isAuth) {
+      setIsLoading(true);
+
+      try {
+        const isAuth = await appClient.auth.isAuthenticated();
+        if (!isAuth) {
+          appClient.auth.redirectToLogin('/');
+          return;
+        }
+
         const userData = await appClient.auth.me();
+        if (!isMounted) return;
+
         setUser(userData);
         setFormData({
-          full_name: userData.full_name || '',
-          phone: userData.phone || '',
-          address: userData.address || '',
-          city: userData.city || '',
-          notifications_enabled: userData.notifications_enabled ?? true,
-          newsletter_enabled: userData.newsletter_enabled ?? true
+          full_name: userData?.full_name || '',
+          phone: userData?.phone || '',
+          address: userData?.address || '',
+          city: userData?.city || '',
+          notifications_enabled: userData?.notifications_enabled ?? true,
+          newsletter_enabled: userData?.newsletter_enabled ?? true,
         });
-      } else {
-        appClient.auth.redirectToLogin('/');
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+        toast.error('Failed to load your account settings.');
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-      setIsLoading(false);
     };
+
     getUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSwitchChange = (name, value) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSave = async () => {
     setIsSaving(true);
-    await appClient.auth.updateMe(formData);
-    setIsSaving(false);
-    toast.success('Settings saved successfully!');
+
+    try {
+      const updatedUser = await appClient.auth.updateMe(formData);
+      setUser(updatedUser);
+      refreshUser();
+      toast.success('Settings saved successfully!');
+    } catch (error) {
+      console.error('Settings save error:', error);
+      toast.error(error?.message || 'Failed to save settings.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // FIXED: was calling appClient.auth.logout() directly, which sends people to the
-  // App auth page. Now uses the app's logout(), which clears the session and
-  // sends people to the guest homepage instead.
   const handleLogout = () => {
     logout();
   };
@@ -85,8 +112,19 @@ export default function Settings() {
   const handleDeleteAccount = async () => {
     if (!confirm('Are you sure you want to delete your account? This action cannot be undone and all your data will be lost.')) return;
     if (!confirm('This is permanent. Delete account?')) return;
-    await appClient.entities.User.delete(user.id);
-    logout();
+
+    setIsDeleting(true);
+
+    try {
+      await appClient.auth.deleteMe();
+      toast.success('Account deleted.');
+      logout();
+    } catch (error) {
+      console.error('Delete account error:', error);
+      toast.error(error?.message || 'Account deletion is not configured yet.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (isLoading) {
@@ -105,11 +143,7 @@ export default function Settings() {
     <div className="container mx-auto px-4 py-6 max-w-2xl">
       <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Account Settings</h1>
 
-      {/* Profile Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <Card className="mb-6 shadow-md overflow-hidden">
           <div className="bg-gradient-to-r from-[#1B3A6B] to-[#2E86C1] p-6">
             <div className="flex items-center gap-4">
@@ -125,12 +159,7 @@ export default function Settings() {
         </Card>
       </motion.div>
 
-      {/* Personal Information */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <Card className="mb-6 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -160,7 +189,7 @@ export default function Settings() {
                   className="pl-10 bg-gray-50"
                 />
               </div>
-              <p className="text-xs text-gray-500">Email cannot be changed</p>
+              <p className="text-xs text-gray-500">Email cannot be changed here</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
@@ -180,12 +209,7 @@ export default function Settings() {
         </Card>
       </motion.div>
 
-      {/* Address */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         <Card className="mb-6 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -218,12 +242,7 @@ export default function Settings() {
         </Card>
       </motion.div>
 
-      {/* Notifications */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
         <Card className="mb-6 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -257,14 +276,13 @@ export default function Settings() {
         </Card>
       </motion.div>
 
-      {/* Save Button */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
         className="flex flex-col gap-3"
       >
-        <Button 
+        <Button
           onClick={handleSave}
           className="w-full bg-[#1B3A6B] hover:bg-[#162f58] font-bold py-6"
           disabled={isSaving}
@@ -281,8 +299,8 @@ export default function Settings() {
             </>
           )}
         </Button>
-        
-        <Button 
+
+        <Button
           variant="outline"
           onClick={handleLogout}
           className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
@@ -291,22 +309,23 @@ export default function Settings() {
           Logout
         </Button>
 
-        {/* Danger Zone — hidden until tapped */}
         <div className="mt-2">
           <button
-            onClick={() => setShowDangerZone(v => !v)}
+            type="button"
+            onClick={() => setShowDangerZone((value) => !value)}
             className="w-full text-xs text-gray-400 hover:text-red-500 transition-colors py-2 flex items-center justify-center gap-1"
           >
             <Shield className="h-3 w-3" />
             {showDangerZone ? 'Hide danger zone' : 'Account options'}
           </button>
           {showDangerZone && (
-            <Button 
+            <Button
               variant="outline"
               onClick={handleDeleteAccount}
+              disabled={isDeleting}
               className="w-full text-red-800 hover:text-white hover:bg-red-700 border-red-400 mt-1"
             >
-              <Trash2 className="mr-2 h-5 w-5" />
+              {isDeleting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Trash2 className="mr-2 h-5 w-5" />}
               Delete My Account
             </Button>
           )}

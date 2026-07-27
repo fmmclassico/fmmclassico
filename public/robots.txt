@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /Admin
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /Cart
+Disallow: /Checkout
+Disallow: /Orders
+Disallow: /OrderTracking
+Disallow: /Invoices
+Disallow: /Notifications
+Disallow: /Settings
+Disallow: /Chat
+Disallow: /BrandProducts
+Disallow: /AllBrands

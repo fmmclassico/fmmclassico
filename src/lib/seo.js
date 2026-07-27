@@ -118,7 +118,7 @@ export function buildSeoMetadata(pathname = '/', search = '') {
     };
   }
 
-  if (lowerPath === '/shop') {
+  if (lowerPath === '/shop' || lowerPath === '/search') {
     const titlePart = subcategory
       ? decodeURIComponent(subcategory)
       : category
@@ -131,7 +131,7 @@ export function buildSeoMetadata(pathname = '/', search = '') {
       title: `${titlePart} | ${SITE_NAME}`,
       description: `Browse ${titlePart.toLowerCase()} products from FMM CLASSICO Ghana.`,
       canonicalPath: fullPath,
-      robots: INDEX_ROBOTS,
+      robots: NOINDEX_ROBOTS,
     };
   }
 
@@ -149,7 +149,7 @@ export function buildSeoMetadata(pathname = '/', search = '') {
     title: `${slugToWords(safePath)} | ${SITE_NAME}`,
     description: PATH_META['/'].description,
     canonicalPath: fullPath || safePath,
-    robots: INDEX_ROBOTS,
+    robots: NOINDEX_ROBOTS,
   };
 }
 

@@ -17,6 +17,26 @@ export const CATEGORY_GROUPS = {
   home_appliances: ['home_appliances'],
 };
 
+export const DEFAULT_BRAND_DIRECTORY = [
+  { name: 'Apple', fallback: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
+  { name: 'Samsung', fallback: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },
+  { name: 'Tecno', fallback: 'https://upload.wikimedia.org/wikipedia/commons/a/a8/TECNO_Mobile_Logo.svg' },
+  { name: 'Hisense', fallback: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Hisense_logo.svg' },
+  { name: 'TCL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/1/16/TCL_Logo.svg' },
+  { name: 'Oraimo', fallback: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },
+  { name: 'Sony', fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },
+  { name: 'JBL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' },
+  { name: 'Infinix', fallback: '' },
+  { name: 'Itel', fallback: '' },
+  { name: 'Xiaomi', fallback: '' },
+  { name: 'LG', fallback: '' },
+  { name: 'Midea', fallback: '' },
+  { name: 'Nasco', fallback: '' },
+  { name: 'Roch', fallback: '' },
+  { name: 'Hoffman', fallback: '' },
+  { name: 'Silver Crest', fallback: '' },
+];
+
 export function normalizeBrandKey(value = '') {
   return String(value)
     .trim()
@@ -33,6 +53,15 @@ export function slugifyBrand(value = '') {
     .replace(/&/g, ' and ')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+export function humanizeBrandKey(value = '') {
+  return String(value)
+    .trim()
+    .split(/[_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 function parseJsonSetting(settings = [], key, fallback) {
@@ -98,6 +127,11 @@ export function getBrandDirectory(settings = [], products = []) {
   const manualBrandNames = Array.isArray(legacyCustomBrands)
     ? legacyCustomBrands.map((brand) => String(brand).trim()).filter(Boolean)
     : [];
+  const defaultBrandNames = DEFAULT_BRAND_DIRECTORY.map((brand) => brand.name);
+  const logoSettingBrands = (Array.isArray(settings) ? settings : [])
+    .filter((setting) => setting?.key?.startsWith('brand_logo_') && String(setting?.value || '').trim())
+    .map((setting) => humanizeBrandKey(setting.key.replace('brand_logo_', '')))
+    .filter(Boolean);
 
   const seedEntries = [];
 
@@ -108,8 +142,16 @@ export function getBrandDirectory(settings = [], products = []) {
     });
   }
 
+  defaultBrandNames.forEach((brandName, index) => {
+    seedEntries.push(normalizeBrandEntry({ sourceName: brandName, displayName: brandName, sortOrder: 500 + index }));
+  });
+
   manualBrandNames.forEach((brandName, index) => {
     seedEntries.push(normalizeBrandEntry({ sourceName: brandName, displayName: brandName, sortOrder: 1000 + index }));
+  });
+
+  logoSettingBrands.forEach((brandName, index) => {
+    seedEntries.push(normalizeBrandEntry({ sourceName: brandName, displayName: brandName, sortOrder: 1500 + index }));
   });
 
   discoveredBrands.forEach((brandName, index) => {
@@ -147,6 +189,15 @@ export function getVisibleBrandDirectory(settings = [], products = []) {
 
 export function getBrandLogo(settings = [], brandKey = '') {
   return settings.find((setting) => setting.key === `brand_logo_${normalizeBrandKey(brandKey)}`)?.value || '';
+}
+
+export function getBrandFallbackLogo(brandValue = '') {
+  const target = normalizeBrandKey(brandValue);
+  return DEFAULT_BRAND_DIRECTORY.find((entry) => normalizeBrandKey(entry.name) === target)?.fallback || '';
+}
+
+export function getBrandLogoSrc(settings = [], brandValue = '') {
+  return getBrandLogo(settings, brandValue) || getBrandFallbackLogo(brandValue) || '';
 }
 
 export function getBrandProductCount(products = [], entry) {

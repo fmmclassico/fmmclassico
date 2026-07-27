@@ -218,7 +218,7 @@ export default function BrandProducts() {
             <ShoppingBag className="h-10 w-10 mx-auto text-gray-300 mb-3" />
             <p className="text-gray-600 font-medium">No {brandLabel} products found</p>
             <p className="text-sm text-gray-400 mt-1">This brand is listed, but it does not have any visible in-stock products yet.</p>
-            <Link to={createPageUrl('AllBrands')} className="inline-flex mt-4 text-sm font-semibold text-[#0A2E60]">Back to all brands</Link>
+            <Link to={createPageUrl('brands')} className="inline-flex mt-4 text-sm font-semibold text-[#0A2E60]">Back to all brands</Link>
           </div>
         )}
       </div>

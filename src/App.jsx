@@ -1,4 +1,7 @@
 import Invoices from './pages/Invoices';
+import AllBrands from './pages/AllBrands';
+import About from './pages/About';
+import Categories from './pages/Categories';
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
@@ -11,7 +14,8 @@ import {
   Route,
   Routes,
   Navigate,
-  useLocation
+  useLocation,
+  useSearchParams
 } from 'react-router-dom';
 
 import PageNotFound from './lib/PageNotFound';
@@ -40,6 +44,7 @@ import AdminInvoice from './pages/AdminInvoice';
 import MobileAppGuide from './pages/MobileAppGuide';
 import DownloadApp from './pages/DownloadApp';
 import Policies from './pages/Policies';
+import Shop from './pages/Shop';
 
 import GuestLayout from '@/components/layouts/GuestLayout';
 import GuestHome from './pages/GuestHome';
@@ -93,6 +98,13 @@ const LayoutWrapper = ({ children, currentPageName, isAuthenticated }) => {
   ) : (
     <>{children}</>
   );
+};
+
+const SearchRedirect = () => {
+  const [searchParams] = useSearchParams();
+  const query = searchParams.get('q') || searchParams.get('search') || '';
+  const target = query ? `/shop?search=${encodeURIComponent(query)}` : '/shop';
+  return <Navigate to={target} replace />;
 };
 
 const ProtectedLayout = ({ children, currentPageName, isAuthenticated, isLoggingOut, navigateToLogin }) => {
@@ -188,6 +200,39 @@ const AuthenticatedApp = () => {
       />
 
       <Route path="/MobileAppGuide" element={<MobileAppGuide />} />
+      <Route
+        path="/about"
+        element={
+          <LayoutWrapper currentPageName="About" isAuthenticated={isAuthenticated}>
+            <About />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/categories"
+        element={
+          <LayoutWrapper currentPageName="Categories" isAuthenticated={isAuthenticated}>
+            <Categories />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/brands"
+        element={
+          <LayoutWrapper currentPageName="AllBrands" isAuthenticated={isAuthenticated}>
+            <AllBrands />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/shop"
+        element={
+          <LayoutWrapper currentPageName="Shop" isAuthenticated={isAuthenticated}>
+            <Shop />
+          </LayoutWrapper>
+        }
+      />
+      <Route path="/search" element={<SearchRedirect />} />
       <Route path="/DownloadApp" element={<DownloadApp />} />
       <Route path="/Policies" element={<Policies />} />
       <Route

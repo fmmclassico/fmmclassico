@@ -8,6 +8,7 @@ import { ChevronRight, Home as HomeIcon, Smartphone, Headphones, Tv, Gem } from 
 import { toast } from 'sonner';
 import guestCart from '@/lib/guest-cart';
 import HeroBanner from '../components/home/HeroBanner';
+import { getVisibleBrandDirectory, getBrandLogoSrc, getSectionLimit } from '@/lib/brandDirectory';
 
 var CATEGORY_BRANDS = {
   phones: [
@@ -93,6 +94,15 @@ export default function GuestHome() {
   });
 
   var visibleProducts = products.filter(function(p) { return p.is_visible !== false && !(p.stock != null && p.stock === 0); });
+  var homepageBrandLimit = getSectionLimit(settings, 'brand_rail', 8);
+  var homepageBrands = getVisibleBrandDirectory(settings, products)
+    .slice(0, homepageBrandLimit)
+    .map(function(entry) {
+      return {
+        ...entry,
+        logoSrc: getBrandLogoSrc(settings, entry.sourceName),
+      };
+    });
   var flashItems = visibleProducts.filter(function(p) { return p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()); });
   var donkomiDeals = visibleProducts.filter(function(p) { return p.donkomi; });
   var newArrivals = visibleProducts.filter(function(p) { return p.new_arrival; });
@@ -221,10 +231,8 @@ export default function GuestHome() {
       {showBrandSection && (
         <div className="mt-3 mx-2 md:mx-4"><div className="bg-white rounded-2xl shadow-sm overflow-hidden"><div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100"><h2 className="font-black text-gray-900 text-sm">Shop by Brand</h2><Link to="/brands" className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link></div>
           <div className="fmm-stable-rail overflow-x-auto flex gap-4 p-4">
-            {[{ name: 'Apple', fallback: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },{ name: 'Samsung', fallback: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg' },{ name: 'Tecno', fallback: 'https://upload.wikimedia.org/wikipedia/commons/a/a8/TECNO_Mobile_Logo.svg' },{ name: 'Hisense', fallback: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Hisense_logo.svg' },{ name: 'TCL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/1/16/TCL_Logo.svg' },{ name: 'Oraimo', fallback: 'https://play-lh.googleusercontent.com/3f4sJfJMJc5Y8mWj4LYl_aSiZ0sGOnJ9iuSqlMzNFJELBPJqBDYQfuCpkJn3RNHanA=s180' },{ name: 'Sony', fallback: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg' },{ name: 'JBL', fallback: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/JBL_logo.svg' }].map(function(brand) {
-              var uploadedLogo = settings.find(function(s) { return s.key === 'brand_logo_' + brand.name.toLowerCase().replace(/ /g,'_'); })?.value;
-              var logoSrc = uploadedLogo || brand.fallback;
-              return <Link key={brand.name} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.name))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16"><div className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2">{logoSrc ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={function(e) { e.target.style.display='none'; }} /> : <span className="text-lg font-bold text-gray-400">{brand.name[0]}</span>}</div><span className="text-[10px] font-semibold text-gray-700 text-center">{brand.name}</span></Link>;
+            {homepageBrands.length === 0 ? <p className="text-xs text-gray-400">No brands are configured yet.</p> : homepageBrands.map(function(brand) {
+              return <Link key={brand.key} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.sourceName))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-20"><div className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2 overflow-hidden">{brand.logoSrc ? <img src={brand.logoSrc} alt={brand.displayName} className="max-w-full max-h-full object-contain" onError={function(event) { event.currentTarget.style.display='none'; var fallback = event.currentTarget.parentElement?.querySelector('[data-brand-fallback]'); if (fallback) fallback.classList.remove('hidden'); }} /> : null}<span data-brand-fallback className={'text-lg font-bold text-gray-400 ' + (brand.logoSrc ? 'hidden' : '')}>{brand.displayName[0]}</span></div><span className="text-[10px] font-semibold text-gray-700 text-center leading-tight">{brand.displayName}</span></Link>;
             })}
           </div>
         </div></div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { appClient } from '@/api/appClient.js';
 import { useQuery } from '@tanstack/react-query';
@@ -7,6 +7,7 @@ import { ShoppingBag, Filter, X } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { getBrandLogoSrc, normalizeBrandKey, resolveBrandEntry } from '@/lib/brandDirectory';
 
 const CATEGORY_LABELS = {
   phones: 'Phones',
@@ -58,11 +59,16 @@ export default function BrandProducts() {
 
   const settings = Array.isArray(appSettings) ? appSettings : [];
   const safeProducts = Array.isArray(allProducts) ? allProducts : [];
+  const brandEntry = useMemo(() => resolveBrandEntry(settings, safeProducts, brand || ''), [settings, safeProducts, brand]);
+  const activeBrandName = brandEntry?.sourceName || brand || '';
+  const brandLabel = brandEntry?.displayName || brand || 'Brand';
+  const brandKey = normalizeBrandKey(activeBrandName);
+  const uploadedLogo = getBrandLogoSrc(settings, activeBrandName);
 
   let brandProducts = safeProducts.filter((product) => {
     if (product.is_visible === false) return false;
     if (product.stock != null && product.stock === 0) return false;
-    const matchBrand = product.brand?.toLowerCase() === brand?.toLowerCase();
+    const matchBrand = normalizeBrandKey(product.brand) === brandKey;
     if (!matchBrand) return false;
 
     if (categoryFilter) {
@@ -78,11 +84,9 @@ export default function BrandProducts() {
 
   const availableCategories = [...new Set(
     safeProducts
-      .filter((product) => product.brand?.toLowerCase() === brand?.toLowerCase() && product.is_visible !== false)
+      .filter((product) => normalizeBrandKey(product.brand) === brandKey && product.is_visible !== false)
       .map((product) => product.category)
   )].filter(Boolean);
-
-  const uploadedLogo = settings.find((s) => s.key === `brand_logo_${brand?.toLowerCase().replace(/ /g, '_')}`)?.value;
 
   const clearFilters = () => {
     setCategoryFilter('');
@@ -102,13 +106,26 @@ export default function BrandProducts() {
     <div className="min-h-screen bg-gray-50 pb-24">
       <div className="max-w-5xl mx-auto px-4 pt-6">
         <div className="flex items-center gap-4 mb-5">
-          {uploadedLogo && (
-            <div className="w-14 h-14 rounded-xl bg-white border flex items-center justify-center p-2">
-              <img src={uploadedLogo} alt={brand} className="w-10 h-10 object-contain" />
-            </div>
-          )}
+          <div className="w-14 h-14 rounded-2xl bg-white border flex items-center justify-center p-2 overflow-hidden">
+            {uploadedLogo ? (
+              <img
+                src={uploadedLogo}
+                alt={brandLabel}
+                className="w-10 h-10 object-contain"
+                onError={(event) => {
+                  event.currentTarget.style.display = 'none';
+                  const fallback = event.currentTarget.parentElement?.querySelector('[data-brand-fallback]');
+                  if (fallback) fallback.classList.remove('hidden');
+                }}
+              />
+            ) : null}
+            <span data-brand-fallback className={`text-lg font-bold text-gray-400 ${uploadedLogo ? 'hidden' : ''}`}>
+              {brandLabel.charAt(0)}
+            </span>
+          </div>
+
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-gray-900">{brand}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{brandLabel}</h1>
             <p className="text-xs text-gray-500">{brandProducts.length} product{brandProducts.length !== 1 ? 's' : ''} available</p>
           </div>
 
@@ -168,48 +185,40 @@ export default function BrandProducts() {
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {Array(8).fill(0).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl overflow-hidden border">
-                <Skeleton className="h-36 w-full" />
-                <div className="p-3"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2 mt-2" /></div>
+              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-3">
+                <Skeleton className="w-full aspect-square rounded-xl mb-3" />
+                <Skeleton className="h-4 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/3" />
               </div>
             ))}
           </div>
         ) : brandProducts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {brandProducts.map((product) => (
-              <Link
-                key={product.id}
-                to={createPageUrl(`ProductDetail?id=${product.id}`)}
-                className="bg-white rounded-xl overflow-hidden border hover:shadow-md transition-shadow group"
-              >
-                <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+              <Link key={product.id} to={createPageUrl(`ProductDetail?id=${product.id}`)} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <div className="aspect-square bg-gray-100">
                   {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
                   ) : (
-                    <ShoppingBag className="h-8 w-8 text-gray-300" />
+                    <div className="w-full h-full bg-gray-100" />
                   )}
                 </div>
                 <div className="p-3">
-                  <p className="text-xs font-medium text-gray-800 line-clamp-2">{product.name}</p>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className="text-sm font-bold text-[#0A2E60]">₵{product.price?.toLocaleString()}</span>
-                    {product.original_price > product.price && (
-                      <span className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</span>
-                    )}
-                  </div>
+                  <p className="text-sm font-medium text-gray-800 line-clamp-2 min-h-[2.5rem]">{product.name}</p>
+                  <p className="text-sm font-extrabold text-gray-900 mt-2">₵{product.price?.toLocaleString()}</p>
                   {product.original_price > product.price && (
-                    <span className="text-[10px] text-red-500 font-medium">-{Math.round((1 - product.price / product.original_price) * 100)}% off</span>
+                    <p className="text-xs text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>
                   )}
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 font-medium">No {brand} products found</p>
-            <p className="text-sm text-gray-400 mt-1">Try adjusting the filters</p>
-            <button onClick={clearFilters} className="mt-3 text-sm text-[#0A2E60] font-medium">Clear filter</button>
+          <div className="bg-white border border-dashed border-gray-200 rounded-2xl p-10 text-center">
+            <ShoppingBag className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+            <p className="text-gray-600 font-medium">No {brandLabel} products found</p>
+            <p className="text-sm text-gray-400 mt-1">This brand is listed, but it does not have any visible in-stock products yet.</p>
+            <Link to={createPageUrl('AllBrands')} className="inline-flex mt-4 text-sm font-semibold text-[#0A2E60]">Back to all brands</Link>
           </div>
         )}
       </div>

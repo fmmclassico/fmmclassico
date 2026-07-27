@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import HeaderSearchBar from '@/components/search/HeaderSearchBar';
 import { createPageUrl } from '@/lib/utils';
 import { 
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/lib/AuthContext';
 import guestCart from '@/lib/guest-cart';
+import { applySeoMetadata, buildSeoMetadata } from '@/lib/seo';
 
 export default function GuestLayout({ children, currentPageName }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,6 +25,7 @@ export default function GuestLayout({ children, currentPageName }) {
   const helpRef = useRef(null);
   const accountRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { } = useAuth();
 
   useEffect(() => {
@@ -81,20 +83,8 @@ export default function GuestLayout({ children, currentPageName }) {
   const ASH_HOVER = '#2578ae';
 
   useEffect(() => {
-    document.title = 'FMM CLASSICO';
-    const setMeta = (attr, key, content) => {
-      let el = document.querySelector(`meta[${attr}="${key}"]`);
-      if (!el) { el = document.createElement('meta'); el.setAttribute(attr, key); document.head.appendChild(el); }
-      el.setAttribute('content', content);
-    };
-    setMeta('name', 'description', 'FMM CLASSICO – Your trusted online store for premium phone accessories, electronic appliances and home appliances in Ghana. Shop chargers, earphones, phone cases, smart watches and more. Fast delivery to Tarkwa (UMAT Campus), Accra (Ashongman Estate) and across Ghana.');
-    setMeta('name', 'keywords', 'FMM CLASSICO, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronic appliances Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Ashongman Estate, online shopping Ghana');
-    setMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
-    setMeta('property', 'og:title', 'FMM CLASSICO');
-    setMeta('property', 'og:description', 'FMM CLASSICO – Your trusted online store for premium phone accessories, electronic appliances and home appliances in Ghana. Shop chargers, earphones, phone cases, smart watches and more. Fast delivery to Tarkwa (UMAT Campus), Accra (Ashongman Estate) and across Ghana.');
-    setMeta('name', 'twitter:title', 'FMM CLASSICO');
-    setMeta('name', 'twitter:description', 'FMM CLASSICO – Your trusted online store for premium phone accessories, electronic appliances and home appliances in Ghana. Shop chargers, earphones, phone cases, smart watches and more. Fast delivery to Tarkwa (UMAT Campus), Accra (Ashongman Estate) and across Ghana.');
-  }, []);
+    applySeoMetadata(buildSeoMetadata(location.pathname, location.search));
+  }, [location.pathname, location.search]);
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full" style={{maxWidth:'100vw', boxSizing:'border-box'}}>

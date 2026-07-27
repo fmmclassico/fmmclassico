@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { supabaseNotifications } from '@/lib/supabaseNotifications';
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { appClient } from '@/api/appClient.js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import HeaderSearchBar from '@/components/search/HeaderSearchBar';
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/lib/AuthContext';
+import { applySeoMetadata, buildSeoMetadata } from '@/lib/seo';
 import {
   Sheet,
   SheetContent,
@@ -51,6 +52,7 @@ export default function Layout({ children, currentPageName }) {
   const helpRef = useRef(null);
   const accountRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -147,40 +149,8 @@ export default function Layout({ children, currentPageName }) {
   ];
 
   useEffect(() => {
-    const merchantPhone = '+233208207543';
-    const merchantEmail = 'fmmclassico@gmail.com';
-    const merchantWhatsapp = 'https://wa.me/233208207543';
-
-    document.title = 'FMM CLASSICO';
-
-    const setMeta = (attr, key, content) => {
-      let el = document.querySelector(`meta[${attr}="${key}"]`);
-      if (!el) { el = document.createElement('meta'); el.setAttribute(attr, key); document.head.appendChild(el); }
-      el.setAttribute('content', content);
-    };
-
-    const siteDescription = 'FMM CLASSICO – Your trusted online store for phones & accessories, home appliances, and electronics in Ghana.';
-
-    setMeta('name', 'description', siteDescription);
-    setMeta('name', 'keywords', 'FMM Classico, phones & Accessories Ghana, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronics Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Kumasi phone shop, Ashongman Estate, Airport Residential Area, online shopping Ghana, wholesale electronics Ghana');
-    setMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
-    setMeta('name', 'googlebot', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
-    setMeta('name', 'author', 'FMM CLASSICO');
-    setMeta('name', 'application-name', 'FMM CLASSICO');
-    setMeta('name', 'apple-mobile-web-app-title', 'FMM CLASSICO');
-    setMeta('property', 'og:type', 'website');
-    setMeta('property', 'og:site_name', 'FMM CLASSICO');
-    setMeta('property', 'og:title', 'FMM CLASSICO');
-    setMeta('property', 'og:description', siteDescription);
-    setMeta('property', 'og:url', window.location.origin);
-    setMeta('name', 'twitter:card', 'summary_large_image');
-    setMeta('name', 'twitter:title', 'FMM CLASSICO');
-    setMeta('name', 'twitter:description', siteDescription);
-
-    let canonical = document.querySelector('link[rel="canonical"]');
-    if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical); }
-    canonical.href = window.location.origin;
-  }, []);
+    applySeoMetadata(buildSeoMetadata(location.pathname, location.search));
+  }, [location.pathname, location.search]);
 
   return <div />;
 }

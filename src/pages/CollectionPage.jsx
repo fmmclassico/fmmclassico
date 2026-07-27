@@ -7,6 +7,7 @@ import { CATEGORY_LABELS, resolveCollectionFromSlug, getVisibleProducts, getAvai
 import ProductCard from '@/components/products/ProductCard';
 import PageNotFound from '@/lib/PageNotFound';
 import { Button } from '@/components/ui/button';
+import AllBrands from './AllBrands';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Filter, ChevronRight, X } from 'lucide-react';
@@ -126,27 +127,7 @@ export default function CollectionPage() {
   }
 
   if (collection.type === 'brands_index') {
-    return (
-      <div className="container mx-auto px-4 py-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-            <Link to={createPageUrl('Home')} className="hover:text-[#0A2E60]">Home</Link>
-            <ChevronRight className="h-3 w-3" />
-            <span>Brands</span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Brands</h1>
-          <p className="text-gray-500">Browse all available brands.</p>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {collection.brands.map((brand) => (
-            <Link key={brand} to={`/${brand.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`} className="bg-white border rounded-xl px-4 py-5 text-center font-semibold text-gray-800 hover:shadow-md transition-shadow">
-              {brand}
-            </Link>
-          ))}
-        </div>
-      </div>
-    );
+    return <AllBrands />;
   }
 
   return (

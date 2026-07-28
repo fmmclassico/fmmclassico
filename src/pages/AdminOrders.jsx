@@ -29,6 +29,7 @@ function getBalanceDue(order) { return toNumber(order?.balance_due ?? order?.bal
 function isTwoStageOrder(order) { return ['deposit_balance', 'pay_on_delivery'].includes(order?.payment_method || ''); }
 function isRemainingBalancePaid(order) { return order?.remaining_balance_paid === true || order?.balance_payment_status === 'paid'; }
 function formatVariantSummary(item) { if (item?.variant_summary) return item.variant_summary; const parts = []; if (item?.selected_color) parts.push(`Color: ${item.selected_color}`); if (item?.selected_wattage) parts.push(`Wattage: ${item.selected_wattage}`); if (item?.selected_type) parts.push(`Type: ${item.selected_type}`); return parts.join(' • '); }
+function isVisibleOrder(order) { return order?.initial_payment_status === 'paid' || order?.payment_status === 'paid' || order?.payment_stage === 'fully_paid'; }
 function getPaymentMethodLabel(method) { if (method === 'full_payment') return { text: 'Full Payment', color: 'bg-green-100 text-green-700' }; if (method === 'deposit_balance') return { text: 'Deposit + Balance', color: 'bg-orange-100 text-orange-700' }; if (method === 'pay_on_delivery') return { text: 'Delivery First', color: 'bg-red-100 text-red-700' }; return { text: 'Full Payment', color: 'bg-green-100 text-green-700' }; }
 function getNextStatus(order) { if (order.status === 'confirmed') return { newStatus: 'processing', label: 'Mark Processing', message: 'Order is being processed.' }; if (order.status === 'processing') return { newStatus: 'packed', label: 'Mark Packed', message: 'Order packed.' }; if (order.status === 'packed') return { newStatus: 'shipped', label: isTwoStageOrder(order) ? 'Mark Shipped & Enable Balance Payment' : 'Mark Shipped', message: isTwoStageOrder(order) ? 'Order shipped. Customer can now pay the remaining balance through the Order page.' : 'Order shipped.' }; if (order.status === 'shipped' && !isTwoStageOrder(order)) return { newStatus: 'delivered', label: 'Product Successfully Delivered', message: 'Order delivered successfully.' }; if (order.status === 'shipped' && isTwoStageOrder(order) && isRemainingBalancePaid(order)) return { newStatus: 'delivered', label: 'Product Successfully Delivered', message: 'Full payment has been confirmed and product delivered successfully.' }; return null; }
 
@@ -50,8 +51,9 @@ export default function AdminOrders() {
 
   useEffect(() => { appClient.auth.isAuthenticated().then((isAuth) => { if (isAuth) { appClient.auth.me().then((userData) => { setUser(userData); setIsAdmin(userData.role === 'admin'); }); } }); }, []);
   const { data: orders = [], isLoading } = useQuery({ queryKey: ['adminOrders'], queryFn: () => appClient.entities.Order.list('-created_date', 100), enabled: isAdmin, refetchInterval: 30000 });
-  const activeOrders = orders.filter((order) => !['delivered', 'cancelled', 'returned'].includes(order.status));
-  const fulfilledOrders = orders.filter((order) => ['delivered', 'cancelled', 'returned'].includes(order.status));
+  const visibleOrders = orders.filter(isVisibleOrder);
+  const activeOrders = visibleOrders.filter((order) => !['delivered', 'cancelled', 'returned'].includes(order.status));
+  const fulfilledOrders = visibleOrders.filter((order) => ['delivered', 'cancelled', 'returned'].includes(order.status));
 
   const sendAdminMessageMutation = useMutation({ mutationFn: async ({ order, message }) => { await sendOrderSignals(order, { title: 'Message from FMM CLASSICO', message, emailSubject: `Message - Order #${order.order_number}`, smsMessage: message, type: 'general' }); }, onSuccess: (_, variables) => { setAdminMessages((prev) => ({ ...prev, [variables.order.id]: '' })); toast.success('Message sent!'); } });
 

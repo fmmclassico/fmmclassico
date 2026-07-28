@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { appClient } from '@/api/appClient.js';
-import { createInitialPaymentReference, createBalancePaymentReference, initiatePayment, verifyPaymentWithRetries, getBaseOrderReference } from '@/api/hubtelClient';
+import { createInitialPaymentReference, createBalancePaymentReference, initiatePayment } from '@/api/hubtelClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -29,7 +29,6 @@ const REGION_AREAS = {
 };
 
 const HUBTEL_CALLBACK_URL = 'https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback';
-const HUBTEL_RETURN_WAIT_MS = 5000;
 
 function toNumber(value, fallback = 0) {
   const numeric = Number(value);
@@ -59,158 +58,15 @@ function inferRegionGroup(region) {
   return null;
 }
 
-function getAdminEmails() {
-  return [...new Set([
-    ...(import.meta.env.VITE_ADMIN_EMAILS || '').split(','),
-    ...(import.meta.env.VITE_ALLOWED_ADMIN_EMAILS || '').split(','),
-    import.meta.env.VITE_MASTER_ADMIN_EMAIL || '',
-  ].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean))];
-}
-
-function getAdminSmsTargets() {
-  return [...new Set((import.meta.env.VITE_ADMIN_PHONE_NUMBERS || '')
-    .split(',')
-    .map((value) => String(value || '').trim())
-    .filter(Boolean))];
-}
-
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function isInitialPaymentConfirmed(order) {
-  return order?.initial_payment_status === 'paid' || order?.payment_status === 'paid';
-}
-
-async function clearLoggedInCart(userEmail, queryClient) {
-  const cartRows = ensureArray(await appClient.entities.CartItem.filter({ user_email: userEmail }));
-  await Promise.allSettled(cartRows.map((item) => appClient.entities.CartItem.delete(item.id)));
-  queryClient.invalidateQueries({ queryKey: ['cartItems', userEmail] });
-}
-
-async function createNotificationSafe(payload) {
-  try {
-    await appClient.entities.Notification.create(payload);
-  } catch (error) {
-    console.warn('Notification create failed:', error);
-  }
-}
-
-async function sendEmailSafe(payload) {
-  try {
-    await appClient.integrations.Core.SendEmail(payload);
-  } catch (error) {
-    console.warn('Email send failed:', error);
-  }
-}
-
-async function sendSmsSafe(payload) {
-  try {
-    await appClient.integrations.Core.SendSMS(payload);
-  } catch (error) {
-    console.warn('SMS send failed:', error);
-  }
-}
-
-async function sendInitialPaymentSignals(order, outcome) {
-  const adminEmails = getAdminEmails();
-  const adminPhones = getAdminSmsTargets();
-  const amountPaidNow = toNumber(order?.initial_payment_amount ?? order?.amount_paid_now);
-  const isTwoStage = ['deposit_balance', 'pay_on_delivery'].includes(order?.payment_method || '');
-
-  if (outcome === 'paid') {
-    const customerTitle = isTwoStage ? 'Initial Payment Confirmed' : 'Payment Confirmed';
-    const customerMessage = isTwoStage
-      ? `Initial payment for order #${order.order_number} has been confirmed. Your order is now visible in your Order page.`
-      : `Payment for order #${order.order_number} has been confirmed successfully.`;
-
-    await Promise.allSettled([
-      createNotificationSafe({
-        user_email: order.customer_email,
-        title: customerTitle,
-        message: customerMessage,
-        type: 'payment_confirmed',
-        order_id: order.id,
-        order_number: order.order_number,
-        is_read: false,
-      }),
-      order.customer_email ? sendEmailSafe({
-        to: order.customer_email,
-        from_name: 'FMM CLASSICO',
-        subject: customerTitle,
-        body: `Hi ${order.customer_name},\n\n${customerMessage}\n\nFMM CLASSICO`,
-      }) : Promise.resolve(),
-      order.customer_phone ? sendSmsSafe({
-        to: order.customer_phone,
-        message: isTwoStage
-          ? `Order ${order.order_number}: initial payment confirmed. You can track it from your Orders page.`
-          : `Order ${order.order_number}: payment confirmed successfully.`,
-      }) : Promise.resolve(),
-    ]);
-
-    await Promise.allSettled(adminEmails.map((email) => Promise.allSettled([
-      createNotificationSafe({
-        user_email: email,
-        title: 'Payment Received',
-        message: `Order #${order.order_number} by ${order.customer_name} has a verified successful Hubtel payment of GHS ${amountPaidNow.toFixed(2)}.`,
-        type: 'payment_confirmed',
-        order_id: order.id,
-        order_number: order.order_number,
-        is_read: false,
-      }),
-      sendEmailSafe({
-        to: email,
-        from_name: 'FMM CLASSICO',
-        subject: `Payment Received - #${order.order_number}`,
-        body: `Order #${order.order_number} has a verified successful Hubtel payment.\n\nCustomer: ${order.customer_name}\nAmount now paid: GHS ${amountPaidNow.toFixed(2)}\nPayment method: ${order.payment_method}`,
-      }),
-    ]))));
-
-    await Promise.allSettled(adminPhones.map((phone) => sendSmsSafe({
-      to: phone,
-      message: `FMM CLASSICO: verified payment received for order ${order.order_number}. Amount paid now: GHS ${amountPaidNow.toFixed(2)}.`,
-    })));
-
-    return;
-  }
-
-  const failedTitle = outcome === 'cancelled' ? 'Payment Cancelled' : 'Payment Failed';
-  const failedMessage = `Your payment for order #${order.order_number} was not completed, so the order was not placed. Your cart is still available for checkout.`;
-
-  await Promise.allSettled([
-    createNotificationSafe({
-      user_email: order.customer_email,
-      title: failedTitle,
-      message: failedMessage,
-      type: 'general',
-      order_id: order.id,
-      order_number: order.order_number,
-      is_read: false,
-    }),
-    order.customer_email ? sendEmailSafe({
-      to: order.customer_email,
-      from_name: 'FMM CLASSICO',
-      subject: failedTitle,
-      body: `Hi ${order.customer_name},\n\n${failedMessage}\n\nFMM CLASSICO`,
-    }) : Promise.resolve(),
-    order.customer_phone ? sendSmsSafe({
-      to: order.customer_phone,
-      message: `Order ${order.order_number}: payment was not completed. Your cart is still available.`,
-    }) : Promise.resolve(),
-  ]);
-}
-
 export default function Checkout() {
   const [user, setUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isReturnVerifying, setIsReturnVerifying] = useState(false);
   const [orderError, setOrderError] = useState('');
   const [locationError, setLocationError] = useState('');
   const [depositWarningAccepted, setDepositWarningAccepted] = useState(false);
   const [podWarningAccepted, setPodWarningAccepted] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
 
   const [selectedZoneId, setSelectedZoneId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -241,7 +97,8 @@ export default function Checkout() {
     staleTime: 30000,
   });
 
-  const subtotal = useMemo(() => ensureArray(cartItems).reduce((sum, item) => sum + (toNumber(item.product_price) * toNumber(item.quantity, 1)), 0), [cartItems]);
+  const safeCartItems = ensureArray(cartItems);
+  const subtotal = useMemo(() => safeCartItems.reduce((sum, item) => sum + (toNumber(item.product_price) * toNumber(item.quantity, 1)), 0), [safeCartItems]);
   const selectedZone = DELIVERY_ZONES.find((zone) => zone.id === selectedZoneId);
   const deliveryFee = selectedZone ? selectedZone.fee : 0;
   const isTwoStageZoneEligible = TWO_STAGE_ZONE_IDS.includes(selectedZoneId);
@@ -295,133 +152,6 @@ export default function Checkout() {
     return { displaySubtotal: 0, deliveryFee, grandTotal: subtotal + deliveryFee, totalToPayNow: deliveryFee, balanceDue: subtotal };
   }, [paymentMethod, subtotal, deliveryFee, selectedZoneId]);
 
-  const returnReference = searchParams.get('hubtelRef') || searchParams.get('order') || '';
-  const returnStatusHint = (searchParams.get('status') || '').toLowerCase();
-  const returnPaymentStage = searchParams.get('paymentStage') || '';
-  const returnOrderId = searchParams.get('orderId') || '';
-
-  useEffect(() => {
-    if (!user?.email || !returnReference || returnPaymentStage !== 'initial') return;
-
-    let cancelled = false;
-
-    const verifyInitialPayment = async () => {
-      setIsReturnVerifying(true);
-      setOrderError('');
-
-      try {
-        await wait(HUBTEL_RETURN_WAIT_MS);
-        const verification = await verifyPaymentWithRetries(returnReference, 5, 1000);
-        const normalizedOutcome = verification.verified
-          ? verification.status
-          : returnStatusHint === 'cancelled' || returnStatusHint === 'canceled'
-            ? 'cancelled'
-            : returnStatusHint === 'failed'
-              ? 'failed'
-              : 'unknown';
-
-        const orderList = ensureArray(await appClient.entities.Order.filter({ customer_email: user.email }, '-created_date', 200));
-        const currentOrder = orderList.find((item) => item.id === returnOrderId || item.order_number === getBaseOrderReference(returnReference));
-
-        if (!currentOrder) {
-          setOrderError('We could not find the payment session to finish verification. Your cart was kept intact.');
-          toast.error('Verification could not locate the payment session.');
-          return;
-        }
-
-        const effectiveOutcome = isInitialPaymentConfirmed(currentOrder)
-          ? 'paid'
-          : ['failed', 'cancelled'].includes(currentOrder.initial_payment_status || '')
-            ? currentOrder.initial_payment_status
-            : normalizedOutcome;
-
-        if (effectiveOutcome === 'paid') {
-          let finalOrder = currentOrder;
-
-          if (!isInitialPaymentConfirmed(currentOrder)) {
-            const now = new Date().toISOString();
-            const paidPayload = {
-              payment_status: 'paid',
-              initial_payment_status: 'paid',
-              payment_stage: ['deposit_balance', 'pay_on_delivery'].includes(currentOrder.payment_method || '') ? 'initial_payment_paid' : 'fully_paid',
-              is_fully_paid: !['deposit_balance', 'pay_on_delivery'].includes(currentOrder.payment_method || ''),
-              balance_payment_status: ['deposit_balance', 'pay_on_delivery'].includes(currentOrder.payment_method || '')
-                ? (currentOrder.balance_payment_status || 'pending')
-                : 'not_required',
-              remaining_balance_paid: !['deposit_balance', 'pay_on_delivery'].includes(currentOrder.payment_method || ''),
-              remaining_balance_paid_at: !['deposit_balance', 'pay_on_delivery'].includes(currentOrder.payment_method || '') ? now : currentOrder.remaining_balance_paid_at,
-              status: 'confirmed',
-              hubtel_status: 'successful',
-              tracking_updates: (currentOrder.tracking_updates || []).concat([{
-                status: 'Initial Payment Confirmed',
-                message: `Verified successful Hubtel payment for order #${currentOrder.order_number}.`,
-                timestamp: now,
-              }]),
-            };
-
-            try {
-              await appClient.entities.Order.update(currentOrder.id, paidPayload);
-              finalOrder = { ...currentOrder, ...paidPayload };
-              await sendInitialPaymentSignals(finalOrder, 'paid');
-            } catch (updateError) {
-              console.warn('Client-side paid finalization fell back to callback-only handling:', updateError);
-            }
-          }
-
-          await clearLoggedInCart(user.email, queryClient);
-          if (!cancelled) {
-            toast.success('Payment confirmed. Redirecting to your order page...');
-            navigate(createPageUrl('Orders'), { replace: true });
-          }
-          return;
-        }
-
-        if (effectiveOutcome === 'failed' || effectiveOutcome === 'cancelled') {
-          if (!['failed', 'cancelled'].includes(currentOrder.initial_payment_status || '')) {
-            const now = new Date().toISOString();
-            const failedPayload = {
-              payment_status: effectiveOutcome === 'cancelled' ? 'cancelled' : 'failed',
-              initial_payment_status: effectiveOutcome === 'cancelled' ? 'cancelled' : 'failed',
-              hubtel_status: 'failed',
-              tracking_updates: (currentOrder.tracking_updates || []).concat([{
-                status: effectiveOutcome === 'cancelled' ? 'Initial Payment Cancelled' : 'Initial Payment Failed',
-                message: 'Hubtel payment was not completed successfully. The order remains hidden and the cart stays available.',
-                timestamp: now,
-              }]),
-            };
-            try {
-              await appClient.entities.Order.update(currentOrder.id, failedPayload);
-              await sendInitialPaymentSignals({ ...currentOrder, ...failedPayload }, effectiveOutcome);
-            } catch (updateError) {
-              console.warn('Client-side failed finalization fell back to callback-only handling:', updateError);
-            }
-          }
-
-          if (!cancelled) {
-            toast.error('Payment was not completed. Your cart is still available.');
-            navigate(createPageUrl('Checkout'), { replace: true });
-          }
-          return;
-        }
-
-        setOrderError('Payment verification is still pending. Your cart has been kept intact.');
-        toast.error('We could not confirm payment yet. Please try again shortly.');
-      } catch (error) {
-        console.error('Initial payment verification error:', error);
-        setOrderError('We could not verify your payment right now. Your cart has been kept intact.');
-        toast.error('Payment verification failed. Your cart was not cleared.');
-      } finally {
-        if (!cancelled) setIsReturnVerifying(false);
-      }
-    };
-
-    verifyInitialPayment();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.email, returnReference, returnPaymentStage, returnStatusHint, returnOrderId, navigate, queryClient]);
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -460,7 +190,6 @@ export default function Checkout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (isSubmitting) return;
     if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !formData.delivery_landmark || !formData.region || !formData.city) {
       return toast.error('Please fill in all required delivery fields, including landmark.');
@@ -487,7 +216,7 @@ export default function Checkout() {
           ? 'Deposit Now, Balance on Delivery'
           : 'Delivery Fee Now, Balance on Delivery';
 
-      const orderItems = ensureArray(cartItems).map((item) => ({
+      const orderItems = safeCartItems.map((item) => ({
         product_id: item.product_id,
         product_name: item.product_name,
         product_image: item.product_image,
@@ -546,8 +275,8 @@ export default function Checkout() {
 
       queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
 
-      const returnUrl = `${window.location.origin}${createPageUrl('Checkout')}?hubtelRef=${encodeURIComponent(initialPaymentReference)}&paymentStage=initial&orderId=${createdOrder.id}`;
-      const cancellationUrl = `${window.location.origin}${createPageUrl('Checkout')}?hubtelRef=${encodeURIComponent(initialPaymentReference)}&paymentStage=initial&status=cancelled&orderId=${createdOrder.id}`;
+      const returnUrl = `${window.location.origin}${createPageUrl('PaymentVerification')}?hubtelRef=${encodeURIComponent(initialPaymentReference)}&paymentStage=initial&orderId=${createdOrder.id}`;
+      const cancellationUrl = `${window.location.origin}${createPageUrl('PaymentVerification')}?hubtelRef=${encodeURIComponent(initialPaymentReference)}&paymentStage=initial&status=cancelled&orderId=${createdOrder.id}`;
       const payDescription = paymentMethod === 'deposit_balance'
         ? `Deposit and delivery for order ${orderNumber}`
         : paymentMethod === 'pay_on_delivery'
@@ -603,21 +332,7 @@ export default function Checkout() {
     );
   }
 
-  if (isReturnVerifying) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 p-6">
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
-          </div>
-          <h2 className="text-lg font-bold text-green-800 mb-2">Verifying Payment</h2>
-          <p className="text-sm text-green-600">Please wait while we confirm your payment with Hubtel. Your cart will only be cleared after a verified success.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (ensureArray(cartItems).length === 0) {
+  if (safeCartItems.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <p className="text-gray-500 mb-4">Your cart is empty</p>
@@ -634,9 +349,9 @@ export default function Checkout() {
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
 
         <Card className="p-4 mb-6 bg-white">
-          <h2 className="font-semibold text-gray-800 mb-3">Your Items ({ensureArray(cartItems).length})</h2>
+          <h2 className="font-semibold text-gray-800 mb-3">Your Items ({safeCartItems.length})</h2>
           <div className="space-y-2">
-            {ensureArray(cartItems).map((item) => {
+            {safeCartItems.map((item) => {
               const variantSummary = formatVariantSummary(item);
               return (
                 <div key={item.id} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
@@ -747,6 +462,7 @@ export default function Checkout() {
                   Deposit and Pay on Delivery are only available in Accra and Tarkwa. Please use the first option.
                 </p>
               )}
+
               {isTwoStageZoneEligible && !strictTwoStageLocationMatch && paymentMethod !== 'full_payment' && (
                 <p className="text-xs text-amber-700 mt-2 flex items-center gap-1">
                   <Info className="h-3 w-3" /> Deposit and Pay on Delivery are only available in Accra and Tarkwa. Please use the first option if your address does not qualify.
@@ -858,3 +574,4 @@ export default function Checkout() {
     </div>
   );
 }
+

@@ -184,7 +184,7 @@ export default function Orders() {
   };
 
   const handleToggleSelect = (id) => setSelectedOrders((prev) => prev.includes(id) ? prev.filter((value) => value !== id) : prev.concat([id]));
-  const handleSelectAll = () => setSelectedOrders((prev) => prev.length === orders.length ? [] : orders.map((order) => order.id));
+  const handleSelectAll = () => setSelectedOrders((prev) => prev.length === visibleOrders.length ? [] : visibleOrders.map((order) => order.id));
   const handleDeleteSelected = () => { if (selectedOrders.length === 0) return; if (confirm(`Delete ${selectedOrders.length} order(s)?`)) deleteOrdersMutation.mutate(selectedOrders); };
 
   if (!user) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
@@ -195,8 +195,8 @@ export default function Orders() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       <div className="max-w-2xl mx-auto px-4 pt-6">
-        <div className="flex items-center justify-between mb-4"><div><h1 className="text-xl font-bold text-gray-900">My Orders</h1><p className="text-xs text-gray-500">{visibleOrders.length} order{visibleOrders.length !== 1 ? 's' : ''}</p></div>{selectedOrders.length > 0 && <Button size="sm" variant="destructive" onClick={handleDeleteSelected}><Trash2 className="h-3 w-3 mr-1" /> Delete {selectedOrders.length}</Button>}</div>
-        {visibleOrders.length > 0 && <div className="flex items-center gap-2 mb-3"><input type="checkbox" checked={selectedOrders.length === visibleOrders.length && visibleOrders.length > 0} onChange={() => setSelectedOrders((prev) => prev.length === visibleOrders.length ? [] : visibleOrders.map((order) => order.id))} className="w-4 h-4 cursor-pointer" /><span className="text-xs text-gray-500">Select All</span></div>}
+        <div className="flex items-center justify-between mb-4"><div><h1 className="text-xl font-bold text-gray-900">My Orders</h1><p className="text-xs text-gray-500">{orders.length} order{orders.length !== 1 ? 's' : ''}</p></div>{selectedOrders.length > 0 && <Button size="sm" variant="destructive" onClick={handleDeleteSelected}><Trash2 className="h-3 w-3 mr-1" /> Delete {selectedOrders.length}</Button>}</div>
+        {orders.length > 0 && <div className="flex items-center gap-2 mb-3"><input type="checkbox" checked={selectedOrders.length === orders.length && orders.length > 0} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer" /><span className="text-xs text-gray-500">Select All</span></div>}
         <div className="space-y-4">
           {isLoading ? Array(3).fill(0).map((_, index) => <Skeleton key={index} className="h-56 rounded-xl" />) : visibleOrders.map((order) => {
             const isSelected = selectedOrders.includes(order.id);
@@ -224,3 +224,5 @@ export default function Orders() {
     </div>
   );
 }
+
+ 

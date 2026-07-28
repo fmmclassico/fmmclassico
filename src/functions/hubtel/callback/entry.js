@@ -3,14 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || process.env.VITE_ADMIN_EMAILS || process.env.VITE_ALLOWED_ADMIN_EMAILS || '')
-  .split(',')
-  .map((value) => value.trim().toLowerCase())
-  .filter(Boolean);
-const ADMIN_SMS_NUMBERS = (process.env.ADMIN_SMS_NUMBERS || process.env.VITE_ADMIN_PHONE_NUMBERS || '')
-  .split(',')
-  .map((value) => value.trim())
-  .filter(Boolean);
+const ADMIN_EMAILS = [...new Set(
+  (process.env.ADMIN_EMAILS || process.env.VITE_ADMIN_EMAILS || process.env.VITE_ALLOWED_ADMIN_EMAILS || '')
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean)
+)];
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
@@ -45,22 +43,6 @@ async function sendEmail(to, subject, body) {
     });
   } catch (error) {
     console.error('[Hubtel Callback] send-email failed:', error);
-  }
-}
-
-async function sendSMS(to, message) {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !to || !message) return;
-  try {
-    await fetch(`${SUPABASE_URL}/functions/v1/send-sms`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({ to, message }),
-    });
-  } catch (error) {
-    console.error('[Hubtel Callback] send-sms failed:', error);
   }
 }
 
@@ -142,16 +124,14 @@ export default async function handler(req, res) {
       hubtel_status: normalizedStatus === 'paid' ? 'successful' : normalizedStatus === 'pending_payment' ? 'pending' : 'failed',
     };
 
-    let shouldNotifyCustomer = false;
-    let shouldNotifyAdmins = false;
+    let notifyCustomer = false;
+    let notifyAdmins = false;
     let customerTitle = '';
     let customerMessage = '';
     let customerEmailSubject = '';
-    let customerSms = '';
     let adminTitle = '';
     let adminMessage = '';
     let adminEmailSubject = '';
-    let adminSms = '';
 
     if (paymentStage === 'balance') {
       updates.balance_checkout_id = checkoutId || order.balance_checkout_id || null;
@@ -168,32 +148,24 @@ export default async function handler(req, res) {
         updates.status = order.status === 'cancelled' ? order.status : 'confirmed';
 
         if (firstTimeSuccess) {
-          shouldNotifyCustomer = true;
-          shouldNotifyAdmins = true;
+          notifyCustomer = true;
+          notifyAdmins = true;
           customerTitle = 'Remaining Balance Paid';
           customerMessage = `Order #${order.order_number} is now fully paid.`;
           customerEmailSubject = `Remaining Balance Paid - #${order.order_number}`;
-          customerSms = `Order ${order.order_number}: remaining balance confirmed. Your order is now fully paid.`;
           adminTitle = 'Remaining Balance Paid';
           adminMessage = `Order #${order.order_number} by ${order.customer_name} is now fully paid.`;
           adminEmailSubject = `Remaining Balance Paid - #${order.order_number}`;
-          adminSms = `FMM CLASSICO: order ${order.order_number} is now fully paid.`;
         }
       } else if (normalizedStatus === 'failed') {
         updates.balance_payment_status = 'failed';
         updates.payment_stage = 'balance_payment_failed';
-        shouldNotifyCustomer = order.balance_payment_status !== 'failed';
+        notifyCustomer = order.balance_payment_status !== 'failed';
         customerTitle = 'Remaining Balance Payment Failed';
         customerMessage = `Remaining balance payment failed for order #${order.order_number}.`;
         customerEmailSubject = `Remaining Balance Payment Failed - #${order.order_number}`;
-        customerSms = `Order ${order.order_number}: remaining balance payment failed.`;
       } else if (normalizedStatus === 'cancelled') {
         updates.balance_payment_status = 'cancelled';
-        shouldNotifyCustomer = order.balance_payment_status !== 'cancelled';
-        customerTitle = 'Remaining Balance Payment Cancelled';
-        customerMessage = `Remaining balance payment was cancelled for order #${order.order_number}.`;
-        customerEmailSubject = `Remaining Balance Payment Cancelled - #${order.order_number}`;
-        customerSms = `Order ${order.order_number}: remaining balance payment was cancelled.`;
       }
     } else {
       updates.initial_checkout_id = checkoutId || order.initial_checkout_id || null;
@@ -203,7 +175,6 @@ export default async function handler(req, res) {
       if (normalizedStatus === 'paid') {
         const balanceDue = Number(order.balance_due || 0);
         const firstTimeSuccess = order.initial_payment_status !== 'paid';
-
         updates.initial_payment_status = 'paid';
         updates.payment_stage = balanceDue > 0 ? 'initial_payment_paid' : 'fully_paid';
         updates.balance_payment_status = balanceDue > 0 ? order.balance_payment_status || 'pending' : 'not_required';
@@ -216,35 +187,25 @@ export default async function handler(req, res) {
         }
 
         if (firstTimeSuccess) {
-          shouldNotifyCustomer = true;
-          shouldNotifyAdmins = true;
+          notifyCustomer = true;
+          notifyAdmins = true;
           customerTitle = balanceDue > 0 ? 'Initial Payment Confirmed' : 'Payment Confirmed';
           customerMessage = balanceDue > 0
             ? `Initial payment for order #${order.order_number} has been confirmed.`
             : `Payment for order #${order.order_number} has been confirmed.`;
           customerEmailSubject = `${customerTitle} - #${order.order_number}`;
-          customerSms = balanceDue > 0
-            ? `Order ${order.order_number}: initial payment confirmed. Track it from your Orders page.`
-            : `Order ${order.order_number}: payment confirmed successfully.`;
           adminTitle = 'Payment Received';
-          adminMessage = `Verified successful Hubtel payment for order #${order.order_number} by ${order.customer_name}.`; 
+          adminMessage = `Verified successful Hubtel payment for order #${order.order_number} by ${order.customer_name}.`;
           adminEmailSubject = `Payment Received - #${order.order_number}`;
-          adminSms = `FMM CLASSICO: verified payment received for order ${order.order_number}.`;
         }
       } else if (normalizedStatus === 'failed') {
         updates.initial_payment_status = 'failed';
-        shouldNotifyCustomer = order.initial_payment_status !== 'failed';
+        notifyCustomer = order.initial_payment_status !== 'failed';
         customerTitle = 'Payment Failed';
-        customerMessage = `Payment failed for order #${order.order_number}. The order was not placed and the cart should remain available.`;
+        customerMessage = `Payment failed for order #${order.order_number}. The order was not placed and the cart remains available.`;
         customerEmailSubject = `Payment Failed - #${order.order_number}`;
-        customerSms = `Order ${order.order_number}: payment failed. Your cart remains available.`;
       } else if (normalizedStatus === 'cancelled') {
         updates.initial_payment_status = 'cancelled';
-        shouldNotifyCustomer = order.initial_payment_status !== 'cancelled';
-        customerTitle = 'Payment Cancelled';
-        customerMessage = `Payment was cancelled for order #${order.order_number}. The order was not placed and the cart should remain available.`;
-        customerEmailSubject = `Payment Cancelled - #${order.order_number}`;
-        customerSms = `Order ${order.order_number}: payment cancelled. Your cart remains available.`;
       }
     }
 
@@ -254,7 +215,7 @@ export default async function handler(req, res) {
       throw updateError;
     }
 
-    if (shouldNotifyCustomer) {
+    if (notifyCustomer) {
       await createNotification({
         user_email: order.customer_email,
         title: customerTitle,
@@ -263,14 +224,19 @@ export default async function handler(req, res) {
         order_id: order.id,
         order_number: order.order_number,
       });
-      await Promise.allSettled([
-        sendEmail(order.customer_email, customerEmailSubject || customerTitle, `Hi ${order.customer_name},\n\n${customerMessage}\n\nFMM CLASSICO`),
-        sendSMS(order.customer_phone, customerSms),
-      ]);
+      await sendEmail(
+        order.customer_email,
+        customerEmailSubject || customerTitle,
+        `Hi ${order.customer_name},
+
+${customerMessage}
+
+FMM CLASSICO`
+      );
     }
 
-    if (shouldNotifyAdmins) {
-      await Promise.allSettled(ADMIN_EMAILS.map(async (email) => {
+    if (notifyAdmins) {
+      for (const email of ADMIN_EMAILS) {
         await createNotification({
           user_email: email,
           title: adminTitle,
@@ -280,9 +246,7 @@ export default async function handler(req, res) {
           order_number: order.order_number,
         });
         await sendEmail(email, adminEmailSubject || adminTitle, adminMessage);
-      }));
-
-      await Promise.allSettled(ADMIN_SMS_NUMBERS.map((phone) => sendSMS(phone, adminSms)));
+      }
     }
 
     return res.status(200).json({
@@ -315,3 +279,5 @@ function readBody(req) {
     req.on('error', reject);
   });
 }
+
+ 

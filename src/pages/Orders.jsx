@@ -47,6 +47,9 @@ function formatVariantSummary(item) {
   if (item?.selected_type) parts.push(`Type: ${item.selected_type}`);
   return parts.join(' • ');
 }
+function isVisibleOrder(order) {
+  return order?.initial_payment_status === 'paid' || order?.payment_status === 'paid' || order?.payment_stage === 'fully_paid';
+}
 
 export default function Orders() {
   const { user, isAuthenticated, navigateToLogin } = useAuth();
@@ -86,7 +89,7 @@ export default function Orders() {
     const status = searchParams.get('status');
     const paymentStage = searchParams.get('paymentStage') || 'initial';
     const orderId = searchParams.get('orderId');
-    if (!reference) { setVerificationDone(true); return; }
+    if (!reference || paymentStage !== 'balance') { setVerificationDone(true); return; }
     setIsVerifying(true);
 
     setTimeout(() => {
@@ -154,6 +157,8 @@ export default function Orders() {
     return unsubscribe;
   }, [user?.email, queryClient]);
 
+  const visibleOrders = orders.filter(isVisibleOrder);
+
   const deleteOrdersMutation = useMutation({ mutationFn: async (orderIds) => Promise.all(orderIds.map((id) => appClient.entities.Order.delete(id))), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['orders'] }); setSelectedOrders([]); toast.success('Deleted'); } });
   const cancelOrderMutation = useMutation({ mutationFn: async ({ order, reason }) => { const newTracking = (order.tracking_updates || []).concat([{ status: 'Cancelled', message: `Cancelled by customer. Reason: ${reason || 'No reason'}`, timestamp: new Date().toISOString() }]); await appClient.entities.Order.update(order.id, { status: 'cancelled', tracking_updates: newTracking }); await appClient.entities.Notification.create({ user_email: order.customer_email, title: 'Order Cancelled', message: `Your order #${order.order_number} has been cancelled. Contact 0208207543 for refund.`, type: 'order_cancelled', order_id: order.id, order_number: order.order_number, is_read: false }); }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['orders'] }); setCancellingOrder(null); setCancelReason(''); toast.success('Order cancelled.'); } });
 
@@ -185,15 +190,15 @@ export default function Orders() {
   if (!user) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
   if (isVerifying) return <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 p-6"><div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center"><div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center"><Loader2 className="h-8 w-8 text-green-600 animate-spin" /></div><h2 className="text-lg font-bold text-green-800 mb-2">Verifying Payment</h2><p className="text-sm text-green-600">Please wait while we confirm your payment with Hubtel...</p></div></div>;
   if (!verificationDone) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
-  if (!isLoading && orders.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center p-6"><Package className="h-16 w-16 text-gray-300 mb-4" /><p className="text-gray-500 font-medium mb-2">No orders yet</p><Link to={createPageUrl('Shop')} className="text-blue-600 font-semibold">Go to Shop</Link></div>;
+  if (!isLoading && visibleOrders.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center p-6"><Package className="h-16 w-16 text-gray-300 mb-4" /><p className="text-gray-500 font-medium mb-2">No orders yet</p><Link to={createPageUrl('Shop')} className="text-blue-600 font-semibold">Go to Shop</Link></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       <div className="max-w-2xl mx-auto px-4 pt-6">
-        <div className="flex items-center justify-between mb-4"><div><h1 className="text-xl font-bold text-gray-900">My Orders</h1><p className="text-xs text-gray-500">{orders.length} order{orders.length !== 1 ? 's' : ''}</p></div>{selectedOrders.length > 0 && <Button size="sm" variant="destructive" onClick={handleDeleteSelected}><Trash2 className="h-3 w-3 mr-1" /> Delete {selectedOrders.length}</Button>}</div>
-        {orders.length > 0 && <div className="flex items-center gap-2 mb-3"><input type="checkbox" checked={selectedOrders.length === orders.length && orders.length > 0} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer" /><span className="text-xs text-gray-500">Select All</span></div>}
+        <div className="flex items-center justify-between mb-4"><div><h1 className="text-xl font-bold text-gray-900">My Orders</h1><p className="text-xs text-gray-500">{visibleOrders.length} order{visibleOrders.length !== 1 ? 's' : ''}</p></div>{selectedOrders.length > 0 && <Button size="sm" variant="destructive" onClick={handleDeleteSelected}><Trash2 className="h-3 w-3 mr-1" /> Delete {selectedOrders.length}</Button>}</div>
+        {visibleOrders.length > 0 && <div className="flex items-center gap-2 mb-3"><input type="checkbox" checked={selectedOrders.length === visibleOrders.length && visibleOrders.length > 0} onChange={() => setSelectedOrders((prev) => prev.length === visibleOrders.length ? [] : visibleOrders.map((order) => order.id))} className="w-4 h-4 cursor-pointer" /><span className="text-xs text-gray-500">Select All</span></div>}
         <div className="space-y-4">
-          {isLoading ? Array(3).fill(0).map((_, index) => <Skeleton key={index} className="h-56 rounded-xl" />) : orders.map((order) => {
+          {isLoading ? Array(3).fill(0).map((_, index) => <Skeleton key={index} className="h-56 rounded-xl" />) : visibleOrders.map((order) => {
             const isSelected = selectedOrders.includes(order.id);
             const isExpanded = expandedOrder === order.id;
             const grandTotal = getGrandTotal(order);
@@ -207,7 +212,7 @@ export default function Orders() {
                 <div className="mb-3"><span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isFullyPaid(order) ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>{paymentSummaryLabel(order)}</span></div>
                 <div className="mb-3 rounded-lg bg-slate-50 p-3 text-xs text-gray-700 space-y-1"><div className="flex justify-between"><span>Total order value</span><span className="font-semibold">₵{grandTotal.toFixed(2)}</span></div><div className="flex justify-between"><span>Initial payment</span><span className="font-semibold">₵{amountPaidNow.toFixed(2)}</span></div>{balanceDue > 0 && !isRemainingBalancePaid(order) && <div className="flex justify-between text-orange-700"><span>Balance left</span><span className="font-bold">₵{balanceDue.toFixed(2)}</span></div>}</div>
                 {isTwoStageOrder(order) && <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900"><p className="font-semibold">Two-stage Hubtel payment</p><p className="mt-1">Once the product arrives, you must complete the remaining balance through this Order page before the product is handed over.</p>{order.balance_payment_enabled !== true && !isRemainingBalancePaid(order) && <p className="mt-2 text-blue-700">Balance payment will appear here after admin marks the order as shipped.</p>}{canPayBalance && <Button onClick={() => handleBalancePayment(order)} disabled={payingBalanceFor === order.id} className="mt-3 bg-blue-800 hover:bg-blue-900 text-white"><Wallet className="h-4 w-4 mr-2" />{payingBalanceFor === order.id ? 'Opening Hubtel...' : balanceButtonLabel(order)}</Button>}</div>}
-                <div className="mb-3 border-t border-gray-100 pt-2">{(order.items || []).map((item, index) => { const variantSummary = formatVariantSummary(item); return <div key={index} className="flex items-center gap-2 py-1">{item.product_image && <img src={item.product_image} alt="" className="w-10 h-10 rounded-lg object-cover" />}<div className="flex-1 min-w-0"><p className="text-xs font-medium text-gray-700 truncate">{item.product_name}</p><p className="text-[10px] text-gray-500">x{item.quantity} Â· ₵{(toNumber(item.price) * toNumber(item.quantity, 1)).toFixed(2)}</p>{variantSummary && <p className="text-[10px] text-blue-700 mt-0.5">{variantSummary}</p>}</div></div>;})}</div>
+                <div className="mb-3 border-t border-gray-100 pt-2">{(order.items || []).map((item, index) => { const variantSummary = formatVariantSummary(item); return <div key={index} className="flex items-center gap-2 py-1">{item.product_image && <img src={item.product_image} alt="" className="w-10 h-10 rounded-lg object-cover" />}<div className="flex-1 min-w-0"><p className="text-xs font-medium text-gray-700 truncate">{item.product_name}</p><p className="text-[10px] text-gray-500">x{item.quantity} · ₵{(toNumber(item.price) * toNumber(item.quantity, 1)).toFixed(2)}</p>{variantSummary && <p className="text-[10px] text-blue-700 mt-0.5">{variantSummary}</p>}</div></div>;})}</div>
                 <div className="border-t border-gray-100 pt-2"><p className="text-xs text-gray-600">{order.delivery_address ? `📍 ${order.delivery_address}` : ''}</p>{hasEstDelivery && <p className="text-xs text-gray-500 mt-1">📅 Est. delivery: {format(new Date(order.estimated_delivery), 'MMM d, yyyy')}</p>}<div className="flex gap-3 mt-3"><Link to={createPageUrl('OrderTracking') + '?id=' + order.id} className="text-xs text-blue-600 font-semibold">Track Order</Link>{CANCELLABLE_STATUSES.includes(order.status) && <button onClick={() => { setCancellingOrder(order); setCancelReason(''); }} className="text-xs text-red-600 font-semibold">Cancel Order</button>}<button onClick={() => setExpandedOrder(isExpanded ? null : order.id)} className="text-xs text-gray-600 font-semibold">{isExpanded ? 'Hide History' : 'Show History'}</button></div></div>
                 {isExpanded && order.tracking_updates && order.tracking_updates.length > 0 && <div className="mt-3 border-t border-gray-100 pt-3"><p className="text-xs font-bold text-gray-700 mb-2">Tracking History</p><div className="space-y-2">{order.tracking_updates.slice().reverse().map((update, index) => <div key={index} className="flex gap-2"><div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div><div><p className="text-xs font-semibold text-gray-800">{update.status}</p><p className="text-[10px] text-gray-500">{update.message}</p>{update.timestamp && <p className="text-[10px] text-gray-400">{format(new Date(update.timestamp), 'MMM d, yyyy h:mm a')}</p>}</div></div>)}</div></div>}
               </Card>

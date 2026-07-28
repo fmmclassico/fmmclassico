@@ -198,22 +198,34 @@ function getRetryableMissingFields(error, payload = {}) {
 }
 
 async function runWriteWithLegacyFallback(tableName, writeFn, payload) {
-  try {
-    return await writeFn(payload);
-  } catch (error) {
-    if (
-      tableName === 'promo_banners'
-      && isMissingColumnError(error, PROMO_BANNER_RESPONSIVE_FIELDS)
-    ) {
-      return writeFn(stripFields(payload, PROMO_BANNER_RESPONSIVE_FIELDS));
-    }
+  let currentPayload = { ...payload };
+  const removedFields = new Set();
 
-    const missingFields = getRetryableMissingFields(error, payload);
-    if (missingFields.length > 0) {
-      return writeFn(stripFields(payload, missingFields));
-    }
+  while (true) {
+    try {
+      return await writeFn(currentPayload);
+    } catch (error) {
+      if (
+        tableName === 'promo_banners'
+        && isMissingColumnError(error, PROMO_BANNER_RESPONSIVE_FIELDS)
+      ) {
+        const retryFields = PROMO_BANNER_RESPONSIVE_FIELDS.filter((field) => field in currentPayload && !removedFields.has(field));
+        if (retryFields.length === 0) throw error;
+        retryFields.forEach((field) => removedFields.add(field));
+        currentPayload = stripFields(currentPayload, retryFields);
+        continue;
+      }
 
-    throw error;
+      const missingFields = getRetryableMissingFields(error, currentPayload)
+        .filter((field) => !removedFields.has(field));
+      if (missingFields.length > 0) {
+        missingFields.forEach((field) => removedFields.add(field));
+        currentPayload = stripFields(currentPayload, missingFields);
+        continue;
+      }
+
+      throw error;
+    }
   }
 }
 
@@ -488,6 +500,29 @@ const integrations = {
         return { success: true };
       } catch (error) {
         console.error('[SendEmail] Error:', error);
+        return { success: false, error: error.message };
+      }
+    }
+,
+
+    async SendSMS({ to, message }) {
+      try {
+        const response = await fetch(SUPABASE_URL + '/functions/v1/send-sms', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ to, message }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          console.error('[SendSMS] Failed:', result);
+          return { success: false, error: result.error || result.message || 'SMS failed' };
+        }
+        return { success: true, data: result };
+      } catch (error) {
+        console.error('[SendSMS] Error:', error);
         return { success: false, error: error.message };
       }
     }

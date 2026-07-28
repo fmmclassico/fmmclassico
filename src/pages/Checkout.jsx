@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 const DELIVERY_ZONES = [
   { id: 'accra', label: 'Within Accra Delivery', fee: 30, area: 'accra' },
   { id: 'kumasi', label: 'Within Kumasi Delivery', fee: 30, area: 'kumasi' },
-  { id: 'umat_doorstep', label: 'UMaT Main Campus – Doorstep Delivery', fee: 1, area: 'tarkwa' },
+  { id: 'umat_doorstep', label: 'UMaT Main Campus – Doorstep Delivery', fee: 0.5, area: 'tarkwa' },
   { id: 'tarkwa', label: 'Within Tarkwa (Outside UMAT Campus)', fee: 25, area: 'tarkwa' },
   { id: 'outside', label: 'Outside Accra, Tarkwa & Kumasi', fee: 50, area: 'other' },
   { id: 'bus_station', label: 'Delivery to Bus Stations', fee: 25, area: 'station' },
@@ -90,14 +90,22 @@ export default function Checkout() {
 
   const selectedZone = DELIVERY_ZONES.find((zone) => zone.id === selectedZoneId);
   const deliveryFee = selectedZone ? selectedZone.fee : 0;
-  const isPayOnDeliveryArea = selectedZone ? PAY_ON_DELIVERY_AREAS.includes(selectedZone.area) : false;
+  const payOnDeliveryZoneEligible = selectedZone ? PAY_ON_DELIVERY_AREAS.includes(selectedZone.area) : false;
 
   const cityMatchesPodArea = useMemo(() => {
     const combined = `${formData.city || ''} ${formData.region || ''}`.toLowerCase();
     return combined.includes('accra') || combined.includes('kumasi') || combined.includes('tarkwa');
   }, [formData.city, formData.region]);
 
-  const canUsePayOnDelivery = isPayOnDeliveryArea && cityMatchesPodArea;
+  const canUsePayOnDelivery = payOnDeliveryZoneEligible;
+  const isPayOnDeliveryAddressConfirmed = canUsePayOnDelivery && cityMatchesPodArea;
+  const requiresTermsAcceptance = paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery';
+  const termsAccepted = paymentMethod === 'deposit_balance'
+    ? depositWarningAccepted
+    : paymentMethod === 'pay_on_delivery'
+      ? podWarningAccepted
+      : true;
+  const canRevealOrderSummary = selectedZoneId && paymentMethod && (!requiresTermsAcceptance || termsAccepted);
 
   const locationMismatch = useMemo(() => {
     const region = (formData.region || '').toLowerCase().trim();
@@ -234,8 +242,8 @@ export default function Checkout() {
       toast.error('Please accept the pay on delivery terms.');
       return;
     }
-    if (paymentMethod === 'pay_on_delivery' && !canUsePayOnDelivery) {
-      toast.error('Pay on Delivery is not available for your location.');
+    if (paymentMethod === 'pay_on_delivery' && (!payOnDeliveryZoneEligible || !cityMatchesPodArea)) {
+      toast.error('Pay on Delivery is only available for eligible Accra, Kumasi, and Tarkwa addresses.');
       return;
     }
     if (orderSummary.totalToPayNow <= 0 || Number.isNaN(orderSummary.totalToPayNow)) {
@@ -425,11 +433,12 @@ export default function Checkout() {
                 <SelectContent>
                   <SelectItem value="full_payment">Pay Full Amount Online — ₵{(subtotal + deliveryFee).toFixed(2)}</SelectItem>
                   <SelectItem value="deposit_balance">Pay Deposit, Balance on Delivery — ₵{(Math.ceil((subtotal / 2) * 100) / 100 + deliveryFee).toFixed(2)}</SelectItem>
-                  <SelectItem value="pay_on_delivery" disabled={!canUsePayOnDelivery}>Pay on Delivery (Accra, Kumasi & Tarkwa) — ₵{deliveryFee.toFixed(2)}</SelectItem>
+                  <SelectItem value="pay_on_delivery" disabled={!payOnDeliveryZoneEligible}>Pay on Delivery (Accra, Kumasi & Tarkwa) — ₵{deliveryFee.toFixed(2)}</SelectItem>
                 </SelectContent>
               </Select>
 
-              {!canUsePayOnDelivery && selectedZoneId && <p className="text-xs text-gray-500 mt-2">Pay on Delivery only available within Accra, Kumasi & Tarkwa.</p>}
+              {!payOnDeliveryZoneEligible && selectedZoneId && <p className="text-xs text-gray-500 mt-2">Pay on Delivery only available within Accra, Kumasi & Tarkwa.</p>}
+              {canUsePayOnDelivery && !isPayOnDeliveryAddressConfirmed && paymentMethod === 'pay_on_delivery' && <p className="text-xs text-amber-700 mt-2 flex items-center gap-1"><Info className="h-3 w-3" /> Complete your city and region with a matching Accra, Kumasi, or Tarkwa address before placing this order.</p>}
               {canUsePayOnDelivery && subtotal > 200 && paymentMethod === 'pay_on_delivery' && <p className="text-xs text-amber-700 mt-2 flex items-center gap-1"><Info className="h-3 w-3" /> Product above ₵200. We recommend "Pay Deposit" instead.</p>}
 
               {paymentMethod === 'deposit_balance' && (
@@ -437,10 +446,14 @@ export default function Checkout() {
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-amber-800 mb-2">Deposit Payment Terms</p>
-                      <p className="text-xs text-amber-700 leading-relaxed">When the product is delivered and the customer does not pay immediately and in full cash the rest of the amount and we have to return the product, only half of the product deposit price he/she paid for will be refunded into their mobile money, or customer would have to come for pickup at our store (which delivery fee will not be refunded). Our customer service personnel will make sure customer is available before product is delivered. If not, product delivery date will be communicated. Hence, they must make sure the delivery details and contact numbers are correct before choosing this option.</p>
-                      <Button type="button" onClick={() => setDepositWarningAccepted(true)} className={`mt-3 text-xs px-4 py-2 rounded-lg ${depositWarningAccepted ? 'bg-green-600 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`} disabled={depositWarningAccepted}>
-                        {depositWarningAccepted ? '✓ Terms Accepted' : 'I Understand, Continue'}
+                      <p className="text-sm font-semibold text-amber-800 mb-2">Deposit Payment Terms</p><ul className="text-xs text-amber-700 leading-relaxed list-disc pl-4 space-y-2">
+                        <li><strong>Pay the remaining balance in full before the product is handed over</strong> at the time of delivery.</li>
+                        <li><strong>If full payment is not made, the product will be returned.</strong> Customers may either receive a <strong>50% refund of their deposit</strong>, which will be processed <strong>within 2 days after the returned product has been received and verified at our store</strong>, or arrange <strong>store pickup or redelivery at their own expense</strong> after paying the outstanding balance.</li>
+                        <li><strong>Delivery fees are non-refundable</strong> under all circumstances.</li>
+                        <li><strong>Customers must provide accurate delivery details and contact information.</strong> Our Customer Service team will contact customers before dispatch to confirm their availability.</li>
+                      </ul>
+                      <Button type="button" onClick={() => setDepositWarningAccepted(true)} className={`mt-3 text-xs px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white ${depositWarningAccepted ? 'opacity-90' : ''}`} disabled={depositWarningAccepted}>
+                        {depositWarningAccepted ? '✓ I agree' : 'I agree'}
                       </Button>
                     </div>
                   </div>
@@ -452,19 +465,29 @@ export default function Checkout() {
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="h-5 w-5 text-purple-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-purple-800 mb-2">Pay on Delivery Terms</p>
-                      <p className="text-xs text-purple-700 leading-relaxed">If product is delivered and upon delivery customer does not pay the product amount in full, product will not be given to them, and their delivery fee will not be refunded. If product is returned, customer must place another order on our website or come for pickup at our store (which delivery fee will not be refunded). Customer must be available before product is delivered. If not, product delivery date will be communicated.</p>
-                      <Button type="button" onClick={() => setPodWarningAccepted(true)} className={`mt-3 text-xs px-4 py-2 rounded-lg ${podWarningAccepted ? 'bg-green-600 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}`} disabled={podWarningAccepted}>
-                        {podWarningAccepted ? '✓ Terms Accepted' : 'I Understand, Continue'}
+                      <p className="text-sm font-semibold text-purple-800 mb-2">Pay on Delivery Terms</p><ul className="text-xs text-purple-700 leading-relaxed list-disc pl-4 space-y-2">
+                        <li><strong>Pay the full outstanding balance before the product is handed over</strong> at the time of delivery.</li>
+                        <li><strong>If full payment is not made, the product will be returned.</strong> Customers may either receive a <strong>50% refund of their deposit</strong>, which will be processed <strong>within 2 days after the returned product has been received and verified at our store</strong>, or pay the outstanding balance and arrange <strong>store pickup or redelivery at their own expense</strong>.</li>
+                        <li><strong>Delivery fees are non-refundable</strong> under all circumstances.</li>
+                        <li><strong>Customers must provide accurate delivery details and contact information.</strong> Our Customer Service team will contact customers before dispatch to confirm their availability.</li>
+                      </ul>
+                      <Button type="button" onClick={() => setPodWarningAccepted(true)} className={`mt-3 text-xs px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white ${podWarningAccepted ? 'opacity-90' : ''}`} disabled={podWarningAccepted}>
+                        {podWarningAccepted ? '✓ I agree' : 'I agree'}
                       </Button>
                     </div>
                   </div>
                 </div>
               )}
+
+              {requiresTermsAcceptance && !termsAccepted && (
+                <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-3 text-xs text-green-800">
+                  Review the payment policy above and click <strong>I agree</strong> before the order summary appears.
+                </div>
+              )}
             </Card>
           )}
 
-          {selectedZoneId && paymentMethod && (
+          {canRevealOrderSummary && (
             <Card className="p-5 bg-white border-2 border-blue-100">
               <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-blue-600" /> Order Summary</h2>
               <div className="space-y-3">
@@ -478,7 +501,7 @@ export default function Checkout() {
             </Card>
           )}
 
-          {selectedZoneId && paymentMethod && (
+          {canRevealOrderSummary && (
             <div className="space-y-3">
               <Button type="submit" disabled={isSubmitting || locationMismatch || (paymentMethod === 'deposit_balance' && !depositWarningAccepted) || (paymentMethod === 'pay_on_delivery' && !podWarningAccepted)} className="w-full rounded-xl bg-blue-800 px-4 py-4 text-white font-bold text-base hover:bg-blue-900 disabled:opacity-50 h-14">
                 {isSubmitting ? <span className="flex items-center justify-center gap-2"><Loader2 className="h-5 w-5 animate-spin" /> Processing...</span> : `💳 Pay ₵${orderSummary.totalToPayNow.toFixed(2)} with Hubtel`}

@@ -17,6 +17,7 @@ import Invoices from './pages/Invoices';
 import Notifications from './pages/Notifications';
 import OrderTracking from './pages/OrderTracking';
 import Orders from './pages/Orders';
+import PaymentVerification from './pages/PaymentVerification';
 import ProductDetail from './pages/ProductDetail';
 import Settings from './pages/Settings';
 import Shop from './pages/Shop';
@@ -42,6 +43,7 @@ export const PAGES = {
   "Notifications": Notifications,
   "OrderTracking": OrderTracking,
   "Orders": Orders,
+  "PaymentVerification": PaymentVerification,
   "ProductDetail": ProductDetail,
   "Settings": Settings,
   "Shop": Shop,
@@ -52,3 +54,4 @@ export const pagesConfig = {
   Pages: PAGES,
   Layout: __Layout,
 };
+

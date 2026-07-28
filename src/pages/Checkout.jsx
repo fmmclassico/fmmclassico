@@ -14,9 +14,9 @@ import { Truck, CreditCard, Loader2, Info, MapPin, AlertTriangle, ShieldCheck } 
 import { toast } from 'sonner';
 
 const DELIVERY_ZONES = [
-  { id: 'accra', label: 'Within Accra Delivery', fee: 30 },
+  { id: 'accra', label: 'Within Accra Delivery', fee: 0.5 },
   { id: 'kumasi', label: 'Within Kumasi Delivery', fee: 30 },
-  { id: 'umat_doorstep', label: 'UMaT Main Campus – Doorstep Delivery', fee: 0.5 },
+  { id: 'umat_doorstep', label: 'UMaT Main Campus – Doorstep Delivery', fee: 10 },
   { id: 'tarkwa', label: 'Approved Tarkwa In-Town Delivery', fee: 25 },
   { id: 'outside', label: 'Outside Accra, Tarkwa & Kumasi', fee: 50 },
   { id: 'bus_station', label: 'Delivery to Bus Stations', fee: 25 },

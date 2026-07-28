@@ -31,13 +31,12 @@ function isRemainingBalancePaid(order) { return order?.remaining_balance_paid ==
 function formatVariantSummary(item) { if (item?.variant_summary) return item.variant_summary; const parts = []; if (item?.selected_color) parts.push(`Color: ${item.selected_color}`); if (item?.selected_wattage) parts.push(`Wattage: ${item.selected_wattage}`); if (item?.selected_type) parts.push(`Type: ${item.selected_type}`); return parts.join(' • '); }
 function isVisibleOrder(order) { return order?.initial_payment_status === 'paid' || order?.payment_status === 'paid' || order?.payment_stage === 'fully_paid'; }
 function getPaymentMethodLabel(method) { if (method === 'full_payment') return { text: 'Full Payment', color: 'bg-green-100 text-green-700' }; if (method === 'deposit_balance') return { text: 'Deposit + Balance', color: 'bg-orange-100 text-orange-700' }; if (method === 'pay_on_delivery') return { text: 'Delivery First', color: 'bg-red-100 text-red-700' }; return { text: 'Full Payment', color: 'bg-green-100 text-green-700' }; }
-function getNextStatus(order) { if (order.status === 'confirmed') return { newStatus: 'processing', label: 'Mark Processing', message: 'Order is being processed.' }; if (order.status === 'processing') return { newStatus: 'packed', label: 'Mark Packed', message: 'Order packed.' }; if (order.status === 'packed') return { newStatus: 'shipped', label: isTwoStageOrder(order) ? 'Mark Shipped & Enable Balance Payment' : 'Mark Shipped', message: isTwoStageOrder(order) ? 'Order shipped. Customer can now pay the remaining balance through the Order page.' : 'Order shipped.' }; if (order.status === 'shipped' && !isTwoStageOrder(order)) return { newStatus: 'delivered', label: 'Product Successfully Delivered', message: 'Order delivered successfully.' }; if (order.status === 'shipped' && isTwoStageOrder(order) && isRemainingBalancePaid(order)) return { newStatus: 'delivered', label: 'Product Successfully Delivered', message: 'Full payment has been confirmed and product delivered successfully.' }; return null; }
+function getNextStatus(order) { if (isTwoStageOrder(order) && isRemainingBalancePaid(order) && order.status !== 'delivered') return { newStatus: 'delivered', label: 'Product Successfully Delivered', message: 'Full payment has been confirmed and product delivered successfully.' }; if (order.status === 'confirmed') return { newStatus: 'processing', label: 'Mark Processing', message: 'Order is being processed.' }; if (order.status === 'processing') return { newStatus: 'packed', label: 'Mark Packed', message: 'Order packed.' }; if (order.status === 'packed') return { newStatus: 'shipped', label: isTwoStageOrder(order) ? 'Mark Shipped & Enable Balance Payment' : 'Mark Shipped', message: isTwoStageOrder(order) ? 'Order shipped. Customer can now pay the remaining balance through the Order page.' : 'Order shipped.' }; if (order.status === 'shipped' && !isTwoStageOrder(order)) return { newStatus: 'delivered', label: 'Product Successfully Delivered', message: 'Order delivered successfully.' }; return null; }
 
-async function sendOrderSignals(order, { title, message, emailSubject, smsMessage, type = 'general' }) {
+async function sendOrderSignals(order, { title, message, emailSubject, type = 'general' }) {
   const emailBody = `Hi ${order.customer_name},${NL}${NL}${message}${NL}${NL}FMM CLASSICO${NL}0208207543`;
   const tasks = [appClient.entities.Notification.create({ user_email: order.customer_email, title, message, type, order_id: order.id, order_number: order.order_number, is_read: false })];
   if (order.customer_email) tasks.push(appClient.integrations.Core.SendEmail({ to: order.customer_email, from_name: 'FMM CLASSICO', subject: emailSubject || title, body: emailBody }));
-  if (order.customer_phone && smsMessage) tasks.push(appClient.integrations.Core.SendSMS({ to: order.customer_phone, message: smsMessage }));
   await Promise.all(tasks);
 }
 
@@ -55,7 +54,7 @@ export default function AdminOrders() {
   const activeOrders = visibleOrders.filter((order) => !['delivered', 'cancelled', 'returned'].includes(order.status));
   const fulfilledOrders = visibleOrders.filter((order) => ['delivered', 'cancelled', 'returned'].includes(order.status));
 
-  const sendAdminMessageMutation = useMutation({ mutationFn: async ({ order, message }) => { await sendOrderSignals(order, { title: 'Message from FMM CLASSICO', message, emailSubject: `Message - Order #${order.order_number}`, smsMessage: message, type: 'general' }); }, onSuccess: (_, variables) => { setAdminMessages((prev) => ({ ...prev, [variables.order.id]: '' })); toast.success('Message sent!'); } });
+  const sendAdminMessageMutation = useMutation({ mutationFn: async ({ order, message }) => { await sendOrderSignals(order, { title: 'Message from FMM CLASSICO', message, emailSubject: `Message - Order #${order.order_number}`, type: 'general' }); }, onSuccess: (_, variables) => { setAdminMessages((prev) => ({ ...prev, [variables.order.id]: '' })); toast.success('Message sent!'); } });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ order, newStatus, message }) => {
@@ -69,16 +68,8 @@ export default function AdminOrders() {
         payload.balance_payment_status = 'enabled';
       }
       await appClient.entities.Order.update(order.id, payload);
-      const smsMap = {
-        processing: `Order ${order.order_number} is now being processed by FMM CLASSICO.`,
-        packed: `Order ${order.order_number} has been packed and is being prepared for shipment.`,
-        shipped: isTwoStageOrder(order) ? `Order ${order.order_number} has been shipped. Remaining balance: GHS ${getBalanceDue(order).toFixed(2)}. Pay through your Order page before handover.` : `Order ${order.order_number} has been shipped successfully.`,
-        delivered: `Order ${order.order_number} has been successfully delivered. Thank you for shopping with FMM CLASSICO.`,
-        cancelled: `Order ${order.order_number} has been cancelled. Contact FMM CLASSICO for assistance.`,
-        returned: `Order ${order.order_number} has been returned because delivery could not be completed under the payment terms.`,
-      };
       const titleMap = { processing: 'Order Being Prepared', packed: 'Order Packed', shipped: 'Order Shipped', delivered: 'Order Delivered', cancelled: 'Order Cancelled', returned: 'Product Returned' };
-      await sendOrderSignals(order, { title: titleMap[newStatus] || 'Order Update', message, emailSubject: `${titleMap[newStatus] || 'Order Update'} - #${order.order_number}`, smsMessage: smsMap[newStatus], type: newStatus === 'delivered' ? 'order_processing' : 'general' });
+      await sendOrderSignals(order, { title: titleMap[newStatus] || 'Order Update', message, emailSubject: `${titleMap[newStatus] || 'Order Update'} - #${order.order_number}`, type: newStatus === 'delivered' ? 'order_processing' : 'general' });
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['adminOrders'] }); toast.success('Updated!'); },
   });
@@ -94,7 +85,7 @@ export default function AdminOrders() {
         payment_stage: 'fully_paid',
         tracking_updates: (order.tracking_updates || []).concat([{ status: 'Balance Paid', message: `Admin confirmed the balance payment of ₵${getBalanceDue(order).toFixed(2)}.`, timestamp: now }]),
       });
-      await sendOrderSignals(order, { title: 'Balance Payment Confirmed', message: `The remaining balance for order #${order.order_number} has been confirmed as paid. Your order is now fully paid.`, emailSubject: `Balance Payment Confirmed - #${order.order_number}`, smsMessage: `Order ${order.order_number}: remaining balance received. Full amount is now paid.`, type: 'payment_confirmed' });
+      await sendOrderSignals(order, { title: 'Balance Payment Confirmed', message: `The remaining balance for order #${order.order_number} has been confirmed as paid. Your order is now fully paid.`, emailSubject: `Balance Payment Confirmed - #${order.order_number}`, type: 'payment_confirmed' });
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['adminOrders'] }); toast.success('Balance payment confirmed.'); },
   });
@@ -107,7 +98,7 @@ export default function AdminOrders() {
         payment_stage: 'balance_payment_failed',
         tracking_updates: (order.tracking_updates || []).concat([{ status: 'Balance Payment Failed', message: `Balance payment of ₵${getBalanceDue(order).toFixed(2)} was not completed successfully.`, timestamp: now }]),
       });
-      await sendOrderSignals(order, { title: 'Balance Payment Failed', message: `The remaining balance payment for order #${order.order_number} was not completed successfully.`, emailSubject: `Balance Payment Failed - #${order.order_number}`, smsMessage: `Order ${order.order_number}: remaining balance payment failed. Please complete payment through your Order page before handover.`, type: 'general' });
+      await sendOrderSignals(order, { title: 'Balance Payment Failed', message: `The remaining balance payment for order #${order.order_number} was not completed successfully.`, emailSubject: `Balance Payment Failed - #${order.order_number}`, type: 'general' });
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['adminOrders'] }); toast.success('Balance payment marked as failed.'); },
   });
@@ -115,7 +106,7 @@ export default function AdminOrders() {
   const updateDeliveryDateMutation = useMutation({
     mutationFn: async ({ order, date }) => {
       await appClient.entities.Order.update(order.id, { estimated_delivery: date, tracking_updates: (order.tracking_updates || []).concat([{ status: 'Delivery Date Set', message: `Estimated delivery date set for ${date}.`, timestamp: new Date().toISOString() }]) });
-      await sendOrderSignals(order, { title: 'Delivery Date Scheduled', message: `Your delivery date for order #${order.order_number} has been set for ${date}.`, emailSubject: `Delivery Date Scheduled - #${order.order_number}`, smsMessage: `Order ${order.order_number}: delivery date set for ${date}.${isTwoStageOrder(order) ? ` Remaining amount due: GHS ${getBalanceDue(order).toFixed(2)}.` : ''}`, type: 'order_processing' });
+      await sendOrderSignals(order, { title: 'Delivery Date Scheduled', message: `Your delivery date for order #${order.order_number} has been set for ${date}.`, emailSubject: `Delivery Date Scheduled - #${order.order_number}`, type: 'order_processing' });
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['adminOrders'] }); toast.success('Delivery date set!'); },
   });
@@ -151,7 +142,7 @@ export default function AdminOrders() {
             <div className="mt-2 text-xs text-gray-600 space-y-0.5"><p className="font-medium text-gray-800">{order.customer_name}</p><p>{order.customer_email}{order.customer_phone ? ` | ${order.customer_phone}` : ''}</p><p>📍 {order.delivery_address}</p></div>
             <div className="mt-2 flex flex-col gap-1.5">{(order.items || []).map((item, index) => { const variantSummary = formatVariantSummary(item); return <div key={index} className="flex items-center gap-1.5 bg-gray-50 rounded-lg px-2 py-1">{item.product_image && <img src={item.product_image} className="w-8 h-8 rounded object-cover" />}<div className="min-w-0"><span className="text-[10px] text-gray-700 block">{item.product_name} x{item.quantity}</span>{variantSummary && <span className="text-[10px] text-blue-700 block">{variantSummary}</span>}</div></div>;})}</div>
             <div className="mt-3 pt-2 border-t border-gray-100"><div className="flex items-center gap-2 mb-1"><Calendar className="h-3.5 w-3.5 text-gray-500" /><span className="text-xs text-gray-600 font-medium">Est. Delivery:</span>{order.estimated_delivery ? <span className="text-xs font-bold text-gray-800">{format(new Date(order.estimated_delivery), 'MMM d, yyyy')}</span> : <span className="text-xs text-gray-400">Not set</span>}</div>{!isClosed && <div className="flex items-center gap-2"><Input type="date" className="text-xs h-8 w-40" value={deliveryDates[order.id] || ''} onChange={(e) => setDeliveryDates((prev) => ({ ...prev, [order.id]: e.target.value }))} /><Button size="sm" variant="outline" className="text-xs h-8" onClick={() => { const date = deliveryDates[order.id]; if (!date) return toast.error('Pick a date'); updateDeliveryDateMutation.mutate({ order, date }); }} disabled={updateDeliveryDateMutation.isPending}>Set</Button></div>}</div>
-            <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t border-gray-100"><Link to={createPageUrl('AdminInvoice') + '?orderId=' + order.id}><Button size="sm" variant="outline" className="text-xs h-8"><FileText className="h-3 w-3 mr-1" /> Invoice</Button></Link>{next && next.newStatus !== 'delivered' && <Button size="sm" className="text-xs h-8 bg-blue-600 hover:bg-blue-700" onClick={() => updateStatusMutation.mutate({ order, newStatus: next.newStatus, message: next.message })} disabled={updateStatusMutation.isPending}>{next.label}</Button>}{showDecisionBar && <><Button size="sm" className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700" onClick={() => confirmRemainingBalanceMutation.mutate(order)} disabled={confirmRemainingBalanceMutation.isPending}><Wallet className="h-3 w-3 mr-1" /> Balance Paid</Button><Button size="sm" variant="outline" className="text-xs h-8 border-amber-400 text-amber-700 hover:bg-amber-50" onClick={() => markBalanceFailedMutation.mutate(order)} disabled={markBalanceFailedMutation.isPending}><AlertTriangle className="h-3 w-3 mr-1" /> Failed Payment</Button><Button size="sm" variant="destructive" className="text-xs h-8" onClick={() => updateStatusMutation.mutate({ order, newStatus: 'cancelled', message: 'Cancelled by admin.' })} disabled={updateStatusMutation.isPending}>Cancel Order</Button></>}{showDeliveredButton && <Button size="sm" className="text-xs h-8 bg-green-700 hover:bg-green-800" onClick={() => updateStatusMutation.mutate({ order, newStatus: next.newStatus, message: next.message })} disabled={updateStatusMutation.isPending}>{next.label}</Button>}</div>
+            <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t border-gray-100"><Link to={createPageUrl('AdminInvoice') + '?orderId=' + order.id}><Button size="sm" variant="outline" className="text-xs h-8"><FileText className="h-3 w-3 mr-1" /> Invoice</Button></Link>{showDecisionBar ? <><Button size="sm" className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700" onClick={() => confirmRemainingBalanceMutation.mutate(order)} disabled={confirmRemainingBalanceMutation.isPending}><Wallet className="h-3 w-3 mr-1" /> Balance Paid</Button><Button size="sm" variant="outline" className="text-xs h-8 border-amber-400 text-amber-700 hover:bg-amber-50" onClick={() => markBalanceFailedMutation.mutate(order)} disabled={markBalanceFailedMutation.isPending}><AlertTriangle className="h-3 w-3 mr-1" /> Failed Payment</Button><Button size="sm" variant="destructive" className="text-xs h-8" onClick={() => updateStatusMutation.mutate({ order, newStatus: 'cancelled', message: 'Cancelled by admin.' })} disabled={updateStatusMutation.isPending}>Cancel Order</Button></> : showDeliveredButton ? <Button size="sm" className="text-xs h-8 bg-green-700 hover:bg-green-800" onClick={() => updateStatusMutation.mutate({ order, newStatus: next.newStatus, message: next.message })} disabled={updateStatusMutation.isPending}>{next.label}</Button> : next ? <Button size="sm" className="text-xs h-8 bg-blue-600 hover:bg-blue-700" onClick={() => updateStatusMutation.mutate({ order, newStatus: next.newStatus, message: next.message })} disabled={updateStatusMutation.isPending}>{next.label}</Button> : null}</div>
             {!isClosed && <div className="mt-2 flex gap-2"><Textarea className="text-xs flex-1" rows={1} placeholder="Message to customer..." value={adminMessages[order.id] || ''} onChange={(e) => setAdminMessages((prev) => ({ ...prev, [order.id]: e.target.value }))} /><Button size="sm" variant="outline" className="h-8" onClick={() => sendAdminMessageMutation.mutate({ order, message: adminMessages[order.id] })}><Send className="h-3 w-3" /></Button></div>}
           </div>
         </div>
@@ -167,5 +158,3 @@ export default function AdminOrders() {
     </div>
   );
 }
-
- 

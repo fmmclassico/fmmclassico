@@ -16,6 +16,8 @@ const statusLabels = {
   shipped: 'Shipped',
   out_for_delivery: 'Out for Delivery',
   delivered: 'Delivered',
+  returned: 'Returned',
+  cancelled: 'Cancelled',
 };
 
 function toNumber(value, fallback = 0) {
@@ -89,7 +91,9 @@ export default function OrderTracking() {
   const status = order.status;
   const orderRank = { confirmed: 1, processing: 2, packed: 3, shipped: 4, out_for_delivery: 5, in_transit: 5, delivered: 6 };
   const rank = orderRank[status] || 0;
+  const isReturned = status === 'returned';
   const isCancelled = status === 'cancelled';
+  const isClosed = isReturned || isCancelled;
   const balanceDue = getBalanceDue(order);
   const grandTotal = getGrandTotal(order);
   const amountPaidNow = getAmountPaidNow(order);
@@ -137,13 +141,20 @@ export default function OrderTracking() {
         <Card className="p-5 bg-white mb-4">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-lg font-bold text-gray-900">Order #{order.order_number}</h1>
-            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isCancelled ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{isCancelled ? 'Cancelled' : (statusLabels[status] || status)}</span>
+            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isCancelled ? 'bg-red-100 text-red-700' : isReturned ? 'bg-gray-100 text-gray-700' : 'bg-blue-100 text-blue-700'}`}>{statusLabels[status] || status}</span>
           </div>
           <p className="text-xs text-gray-500">{order.created_date ? format(new Date(order.created_date), 'MMM d, yyyy h:mm a') : ''}</p>
           <div className="mt-2"><span className={`text-xs px-2.5 py-1 rounded-full font-medium ${payColor}`}>{payLabel}</span></div>
         </Card>
 
-        {!isCancelled && (
+        {isReturned && (
+          <Card className="p-5 bg-white mb-4 border border-gray-200">
+            <h2 className="text-sm font-bold text-gray-800 mb-2">Product Returned</h2>
+            <p className="text-xs text-gray-600">This order was marked as returned. Check the tracking history below for the admin note about refund, pickup, or redelivery arrangements.</p>
+          </Card>
+        )}
+
+        {!isClosed && (
           <Card className="p-5 bg-white mb-4">
             <h2 className="text-sm font-bold text-gray-800 mb-4">Order Progress</h2>
             <div className="space-y-4">

@@ -467,7 +467,6 @@ export default function Checkout() {
                     <div>
                       <p className="text-sm font-semibold text-purple-800 mb-2">Pay on Delivery Terms</p><ul className="text-xs text-purple-700 leading-relaxed list-disc pl-4 space-y-2">
                         <li><strong>Pay the full outstanding balance before the product is handed over</strong> at the time of delivery.</li>
-                        <li><strong>If full payment is not made, the product will be returned.</strong> Customers may either receive a <strong>50% refund of their deposit</strong>, which will be processed <strong>within 2 days after the returned product has been received and verified at our store</strong>, or pay the outstanding balance and arrange <strong>store pickup or redelivery at their own expense</strong>.</li>
                         <li><strong>Delivery fees are non-refundable</strong> under all circumstances.</li>
                         <li><strong>Customers must provide accurate delivery details and contact information.</strong> Our Customer Service team will contact customers before dispatch to confirm their availability.</li>
                       </ul>

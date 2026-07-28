@@ -9,66 +9,34 @@ import { Badge } from "@/components/ui/badge";
 import { Send, Upload, Loader2, CheckCircle2, XCircle, Trash2, Phone, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
-var SMS_CLIENT_ID = import.meta.env.VITE_HUBTEL_SMS_CLIENT_ID || '';
-var SMS_CLIENT_SECRET = import.meta.env.VITE_HUBTEL_SMS_CLIENT_SECRET || '';
-var SMS_SENDER_ID = import.meta.env.VITE_HUBTEL_SMS_SENDER_ID || 'FMMCLASSICO';
-
 function formatPhone(phone) {
   if (!phone) return null;
-  var cleaned = phone.toString().replace(/[^0-9+]/g, '');
-  if (cleaned.startsWith('+233')) return cleaned.replace('+', '');
-  if (cleaned.startsWith('233')) return cleaned;
-  if (cleaned.startsWith('0') && cleaned.length === 10) return '233' + cleaned.slice(1);
-  if (cleaned.length === 9) return '233' + cleaned;
+  const cleaned = phone.toString().replace(/[^0-9+]/g, '');
+  if (cleaned.startsWith('+233')) return cleaned;
+  if (cleaned.startsWith('233')) return '+' + cleaned;
+  if (cleaned.startsWith('0') && cleaned.length === 10) return '+233' + cleaned.slice(1);
+  if (cleaned.length === 9) return '+233' + cleaned;
   return null;
 }
 
-async function sendSMS(to, message) {
-  var formattedPhone = formatPhone(to);
-  if (!formattedPhone) return { success: false, phone: to, error: 'Invalid phone number' };
-
-  try {
-    var url = 'https://sms.hubtel.com/v1/messages/send?clientsecret=' + SMS_CLIENT_SECRET + '&clientid=' + SMS_CLIENT_ID + '&from=' + SMS_SENDER_ID + '&to=' + formattedPhone + '&content=' + encodeURIComponent(message);
-
-    var response = await fetch(url);
-    var data = await response.json();
-
-    if (response.ok && data.status === 0) {
-      return { success: true, phone: to };
-    }
-    return { success: false, phone: to, error: data.message || 'Failed' };
-  } catch (err) {
-    return { success: false, phone: to, error: err.message };
-  }
-}
-
 function parseFileContacts(file) {
-  return new Promise(function(resolve, reject) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
       try {
-        var text = e.target.result;
-        var NL = String.fromCharCode(10);
-        var lines = text.split(NL).filter(function(line) { return line.trim().length > 0; });
-        var phones = [];
-        for (var i = 0; i < lines.length; i++) {
-          var line = lines[i];
-          var cells = line.split(',');
+        const text = e.target.result;
+        const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
+        const phones = [];
+        for (const line of lines) {
+          let cells = line.split(',');
           if (cells.length === 1) cells = line.split(';');
           if (cells.length === 1) cells = line.split('\t');
-          for (var j = 0; j < cells.length; j++) {
-            var cell = cells[j].trim().replace(/"/g, '').replace(/'/g, '');
-            var digitsOnly = cell.replace(/[^0-9+]/g, '');
-            if (digitsOnly.length >= 9 && digitsOnly.length <= 15) {
-              phones.push(digitsOnly);
-            }
+          for (const cell of cells) {
+            const digitsOnly = cell.trim().replace(/"|'/g, '').replace(/[^0-9+]/g, '');
+            if (digitsOnly.length >= 9 && digitsOnly.length <= 15) phones.push(digitsOnly);
           }
         }
-        var unique = [];
-        for (var k = 0; k < phones.length; k++) {
-          if (unique.indexOf(phones[k]) === -1) unique.push(phones[k]);
-        }
-        resolve(unique);
+        resolve([...new Set(phones)]);
       } catch (err) {
         reject(err);
       }
@@ -79,109 +47,74 @@ function parseFileContacts(file) {
 }
 
 export default function AdminSMSBroadcast() {
-  var [user, setUser] = useState(null);
-  var [isAdmin, setIsAdmin] = useState(false);
-  var [message, setMessage] = useState('');
-  var [contacts, setContacts] = useState([]);
-  var [manualNumber, setManualNumber] = useState('');
-  var [isSending, setIsSending] = useState(false);
-  var [results, setResults] = useState(null);
-  var [progress, setProgress] = useState(0);
-  var fileInputRef = useRef(null);
+  const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [message, setMessage] = useState('');
+  const [contacts, setContacts] = useState([]);
+  const [manualNumber, setManualNumber] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [results, setResults] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const fileInputRef = useRef(null);
 
-  useEffect(function() {
-    appClient.auth.me().then(function(u) { setUser(u); setIsAdmin(u.role === 'admin'); }).catch(function() {});
+  useEffect(() => {
+    appClient.auth.me().then((u) => { setUser(u); setIsAdmin(u.role === 'admin'); }).catch(() => {});
   }, []);
 
-  var handleFileUpload = async function(e) {
-    var file = e.target.files && e.target.files[0];
+  const handleFileUpload = async (e) => {
+    const file = e.target.files && e.target.files[0];
     if (!file) return;
     try {
-      var phones = await parseFileContacts(file);
-      if (phones.length === 0) {
-        toast.error('No valid phone numbers found in file');
-        return;
-      }
-      setContacts(function(prev) {
-        var existing = prev.map(function(c) { return c.phone; });
-        var newOnes = phones.filter(function(p) { return existing.indexOf(p) === -1; }).map(function(p) { return { phone: p }; });
+      const phones = await parseFileContacts(file);
+      if (phones.length === 0) return toast.error('No valid phone numbers found in file');
+      setContacts((prev) => {
+        const existing = prev.map((c) => c.phone);
+        const newOnes = phones.filter((p) => !existing.includes(p)).map((p) => ({ phone: p }));
         return prev.concat(newOnes);
       });
-      toast.success(phones.length + ' contacts loaded from file');
+      toast.success(`${phones.length} contacts loaded from file`);
     } catch (err) {
       toast.error('Failed to read file: ' + err.message);
     }
     e.target.value = '';
   };
 
-  var handleAddManual = function() {
+  const handleAddManual = () => {
     if (!manualNumber.trim()) return;
-    var separators = [',', ';'];
-    var raw = manualNumber;
-    for (var s = 0; s < separators.length; s++) {
-      raw = raw.split(separators[s]).join('\n');
-    }
-    var numbers = raw.split('\n').map(function(n) { return n.trim(); }).filter(function(n) { return n.length > 0; });
-    var newContacts = [];
-    var existing = contacts.map(function(c) { return c.phone; });
-    for (var i = 0; i < numbers.length; i++) {
-      if (existing.indexOf(numbers[i]) === -1) {
-        newContacts.push({ phone: numbers[i] });
-        existing.push(numbers[i]);
-      }
-    }
-    if (newContacts.length > 0) {
-      setContacts(function(prev) { return prev.concat(newContacts); });
-      toast.success(newContacts.length + ' number(s) added');
-    }
+    const numbers = manualNumber.replace(/[;,]/g, '\n').split('\n').map((n) => n.trim()).filter(Boolean);
+    setContacts((prev) => {
+      const existing = prev.map((c) => c.phone);
+      const additions = numbers.filter((n) => !existing.includes(n)).map((n) => ({ phone: n }));
+      if (additions.length > 0) toast.success(`${additions.length} number(s) added`);
+      return prev.concat(additions);
+    });
     setManualNumber('');
   };
 
-  var handleRemoveContact = function(index) {
-    setContacts(function(prev) { return prev.filter(function(_, i) { return i !== index; }); });
-  };
-
-  var handleClearAll = function() {
-    if (confirm('Clear all ' + contacts.length + ' contacts?')) {
-      setContacts([]);
-    }
-  };
-
-  var handleSend = async function() {
-    if (!message.trim()) { toast.error('Please write a message'); return; }
-    if (contacts.length === 0) { toast.error('Add at least one contact'); return; }
-    if (!SMS_CLIENT_ID || !SMS_CLIENT_SECRET) { toast.error('Hubtel SMS credentials not configured'); return; }
-
+  const handleSend = async () => {
+    if (!message.trim()) return toast.error('Please write a message');
+    if (contacts.length === 0) return toast.error('Add at least one contact');
     setIsSending(true);
     setResults(null);
     setProgress(0);
-
-    var successCount = 0;
-    var failCount = 0;
-    var failedNumbers = [];
-
-    for (var i = 0; i < contacts.length; i++) {
-      var result = await sendSMS(contacts[i].phone, message);
-      if (result.success) {
-        successCount++;
-      } else {
-        failCount++;
-        failedNumbers.push(result.phone + ' (' + (result.error || 'failed') + ')');
+    let success = 0;
+    let failed = 0;
+    const failedNumbers = [];
+    for (let i = 0; i < contacts.length; i++) {
+      const formatted = formatPhone(contacts[i].phone);
+      const result = formatted ? await appClient.integrations.Core.SendSMS({ to: formatted, message }) : { success: false, error: 'Invalid phone number' };
+      if (result.success) success += 1;
+      else {
+        failed += 1;
+        failedNumbers.push(`${contacts[i].phone} (${result.error || 'failed'})`);
       }
       setProgress(Math.round(((i + 1) / contacts.length) * 100));
-      if (i < contacts.length - 1) {
-        await new Promise(function(resolve) { setTimeout(resolve, 500); });
-      }
+      if (i < contacts.length - 1) await new Promise((resolve) => setTimeout(resolve, 300));
     }
-
-    setResults({ success: successCount, failed: failCount, failedNumbers: failedNumbers });
+    setResults({ success, failed, failedNumbers });
     setIsSending(false);
-
-    if (failCount === 0) {
-      toast.success('All ' + successCount + ' messages sent!');
-    } else {
-      toast.error('Sent: ' + successCount + ', Failed: ' + failCount);
-    }
+    if (failed === 0) toast.success(`All ${success} messages sent!`);
+    else toast.error(`Sent: ${success}, Failed: ${failed}`);
   };
 
   if (!user) return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-6 h-6 animate-spin" /></div>;
@@ -191,123 +124,49 @@ export default function AdminSMSBroadcast() {
     <div className="max-w-4xl mx-auto px-4 py-6">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Send className="w-5 h-5 text-blue-600" /> SMS Broadcast</h1>
-        <p className="text-sm text-gray-500">Send SMS to one or many contacts using Hubtel</p>
+        <p className="text-sm text-gray-500">Send SMS to one or many contacts using your deployed send-sms function</p>
       </div>
-
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-4">
           <Card className="p-4 rounded-2xl">
             <h2 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Phone className="w-4 h-4" /> Compose Message</h2>
-            <div>
-              <Label className="text-sm font-medium">Message</Label>
-              <Textarea value={message} onChange={function(e) { setMessage(e.target.value); }} placeholder="Type your SMS message here..." rows={6} className="mt-1 rounded-xl" />
-              <p className="text-xs text-gray-400 mt-1">{message.length} characters {message.length > 160 ? '(' + Math.ceil(message.length / 160) + ' SMS parts)' : ''}</p>
-            </div>
-
+            <Label className="text-sm font-medium">Message</Label>
+            <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Type your SMS message here..." rows={6} className="mt-1 rounded-xl" />
+            <p className="text-xs text-gray-400 mt-1">{message.length} characters {message.length > 160 ? '(' + Math.ceil(message.length / 160) + ' SMS parts)' : ''}</p>
             <div className="mt-4">
               <Button onClick={handleSend} disabled={isSending || contacts.length === 0 || !message.trim()} className="w-full rounded-xl bg-blue-800 text-white hover:bg-blue-900 py-3">
-                {isSending ? (
-                  <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Sending... {progress}%</>
-                ) : (
-                  <><Send className="w-4 h-4 mr-2" /> Send SMS to {contacts.length} Contact{contacts.length !== 1 ? 's' : ''}</>
-                )}
+                {isSending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Sending... {progress}%</> : <><Send className="w-4 h-4 mr-2" /> Send SMS to {contacts.length} Contact{contacts.length !== 1 ? 's' : ''}</>}
               </Button>
             </div>
-
-            {isSending && (
-              <div className="mt-3">
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: progress + '%' }}></div>
-                </div>
-              </div>
-            )}
-
+            {isSending && <div className="mt-3"><div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: progress + '%' }}></div></div></div>}
             {results && (
               <div className="mt-4 p-3 bg-gray-50 rounded-xl text-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  {results.failed === 0 ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-500" />}
-                  <span className="font-bold">Broadcast Complete</span>
-                </div>
+                <div className="flex items-center gap-2 mb-2">{results.failed === 0 ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-500" />}<span className="font-bold">Broadcast Complete</span></div>
                 <p className="text-green-700">Sent: {results.success}</p>
-                {results.failed > 0 && (
-                  <div>
-                    <p className="text-red-600">Failed: {results.failed}</p>
-                    <div className="mt-1 text-xs text-gray-500 max-h-20 overflow-y-auto">
-                      {results.failedNumbers.map(function(n, i) { return <p key={i}>{n}</p>; })}
-                    </div>
-                  </div>
-                )}
+                {results.failed > 0 && <div><p className="text-red-600">Failed: {results.failed}</p><div className="mt-1 text-xs text-gray-500 max-h-20 overflow-y-auto">{results.failedNumbers.map((n, i) => <p key={i}>{n}</p>)}</div></div>}
               </div>
             )}
           </Card>
-
-          <Card className="p-3 rounded-2xl bg-blue-50 border-blue-200">
-            <p className="text-xs text-blue-700">Sender ID: <strong>{SMS_SENDER_ID}</strong></p>
-            <p className="text-xs text-blue-600">Messages appear from "FMMCLASSICO" on phones.</p>
-          </Card>
         </div>
-
         <div className="space-y-4">
           <Card className="p-4 rounded-2xl">
             <h2 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> Contacts ({contacts.length})</h2>
-
             <div className="mb-3">
               <input type="file" ref={fileInputRef} className="hidden" accept=".csv,.xlsx,.xls,.txt" onChange={handleFileUpload} />
-              <Button variant="outline" className="w-full rounded-xl" onClick={function() { fileInputRef.current && fileInputRef.current.click(); }}>
-                <Upload className="w-4 h-4 mr-2" /> Upload Excel / CSV File
-              </Button>
-              <p className="text-[10px] text-gray-400 mt-1">Accepts .csv, .xlsx, .xls, .txt with phone numbers</p>
+              <Button variant="outline" className="w-full rounded-xl" onClick={() => fileInputRef.current && fileInputRef.current.click()}><Upload className="w-4 h-4 mr-2" /> Upload Excel / CSV File</Button>
             </div>
-
             <div className="mb-3">
               <Label className="text-xs font-medium">Add numbers manually</Label>
-              <div className="flex gap-2 mt-1">
-                <Input value={manualNumber} onChange={function(e) { setManualNumber(e.target.value); }} placeholder="0208207543 or comma separated" className="flex-1 rounded-xl text-sm" onKeyDown={function(e) { if (e.key === 'Enter') handleAddManual(); }} />
-                <Button size="sm" onClick={handleAddManual} className="rounded-xl bg-green-600 text-white hover:bg-green-700">Add</Button>
-              </div>
+              <div className="flex gap-2 mt-1"><Input value={manualNumber} onChange={(e) => setManualNumber(e.target.value)} placeholder="0208207543 or comma separated" className="flex-1 rounded-xl text-sm" onKeyDown={(e) => { if (e.key === 'Enter') handleAddManual(); }} /><Button size="sm" onClick={handleAddManual} className="rounded-xl bg-green-600 text-white hover:bg-green-700">Add</Button></div>
             </div>
-
-            {contacts.length > 0 && (
+            {contacts.length > 0 ? (
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className="bg-blue-100 text-blue-700">{contacts.length} contacts</Badge>
-                  <Button variant="ghost" size="sm" className="text-xs text-red-500 hover:text-red-700" onClick={handleClearAll}>
-                    <Trash2 className="w-3 h-3 mr-1" /> Clear All
-                  </Button>
-                </div>
-                <div className="max-h-[300px] overflow-y-auto space-y-1">
-                  {contacts.map(function(contact, idx) {
-                    return (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
-                        <span className="text-gray-700">{contact.phone}</span>
-                        <button onClick={function() { handleRemoveContact(idx); }} className="text-red-400 hover:text-red-600">
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                <div className="flex items-center justify-between mb-2"><Badge className="bg-blue-100 text-blue-700">{contacts.length} contacts</Badge><Button variant="ghost" size="sm" className="text-xs text-red-500 hover:text-red-700" onClick={() => setContacts([])}><Trash2 className="w-3 h-3 mr-1" /> Clear All</Button></div>
+                <div className="max-h-[300px] overflow-y-auto space-y-1">{contacts.map((contact, idx) => <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm"><span className="text-gray-700">{contact.phone}</span><button onClick={() => setContacts((prev) => prev.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600"><XCircle className="w-4 h-4" /></button></div>)}</div>
               </div>
-            )}
-
-            {contacts.length === 0 && (
-              <div className="text-center py-8 text-gray-400 text-sm">
-                <Phone className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>No contacts yet</p>
-                <p className="text-xs">Upload a file or add numbers manually</p>
-              </div>
-            )}
+            ) : <div className="text-center py-8 text-gray-400 text-sm"><Phone className="w-8 h-8 mx-auto mb-2 opacity-50" /><p>No contacts yet</p><p className="text-xs">Upload a file or add numbers manually</p></div>}
           </Card>
-
-          <Card className="p-3 rounded-2xl">
-            <p className="text-xs font-semibold text-gray-700 mb-1">Tips:</p>
-            <ul className="text-xs text-gray-500 space-y-0.5 list-disc pl-4">
-              <li>Numbers: 0208207543, 233208207543, or +233208207543</li>
-              <li>Excel: phone numbers found in any column</li>
-              <li>Over 160 chars counts as multiple SMS</li>
-              <li>500ms delay between messages to avoid rate limits</li>
-            </ul>
-          </Card>
+          <Card className="p-3 rounded-2xl"><p className="text-xs font-semibold text-gray-700 mb-1">Tips:</p><ul className="text-xs text-gray-500 space-y-0.5 list-disc pl-4"><li>Numbers: 0208207543, 233208207543, or +233208207543</li><li>Excel: phone numbers found in any column</li><li>Over 160 chars counts as multiple SMS</li><li>This page now uses the server-side send-sms function instead of browser-side credentials</li></ul></Card>
         </div>
       </div>
     </div>

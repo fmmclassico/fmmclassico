@@ -107,6 +107,20 @@ function getNextStatus(order) {
   return null;
 }
 
+function getReturnStatusMessage(order) {
+  const balanceDue = getBalanceDue(order).toFixed(2);
+
+  if ((order?.payment_method || 'full_payment') === 'deposit_balance') {
+    return `Product returned because the remaining balance of ₵${balanceDue} was not paid on delivery. Follow the deposit payment terms for the 50% deposit refund timeline or for pickup/redelivery after the outstanding balance is settled. Delivery fees remain non-refundable.`;
+  }
+
+  if ((order?.payment_method || 'full_payment') === 'pay_on_delivery') {
+    return `Product returned because the outstanding balance of ₵${balanceDue} was not paid on delivery. Follow the payment terms for refund handling or for pickup/redelivery after the outstanding balance is settled. Delivery fees remain non-refundable.`;
+  }
+
+  return 'Product returned.';
+}
+
 export default function AdminOrders() {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -169,6 +183,7 @@ export default function AdminOrders() {
         out_for_delivery: { title: 'Order Out for Delivery', msg: `Your order #${order.order_number} is out for delivery.` },
         delivered: { title: 'Order Delivered!', msg: `Order #${order.order_number} delivered. Thank you!` },
         cancelled: { title: 'Order Cancelled', msg: `Order #${order.order_number} cancelled.` },
+        returned: { title: 'Product Returned', msg: `Order #${order.order_number} was returned because delivery could not be completed under the selected payment terms.` },
       };
 
       const notif = notifMap[newStatus];
@@ -271,6 +286,7 @@ export default function AdminOrders() {
     const isClosed = isDelivered || isCancelled;
     const canConfirmBalance = hasRemainingBalance(order) && order.payment_status === 'paid' && !isRemainingBalancePaid(order) && !isClosed && ['shipped', 'out_for_delivery'].includes(order.status);
     const canAdvance = next && order.payment_status === 'paid' && !isClosed;
+    const canMarkReturned = hasRemainingBalance(order) && order.payment_status === 'paid' && !isClosed && ['shipped', 'out_for_delivery'].includes(order.status);
     const deliveryBlocked = next?.newStatus === 'delivered' && hasRemainingBalance(order) && !isRemainingBalancePaid(order);
 
     return (
@@ -340,7 +356,7 @@ export default function AdminOrders() {
             </div>
 
             <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t border-gray-100">
-              <Link to={createPageUrl('AdminInvoice') + '?order=' + order.order_number}>
+              <Link to={createPageUrl('AdminInvoice') + '?orderId=' + order.id}>
                 <Button size="sm" variant="outline" className="text-xs h-8"><FileText className="h-3 w-3 mr-1" /> Invoice</Button>
               </Link>
 
@@ -359,6 +375,12 @@ export default function AdminOrders() {
               {canAdvance && deliveryBlocked && (
                 <Button size="sm" variant="outline" className="text-xs h-8 opacity-50" disabled>
                   Confirm Balance Paid First
+                </Button>
+              )}
+
+              {canMarkReturned && (
+                <Button size="sm" variant="outline" className="text-xs h-8 border-gray-400 text-gray-700 hover:bg-gray-100" onClick={() => updateStatusMutation.mutate({ order, newStatus: 'returned', message: getReturnStatusMessage(order) })} disabled={updateStatusMutation.isPending}>
+                  Mark Product Returned
                 </Button>
               )}
 

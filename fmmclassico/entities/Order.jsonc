@@ -2,10 +2,7 @@
   "name": "Order",
   "type": "object",
   "properties": {
-    "order_number": {
-      "type": "string",
-      "description": "Unique order number"
-    },
+    "order_number": { "type": "string", "description": "Unique order number" },
     "items": {
       "type": "array",
       "description": "Order items",
@@ -25,60 +22,34 @@
         }
       }
     },
-    "product_subtotal": {
-      "type": "number",
-      "description": "Total of products before delivery"
-    },
-    "delivery_fee": {
-      "type": "number",
-      "description": "Delivery fee charged"
-    },
-    "grand_total": {
-      "type": "number",
-      "description": "Full order value including delivery"
-    },
-    "amount_paid_now": {
-      "type": "number",
-      "description": "Amount charged immediately at checkout"
-    },
-    "total_amount": {
-      "type": "number",
-      "description": "Legacy total field kept for compatibility; store the full order value here"
-    },
-    "balance_due": {
-      "type": "number",
-      "description": "Amount still to be paid on delivery (0 for full payment)"
-    },
-    "remaining_balance_paid": {
-      "type": "boolean",
-      "default": false,
-      "description": "Whether the remaining delivery-side balance has been confirmed by admin"
-    },
-    "remaining_balance_paid_at": {
-      "type": "string",
-      "description": "Timestamp when the remaining balance was confirmed"
-    },
-    "payment_method": {
-      "type": "string",
-      "enum": ["full_payment", "deposit_balance", "pay_on_delivery"],
-      "description": "Payment method chosen at checkout"
-    },
-    "delivery_zone": {
-      "type": "string",
-      "description": "Delivery zone selected"
-    },
-    "payment_status": {
-      "type": "string",
-      "enum": ["pending_payment", "paid", "failed", "cancelled", "refunded"],
-      "default": "pending_payment",
-      "description": "Initial online payment status from Hubtel"
-    },
-    "status": {
-      "type": "string",
-      "enum": ["confirmed", "processing", "packed", "shipped", "out_for_delivery", "delivered", "cancelled", "returned"],
-      "default": "confirmed",
-      "description": "Fulfillment status"
-    },
+    "product_subtotal": { "type": "number", "description": "Total of products before delivery" },
+    "delivery_fee": { "type": "number", "description": "Delivery fee charged" },
+    "grand_total": { "type": "number", "description": "Full order value including delivery" },
+    "amount_paid_now": { "type": "number", "description": "Amount charged immediately at checkout" },
+    "initial_payment_amount": { "type": "number", "description": "Amount expected in the first Hubtel payment stage" },
+    "balance_payment_amount": { "type": "number", "description": "Amount expected in the remaining Hubtel payment stage" },
+    "total_amount": { "type": "number", "description": "Legacy total field kept for compatibility; store the full order value here" },
+    "balance_due": { "type": "number", "description": "Amount still to be paid after the first payment stage" },
+    "remaining_balance_paid": { "type": "boolean", "default": false, "description": "Whether the remaining balance has been fully settled" },
+    "remaining_balance_paid_at": { "type": "string", "description": "Timestamp when the remaining balance was confirmed" },
+    "payment_method": { "type": "string", "enum": ["full_payment", "deposit_balance", "pay_on_delivery"], "description": "Payment method chosen at checkout" },
+    "delivery_zone": { "type": "string", "description": "Delivery zone selected" },
+    "payment_status": { "type": "string", "enum": ["pending_payment", "paid", "failed", "cancelled", "refunded"], "default": "pending_payment", "description": "Legacy field for initial online payment status" },
+    "initial_payment_status": { "type": "string", "enum": ["pending", "paid", "failed", "cancelled"], "default": "pending", "description": "Status of the first Hubtel payment stage" },
+    "balance_payment_status": { "type": "string", "enum": ["not_required", "pending", "enabled", "paid", "failed", "cancelled"], "default": "not_required", "description": "Status of the remaining Hubtel balance payment stage" },
+    "payment_stage": { "type": "string", "enum": ["awaiting_initial_payment", "initial_payment_paid", "awaiting_balance_payment", "balance_payment_failed", "fully_paid"], "default": "awaiting_initial_payment", "description": "High-level payment journey state" },
+    "is_fully_paid": { "type": "boolean", "default": false, "description": "Whether the full order value has been completed through Hubtel-tracked stages" },
+    "balance_payment_enabled": { "type": "boolean", "default": false, "description": "Whether the customer can pay the remaining balance from the order page" },
+    "balance_payment_enabled_at": { "type": "string", "description": "Timestamp when remaining-balance payment became available" },
+    "initial_payment_reference": { "type": "string", "description": "Hubtel client reference for the first payment stage" },
+    "balance_payment_reference": { "type": "string", "description": "Hubtel client reference for the balance payment stage" },
+    "initial_checkout_id": { "type": "string", "description": "Hubtel checkout id for the first payment stage" },
+    "balance_checkout_id": { "type": "string", "description": "Hubtel checkout id for the balance payment stage" },
+    "delivery_landmark": { "type": "string", "description": "Landmark or extra address detail used for stricter location validation" },
+    "delivery_day_sms_sent_at": { "type": "string", "description": "Timestamp of the delivery-day reminder SMS" },
+    "last_sms_event": { "type": "string", "description": "Most recent SMS event label sent to the customer" },
+    "last_sms_sent_at": { "type": "string", "description": "Timestamp of the latest SMS sent to the customer" },
+    "status": { "type": "string", "enum": ["confirmed", "processing", "packed", "shipped", "out_for_delivery", "delivered", "cancelled", "returned"], "default": "confirmed", "description": "Fulfilment status" },
     "customer_name": { "type": "string" },
     "customer_email": { "type": "string" },
     "customer_phone": { "type": "string" },
@@ -98,9 +69,9 @@
         }
       }
     },
-    "hubtel_transaction_id": { "type": "string", "description": "(Deprecated)" },
-    "hubtel_status": { "type": "string", "enum": ["initiated", "pending", "successful", "failed"], "default": "initiated", "description": "(Deprecated)" },
-    "payment_reference": { "type": "string", "description": "(Deprecated)" }
+    "hubtel_transaction_id": { "type": "string", "description": "Legacy Hubtel transaction id field" },
+    "hubtel_status": { "type": "string", "enum": ["initiated", "pending", "successful", "failed"], "default": "initiated", "description": "Legacy Hubtel status field" },
+    "payment_reference": { "type": "string", "description": "Legacy primary Hubtel reference field" }
   },
   "required": ["items", "total_amount", "customer_name", "customer_email", "delivery_address"],
   "rls": {

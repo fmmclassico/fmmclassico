@@ -26,21 +26,6 @@ function pickHeroImage(slide, isMobile) {
 const BLUE_GRADIENT = 'from-[#03143f] via-[#06286d] to-[#0b3ea9]';
 const BLUE_TITLE = 'text-[#8dc3ff]';
 
-
-const REVIEW_SLIDE = {
-  id: 'google-review',
-  type: 'review',
-  title: 'WELCOME TO FMM CLASSICO',
-  subtitle: 'Shop smartphones, phone accessories, electronics, home appliances, and lifestyle products in one place.',
-  points: [
-    'Save items to your wishlist',
-    'Track orders and view order history',
-    'Manage your account details',
-    'Enjoy a faster, more secure checkout',
-  ],
-  note: 'Sign in with Google or email to access your account quickly and securely.',
-};
-
 const BUILT_IN_BANNERS = [
   {
     id: 'fixed-phones',
@@ -133,47 +118,6 @@ const BUILT_IN_BANNERS = [
     titleClass: BLUE_TITLE,
   },
 ];
-
-
-function ReviewIntroSlide({ slide }) {
-  return (
-    <div className="relative h-full w-full overflow-hidden bg-gradient-to-r from-[#03143f] via-[#0b2a63] to-[#2E86C1]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.14),transparent_32%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_20%,rgba(255,255,255,0.10),transparent_28%)]" />
-      <div className="relative z-10 grid h-full gap-3 px-3 py-3 sm:px-5 md:grid-cols-[1.05fr_0.95fr] md:gap-5 md:px-8 md:py-6">
-        <div className="min-w-0 self-center">
-          <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white/90 sm:text-xs">
-            Welcome to FMM CLASSICO
-          </span>
-          <h2 className="mt-2 text-lg font-black leading-tight text-white sm:text-2xl md:text-4xl">
-            {slide.subtitle}
-          </h2>
-          <p className="mt-2 max-w-xl text-[11px] leading-5 text-white/88 sm:text-sm md:text-base md:leading-7">
-            Create an account or sign in to save favourites, track orders, view order history, manage your details, and enjoy a smoother checkout.
-          </p>
-        </div>
-
-        <div className="flex h-full items-center justify-center md:justify-end">
-          <div className="w-full max-w-md rounded-3xl border border-white/15 bg-white/95 p-3 text-left shadow-2xl sm:p-4 md:p-5">
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#2E86C1] sm:text-xs">
-              What you can do after signing in
-            </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {slide.points.map((point) => (
-                <div key={point} className="rounded-2xl bg-slate-50 px-3 py-2 text-[11px] font-semibold leading-5 text-slate-700 sm:text-xs md:text-sm">
-                  {point}
-                </div>
-              ))}
-            </div>
-            <p className="mt-3 text-[11px] leading-5 text-slate-600 sm:text-xs md:text-sm">
-              {slide.note}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function BuiltInBannerSlide({ slide }) {
   return (
@@ -269,7 +213,7 @@ export default function HeroBanner() {
       }));
   }, [promoBanners]);
 
-  const slides = useMemo(() => [REVIEW_SLIDE, ...BUILT_IN_BANNERS, ...uploadedSlides], [uploadedSlides]);
+  const slides = useMemo(() => [...BUILT_IN_BANNERS, ...uploadedSlides], [uploadedSlides]);
 
   useEffect(() => {
     if (current >= slides.length) setCurrent(0);
@@ -277,12 +221,11 @@ export default function HeroBanner() {
 
   useEffect(() => {
     if (slides.length <= 1) return undefined;
-    const delay = current === 0 ? 10000 : 5000;
-    const timer = setTimeout(() => {
+    const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % slides.length);
-    }, delay);
-    return () => clearTimeout(timer);
-  }, [current, slides.length]);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
 
   const prev = () => {
     if (slides.length <= 1) return;
@@ -318,10 +261,10 @@ export default function HeroBanner() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.28 }}
+        transition={{ duration: 0.40 }}
         className="h-full"
       >
-        {slide.type === 'review' ? <ReviewIntroSlide slide={slide} /> : slide.type === 'built_in' ? <BuiltInBannerSlide slide={slide} /> : <UploadedBannerSlide slide={slide} isMobile={isMobile} />}
+        {slide.type === 'built_in' ? <BuiltInBannerSlide slide={slide} /> : <UploadedBannerSlide slide={slide} isMobile={isMobile} />}
       </motion.div>
     </AnimatePresence>
   );

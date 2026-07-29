@@ -287,7 +287,7 @@ export default function ProductDetail() {
     if (galleryItems.length <= 1) return undefined;
     const interval = setInterval(() => {
       setSelectedImageIndex((prev) => (prev + 1) % galleryItems.length);
-    }, 10000);
+    }, 4000);
     return () => clearInterval(interval);
   }, [galleryItems.length]);
 

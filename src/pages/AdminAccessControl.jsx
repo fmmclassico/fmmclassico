@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Loader2, Mail, Lock, Plus, Trash2 } from 'lucide-react';
+import { Shield, Loader2, Mail, Lock, ShieldCheck, ShieldOff } from 'lucide-react';
 import { toast } from "sonner";
 
 export default function AdminAccessControl() {
@@ -18,87 +18,74 @@ export default function AdminAccessControl() {
   const queryClient = useQueryClient();
 
   const MASTER_ADMIN_EMAIL = (import.meta.env.VITE_MASTER_ADMIN_EMAIL || 'fmmclassico@gmail.com').trim().toLowerCase();
-  const ENV_ADMIN_EMAILS = [...new Set([
+  const APPROVED_EMAILS = [...new Set([
     ...(import.meta.env.VITE_ALLOWED_ADMIN_EMAILS || '').split(','),
     ...(import.meta.env.VITE_ADMIN_EMAILS || '').split(','),
     MASTER_ADMIN_EMAIL,
-  ].map(function(value) { return value.trim().toLowerCase(); }).filter(Boolean))];
-  const [newAdminEmail, setNewAdminEmail] = useState('');
+  ].map(function(e) { return e.trim().toLowerCase(); }).filter(Boolean))];
   const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || '';
 
-  function parseStoredAdminEmails(value) {
-    if (!value) return [];
-    if (Array.isArray(value)) return value.map(function(item) { return String(item).trim().toLowerCase(); }).filter(Boolean);
+  function parseControls(value) {
+    if (!value) return {};
+    if (typeof value === 'object' && !Array.isArray(value)) return value;
     if (typeof value === 'string') {
       try {
         var parsed = JSON.parse(value);
-        if (Array.isArray(parsed)) return parsed.map(function(item) { return String(item).trim().toLowerCase(); }).filter(Boolean);
-      } catch (_) {}
-      return value.split(/[,\n]/).map(function(item) { return item.trim().toLowerCase(); }).filter(Boolean);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+      } catch (_) {
+        return {};
+      }
     }
-    return [];
-  }
-
-  function normalizeEmail(value) {
-    return String(value || '').trim().toLowerCase();
+    return {};
   }
 
   useEffect(function() {
     var checkAdmin = async function() {
-      try {
-        var isAuth = await appClient.auth.isAuthenticated();
-        if (!isAuth) { toast.error('Please login'); return; }
-        var userData = await appClient.auth.me();
-        if (!userData?.isAdmin) { toast.error('Admin access required'); return; }
-        setUser(userData);
-      } catch (err) {
-        toast.error('Unable to verify admin access');
-      }
+      var isAuth = await appClient.auth.isAuthenticated();
+      if (!isAuth) { toast.error('Please login'); return; }
+      var userData = await appClient.auth.me();
+      if (userData?.isAdmin !== true) { toast.error('Admin access required'); return; }
+      setUser(userData);
     };
     checkAdmin();
   }, []);
 
-  var { data: adminEmailSettings = [] } = useQuery({
-    queryKey: ['adminAccessEmails'],
-    queryFn: function() { return appClient.entities.AppSetting.filter({ key: 'admin_access_emails' }); },
+  var { data: adminAccessSettings = [] } = useQuery({
+    queryKey: ['adminAccessControls'],
+    queryFn: function() { return appClient.entities.AppSetting.filter({ key: 'admin_access_controls' }); },
     enabled: !!user,
   });
 
-  var storedAdminEmailSetting = adminEmailSettings.length > 0 ? adminEmailSettings[0] : null;
-  var storedAdminEmails = parseStoredAdminEmails(storedAdminEmailSetting?.value);
+  var accessControlSetting = adminAccessSettings.length > 0 ? adminAccessSettings[0] : null;
+  var storedControls = parseControls(accessControlSetting?.value);
 
-  var combinedAdminEmails = useMemo(function() {
-    return [...new Set([].concat(ENV_ADMIN_EMAILS, storedAdminEmails).filter(Boolean))].sort();
-  }, [storedAdminEmailSetting?.value]);
+  var emailStates = useMemo(function() {
+    return APPROVED_EMAILS.map(function(email) {
+      var isMaster = email === MASTER_ADMIN_EMAIL;
+      var enabled = isMaster ? true : storedControls[email]?.enabled !== false;
+      return { email, isMaster, enabled };
+    });
+  }, [accessControlSetting?.value]);
 
-  var saveAdminEmailsMutation = useMutation({
-    mutationFn: async function(nextEmails) {
-      var payload = { key: 'admin_access_emails', value: JSON.stringify(nextEmails) };
-      if (storedAdminEmailSetting?.id) return appClient.entities.AppSetting.update(storedAdminEmailSetting.id, payload);
+  var saveAccessMutation = useMutation({
+    mutationFn: async function(nextControls) {
+      var payload = { key: 'admin_access_controls', value: JSON.stringify(nextControls) };
+      if (accessControlSetting?.id) return appClient.entities.AppSetting.update(accessControlSetting.id, payload);
       return appClient.entities.AppSetting.create(payload);
     },
     onSuccess: function() {
-      setNewAdminEmail('');
-      queryClient.invalidateQueries({ queryKey: ['adminAccessEmails'] });
-      toast.success('Admin access list updated. Added users should sign out and sign back in to refresh access.');
+      queryClient.invalidateQueries({ queryKey: ['adminAccessControls'] });
+      toast.success('Admin access updated. That email can sign in only when allowed and when the admin password is correct.');
     },
     onError: function(err) {
-      toast.error('Failed to update admin emails: ' + (err?.message || 'Unknown error'));
-    }
+      toast.error('Failed to update admin access: ' + (err?.message || 'Unknown error'));
+    },
   });
 
-  var handleAddAdminEmail = function() {
-    var normalized = normalizeEmail(newAdminEmail);
-    if (!normalized || !normalized.includes('@')) { toast.error('Enter a valid email address'); return; }
-    if (combinedAdminEmails.includes(normalized)) { toast.error('That email already has admin access'); return; }
-    saveAdminEmailsMutation.mutate([].concat(storedAdminEmails, [normalized]).filter(Boolean).sort());
-  };
-
-  var handleRemoveAdminEmail = function(email) {
-    var normalized = normalizeEmail(email);
-    if (normalized === MASTER_ADMIN_EMAIL) { toast.error('Master admin cannot be removed here'); return; }
-    if (ENV_ADMIN_EMAILS.includes(normalized) && !storedAdminEmails.includes(normalized)) { toast.error('This email is locked by environment variables. Remove it in Vercel to disable access.'); return; }
-    saveAdminEmailsMutation.mutate(storedAdminEmails.filter(function(item) { return item !== normalized; }));
+  var handleToggleAccess = function(email, nextEnabled) {
+    if (email === MASTER_ADMIN_EMAIL) return;
+    var nextControls = { ...storedControls, [email]: { enabled: !!nextEnabled } };
+    saveAccessMutation.mutate(nextControls);
   };
 
   var { data: adminPasswordData = [] } = useQuery({
@@ -154,32 +141,36 @@ export default function AdminAccessControl() {
       {/* Authorized Emails List */}
       <Card className="p-4 rounded-2xl mb-4">
         <h2 className="font-bold text-gray-800 mb-3">Authorized Admin Emails</h2>
-        <p className="text-xs text-gray-500 mb-3">These emails have admin access (configured in environment variables):</p>
+        <p className="text-xs text-gray-500 mb-3">Only these approved emails can ever become admins. Use the buttons to allow or disable access without deleting any email.</p>
         <div className="space-y-2">
-          {combinedAdminEmails.map(function(email) {
-            var isMaster = email === MASTER_ADMIN_EMAIL;
-            var isEnvControlled = ENV_ADMIN_EMAILS.includes(email);
+          {emailStates.map(function(item) {
             return (
-              <div key={email} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl gap-3">
+              <div key={item.email} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <Mail className="w-4 h-4 text-gray-400 shrink-0" />
-                  <span className="text-sm font-medium break-all">{email}</span>
+                  <span className="text-sm font-medium break-all">{item.email}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Badge className={isMaster ? 'bg-purple-100 text-purple-700' : isEnvControlled ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}>
-                    {isMaster ? 'Master Admin' : isEnvControlled ? 'Env Admin' : 'DB Admin'}
+                  <Badge className={item.isMaster ? 'bg-purple-100 text-purple-700' : item.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}>
+                    {item.isMaster ? 'Master Admin' : item.enabled ? 'Access Allowed' : 'Access Disabled'}
                   </Badge>
-                  {!isMaster && <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:text-red-700" onClick={function() { handleRemoveAdminEmail(email); }} disabled={saveAdminEmailsMutation.isPending}><Trash2 className="w-4 h-4" /></Button>}
+                  {item.isMaster ? (
+                    <span className="text-[11px] text-gray-500">Always enabled</span>
+                  ) : item.enabled ? (
+                    <Button type="button" variant="outline" size="sm" className="gap-1 text-amber-700 border-amber-200 hover:bg-amber-50" onClick={function() { handleToggleAccess(item.email, false); }} disabled={saveAccessMutation.isPending}>
+                      <ShieldOff className="w-4 h-4" /> Disable
+                    </Button>
+                  ) : (
+                    <Button type="button" size="sm" className="gap-1 bg-blue-800 text-white hover:bg-blue-900" onClick={function() { handleToggleAccess(item.email, true); }} disabled={saveAccessMutation.isPending}>
+                      <ShieldCheck className="w-4 h-4" /> Allow
+                    </Button>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]">
-          <Input type="email" value={newAdminEmail} onChange={function(e) { setNewAdminEmail(e.target.value); }} placeholder="Add admin email" />
-          <Button type="button" className="bg-blue-800 text-white hover:bg-blue-900" onClick={handleAddAdminEmail} disabled={saveAdminEmailsMutation.isPending}><Plus className="w-4 h-4 mr-1" /> Add Email</Button>
-        </div>
-        <p className="text-xs text-gray-400 mt-3">Env Admin entries come from your Vercel variables. DB Admin entries can now be enabled or disabled directly here.</p>
+        <p className="text-xs text-gray-400 mt-3">Allowed emails can continue only after they also enter the admin password. Disabled emails stay on the list but cannot access the admin area.</p>
       </Card>
 
       {/* Change Password */}

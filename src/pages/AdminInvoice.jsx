@@ -12,6 +12,10 @@ import { format } from 'date-fns';
 import { useAuth } from '@/lib/AuthContext';
 
 const DEFAULT_FOOTER = 'Thank you for shopping with FMM CLASSICO! 🧡';
+const DEFAULT_SUPPORT_LINE = 'WhatsApp: 0208207543 | fmmclassico@gmail.com';
+const DEFAULT_HEADER_TITLE = 'FMM CLASSICO';
+const DEFAULT_HEADER_SUBTITLE = 'Phones & Accessories · Electronics · Home Appliances';
+const DEFAULT_HEADER_CONTACT = 'Tarkwa (UMAT Campus) & Accra (Ashongman Estate) | 0208207543';
 
 const statusLabels = {
   confirmed: 'Confirmed',
@@ -126,7 +130,19 @@ function getPaymentArrangementLines(order) {
   ];
 }
 
-function buildInvoiceEmailHtml(order, note, footer) {
+function buildInvoiceEmailHtml(order, edits) {
+  const note = edits?.note || '';
+  const footer = edits?.footer || DEFAULT_FOOTER;
+  const supportLine = edits?.supportLine || DEFAULT_SUPPORT_LINE;
+  const headerTitle = edits?.headerTitle || DEFAULT_HEADER_TITLE;
+  const headerSubtitle = edits?.headerSubtitle || DEFAULT_HEADER_SUBTITLE;
+  const headerContact = edits?.headerContact || DEFAULT_HEADER_CONTACT;
+  const invoiceLabel = edits?.invoiceLabel || 'INVOICE';
+  const billToLabel = edits?.billToLabel || 'Bill To:';
+  const customerName = edits?.customerName || order?.customer_name || '';
+  const customerEmail = edits?.customerEmail || order?.customer_email || '';
+  const customerPhone = edits?.customerPhone || order?.customer_phone || '';
+
   const subtotal = (order?.items || []).reduce((sum, item) => sum + (toNumber(item?.price) * toNumber(item?.quantity, 1)), 0);
   const grandTotal = getGrandTotal(order);
   const shipping = Math.max(grandTotal - subtotal, 0);
@@ -151,22 +167,22 @@ function buildInvoiceEmailHtml(order, note, footer) {
     <div style="max-width:700px;margin:0 auto;font-family:Arial,sans-serif;background:#f8fafc;padding:20px;color:#1f2937">
       <div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 6px 24px rgba(15,23,42,0.08)">
         <div style="background:linear-gradient(135deg,#031725,#0A2E60);color:white;padding:28px 30px;text-align:center">
-          <h1 style="margin:0;font-size:24px">FMM CLASSICO</h1>
-          <p style="opacity:0.82;font-size:12px;margin-top:6px">Phones & Accessories · Electronics · Home Appliances</p>
-          <p style="opacity:0.74;font-size:11px;margin-top:4px">Tarkwa (UMAT Campus) & Accra (Ashongman Estate)</p>
+          <h1 style="margin:0;font-size:24px">${headerTitle}</h1>
+          <p style="opacity:0.82;font-size:12px;margin-top:6px">${headerSubtitle}</p>
+          <p style="opacity:0.74;font-size:11px;margin-top:4px">${headerContact}</p>
         </div>
         <div style="padding:28px 30px">
           <div style="display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:20px">
             <div>
-              <h3 style="color:#0A2E60;margin:0 0 8px;font-size:18px">INVOICE</h3>
+              <h3 style="color:#0A2E60;margin:0 0 8px;font-size:18px">${invoiceLabel}</h3>
               <p style="font-size:13px;margin:0 0 4px"><strong>#${order.order_number}</strong></p>
               <p style="font-size:12px;color:#6b7280;margin:0">Date: ${order.created_date ? format(new Date(order.created_date), 'dd MMM yyyy, h:mm a') : format(new Date(), 'dd MMM yyyy, h:mm a')}</p>
             </div>
             <div style="text-align:right">
-              <p style="font-size:12px;font-weight:bold;margin:0 0 4px">Bill To:</p>
-              <p style="font-size:13px;margin:0 0 2px">${order.customer_name || ''}</p>
-              <p style="font-size:12px;color:#6b7280;margin:0 0 2px">${order.customer_email || ''}</p>
-              <p style="font-size:12px;color:#6b7280;margin:0">${order.customer_phone || ''}</p>
+              <p style="font-size:12px;font-weight:bold;margin:0 0 4px">${billToLabel}</p>
+              <p style="font-size:13px;margin:0 0 2px">${customerName}</p>
+              <p style="font-size:12px;color:#6b7280;margin:0 0 2px">${customerEmail}</p>
+              <p style="font-size:12px;color:#6b7280;margin:0">${customerPhone}</p>
             </div>
           </div>
 
@@ -213,7 +229,7 @@ function buildInvoiceEmailHtml(order, note, footer) {
 
           <div style="margin-top:24px;text-align:center;padding:16px;background:#f8fafc;border-radius:12px">
             <p style="font-size:13px;color:#6b7280;margin:0">${footer}</p>
-            <p style="font-size:11px;color:#9ca3af;margin:6px 0 0">WhatsApp: 0208207543 | fmmclassico@gmail.com</p>
+            <p style="font-size:11px;color:#9ca3af;margin:6px 0 0">${supportLine}</p>
           </div>
         </div>
       </div>
@@ -287,8 +303,17 @@ export default function AdminInvoice() {
       return {
         ...prev,
         [selectedOrder.id]: {
+          headerTitle: DEFAULT_HEADER_TITLE,
+          headerSubtitle: DEFAULT_HEADER_SUBTITLE,
+          headerContact: DEFAULT_HEADER_CONTACT,
+          invoiceLabel: 'INVOICE',
+          billToLabel: 'Bill To:',
+          customerName: selectedOrder.customer_name || '',
+          customerEmail: selectedOrder.customer_email || '',
+          customerPhone: selectedOrder.customer_phone || '',
           note: getDefaultInvoiceNote(selectedOrder),
           footer: DEFAULT_FOOTER,
+          supportLine: DEFAULT_SUPPORT_LINE,
         },
       };
     });
@@ -324,8 +349,20 @@ export default function AdminInvoice() {
   );
 
   const activeEdit = selectedOrder
-    ? invoiceEdits[selectedOrder.id] || { note: getDefaultInvoiceNote(selectedOrder), footer: DEFAULT_FOOTER }
-    : { note: '', footer: DEFAULT_FOOTER };
+    ? invoiceEdits[selectedOrder.id] || {
+        headerTitle: DEFAULT_HEADER_TITLE,
+        headerSubtitle: DEFAULT_HEADER_SUBTITLE,
+        headerContact: DEFAULT_HEADER_CONTACT,
+        invoiceLabel: 'INVOICE',
+        billToLabel: 'Bill To:',
+        customerName: selectedOrder.customer_name || '',
+        customerEmail: selectedOrder.customer_email || '',
+        customerPhone: selectedOrder.customer_phone || '',
+        note: getDefaultInvoiceNote(selectedOrder),
+        footer: DEFAULT_FOOTER,
+        supportLine: DEFAULT_SUPPORT_LINE,
+      }
+    : { note: '', footer: DEFAULT_FOOTER, supportLine: DEFAULT_SUPPORT_LINE };
 
   const updateInvoiceEdit = (field, value) => {
     if (!selectedOrder) return;
@@ -333,8 +370,17 @@ export default function AdminInvoice() {
     setInvoiceEdits((prev) => ({
       ...prev,
       [selectedOrder.id]: {
+        headerTitle: prev[selectedOrder.id]?.headerTitle ?? DEFAULT_HEADER_TITLE,
+        headerSubtitle: prev[selectedOrder.id]?.headerSubtitle ?? DEFAULT_HEADER_SUBTITLE,
+        headerContact: prev[selectedOrder.id]?.headerContact ?? DEFAULT_HEADER_CONTACT,
+        invoiceLabel: prev[selectedOrder.id]?.invoiceLabel ?? 'INVOICE',
+        billToLabel: prev[selectedOrder.id]?.billToLabel ?? 'Bill To:',
+        customerName: prev[selectedOrder.id]?.customerName ?? selectedOrder.customer_name ?? '',
+        customerEmail: prev[selectedOrder.id]?.customerEmail ?? selectedOrder.customer_email ?? '',
+        customerPhone: prev[selectedOrder.id]?.customerPhone ?? selectedOrder.customer_phone ?? '',
         note: prev[selectedOrder.id]?.note ?? getDefaultInvoiceNote(selectedOrder),
         footer: prev[selectedOrder.id]?.footer ?? DEFAULT_FOOTER,
+        supportLine: prev[selectedOrder.id]?.supportLine ?? DEFAULT_SUPPORT_LINE,
         [field]: value,
       },
     }));
@@ -356,7 +402,7 @@ export default function AdminInvoice() {
 
     setSendingEmail(true);
     try {
-      const emailBody = buildInvoiceEmailHtml(selectedOrder, activeEdit.note, activeEdit.footer);
+      const emailBody = buildInvoiceEmailHtml(selectedOrder, activeEdit);
 
       await appClient.integrations.Core.SendEmail({
         to: selectedOrder.customer_email,
@@ -458,6 +504,44 @@ export default function AdminInvoice() {
               {isEditing && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-3">
                   <p className="text-xs font-bold text-yellow-800">✏️ Edit Invoice Before Sending</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-700">Header Title</label>
+                      <input className="w-full border rounded-lg p-2 text-sm mt-1" value={activeEdit.headerTitle} onChange={(e) => updateInvoiceEdit('headerTitle', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-700">Invoice Heading</label>
+                      <input className="w-full border rounded-lg p-2 text-sm mt-1" value={activeEdit.invoiceLabel} onChange={(e) => updateInvoiceEdit('invoiceLabel', e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700">Header Subtitle</label>
+                    <input className="w-full border rounded-lg p-2 text-sm mt-1" value={activeEdit.headerSubtitle} onChange={(e) => updateInvoiceEdit('headerSubtitle', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700">Header Contact Line</label>
+                    <input className="w-full border rounded-lg p-2 text-sm mt-1" value={activeEdit.headerContact} onChange={(e) => updateInvoiceEdit('headerContact', e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-700">Bill To Label</label>
+                      <input className="w-full border rounded-lg p-2 text-sm mt-1" value={activeEdit.billToLabel} onChange={(e) => updateInvoiceEdit('billToLabel', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-700">Customer Name</label>
+                      <input className="w-full border rounded-lg p-2 text-sm mt-1" value={activeEdit.customerName} onChange={(e) => updateInvoiceEdit('customerName', e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-700">Customer Email</label>
+                      <input className="w-full border rounded-lg p-2 text-sm mt-1" value={activeEdit.customerEmail} onChange={(e) => updateInvoiceEdit('customerEmail', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-700">Customer Phone</label>
+                      <input className="w-full border rounded-lg p-2 text-sm mt-1" value={activeEdit.customerPhone} onChange={(e) => updateInvoiceEdit('customerPhone', e.target.value)} />
+                    </div>
+                  </div>
                   <div>
                     <label className="text-xs font-medium text-gray-700">Payment / Delivery Note</label>
                     <textarea className="w-full border rounded-lg p-2 text-sm mt-1" rows={3} placeholder="Add a payment arrangement note..." value={activeEdit.note} onChange={(e) => updateInvoiceEdit('note', e.target.value)} />
@@ -466,28 +550,32 @@ export default function AdminInvoice() {
                     <label className="text-xs font-medium text-gray-700">Footer Message</label>
                     <input className="w-full border rounded-lg p-2 text-sm mt-1" value={activeEdit.footer} onChange={(e) => updateInvoiceEdit('footer', e.target.value)} />
                   </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700">Support Line</label>
+                    <input className="w-full border rounded-lg p-2 text-sm mt-1" value={activeEdit.supportLine} onChange={(e) => updateInvoiceEdit('supportLine', e.target.value)} />
+                  </div>
                 </div>
               )}
 
               <div ref={invoiceRef} className="bg-white border rounded-xl overflow-hidden shadow-lg">
                 <div style={{ background: 'linear-gradient(135deg, #031725, #0A2E60)' }} className="p-6 text-center">
-                  <h2 className="text-white font-bold text-xl">FMM CLASSICO</h2>
-                  <p className="text-white/70 text-xs mt-1">Phones & Accessories · Electronics · Home Appliances</p>
-                  <p className="text-white/60 text-[10px] mt-1">Tarkwa (UMAT Campus) & Accra (Ashongman Estate) | 0208207543</p>
+                  <h2 className="text-white font-bold text-xl">{activeEdit.headerTitle}</h2>
+                  <p className="text-white/70 text-xs mt-1">{activeEdit.headerSubtitle}</p>
+                  <p className="text-white/60 text-[10px] mt-1">{activeEdit.headerContact}</p>
                 </div>
 
                 <div className="p-6">
                   <div className="flex justify-between mb-4 gap-4 flex-wrap">
                     <div>
-                      <h3 className="text-[#0A2E60] font-bold text-lg">INVOICE</h3>
+                      <h3 className="text-[#0A2E60] font-bold text-lg">{activeEdit.invoiceLabel}</h3>
                       <p className="text-sm font-semibold">#{selectedOrder.order_number}</p>
                       <p className="text-xs text-gray-500">{selectedOrder.created_date ? format(new Date(selectedOrder.created_date), 'dd MMM yyyy, h:mm a') : ''}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs font-bold text-gray-600">Bill To:</p>
-                      <p className="text-sm font-medium">{selectedOrder.customer_name}</p>
-                      <p className="text-xs text-gray-500">{selectedOrder.customer_email}</p>
-                      <p className="text-xs text-gray-500">{selectedOrder.customer_phone}</p>
+                      <p className="text-xs font-bold text-gray-600">{activeEdit.billToLabel}</p>
+                      <p className="text-sm font-medium">{activeEdit.customerName}</p>
+                      <p className="text-xs text-gray-500">{activeEdit.customerEmail}</p>
+                      <p className="text-xs text-gray-500">{activeEdit.customerPhone}</p>
                     </div>
                   </div>
 
@@ -549,7 +637,7 @@ export default function AdminInvoice() {
 
                   <div className="mt-6 text-center p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600">{activeEdit.footer}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">WhatsApp: 0208207543 | fmmclassico@gmail.com</p>
+                    <p className="text-[10px] text-gray-400 mt-1">{activeEdit.supportLine}</p>
                   </div>
                 </div>
               </div>

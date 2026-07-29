@@ -255,7 +255,7 @@ function BuiltInBannerSlide({ slide }) {
           <img
             src={slide.imageUrl}
             alt={slide.title}
-            className="max-h-[84px] sm:max-h-[100px] md:max-h-[160px] lg:max-h-[176px] w-auto object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.26)]"
+            className="max-h-[120px] sm:max-h-[170px] md:max-h-[255px] w-auto object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.26)]"
             loading="eager"
             fetchPriority="high"
             onError={(e) => {

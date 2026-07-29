@@ -137,14 +137,14 @@ const BUILT_IN_BANNERS = [
 
 function ReviewBannerSlide({ slide }) {
   return (
-    <div className={`relative h-full w-full overflow-hidden bg-gradient-to-r ${BLUE_GRADIENT}`}>
+    <div className="relative h-full w-full overflow-hidden bg-gradient-to-r from-[#03143f] via-[#0b2a63] to-[#2E86C1]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.16),transparent_32%),radial-gradient(circle_at_85%_18%,rgba(255,255,255,0.10),transparent_28%)]" />
       <div className="relative z-10 grid h-full gap-3 px-3 py-3 sm:px-5 md:grid-cols-[1.02fr_0.98fr] md:gap-5 md:px-8 md:py-6">
         <div className="min-w-0 self-center text-white">
           <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white/88 sm:text-xs">
             Welcome to FMM CLASSICO
           </span>
-          <h2 className={`mt-2 text-lg font-black leading-tight ${BLUE_TITLE} sm:text-2xl md:text-4xl`}>
+          <h2 className="mt-2 text-lg font-black leading-tight text-white sm:text-2xl md:text-4xl">
             {slide.subtitle}
           </h2>
           <p className="mt-3 max-w-2xl text-[11px] leading-5 text-white/88 sm:text-sm md:text-base md:leading-7">
@@ -155,7 +155,7 @@ function ReviewBannerSlide({ slide }) {
         <div className="flex h-full items-center justify-center md:justify-end">
           <div className="grid w-full max-w-md gap-2 rounded-[1.8rem] border border-white/15 bg-white/95 p-3 shadow-2xl sm:grid-cols-2 sm:p-4 md:p-5">
             {slide.highlights.map((item) => (
-              <div key={item} className={`rounded-2xl bg-blue-50 px-3 py-3 text-[11px] font-bold leading-5 ${BLUE_TITLE} sm:text-xs md:text-sm`}>
+              <div key={item} className="rounded-2xl bg-slate-50 px-3 py-3 text-[11px] font-bold leading-5 text-slate-700 sm:text-xs md:text-sm">
                 {item}
               </div>
             ))}
@@ -270,7 +270,7 @@ export default function HeroBanner() {
     if (slides.length <= 1) return undefined;
     const timer = window.setTimeout(() => {
       setCurrent((prev) => (prev + 1) % slides.length);
-    }, 10 * 60 * 1000);
+    }, current === 0 ? 10000 : 5000);
     return () => window.clearTimeout(timer);
   }, [current, slides.length]);
 
@@ -323,7 +323,15 @@ export default function HeroBanner() {
   return (
     <div className="fmm-flyer-hero-shell" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <div className="fmm-flyer-hero-frame">
-        <div className="fmm-flyer-hero-clickable cursor-default">{flyerContent}</div>
+        {slide.href ? (
+          isExternal ? (
+            <a href={slide.href} target="_blank" rel="noreferrer" className="fmm-flyer-hero-clickable">{flyerContent}</a>
+          ) : (
+            <Link to={slide.href} className="fmm-flyer-hero-clickable">{flyerContent}</Link>
+          )
+        ) : (
+          <div className="fmm-flyer-hero-clickable">{flyerContent}</div>
+        )}
 
         {slides.length > 1 && (
           <div className="fmm-flyer-hero-dots">

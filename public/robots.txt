@@ -1,5 +1,6 @@
 User-agent: *
-Allow: /
+Disallow: /AdminOrders
+Disallow: /AdminReviews
 Disallow: /Admin
 Disallow: /admin
 Disallow: /login
@@ -29,5 +30,7 @@ Disallow: /allbrands
 Disallow: /Shop
 Disallow: /shop
 Disallow: /search
+Disallow: /Cart
+Disallow: /account
 
 Sitemap: https://www.fmmclassico.com/sitemap.xml

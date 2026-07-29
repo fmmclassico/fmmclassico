@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Settings, Upload, X, Loader2 } from 'lucide-react';
@@ -119,6 +119,7 @@ function getSubLink(sub) {
 export default function Categories() {
   const [expanded, setExpanded] = useState({});
   const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+  const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
   const [editMode, setEditMode] = useState(false);
@@ -238,13 +239,13 @@ export default function Categories() {
             >
               {/* Category card */}
               <div
-                className="group relative overflow-hidden rounded-2xl h-48 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-                onClick={() => !editMode && toggle(cat.id)}
+                className="group relative overflow-hidden rounded-2xl h-48 shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <img
                   src={getCatImage(cat.id) || cat.image}
                   alt={cat.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 cursor-pointer"
+                  onClick={() => !editMode && navigate(allLink)}
                 />
                 <div className={`absolute inset-0 bg-gradient-to-r ${cat.color} opacity-70 group-hover:opacity-80 transition-opacity`} />
                 <div className="absolute inset-0 flex flex-col justify-end p-6">
@@ -255,9 +256,16 @@ export default function Categories() {
                     {getCatText(cat.id, 'desc', cat.desc)}
                   </p>
                   {!editMode && (
-                    <div className="flex items-center text-white font-medium text-sm">
-                      {isOpen ? 'Hide subcategories' : 'Browse subcategories'}
-                      <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-white/90 text-sm font-medium">Click image to open category</span>
+                      <button
+                        type="button"
+                        onClick={(event) => { event.stopPropagation(); toggle(cat.id); }}
+                        className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-white font-medium text-sm transition hover:bg-white/20"
+                      >
+                        {isOpen ? 'Hide subcategories' : 'Browse subcategories'}
+                        <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                      </button>
                     </div>
                   )}
                 </div>

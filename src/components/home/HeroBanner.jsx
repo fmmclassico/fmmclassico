@@ -26,6 +26,22 @@ function pickHeroImage(slide, isMobile) {
 const BLUE_GRADIENT = 'from-[#03143f] via-[#06286d] to-[#0b3ea9]';
 const BLUE_TITLE = 'text-[#8dc3ff]';
 
+const REVIEW_SLIDE = {
+  id: 'fmm-welcome-slide',
+  type: 'review',
+  title: 'WELCOME TO FMM CLASSICO',
+  subtitle: 'Online shopping for smartphones, phone accessories, electronics, home appliances, and lifestyle products.',
+  description: 'Create an account or sign in to save your wishlist, track orders, view order history, manage your account information, enjoy faster and more secure checkout, and access exclusive promotions.',
+  highlights: [
+    'Save wishlist',
+    'Track orders',
+    'View order history',
+    'Manage account information',
+    'Faster secure checkout',
+    'Exclusive promotions',
+  ],
+};
+
 const BUILT_IN_BANNERS = [
   {
     id: 'fixed-phones',
@@ -119,6 +135,37 @@ const BUILT_IN_BANNERS = [
   },
 ];
 
+function ReviewBannerSlide({ slide }) {
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-gradient-to-r from-[#03143f] via-[#0b2a63] to-[#2E86C1]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.16),transparent_32%),radial-gradient(circle_at_85%_18%,rgba(255,255,255,0.10),transparent_28%)]" />
+      <div className="relative z-10 grid h-full gap-3 px-3 py-3 sm:px-5 md:grid-cols-[1.02fr_0.98fr] md:gap-5 md:px-8 md:py-6">
+        <div className="min-w-0 self-center text-white">
+          <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white/88 sm:text-xs">
+            Welcome to FMM CLASSICO
+          </span>
+          <h2 className="mt-2 text-lg font-black leading-tight text-white sm:text-2xl md:text-4xl">
+            {slide.subtitle}
+          </h2>
+          <p className="mt-3 max-w-2xl text-[11px] leading-5 text-white/88 sm:text-sm md:text-base md:leading-7">
+            {slide.description}
+          </p>
+        </div>
+
+        <div className="flex h-full items-center justify-center md:justify-end">
+          <div className="grid w-full max-w-md gap-2 rounded-[1.8rem] border border-white/15 bg-white/95 p-3 shadow-2xl sm:grid-cols-2 sm:p-4 md:p-5">
+            {slide.highlights.map((item) => (
+              <div key={item} className="rounded-2xl bg-slate-50 px-3 py-3 text-[11px] font-bold leading-5 text-slate-700 sm:text-xs md:text-sm">
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BuiltInBannerSlide({ slide }) {
   return (
     <div className={`relative h-full w-full overflow-hidden bg-gradient-to-r ${slide.gradient}`}>
@@ -137,7 +184,7 @@ function BuiltInBannerSlide({ slide }) {
           <img
             src={slide.imageUrl}
             alt={slide.title}
-            className="max-h-[80px] sm:max-h-[105px] md:max-h-[220px] w-auto object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.30)] "
+            className="max-h-[80px] sm:max-h-[105px] md:max-h-[220px] w-auto object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.30)]"
             loading="eager"
             fetchPriority="high"
             onError={(e) => {
@@ -213,7 +260,7 @@ export default function HeroBanner() {
       }));
   }, [promoBanners]);
 
-  const slides = useMemo(() => [...BUILT_IN_BANNERS, ...uploadedSlides], [uploadedSlides]);
+  const slides = useMemo(() => [REVIEW_SLIDE, ...BUILT_IN_BANNERS, ...uploadedSlides], [uploadedSlides]);
 
   useEffect(() => {
     if (current >= slides.length) setCurrent(0);
@@ -221,11 +268,11 @@ export default function HeroBanner() {
 
   useEffect(() => {
     if (slides.length <= 1) return undefined;
-    const timer = setInterval(() => {
+    const timer = window.setTimeout(() => {
       setCurrent((prev) => (prev + 1) % slides.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [slides.length]);
+    }, current === 0 ? 10000 : 5000);
+    return () => window.clearTimeout(timer);
+  }, [current, slides.length]);
 
   const prev = () => {
     if (slides.length <= 1) return;
@@ -261,10 +308,14 @@ export default function HeroBanner() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.40 }}
+        transition={{ duration: 0.35 }}
         className="h-full"
       >
-        {slide.type === 'built_in' ? <BuiltInBannerSlide slide={slide} /> : <UploadedBannerSlide slide={slide} isMobile={isMobile} />}
+        {slide.type === 'review'
+          ? <ReviewBannerSlide slide={slide} />
+          : slide.type === 'built_in'
+            ? <BuiltInBannerSlide slide={slide} />
+            : <UploadedBannerSlide slide={slide} isMobile={isMobile} />}
       </motion.div>
     </AnimatePresence>
   );

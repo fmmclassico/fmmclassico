@@ -8,8 +8,6 @@ import { ChevronRight, Home as HomeIcon, Smartphone, Headphones, Tv, Gem } from 
 import { toast } from 'sonner';
 import guestCart from '@/lib/guest-cart';
 import HeroBanner from '../components/home/HeroBanner';
-import GuestWelcomeModal from '@/components/guest/GuestWelcomeModal';
-import AboutFmmSection from '@/components/guest/AboutFmmSection';
 import { getVisibleBrandDirectory, getBrandLogoSrc, getSectionLimit } from '@/lib/brandDirectory';
 
 var CATEGORY_BRANDS = {
@@ -112,9 +110,8 @@ export default function GuestHome() {
 
   return (
     <div className="pb-4 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
-      <GuestWelcomeModal />
+
       <HeroBanner />
-      <AboutFmmSection />
 
       {/* CATEGORIES */}
 <div className="bg-white mt-2 mx-2 md:mx-4 rounded-2xl shadow-sm px-3 pt-1.5 pb-2 md:px-4 md:pt-2 md:pb-2.5">
@@ -263,11 +260,13 @@ export default function GuestHome() {
             : topSellingFallback.map(function(product) { return (
               <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
-                <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}</div>
+                <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.reviews_count > 0 && <p className="text-[10px] text-gray-400">{product.reviews_count} sold</p>}</div>
               </Link>
             ); })}
         </div>
       </div></div>
+
+      <div className="h-6" />
     </div>
   );
 }

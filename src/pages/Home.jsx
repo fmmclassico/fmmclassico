@@ -157,38 +157,6 @@ export default function Home() {
 
       <HeroBanner />
 
-      <section className="bg-white mt-3 mx-2 md:mx-4 rounded-2xl shadow-sm border border-gray-100">
-        <div className="p-5 md:p-7">
-          <div className="max-w-4xl">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2E86C1] mb-2">Welcome to FMM CLASSICO</p>
-            <h2 className="text-2xl md:text-3xl font-black text-gray-900 mb-3">Shop smartphones, accessories, electronics, home appliances, and lifestyle products in one place.</h2>
-            <p className="text-sm md:text-base text-gray-600 leading-relaxed">FMM CLASSICO is an online shopping platform where customers can browse quality products, place orders securely, and manage their shopping experience with ease.</p>
-            <div className="grid md:grid-cols-2 gap-5 mt-5">
-              <div className="rounded-2xl bg-gray-50 border border-gray-100 p-4">
-                <p className="text-sm font-bold text-gray-900 mb-2">After signing in, customers can:</p>
-                <ul className="space-y-1.5 text-sm text-gray-600">
-                  <li>â€¢ Shop thousands of quality products</li>
-                  <li>â€¢ Save items to cart and wishlist</li>
-                  <li>â€¢ Track orders and view order history</li>
-                  <li>â€¢ Manage account details</li>
-                  <li>â€¢ Receive exclusive deals and promotions</li>
-                  <li>â€¢ Enjoy faster and more secure checkout</li>
-                </ul>
-              </div>
-              <div className="rounded-2xl bg-[#f4f9fd] border border-[#d7e9f7] p-4">
-                <p className="text-sm font-bold text-gray-900 mb-2">Why sign in with Google or email?</p>
-                <p className="text-sm text-gray-600 leading-relaxed">Signing in helps FMM CLASSICO securely identify each customer, protect orders, save account details, and provide order tracking, account management, and a smoother checkout experience.</p>
-                <div className="flex flex-wrap gap-2 mt-4">
-                  <Link to="/login" className="inline-flex items-center rounded-full bg-[#2E86C1] text-white text-xs font-bold px-4 py-2 hover:bg-[#2578ae] transition-colors">Sign In Securely</Link>
-                  <Link to="/register" className="inline-flex items-center rounded-full border border-[#2E86C1] text-[#2E86C1] text-xs font-bold px-4 py-2 hover:bg-blue-50 transition-colors">Create Account</Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-
       {/* CATEGORIES */}
       <div className="bg-white mt-3 mx-2 md:mx-4 rounded-2xl shadow-sm px-3 py-3 md:px-4 md:py-3.5">
         <div className="flex items-center justify-between mb-3">
@@ -221,7 +189,7 @@ export default function Home() {
                 {cat.brands.map(function(b) {
                   return <Link key={b.brand + b.category} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + b.category)} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>{b.label}</Link>;
                 })}
-                <Link to={cat.link} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>All {cat.label} â†’</Link>;
+                <Link to={cat.link} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>All {cat.label} →</Link>;
               </div>
             </div>
           );
@@ -296,8 +264,8 @@ export default function Home() {
                   </div>
                   <div className="p-2">
                     <p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p>
-                    <p className="text-xs font-extrabold text-gray-900 mt-1">â‚µ{product.price?.toLocaleString()}</p>
-                    {product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">â‚µ{product.original_price?.toLocaleString()}</p>}
+                    <p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}
                   </div>
                 </Link>
               ); })}
@@ -327,8 +295,8 @@ export default function Home() {
                   </div>
                   <div className="p-2">
                     <p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p>
-                    <p className="text-xs font-extrabold text-gray-900 mt-1">â‚µ{product.price?.toLocaleString()}</p>
-                    {product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">â‚µ{product.original_price?.toLocaleString()}</p>}
+                    <p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}
                   </div>
                 </Link>
               ); })}
@@ -392,8 +360,8 @@ export default function Home() {
                   </div>
                   <div className="p-2">
                     <p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p>
-                    <p className="text-xs font-extrabold text-gray-900 mt-1">â‚µ{product.price?.toLocaleString()}</p>
-                    {product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">â‚µ{product.original_price?.toLocaleString()}</p>}
+                    <p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>
+                    {product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}
                   </div>
                 </Link>
               ); })}
@@ -422,7 +390,7 @@ export default function Home() {
                   </div>
                   <div className="p-2">
                     <p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p>
-                    <p className="text-xs font-extrabold text-gray-900 mt-1">â‚µ{product.price?.toLocaleString()}</p>
+                    <p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>
                     {product.reviews_count > 0 && <p className="text-[10px] text-gray-400">{product.reviews_count} sold</p>}
                   </div>
                 </Link>

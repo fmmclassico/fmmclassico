@@ -1,3 +1,5 @@
+import { uniqueMediaCandidates } from '@/lib/media';
+
 export const BRAND_DIRECTORY_KEY = 'brand_directory_v2';
 export const LEGACY_CUSTOM_BRANDS_KEY = 'custom_brands_list';
 export const HOMEPAGE_SECTION_SETTINGS_KEY = 'homepage_section_settings_v2';
@@ -196,8 +198,12 @@ export function getBrandFallbackLogo(brandValue = '') {
   return DEFAULT_BRAND_DIRECTORY.find((entry) => normalizeBrandKey(entry.name) === target)?.fallback || '';
 }
 
+export function getBrandLogoSources(settings = [], brandValue = '') {
+  return uniqueMediaCandidates([getBrandLogo(settings, brandValue), getBrandFallbackLogo(brandValue)]);
+}
+
 export function getBrandLogoSrc(settings = [], brandValue = '') {
-  return getBrandLogo(settings, brandValue) || getBrandFallbackLogo(brandValue) || '';
+  return getBrandLogoSources(settings, brandValue)[0] || '';
 }
 
 export function getBrandProductCount(products = [], entry) {

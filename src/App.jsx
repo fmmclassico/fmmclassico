@@ -4,6 +4,7 @@ import About from './pages/About';
 import Categories from './pages/Categories';
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
+import './styles/toast-responsive.css';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClientInstance } from '@/lib/query-client';
@@ -405,7 +406,14 @@ export default function App() {
           <NavigationTracker />
           <AuthenticatedApp />
           <Toaster />
-          <SonnerToaster position="top-center" richColors />
+          <SonnerToaster
+  position="top-center"
+  toastOptions={{
+    className: 'fmm-toast',
+    duration: 3000,
+  }}
+/>
+
         </Router>
       </AuthProvider>
     </QueryClientProvider>

@@ -7,7 +7,6 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { ChevronRight, Home as HomeIcon, Smartphone, Headphones, Tv, Gem } from 'lucide-react';
 import guestCart from '@/lib/guest-cart';
 import HeroBanner from '../components/home/HeroBanner';
-import AboutFmmClassicoSection from '../components/home/AboutFmmClassicoSection';
 import GuestWelcomeModal from '../components/guest/GuestWelcomeModal';
 import { getVisibleBrandDirectory, getBrandLogoSrc, getSectionLimit } from '@/lib/brandDirectory';
 
@@ -105,7 +104,6 @@ export default function GuestHome() {
 
       <GuestWelcomeModal />
       <HeroBanner />
-      <AboutFmmClassicoSection showAccountActions />
 
       {/* CATEGORIES */}
 <div className="bg-white mt-2 mx-2 md:mx-4 rounded-2xl shadow-sm px-3 pt-1.5 pb-2 md:px-4 md:pt-2 md:pb-2.5">

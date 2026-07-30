@@ -143,7 +143,7 @@ function WelcomePhonePreview() {
       <div className="absolute -bottom-1.5 left-1/2 h-4 w-[86%] -translate-x-1/2 rounded-full bg-[#02153f]/70 blur-md md:-bottom-2 md:h-5" />
       <div className="absolute -bottom-0.5 left-1/2 h-2.5 w-[92%] -translate-x-1/2 rounded-[999px] border border-[#1e5bb8]/35 bg-[#072764] md:h-3" />
 
-      <div className="relative ml-auto w-[82px] rotate-[9deg] rounded-[1.35rem] border border-white/[0.18] bg-[#0d1629] p-[4px] shadow-[0_14px_32px_rgba(0,0,0,0.28)] md:w-[164px] md:rounded-[2rem] md:p-[6px] lg:w-[182px]">
+      <div className="relative ml-auto w-[82px] rotate-[9deg] rounded-[1.35rem] border border-white/18 bg-[#0d1629] p-[4px] shadow-[0_14px_32px_rgba(0,0,0,0.28)] md:w-[164px] md:rounded-[2rem] md:p-[6px] lg:w-[182px]">
         <div className="absolute left-1/2 top-[6px] z-20 h-[6px] w-[28px] -translate-x-1/2 rounded-full bg-[#101827] md:top-2.5 md:h-3 md:w-14" />
 
         <div className="overflow-hidden rounded-[1rem] bg-white md:rounded-[1.5rem]">
@@ -188,7 +188,7 @@ function ReviewBannerSlide({ slide }) {
   return (
     <div className="relative h-full w-full overflow-hidden bg-[#03143f]">
       <div className="absolute inset-0 bg-gradient-to-r from-[#03143f] via-[#082a6f] to-[#0b3ea9]" />
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.10), transparent 30%), radial-gradient(circle at 84% 18%, rgba(255,255,255,0.08), transparent 24%), radial-gradient(circle at 80% 84%, rgba(46,134,193,0.16), transparent 22%)' }} />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.10),transparent_30%),radial-gradient(circle_at_84%_18%,rgba(255,255,255,0.08),transparent_24%),radial-gradient(circle_at_80%_84%,rgba(46,134,193,0.16),transparent_22%)]" />
 
       <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_92px] items-center gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_112px] sm:px-4 md:grid-cols-[minmax(0,1.08fr)_184px] md:gap-4 md:px-7 md:py-4 lg:grid-cols-[minmax(0,1.08fr)_200px] lg:px-8 lg:py-4">
         <div className="min-w-0 self-center text-white">
@@ -201,7 +201,7 @@ function ReviewBannerSlide({ slide }) {
             <span className="mt-1 block text-[#8dc3ff]">{slide.titleAccent}</span>
           </h2>
 
-          <p className="mt-2 max-w-[27ch] text-[8px] leading-[1.38] text-white/[0.86] sm:text-[8.8px] md:mt-2.5 md:max-w-[40ch] md:text-[12px] md:leading-5 lg:text-[13px]">
+          <p className="mt-2 max-w-[27ch] text-[8px] leading-[1.38] text-white/86 sm:text-[8.8px] md:mt-2.5 md:max-w-[40ch] md:text-[12px] md:leading-5 lg:text-[13px]">
             {slide.description}
           </p>
 
@@ -209,7 +209,7 @@ function ReviewBannerSlide({ slide }) {
             {slide.features.map((feature) => {
               const Icon = feature.icon;
               return (
-                <div key={feature.title} className="rounded-xl border border-white/[0.12] bg-white/[0.08] px-1.5 py-1.5 text-white/[0.94] backdrop-blur-[2px] md:rounded-2xl md:px-2 md:py-2">
+                <div key={feature.title} className="rounded-xl border border-white/12 bg-white/8 px-1.5 py-1.5 text-white/94 backdrop-blur-[2px] md:rounded-2xl md:px-2 md:py-2">
                   <div className="flex items-center gap-1 md:gap-1.5">
                     <Icon className="h-2.5 w-2.5 text-[#8dc3ff] md:h-3.5 md:w-3.5" />
                     <span className="text-[5.9px] font-semibold leading-tight sm:text-[6.2px] md:text-[9px] lg:text-[10px]">{feature.title}</span>
@@ -240,7 +240,7 @@ function ReviewBannerSlide({ slide }) {
 function BuiltInBannerSlide({ slide }) {
   return (
     <div className={`relative h-full w-full overflow-hidden bg-gradient-to-r ${slide.gradient}`}>
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 22% 20%, rgba(255,255,255,0.10), transparent 35%)' }} />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_20%,rgba(255,255,255,0.10),transparent_35%)]" />
       <div className="relative z-10 grid h-full grid-cols-2 items-center gap-2 px-3 py-3 sm:px-5 md:grid-cols-[1.05fr_0.95fr] md:px-7 md:py-5 lg:px-8 lg:py-5">
         <div className="min-w-0 self-center">
           <h2 className={`text-[22px] sm:text-[30px] md:text-[42px] lg:text-[48px] font-black tracking-tight leading-none ${slide.titleClass}`}>
@@ -257,8 +257,10 @@ function BuiltInBannerSlide({ slide }) {
             alt={slide.title}
             className="max-h-[120px] sm:max-h-[170px] md:max-h-[255px] w-auto object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.26)]"
             loading="eager"
-            fetchpriority="high"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            fetchPriority="high"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
           />
         </div>
       </div>
@@ -276,8 +278,10 @@ function UploadedBannerSlide({ slide, isMobile }) {
         alt={slide.title}
         className="fmm-flyer-hero-image"
         loading="eager"
-        fetchpriority="high"
-        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        fetchPriority="high"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
       />
     </div>
   );
@@ -379,8 +383,8 @@ export default function HeroBanner() {
         {slide.type === 'review'
           ? <ReviewBannerSlide slide={slide} />
           : slide.type === 'built_in'
-          ? <BuiltInBannerSlide slide={slide} />
-          : <UploadedBannerSlide slide={slide} isMobile={isMobile} />}
+            ? <BuiltInBannerSlide slide={slide} />
+            : <UploadedBannerSlide slide={slide} isMobile={isMobile} />}
       </motion.div>
     </AnimatePresence>
   );

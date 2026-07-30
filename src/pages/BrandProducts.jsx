@@ -7,7 +7,8 @@ import { ShoppingBag, Filter, X } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { getBrandLogoSrc, normalizeBrandKey, resolveBrandEntry } from '@/lib/brandDirectory';
+import { getBrandLogoSources, normalizeBrandKey, resolveBrandEntry } from '@/lib/brandDirectory';
+import BrandLogoMark from '@/components/brands/BrandLogoMark';
 
 const CATEGORY_LABELS = {
   phones: 'Phones',
@@ -63,7 +64,7 @@ export default function BrandProducts() {
   const activeBrandName = brandEntry?.sourceName || brand || '';
   const brandLabel = brandEntry?.displayName || brand || 'Brand';
   const brandKey = normalizeBrandKey(activeBrandName);
-  const uploadedLogo = getBrandLogoSrc(settings, activeBrandName);
+  const brandLogoSources = getBrandLogoSources(settings, activeBrandName);
 
   let brandProducts = safeProducts.filter((product) => {
     if (product.is_visible === false) return false;
@@ -106,23 +107,15 @@ export default function BrandProducts() {
     <div className="min-h-screen bg-gray-50 pb-24">
       <div className="max-w-5xl mx-auto px-4 pt-6">
         <div className="flex items-center gap-4 mb-5">
-          <div className="w-14 h-14 rounded-2xl bg-white border flex items-center justify-center p-2 overflow-hidden">
-            {uploadedLogo ? (
-              <img
-                src={uploadedLogo}
-                alt={brandLabel}
-                className="w-10 h-10 object-contain"
-                onError={(event) => {
-                  event.currentTarget.style.display = 'none';
-                  const fallback = event.currentTarget.parentElement?.querySelector('[data-brand-fallback]');
-                  if (fallback) fallback.classList.remove('hidden');
-                }}
-              />
-            ) : null}
-            <span data-brand-fallback className={`text-lg font-bold text-gray-400 ${uploadedLogo ? 'hidden' : ''}`}>
-              {brandLabel.charAt(0)}
-            </span>
-          </div>
+          <BrandLogoMark
+            sources={brandLogoSources}
+            alt={brandLabel}
+            fallbackLabel={brandLabel.charAt(0)}
+            wrapperClassName="w-14 h-14 rounded-2xl bg-gradient-to-br from-white to-slate-50 border flex items-center justify-center p-2 overflow-hidden shadow-sm"
+            imageClassName="w-10 h-10 object-contain"
+            fallbackClassName="text-lg font-bold text-gray-400"
+            loading="eager"
+          />
 
           <div className="flex-1">
             <h1 className="text-xl font-bold text-gray-900">{brandLabel}</h1>

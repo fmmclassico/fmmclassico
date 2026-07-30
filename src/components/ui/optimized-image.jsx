@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { uniqueMediaCandidates } from '@/lib/media';
 
 /**
  * OptimizedImage - Professional image component with:
@@ -16,24 +17,28 @@ export default function OptimizedImage({
   lazy = true,
   priority = false,
   fallbackIcon = null,
+  fallbackSrcs = [],
   onLoad: externalOnLoad,
 }) {
+  const candidates = useMemo(() => uniqueMediaCandidates([src, ...(Array.isArray(fallbackSrcs) ? fallbackSrcs : [fallbackSrcs])]), [src, fallbackSrcs]);
+  const [sourceIndex, setSourceIndex] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
   const imgRef = useRef(null);
+  const activeSrc = candidates[sourceIndex] || '';
 
   // If the image is already cached by the browser, it loads instantly
   useEffect(() => {
     if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
       setLoaded(true);
     }
-  }, [src]);
+  }, [activeSrc]);
 
-  // Reset state when src changes
   useEffect(() => {
+    setSourceIndex(0);
     setLoaded(false);
     setError(false);
-  }, [src]);
+  }, [candidates.join('||')]);
 
   const handleLoad = () => {
     setLoaded(true);
@@ -41,10 +46,16 @@ export default function OptimizedImage({
   };
 
   const handleError = () => {
+    if (sourceIndex + 1 < candidates.length) {
+      setSourceIndex((prev) => prev + 1);
+      setLoaded(false);
+      return;
+    }
+
     setError(true);
   };
 
-  if (!src || error) {
+  if (!activeSrc || error) {
     return (
       <div className={`flex items-center justify-center bg-gray-100 ${containerClassName}`}>
         {fallbackIcon || (
@@ -66,7 +77,7 @@ export default function OptimizedImage({
       {/* Actual image */}
       <img
         ref={imgRef}
-        src={src}
+        src={activeSrc}
         alt={alt}
         loading={priority ? 'eager' : lazy ? 'lazy' : undefined}
         decoding="async"

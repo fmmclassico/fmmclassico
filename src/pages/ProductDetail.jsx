@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import 'react-quill/dist/quill.snow.css';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -13,6 +13,7 @@ import { ShoppingCart, Star, Plus, Minus, ExternalLink, PlayCircle } from 'lucid
 import ReviewSection from '@/components/products/ReviewSection';
 import { motion, AnimatePresence } from 'framer-motion';
 import InlineNotice from '@/components/ui/InlineNotice';
+import { normalizeMediaUrl } from '@/lib/media';
 
 const categoryNames = {
   phone_cases: 'Phone Cases',
@@ -31,9 +32,8 @@ const categoryNames = {
 const DIRECT_VIDEO_PATTERN = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i;
 
 function normalizeUrl(value) {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed || null;
+  const normalized = normalizeMediaUrl(value);
+  return normalized || null;
 }
 
 function parseArrayValue(value) {
@@ -149,6 +149,7 @@ export default function ProductDetail() {
   const [selectedWattage, setSelectedWattage] = useState(null);
   const [selectedType, setSelectedType] = useState(null);
   const [feedback, setFeedback] = useState(null);
+  const videoRef = useRef(null);
   const queryClient = useQueryClient();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -269,15 +270,15 @@ export default function ProductDetail() {
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
 
-  const nextImage = () => {
+  const nextImage = useCallback(() => {
     if (galleryItems.length === 0) return;
     setSelectedImageIndex((prev) => (prev + 1) % galleryItems.length);
-  };
+  }, [galleryItems.length]);
 
-  const prevImage = () => {
+  const prevImage = useCallback(() => {
     if (galleryItems.length === 0) return;
     setSelectedImageIndex((prev) => (prev - 1 + galleryItems.length) % galleryItems.length);
-  };
+  }, [galleryItems.length]);
 
   const handleTouchStart = (event) => {
     setTouchStart(event.touches[0].clientX);
@@ -292,13 +293,38 @@ export default function ProductDetail() {
     setTouchStart(null);
   };
 
+  const selectedGalleryItem = galleryItems[selectedImageIndex];
+
   useEffect(() => {
     if (galleryItems.length <= 1) return undefined;
+    if (selectedGalleryItem?.type === 'video') return undefined;
+
     const interval = setInterval(() => {
-      setSelectedImageIndex((prev) => (prev + 1) % galleryItems.length);
+      nextImage();
     }, 4000);
+
     return () => clearInterval(interval);
-  }, [galleryItems.length]);
+  }, [galleryItems.length, nextImage, selectedGalleryItem?.type]);
+
+  useEffect(() => {
+    if (selectedGalleryItem?.type !== 'video' || selectedGalleryItem?.kind !== 'file' || !videoRef.current) {
+      return undefined;
+    }
+
+    const videoElement = videoRef.current;
+    const handleEnded = () => nextImage();
+
+    videoElement.currentTime = 0;
+    const playPromise = videoElement.play?.();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {});
+    }
+
+    videoElement.addEventListener('ended', handleEnded);
+    return () => {
+      videoElement.removeEventListener('ended', handleEnded);
+    };
+  }, [nextImage, selectedGalleryItem?.kind, selectedGalleryItem?.type, selectedImageIndex]);
 
   if (isLoading) {
     return (
@@ -326,8 +352,6 @@ export default function ProductDetail() {
       </div>
     );
   }
-
-  const selectedGalleryItem = galleryItems[selectedImageIndex];
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -365,10 +389,12 @@ export default function ProductDetail() {
                   ) : selectedGalleryItem.kind === 'file' ? (
                     <motion.video
                       key={`video-${selectedImageIndex}`}
+                      ref={videoRef}
                       src={selectedGalleryItem.url}
                       className="w-full h-full object-contain bg-slate-950"
                       controls
                       playsInline
+                      autoPlay
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -392,16 +418,26 @@ export default function ProductDetail() {
                     </motion.div>
                   )
                 ) : (
-                  <motion.img
+                  <motion.div
                     key={selectedImageIndex}
-                    src={selectedGalleryItem?.url}
-                    alt={product.name}
-                    className="w-full h-full object-contain bg-white p-3"
+                    className="relative w-full h-full overflow-hidden bg-white"
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -30 }}
                     transition={{ duration: 0.25 }}
-                  />
+                  >
+                    <img
+                      src={selectedGalleryItem?.url}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-20"
+                    />
+                    <motion.img
+                      src={selectedGalleryItem?.url}
+                      alt={product.name}
+                      className="relative z-10 h-full w-full object-contain bg-white/92 p-1.5 sm:p-2.5 md:p-3 drop-shadow-[0_18px_36px_rgba(15,23,42,0.18)]"
+                    />
+                  </motion.div>
                 )}
               </AnimatePresence>
             )}

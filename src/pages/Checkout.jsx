@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Truck, CreditCard, Loader2, Info, MapPin, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
+import InlineNotice from '@/components/ui/InlineNotice';
 
 const DELIVERY_ZONES = [
   { id: 'accra', label: 'Within Accra Delivery', fee: 0.5 },
@@ -63,6 +63,7 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderError, setOrderError] = useState('');
   const [locationError, setLocationError] = useState('');
+  const [feedback, setFeedback] = useState(null);
   const [depositWarningAccepted, setDepositWarningAccepted] = useState(false);
   const [podWarningAccepted, setPodWarningAccepted] = useState(false);
   const navigate = useNavigate();
@@ -157,6 +158,10 @@ export default function Checkout() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const showFeedback = (variant, message, title) => {
+    setFeedback({ variant, message, title });
+  };
+
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       setLocationError('Geolocation not supported');
@@ -171,12 +176,12 @@ export default function Checkout() {
           ...prev,
           map_location: `https://www.google.com/maps?q=${latitude.toFixed(6)},${longitude.toFixed(6)}&z=15`,
         }));
-        toast.success('Location detected!');
+        showFeedback('success', 'Your location link was added successfully.', 'Location detected');
       },
       (error) => {
         const msg = error.code === 1 ? 'Location access denied' : error.code === 2 ? 'Location unavailable' : 'Location timed out';
         setLocationError(msg);
-        toast.error(msg);
+        showFeedback('error', msg, 'Location unavailable');
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
@@ -192,17 +197,37 @@ export default function Checkout() {
     e.preventDefault();
     if (isSubmitting) return;
     if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !formData.delivery_landmark || !formData.region || !formData.city) {
-      return toast.error('Please fill in all required delivery fields, including landmark.');
+      showFeedback('error', 'Please fill in all required delivery fields, including a landmark.', 'Complete the form');
+      return;
     }
-    if (locationMismatch) return toast.error('Your Region and City/Town do not match. Please correct them.');
-    if (!selectedZoneId) return toast.error('Please select a delivery method.');
-    if (!paymentMethod) return toast.error('Please select a payment method.');
+    if (locationMismatch) {
+      showFeedback('error', 'Your region and city or town do not match. Please correct them before continuing.', 'Address check');
+      return;
+    }
+    if (!selectedZoneId) {
+      showFeedback('error', 'Please select a delivery method before proceeding.', 'Delivery method required');
+      return;
+    }
+    if (!paymentMethod) {
+      showFeedback('error', 'Please select a payment method before proceeding.', 'Payment method required');
+      return;
+    }
     if ((paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery') && !strictTwoStageLocationMatch) {
-      return toast.error('Deposit and Pay on Delivery are only available for approved Accra and Tarkwa addresses. Please use the first option if your address is outside those areas.');
+      showFeedback('warning', 'Deposit and pay-on-delivery are only available for approved Accra and Tarkwa addresses. Use the full online payment option if your address does not qualify.', 'Delivery restriction');
+      return;
     }
-    if (paymentMethod === 'deposit_balance' && !depositWarningAccepted) return toast.error('Please accept the deposit payment terms.');
-    if (paymentMethod === 'pay_on_delivery' && !podWarningAccepted) return toast.error('Please accept the pay on delivery terms.');
-    if (orderSummary.totalToPayNow <= 0 || Number.isNaN(orderSummary.totalToPayNow)) return toast.error('Order total is invalid.');
+    if (paymentMethod === 'deposit_balance' && !depositWarningAccepted) {
+      showFeedback('warning', 'Please accept the deposit payment terms before continuing.', 'Action needed');
+      return;
+    }
+    if (paymentMethod === 'pay_on_delivery' && !podWarningAccepted) {
+      showFeedback('warning', 'Please accept the pay on delivery terms before continuing.', 'Action needed');
+      return;
+    }
+    if (orderSummary.totalToPayNow <= 0 || Number.isNaN(orderSummary.totalToPayNow)) {
+      showFeedback('error', 'The order total is invalid. Please review your cart and try again.', 'Unable to continue');
+      return;
+    }
 
     setIsSubmitting(true);
     setOrderError('');
@@ -293,7 +318,7 @@ export default function Checkout() {
       });
 
       if (initRes?.data?.checkoutUrl) {
-        toast.success('Redirecting to Hubtel...');
+        showFeedback('info', 'Redirecting you to Hubtel for secure payment...', 'Opening payment');
         window.location.href = initRes.data.checkoutUrl;
         return;
       }
@@ -314,11 +339,11 @@ export default function Checkout() {
       }
 
       setOrderError('Unable to start Hubtel payment. Your cart is still available and no visible order was placed.');
-      toast.error('Payment initiation failed.');
+      showFeedback('error', 'Hubtel payment could not be started. Your cart is still available and no visible order was placed.', 'Payment initiation failed');
     } catch (error) {
       console.error('Checkout error:', error);
       setOrderError('Unable to start checkout right now. Your cart was not cleared.');
-      toast.error('Unable to start checkout.');
+      showFeedback('error', 'Unable to start checkout right now. Your cart was not cleared.', 'Checkout unavailable');
     } finally {
       setIsSubmitting(false);
     }
@@ -347,6 +372,13 @@ export default function Checkout() {
     <div className="min-h-screen bg-gray-50 pb-8">
       <div className="max-w-2xl mx-auto px-4 pt-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
+        <InlineNotice
+          variant={feedback?.variant}
+          title={feedback?.title}
+          message={feedback?.message}
+          onDismiss={() => setFeedback(null)}
+          className="mb-4"
+        />
 
         <Card className="p-4 mb-6 bg-white">
           <h2 className="font-semibold text-gray-800 mb-3">Your Items ({safeCartItems.length})</h2>
@@ -471,8 +503,7 @@ export default function Checkout() {
 
               {paymentMethod === 'deposit_balance' && (
                 <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                  <p className="text-sm font-semibold text-amber-800 mb-2">Deposit Payment Terms</p>
-                  <ul className="text-xs text-amber-700 leading-relaxed list-disc pl-4 space-y-2">
+                  <p className="text-sm font-semibold text-amber-800 mb-2">Deposit Payment Terms</p><ul className="text-xs text-amber-700 leading-relaxed list-disc pl-4 space-y-2">
                     <li><strong>Pay the remaining balance in full before the product is handed over</strong> at the time of delivery.</li>
                     <li><strong>Once the product arrives, customers must complete payment of the remaining balance through their Order page before the product is handed over.</strong></li>
                     <li><strong>If full payment is not made, the product will be returned.</strong> Customers may receive a <strong>50% refund of their deposit</strong> after verification or arrange pickup/redelivery at their own expense after paying the outstanding balance.</li>
@@ -486,8 +517,7 @@ export default function Checkout() {
 
               {paymentMethod === 'pay_on_delivery' && (
                 <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-xl">
-                  <p className="text-sm font-semibold text-purple-800 mb-2">Pay on Delivery Terms</p>
-                  <ul className="text-xs text-purple-700 leading-relaxed list-disc pl-4 space-y-2">
+                  <p className="text-sm font-semibold text-purple-800 mb-2">Pay on Delivery Terms</p><ul className="text-xs text-purple-700 leading-relaxed list-disc pl-4 space-y-2">
                     <li><strong>The delivery fee is paid first online.</strong></li>
                     <li><strong>Once the product arrives, customers must complete payment of the remaining balance through their Order page before the product is handed over.</strong></li>
                     <li><strong>If full payment is not made, the product will be returned.</strong></li>
@@ -557,7 +587,7 @@ export default function Checkout() {
               >
                 {isSubmitting ? (
                   <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" /> Processing...
+                    <Loader2 className="h-5 w-5 animate-spin" /> Redirecting to secure payment...
                   </span>
                 ) : (
                   `Pay ₵${orderSummary.totalToPayNow.toFixed(2)} with Hubtel`
@@ -574,4 +604,3 @@ export default function Checkout() {
     </div>
   );
 }
-

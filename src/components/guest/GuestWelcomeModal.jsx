@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
 import { createPageUrl } from "@/lib/utils";
 
-const DISMISS_KEY = "fmm_guest_welcome_modal_dismissed_at";
+const DISMISS_KEY = "fmm_guest_welcome_modal_v2_dismissed_at";
 const SIXTY_DAYS_IN_MS = 60 * 24 * 60 * 60 * 1000;
 
 const BENEFITS = [
@@ -41,7 +41,8 @@ export default function GuestWelcomeModal() {
       return;
     }
 
-    const isHomepage = window.location.pathname === "/";
+    const currentPath = (window.location.pathname || "/").toLowerCase();
+    const isHomepage = currentPath === "/" || currentPath === "/home";
     if (isHomepage && shouldDisplayWelcomeModal()) {
       setOpen(true);
     }

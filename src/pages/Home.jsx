@@ -189,7 +189,7 @@ export default function Home() {
                 {cat.brands.map(function(b) {
                   return <Link key={b.brand + b.category} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + b.category)} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>{b.label}</Link>;
                 })}
-                <Link to={cat.link} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>All {cat.label} →</Link>;
+                <Link to={cat.link} className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}>All {cat.label} →</Link>
               </div>
             </div>
           );

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
 import { createPageUrl } from '../utils';
 import { appClient } from '@/api/appClient.js';
 import { checkPaymentStatus, getBaseOrderReference } from '@/api/hubtelClient';
@@ -35,6 +34,7 @@ export default function PaymentVerification() {
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [message, setMessage] = useState('Checking payment status with Hubtel and verifying callback logs...');
+  const [statusTone, setStatusTone] = useState('pending');
 
   useEffect(() => {
     let active = true;
@@ -63,8 +63,9 @@ export default function PaymentVerification() {
 
           if (currentOrder && (currentOrder.initial_payment_status === 'paid' || currentOrder.payment_status === 'paid' || currentOrder.payment_stage === 'fully_paid')) {
             await clearLoggedInCart(user.email, queryClient);
-            toast.success('Payment confirmed successfully.');
-            navigate(createPageUrl('Orders'), { replace: true });
+            setStatusTone('success');
+            setMessage('Payment confirmed successfully. Redirecting you to your orders...');
+            setTimeout(() => navigate(createPageUrl('Orders'), { replace: true }), 1200);
             return;
           }
 
@@ -72,14 +73,16 @@ export default function PaymentVerification() {
           const statusValue = getStatusValue(result);
 
           if (statusValue === 'failed' || statusValue === 'unpaid') {
-            toast.error('Payment failed. Your cart is still available.');
-            navigate(createPageUrl('Checkout'), { replace: true });
+            setStatusTone('error');
+            setMessage('Payment failed. Your cart is still available. Redirecting you back to checkout...');
+            setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1400);
             return;
           }
 
           if (statusValue === 'cancelled' || statusValue === 'canceled') {
-            toast.error('Payment was cancelled. Your cart is still available.');
-            navigate(createPageUrl('Checkout'), { replace: true });
+            setStatusTone('warning');
+            setMessage('Payment was cancelled. Your cart is still available. Redirecting you back to checkout...');
+            setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1400);
             return;
           }
 
@@ -89,15 +92,18 @@ export default function PaymentVerification() {
         }
 
         if (hintedStatus === 'cancelled' || hintedStatus === 'canceled') {
-          toast.error('Payment was cancelled. Your cart is still available.');
+          setStatusTone('warning');
+          setMessage('Payment was cancelled. Your cart is still available. Redirecting you back to checkout...');
         } else {
-          toast.error('No successful payment was confirmed. Your cart is still available.');
+          setStatusTone('error');
+          setMessage('No successful payment was confirmed. Your cart is still available. Redirecting you back to checkout...');
         }
-        navigate(createPageUrl('Checkout'), { replace: true });
+        setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1400);
       } catch (error) {
         console.error('Payment verification page error:', error);
-        toast.error('We could not verify the payment right now. Your cart is still available.');
-        navigate(createPageUrl('Checkout'), { replace: true });
+        setStatusTone('error');
+        setMessage('We could not verify the payment right now. Your cart is still available. Redirecting you back to checkout...');
+        setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1400);
       }
     };
 
@@ -108,15 +114,23 @@ export default function PaymentVerification() {
     };
   }, [navigate, queryClient, searchParams]);
 
+  const toneClasses = statusTone === 'success'
+    ? { shell: 'bg-emerald-50', iconWrap: 'bg-emerald-100', icon: 'text-emerald-600', title: 'text-emerald-800', subtitle: 'text-emerald-700' }
+    : statusTone === 'warning'
+      ? { shell: 'bg-amber-50', iconWrap: 'bg-amber-100', icon: 'text-amber-600', title: 'text-amber-800', subtitle: 'text-amber-700' }
+      : statusTone === 'error'
+        ? { shell: 'bg-red-50', iconWrap: 'bg-red-100', icon: 'text-red-600', title: 'text-red-800', subtitle: 'text-red-700' }
+        : { shell: 'bg-green-50', iconWrap: 'bg-green-100', icon: 'text-green-600', title: 'text-green-800', subtitle: 'text-green-600' };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 p-6">
+    <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${toneClasses.shell}`}>
       <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
+        <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${toneClasses.iconWrap}`}>
+          <Loader2 className={`h-8 w-8 animate-spin ${toneClasses.icon}`} />
         </div>
-        <h2 className="text-lg font-bold text-green-800 mb-2">Verifying Payment</h2>
-        <p className="text-sm text-green-600 mb-3">Please wait while we verify your Hubtel payment.</p>
-        <p className="text-xs text-gray-500">{message}</p>
+        <h2 className={`text-lg font-bold mb-2 ${toneClasses.title}`}>Verifying Payment</h2>
+        <p className={`text-sm mb-3 ${toneClasses.subtitle}`}>Please wait while we verify your Hubtel payment.</p>
+        <p className="text-xs text-gray-500 leading-6">{message}</p>
         <div className="mt-4 text-xs text-gray-500 flex items-center justify-center gap-2">
           <ShieldCheck className="h-4 w-4" /> Secure verification in progress
         </div>
@@ -124,4 +138,3 @@ export default function PaymentVerification() {
     </div>
   );
 }
-

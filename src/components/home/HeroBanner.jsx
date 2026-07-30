@@ -38,10 +38,10 @@ const REVIEW_SLIDE = {
   id: 'fmm-welcome-slide',
   type: 'review',
   eyebrow: 'WELCOME TO FMM CLASSICO',
-  titleLead: 'Your One-Stop Shop for',
-  titleAccent: 'Smart Tech & Lifestyle',
+  titleLead: 'Your Trusted Destination for',
+  titleAccent: 'Quality Products',
   description:
-    'Shop smartphones, phone accessories, electronics, home appliances, and lifestyle products — all in one place.',
+    'Shop smartphones, phone accessories, electronics, home appliances, and many more, all in one place.',
   features: [
     { title: 'Save Wishlist', icon: Heart },
     { title: 'Track Orders', icon: Truck },
@@ -190,22 +190,22 @@ function ReviewBannerSlide({ slide }) {
       <div className="absolute inset-0 bg-gradient-to-r from-[#03143f] via-[#082a6f] to-[#0b3ea9]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.10),transparent_30%),radial-gradient(circle_at_84%_18%,rgba(255,255,255,0.08),transparent_24%),radial-gradient(circle_at_80%_84%,rgba(46,134,193,0.16),transparent_22%)]" />
 
-      <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_92px] items-center gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_112px] sm:px-4 md:grid-cols-[minmax(0,1.08fr)_184px] md:gap-4 md:px-7 md:py-4 lg:grid-cols-[minmax(0,1.08fr)_200px] lg:px-8 lg:py-4">
-        <div className="min-w-0 self-center text-white">
+      <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_92px] items-start gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_112px] sm:px-4 md:grid-cols-[minmax(0,1.28fr)_176px] md:items-center md:gap-5 md:px-7 md:py-4 lg:grid-cols-[minmax(0,1.38fr)_188px] lg:px-8 lg:py-4">
+        <div className="min-w-0 self-start pb-7 text-white md:self-center md:pb-8">
           <span className="inline-flex items-center rounded-full border border-[#5daeff]/35 bg-[#0d2f79]/55 px-2.5 py-1 text-[7px] font-bold uppercase tracking-[0.18em] text-[#d9ecff] sm:text-[8px] md:px-3 md:py-1.5 md:text-[10px]">
             {slide.eyebrow}
           </span>
 
-          <h2 className="mt-2 text-[14px] font-black leading-[1.04] tracking-[-0.03em] text-white sm:text-[16px] md:mt-3 md:max-w-[11ch] md:text-[28px] lg:text-[32px]">
-            <span className="block">{slide.titleLead}</span>
-            <span className="mt-1 block text-[#8dc3ff]">{slide.titleAccent}</span>
+          <h2 className="mt-2 text-[14px] font-black leading-[1.08] tracking-[-0.03em] text-white sm:text-[16px] md:mt-3 md:max-w-none md:text-[26px] lg:text-[32px] lg:whitespace-nowrap">
+            <span className="block md:inline">{slide.titleLead} </span>
+            <span className="block text-[#8dc3ff] md:inline">{slide.titleAccent}</span>
           </h2>
 
-          <p className="mt-2 max-w-[27ch] text-[8px] leading-[1.38] text-white/86 sm:text-[8.8px] md:mt-2.5 md:max-w-[40ch] md:text-[12px] md:leading-5 lg:text-[13px]">
+          <p className="mt-2 max-w-[27ch] text-[8px] leading-[1.38] text-white/86 sm:text-[8.8px] md:mt-2.5 md:max-w-[44ch] md:text-[12px] md:leading-5 lg:max-w-none lg:text-[13px] lg:whitespace-nowrap">
             {slide.description}
           </p>
 
-          <div className="mt-3 grid grid-cols-3 gap-1.5 md:mt-3 md:gap-2 lg:gap-2.5">
+          <div className="mt-3 grid grid-cols-3 gap-1.5 md:mt-4 md:gap-2 lg:mb-1 lg:gap-2.5">
             {slide.features.map((feature) => {
               const Icon = feature.icon;
               return (
@@ -219,7 +219,7 @@ function ReviewBannerSlide({ slide }) {
             })}
           </div>
 
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[7px] text-white/80 sm:text-[7.5px] md:mt-3 md:gap-x-4 md:text-[10px] lg:text-[11px]">
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[7px] text-white/80 sm:text-[7.5px] md:mt-3 md:gap-x-4 md:text-[10px] lg:text-[11px]">
             {slide.trustItems.map((item) => (
               <div key={item} className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-2.5 w-2.5 text-[#8dc3ff] md:h-3.5 md:w-3.5" />

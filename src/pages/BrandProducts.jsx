@@ -142,23 +142,23 @@ export default function BrandProducts() {
 
               <div className="mt-6 space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">Category</label>
-                  <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white">
-                    <option value="">All Categories</option>
-                    {availableCategories.map((category) => (
-                      <option key={category} value={category}>{CATEGORY_LABELS[category] || category}</option>
-                    ))}
-                  </select>
+                <label className="text-xs font-medium text-gray-600 block mb-2">Category</label>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setCategoryFilter('')} className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${categoryFilter === '' ? 'border-[#0A2E60] bg-[#0A2E60] text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-[#2E86C1] hover:text-[#0A2E60]'}`}>All Categories</button>
+                  {availableCategories.map((category) => (
+                    <button key={category} type="button" onClick={() => setCategoryFilter(category)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${categoryFilter === category ? 'border-[#0A2E60] bg-[#0A2E60] text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-[#2E86C1] hover:text-[#0A2E60]'}`}>{CATEGORY_LABELS[category] || category}</button>
+                  ))}
                 </div>
+              </div>
 
-                <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">Sort By</label>
-                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white">
-                    <option value="newest">Newest</option>
-                    <option value="price_low">Price: Low to High</option>
-                    <option value="price_high">Price: High to Low</option>
-                  </select>
-                </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Sort By</label>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full border rounded-2xl px-3 py-2.5 text-sm bg-white">
+                  <option value="newest">Newest</option>
+                  <option value="price_low">Price: Low to High</option>
+                  <option value="price_high">Price: High to Low</option>
+                </select>
+              </div>
 
                 <div className="flex gap-3 pt-2">
                   <Button variant="outline" className="flex-1 rounded-xl" onClick={clearFilters}>Clear Filters</Button>

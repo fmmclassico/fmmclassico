@@ -97,18 +97,11 @@ const MAIN_CATEGORY_LINKS = {
   home_appliances: createPageUrl('home-appliances'),
 };
 
-function slugifyCollection(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
 function getSubLink(sub) {
-  if (sub.brand && sub.category) {
-    return createPageUrl(slugifyCollection(sub.brand));
+  if (sub.brand) {
+    const params = new URLSearchParams({ brand: sub.brand });
+    if (sub.category) params.set('category', sub.category);
+    return createPageUrl(`BrandProducts?${params.toString()}`);
   }
   if (sub.sub) {
     return createPageUrl(`Shop?category=${sub.shopCategory}&sub=${sub.sub}`);
@@ -141,7 +134,6 @@ export default function Categories() {
 
   const isAdmin = user?.role === 'admin';
 
-  // Get overridden image for a category
   const getCatImage = (catId) => {
     const s = settings.find(x => x.key === `cat_bg_${catId}`);
     return s?.value || null;
@@ -237,7 +229,6 @@ export default function Categories() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.07 }}
             >
-              {/* Category card */}
               <div
                 className="group relative overflow-hidden rounded-2xl h-48 shadow-lg hover:shadow-xl transition-all duration-300"
               >
@@ -270,7 +261,6 @@ export default function Categories() {
                   )}
                 </div>
 
-                {/* Admin edit overlay */}
                 {editMode && (
                   <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 p-4" onClick={e => e.stopPropagation()}>
                     <p className="text-white text-xs font-bold mb-1">Edit "{cat.name}" Card</p>
@@ -316,7 +306,6 @@ export default function Categories() {
                 )}
               </div>
 
-              {/* Subcategory dropdown */}
               <AnimatePresence>
                 {isOpen && (
                   <motion.div

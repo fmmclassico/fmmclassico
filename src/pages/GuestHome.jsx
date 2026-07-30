@@ -5,8 +5,6 @@ import { createPageUrl } from '@/lib/utils';
 import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { ChevronRight, Home as HomeIcon, Smartphone, Headphones, Tv, Gem } from 'lucide-react';
-import AboutSection from '../components/home/AboutSection';
-import WelcomeModal from '../components/home/WelcomeModal';
 import { toast } from 'sonner';
 import guestCart from '@/lib/guest-cart';
 import HeroBanner from '../components/home/HeroBanner';
@@ -114,19 +112,6 @@ export default function GuestHome() {
     <div className="pb-4 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
 
       <HeroBanner />
-      return (
-  <div className="min-h-screen bg-gray-50">
-    {/* Welcome Modal */}
-    <WelcomeModal />
-
-    {/* Hero Slider */}
-    <HeroBanner />
-
-    {/* About FMM CLASSICO - permanent, SEO-friendly */}
-    <AboutSection />
-
-    {/* ... rest of existing code unchanged ... */}
-
 
       {/* CATEGORIES */}
 <div className="bg-white mt-2 mx-2 md:mx-4 rounded-2xl shadow-sm px-3 pt-1.5 pb-2 md:px-4 md:pt-2 md:pb-2.5">

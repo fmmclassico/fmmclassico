@@ -1,8 +1,10 @@
 User-agent: *
-Disallow: /AdminOrders
-Disallow: /AdminReviews
 Disallow: /Admin
 Disallow: /admin
+Disallow: /AdminOrders
+Disallow: /AdminReviews
+Disallow: /Home
+Disallow: /home
 Disallow: /login
 Disallow: /register
 Disallow: /forgot-password
@@ -30,7 +32,13 @@ Disallow: /allbrands
 Disallow: /Shop
 Disallow: /shop
 Disallow: /search
-Disallow: /Cart
+Disallow: /about
+Disallow: /categories
+Disallow: /policies
+Disallow: /downloadapp
+Disallow: /mobileappguide
+Disallow: /feedback
+Disallow: /howtouse
 Disallow: /account
 
 Sitemap: https://www.fmmclassico.com/sitemap.xml

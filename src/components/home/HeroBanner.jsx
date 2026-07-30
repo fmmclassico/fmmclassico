@@ -190,26 +190,28 @@ function WelcomePhonePreview() {
 
 function ReviewBannerSlide({ slide }) {
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[#03143f]">
+    <div className="fmm-review-slide relative h-full w-full overflow-hidden bg-[#03143f]">
       <div className="absolute inset-0 bg-gradient-to-r from-[#03143f] via-[#082a6f] to-[#0b3ea9]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.10),transparent_30%),radial-gradient(circle_at_84%_18%,rgba(255,255,255,0.08),transparent_24%),radial-gradient(circle_at_80%_84%,rgba(46,134,193,0.16),transparent_22%)]" />
 
-      <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_92px] items-start gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_112px] sm:px-4 md:grid-cols-[minmax(0,1.36fr)_176px] md:items-center md:gap-6 md:px-7 md:py-4 lg:grid-cols-[minmax(0,1.48fr)_188px] lg:px-8 lg:py-4">
-        <div className="min-w-0 self-start pb-10 text-white md:self-center md:pb-10">
-          <span className="inline-flex items-center rounded-full border border-[#5daeff]/35 bg-[#0d2f79]/55 px-2.5 py-1 text-[7px] font-bold uppercase tracking-[0.18em] text-[#d9ecff] sm:text-[8px] md:px-3 md:py-1.5 md:text-[10px]">
-            {slide.eyebrow}
-          </span>
+      <div className="fmm-review-slide__grid">
+        <div className="fmm-review-slide__content min-w-0 text-white">
+          {slide.eyebrow ? (
+            <span className="inline-flex items-center rounded-full border border-[#5daeff]/35 bg-[#0d2f79]/55 px-2.5 py-1 text-[7px] font-bold uppercase tracking-[0.18em] text-[#d9ecff] sm:text-[8px] md:px-3 md:py-1.5 md:text-[10px]">
+              {slide.eyebrow}
+            </span>
+          ) : null}
 
-          <h2 className="mt-2 text-[14px] font-black leading-[1.08] tracking-[-0.03em] text-white sm:text-[16px] md:mt-3 md:max-w-[20ch] md:text-[26px] lg:max-w-none lg:text-[32px] lg:whitespace-nowrap">
-            <span className="block md:inline">{slide.titleLead} </span>
-            <span className="block text-[#8dc3ff] md:inline">{slide.titleAccent}</span>
+          <h2 className="fmm-review-slide__title mt-2 font-black leading-[1.08] tracking-[-0.03em] text-white">
+            <span className="block sm:inline">{slide.titleLead} </span>
+            <span className="block text-[#8dc3ff] sm:inline">{slide.titleAccent}</span>
           </h2>
 
-          <p className="mt-2 max-w-[30ch] text-[8px] leading-[1.38] text-white/86 sm:text-[8.8px] md:mt-2.5 md:max-w-[62ch] md:text-[12px] md:leading-5 lg:max-w-[74ch] lg:text-[13px]">
+          <p className="fmm-review-slide__description mt-2 text-white/86">
             {slide.description}
           </p>
 
-          <div className="mt-3 grid grid-cols-3 gap-1.5 md:mt-4 md:gap-2 lg:mt-5 lg:gap-2.5">
+          <div className="fmm-review-slide__features mt-3 grid grid-cols-3 md:mt-4 lg:mt-5">
             {slide.features.map((feature) => {
               const Icon = feature.icon;
               return (
@@ -223,7 +225,7 @@ function ReviewBannerSlide({ slide }) {
             })}
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[7px] text-white/80 sm:text-[7.5px] md:mt-3 md:gap-x-4 md:text-[10px] lg:text-[11px]">
+          <div className="fmm-review-slide__trust mt-2 flex flex-wrap items-center text-white/80 sm:text-[7.5px] md:mt-3 md:text-[10px] lg:text-[11px]">
             {slide.trustItems.map((item) => (
               <div key={item} className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-2.5 w-2.5 text-[#8dc3ff] md:h-3.5 md:w-3.5" />
@@ -233,7 +235,7 @@ function ReviewBannerSlide({ slide }) {
           </div>
         </div>
 
-        <div className="flex h-full items-center justify-center md:justify-end">
+        <div className="fmm-review-slide__preview flex items-center justify-center md:justify-end">
           <WelcomePhonePreview />
         </div>
       </div>
@@ -382,6 +384,7 @@ export default function HeroBanner() {
   }
 
   const slide = slides[current];
+  const isReviewSlide = slide?.type === 'review';
 
   const flyerContent = (
     <AnimatePresence mode="wait">
@@ -404,7 +407,7 @@ export default function HeroBanner() {
 
   return (
     <div className="fmm-flyer-hero-shell" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      <div className="fmm-flyer-hero-frame">
+      <div className={`fmm-flyer-hero-frame ${isReviewSlide ? 'is-review-slide' : ''}`}>
         <div className="fmm-flyer-hero-static">{flyerContent}</div>
 
         {slides.length > 1 && (

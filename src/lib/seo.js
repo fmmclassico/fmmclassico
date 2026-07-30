@@ -1,21 +1,21 @@
 const SITE_NAME = 'FMM CLASSICO';
 const SITE_URL = 'https://www.fmmclassico.com';
 const DEFAULT_IMAGE = `${SITE_URL}/logo.png`;
-const DEFAULT_KEYWORDS = 'FMM CLASSICO, phones Ghana, phone accessories Ghana, electronics Ghana, home appliances Ghana, online store Ghana';
+const DEFAULT_KEYWORDS = 'FMM CLASSICO, FMM, CLASSICO, FMM CLASSICO Ghana, phones Ghana, phone accessories Ghana, electronics Ghana, home appliances Ghana, branded products Ghana, online store Ghana, shop in Ghana, phone shop in Ghana, electronics shop in Ghana';
 const INDEX_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 const NOINDEX_ROBOTS = 'noindex, follow';
 
 const PATH_META = {
   '/': {
-    title: 'FMM CLASSICO | Phones, Accessories, Electronics & Home Appliances',
-    description: 'FMM CLASSICO is a trusted Ghanaian online and physical retail & wholesale store for smartphones, phone accessories, electronics and home appliances.',
+    title: 'FMM CLASSICO | Phones, Phone Accessories, Electronics, Home Appliances & Branded Products',
+    description: 'FMM CLASSICO is your trusted destination in Ghana for smartphones, phone accessories, electronics, home appliances and branded products.',
   },
   '/phones': {
     title: 'Phones | FMM CLASSICO',
     description: 'Shop smartphones from Apple, Samsung, Tecno, Infinix and more at FMM CLASSICO Ghana.',
   },
   '/phone-accessories': {
-    title: 'Phones & Accessories | FMM CLASSICO',
+    title: 'Phone Accessories | FMM CLASSICO',
     description: 'Shop phone cases, chargers, earphones, cables, power banks and other accessories at FMM CLASSICO Ghana.',
   },
   '/electronics': {
@@ -27,16 +27,18 @@ const PATH_META = {
     description: 'Browse kitchen and household appliances from FMM CLASSICO, including fridges, kettles, cookers and more.',
   },
   '/brands': {
-    title: 'All Brands | FMM CLASSICO',
-    description: 'Browse every brand configured in FMM CLASSICO, including phones, accessories, electronics and home appliance brands.',
+    title: 'Branded Products | FMM CLASSICO',
+    description: 'Browse branded products from FMM CLASSICO, including phones, accessories, electronics and home appliance brands.',
   },
   '/categories': {
     title: 'Shop by Category | FMM CLASSICO',
     description: 'Browse FMM CLASSICO departments for phones, accessories, electronics and home appliances.',
+    robots: NOINDEX_ROBOTS,
   },
   '/about': {
     title: 'About FMM CLASSICO',
     description: 'Learn more about FMM CLASSICO, our stores and how we serve shoppers across Ghana.',
+    robots: NOINDEX_ROBOTS,
   },
   '/allbrands': {
     title: 'All Brands | FMM CLASSICO',
@@ -61,6 +63,14 @@ const NOINDEX_PATHS = new Set([
   '/forgot-password',
   '/reset-password',
   '/brandproducts',
+  '/home',
+  '/about',
+  '/categories',
+  '/policies',
+  '/downloadapp',
+  '/mobileappguide',
+  '/feedback',
+  '/howtouse',
 ]);
 
 function slugToWords(pathname = '/') {

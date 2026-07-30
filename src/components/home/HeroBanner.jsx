@@ -1,338 +1,413 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '../../utils';
-import { Button } from "@/components/ui/button";
-import { ArrowRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  BadgePercent,
+  Bell,
+  CheckCircle2,
+  Heart,
+  Menu,
+  ReceiptText,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  Smartphone,
+  Truck,
+  UserCircle2,
+} from 'lucide-react';
+import { appClient } from '@/api/appClient.js';
+import './hero-banner-overrides.css';
 
-// Inline SVG illustrations for each banner
-const PhoneSVG = () => (
-  <svg viewBox="0 0 200 320" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Phone body */}
-    <rect x="30" y="10" width="140" height="300" rx="20" fill="#1a1a2e" stroke="#3a3a5e" strokeWidth="2"/>
-    {/* Screen */}
-    <rect x="38" y="35" width="124" height="250" rx="4" fill="#0f3460"/>
-    {/* Screen content - gradient */}
-    <defs>
-      <linearGradient id="screenGrad" x1="38" y1="35" x2="162" y2="285" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stopColor="#1a73e8"/>
-        <stop offset="100%" stopColor="#0d47a1"/>
-      </linearGradient>
-    </defs>
-    <rect x="38" y="35" width="124" height="250" rx="4" fill="url(#screenGrad)"/>
-    {/* App icons on screen */}
-    <rect x="50" y="55" width="24" height="24" rx="6" fill="#4fc3f7" opacity="0.9"/>
-    <rect x="82" y="55" width="24" height="24" rx="6" fill="#81c784" opacity="0.9"/>
-    <rect x="114" y="55" width="24" height="24" rx="6" fill="#ffb74d" opacity="0.9"/>
-    <rect x="146" y="55" width="0" height="24" rx="6" fill="#e57373" opacity="0.9"/>
-    {/* Camera notch */}
-    <rect x="80" y="15" width="40" height="14" rx="7" fill="#0d0d1a"/>
-    <circle cx="100" cy="22" r="4" fill="#2a2a4a"/>
-    {/* Home indicator */}
-    <rect x="75" y="295" width="50" height="4" rx="2" fill="#3a3a5e"/>
-    {/* Decorative screen elements */}
-    <rect x="50" y="100" width="100" height="60" rx="8" fill="white" opacity="0.1"/>
-    <rect x="50" y="175" width="100" height="40" rx="8" fill="white" opacity="0.08"/>
-    <rect x="50" y="230" width="60" height="30" rx="6" fill="#4fc3f7" opacity="0.3"/>
-    {/* Shine effect */}
-    <rect x="30" y="10" width="40" height="300" rx="20" fill="white" opacity="0.03"/>
-  </svg>
-);
+function normalizeQueryResult(result) {
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result?.data)) return result.data;
+  return [];
+}
 
-const AccessoriesSVG = () => (
-  <svg viewBox="0 0 200 200" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Earphone case */}
-    <ellipse cx="100" cy="110" rx="55" ry="60" fill="#e8f4fd"/>
-    {/* Left earphone */}
-    <path d="M70 85 C60 75, 50 80, 50 95 C50 110, 60 115, 70 110 Z" fill="white" stroke="#90caf9" strokeWidth="2"/>
-    <circle cx="65" cy="95" r="8" fill="#2196f3"/>
-    <path d="M65 103 C65 103, 60 130, 65 145" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-    {/* Right earphone */}
-    <path d="M130 85 C140 75, 150 80, 150 95 C150 110, 140 115, 130 110 Z" fill="white" stroke="#90caf9" strokeWidth="2"/>
-    <circle cx="135" cy="95" r="8" fill="#2196f3"/>
-    <path d="M135 103 C135 103, 140 130, 135 145" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-    {/* Charger cable */}
-    <rect x="90" y="150" width="20" height="8" rx="4" fill="#64b5f6"/>
-    <path d="M100 158 L100 180" stroke="#64b5f6" strokeWidth="3" strokeLinecap="round"/>
-    {/* Lightning bolt icon */}
-    <path d="M98 165 L95 172 L99 172 L97 180" stroke="#ffd54f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
+function pickHeroImage(slide, isMobile) {
+  if (slide.type === 'built_in') return slide.imageUrl;
+  if (isMobile) return slide.mobile_image_url || slide.image_url || slide.desktop_image_url || '';
+  return slide.desktop_image_url || slide.image_url || slide.mobile_image_url || '';
+}
 
-const ElectronicsSVG = () => (
-  <svg viewBox="0 0 240 200" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* TV/Monitor */}
-    <rect x="30" y="20" width="180" height="120" rx="8" fill="#1a1a2e"/>
-    <rect x="38" y="28" width="164" height="104" rx="4" fill="#0d47a1"/>
-    {/* Screen gradient */}
-    <defs>
-      <linearGradient id="tvScreen" x1="38" y1="28" x2="202" y2="132" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stopColor="#1565c0"/>
-        <stop offset="50%" stopColor="#0d47a1"/>
-        <stop offset="100%" stopColor="#002171"/>
-      </linearGradient>
-    </defs>
-    <rect x="38" y="28" width="164" height="104" rx="4" fill="url(#tvScreen)"/>
-    {/* Screen content */}
-    <circle cx="120" cy="75" r="25" fill="white" opacity="0.1"/>
-    <polygon points="112,65 112,85 135,75" fill="white" opacity="0.3"/>
-    {/* TV Stand */}
-    <rect x="95" y="140" width="50" height="8" rx="2" fill="#2a2a4a"/>
-    <rect x="80" y="148" width="80" height="6" rx="3" fill="#1a1a2e"/>
-    {/* Brand dot */}
-    <circle cx="120" cy="136" r="3" fill="#4fc3f7"/>
-  </svg>
-);
+const BLUE_GRADIENT = 'from-[#03143f] via-[#06286d] to-[#0b3ea9]';
+const BLUE_TITLE = 'text-[#8dc3ff]';
+const BLUE_ACCENT = '#2E86C1';
 
-const HomeAppliancesSVG = () => (
-  <svg viewBox="0 0 200 220" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Refrigerator */}
-    <rect x="55" y="20" width="90" height="180" rx="8" fill="#e3f2fd"/>
-    <rect x="55" y="20" width="90" height="180" rx="8" stroke="#90caf9" strokeWidth="2"/>
-    {/* Top door (freezer) */}
-    <rect x="60" y="25" width="80" height="55" rx="4" fill="white"/>
-    <line x1="60" y1="80" x2="140" y2="80" stroke="#bbdefb" strokeWidth="1.5"/>
-    {/* Bottom door (fridge) */}
-    <rect x="60" y="85" width="80" height="110" rx="4" fill="white"/>
-    {/* Handles */}
-    <rect x="130" y="45" width="4" height="20" rx="2" fill="#90caf9"/>
-    <rect x="130" y="120" width="4" height="30" rx="2" fill="#90caf9"/>
-    {/* Temperature display */}
-    <rect x="75" y="35" width="30" height="12" rx="3" fill="#e3f2fd"/>
-    <text x="82" y="45" fontSize="8" fill="#1565c0" fontFamily="monospace">-18°</text>
-    {/* Water dispenser */}
-    <rect x="75" y="130" width="25" height="20" rx="4" fill="#e3f2fd"/>
-    <circle cx="87" cy="140" r="5" fill="#bbdefb"/>
-  </svg>
-);
-
-const BrandsSVG = () => (
-  <svg viewBox="0 0 200 200" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Samsung Galaxy shape */}
-    <rect x="60" y="30" width="80" height="140" rx="16" fill="#1a1a2e" stroke="#3a3a5e" strokeWidth="2"/>
-    <rect x="67" y="50" width="66" height="100" rx="3" fill="#0d47a1"/>
-    {/* Apple logo shape */}
-    <path d="M100 55 C95 48, 85 50, 85 60 C85 72, 100 80, 100 80 C100 80, 115 72, 115 60 C115 50, 105 48, 100 55" fill="white" opacity="0.3"/>
-    {/* Stars around */}
-    <circle cx="40" cy="60" r="4" fill="#ffd54f" opacity="0.6"/>
-    <circle cx="160" cy="80" r="3" fill="#4fc3f7" opacity="0.6"/>
-    <circle cx="45" cy="150" r="3" fill="#81c784" opacity="0.6"/>
-    <circle cx="155" cy="140" r="4" fill="#e57373" opacity="0.6"/>
-    {/* Sparkle */}
-    <path d="M150 40 L152 45 L157 47 L152 49 L150 54 L148 49 L143 47 L148 45 Z" fill="#ffd54f" opacity="0.7"/>
-  </svg>
-);
-
-const EarphonesSVG = () => (
-  <svg viewBox="0 0 200 200" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Headphone band */}
-    <path d="M50 120 C50 60, 150 60, 150 120" stroke="#1a1a2e" strokeWidth="8" strokeLinecap="round" fill="none"/>
-    {/* Left ear cup */}
-    <ellipse cx="50" cy="125" rx="22" ry="28" fill="#1a1a2e"/>
-    <ellipse cx="50" cy="125" rx="15" ry="20" fill="#0d47a1"/>
-    <ellipse cx="50" cy="125" rx="8" ry="10" fill="#1565c0"/>
-    {/* Right ear cup */}
-    <ellipse cx="150" cy="125" rx="22" ry="28" fill="#1a1a2e"/>
-    <ellipse cx="150" cy="125" rx="15" ry="20" fill="#0d47a1"/>
-    <ellipse cx="150" cy="125" rx="8" ry="10" fill="#1565c0"/>
-    {/* Sound waves */}
-    <path d="M170 105 C178 115, 178 135, 170 145" stroke="#4fc3f7" strokeWidth="2" opacity="0.5" fill="none"/>
-    <path d="M178 100 C188 113, 188 137, 178 150" stroke="#4fc3f7" strokeWidth="2" opacity="0.3" fill="none"/>
-    {/* Music note */}
-    <circle cx="100" cy="170" r="6" fill="#ffd54f" opacity="0.6"/>
-    <line x1="106" y1="170" x2="106" y2="155" stroke="#ffd54f" strokeWidth="2" opacity="0.6"/>
-    <path d="M106 155 C106 155, 114 152, 114 158" stroke="#ffd54f" strokeWidth="2" opacity="0.6" fill="none"/>
-  </svg>
-);
-
-const SmartWatchSVG = () => (
-  <svg viewBox="0 0 200 240" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Watch band top */}
-    <rect x="75" y="10" width="50" height="50" rx="6" fill="#263238"/>
-    <rect x="80" y="15" width="40" height="40" rx="4" fill="#37474f"/>
-    {/* Watch body */}
-    <rect x="60" y="60" width="80" height="100" rx="18" fill="#1a1a2e" stroke="#3a3a5e" strokeWidth="2"/>
-    {/* Watch screen */}
-    <rect x="68" y="72" width="64" height="76" rx="12" fill="#0d47a1"/>
-    {/* Watch face content */}
-    <text x="80" y="105" fontSize="18" fill="white" fontFamily="monospace" fontWeight="bold">12:45</text>
-    <text x="85" y="120" fontSize="8" fill="#90caf9" fontFamily="sans-serif">Thu, Jul 30</text>
-    {/* Heart rate */}
-    <circle cx="85" cy="135" r="5" fill="#e57373" opacity="0.7"/>
-    <text x="93" y="138" fontSize="8" fill="white" opacity="0.8">72</text>
-    {/* Steps icon */}
-    <circle cx="115" cy="135" r="5" fill="#81c784" opacity="0.7"/>
-    <text x="108" y="148" fontSize="6" fill="#81c784" opacity="0.6">5.2k</text>
-    {/* Watch band bottom */}
-    <rect x="75" y="160" width="50" height="50" rx="6" fill="#263238"/>
-    <rect x="80" y="165" width="40" height="40" rx="4" fill="#37474f"/>
-    {/* Side button */}
-    <rect x="140" y="95" width="6" height="15" rx="3" fill="#3a3a5e"/>
-  </svg>
-);
-
-// Map slide id to its SVG illustration
-const SLIDE_ILLUSTRATIONS = {
-  'default-1': PhoneSVG,
-  'default-1b': AccessoriesSVG,
-  'default-2': ElectronicsSVG,
-  'default-3': HomeAppliancesSVG,
-  'default-4': BrandsSVG,
-  'default-5': EarphonesSVG,
-  'default-6': SmartWatchSVG,
+const REVIEW_SLIDE = {
+  id: 'fmm-welcome-slide',
+  type: 'review',
+  eyebrow: 'WELCOME TO FMM CLASSICO',
+  titleLead: 'Your One-Stop Shop for',
+  titleAccent: 'Smart Tech & Lifestyle',
+  description:
+    'Shop smartphones, phone accessories, electronics, home appliances, and lifestyle products — all in one place.',
+  features: [
+    { title: 'Save Wishlist', icon: Heart },
+    { title: 'Track Orders', icon: Truck },
+    { title: 'Order History', icon: ReceiptText },
+    { title: 'Manage Account', icon: UserCircle2 },
+    { title: 'Secure Checkout', icon: ShieldCheck },
+    { title: 'Exclusive Offers', icon: BadgePercent },
+  ],
+  trustItems: ['100% Genuine Products', 'Trusted Support', 'Fast & Reliable Delivery'],
 };
 
-const DEFAULT_SLIDES = [
+const BUILT_IN_BANNERS = [
   {
-    id: 'default-1',
-    badge: '🔥 New Arrivals',
-    title: 'Phones',
-    subtitle: 'Samsung, iPhones & more at unbeatable prices',
-    cta_link: createPageUrl('Shop?category=phones'),
-    cta_text: 'Shop Now',
+    id: 'fixed-phones',
+    type: 'built_in',
+    title: 'PHONES',
+    subtitle: 'Latest models. Top performance. Unbeatable prices.',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784561540/ChatGPT_Image_Jul_20_2026_03_19_56_PM_vje886.png',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
   },
   {
-    id: 'default-1b',
-    badge: '🔥 Classico Deals',
-    title: 'Phone Accessories',
-    subtitle: 'Cases, chargers, earphones & more at unbeatable prices',
-    cta_link: createPageUrl('Categories'),
-    cta_text: 'Shop Now',
+    id: 'fixed-accessories',
+    type: 'built_in',
+    title: 'PHONE ACCESSORIES',
+    subtitle: 'Chargers, earbuds, cases, speakers and more for everyday use.',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784299259/ChatGPT_Image_Jul_17_2026_02_37_29_PM_qlihyw.png',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
   },
   {
-    id: 'default-2',
-    badge: '⚡ Best Deals',
-    title: 'Electronic Appliances',
-    subtitle: 'Top quality electronics for your everyday needs',
-    cta_link: createPageUrl('Shop?category=electronic_appliances'),
-    cta_text: 'Shop Now',
+    id: 'fixed-home',
+    type: 'built_in',
+    title: 'HOME APPLIANCES',
+    subtitle: 'Quality appliances for your kitchen, comfort and daily living.',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784300533/ChatGPT_Image_Jul_17_2026_03_01_53_PM_hne4gq.png',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
   },
   {
-    id: 'default-3',
-    badge: '🏡 Home Deals',
-    title: 'Home Appliances',
-    subtitle: 'Quality home appliances delivered to your door',
-    cta_link: createPageUrl('Shop?category=home_appliances'),
-    cta_text: 'Shop Now',
+    id: 'fixed-electronics',
+    type: 'built_in',
+    title: 'ELECTRONICS',
+    subtitle: 'Smart gadgets and everyday electronics at trusted prices.',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784301769/ChatGPT_Image_Jul_17_2026_03_20_50_PM_b8mhgl.png',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
   },
   {
-    id: 'default-4',
-    badge: '📱 Top Brands',
-    title: 'Samsung & Apple',
-    subtitle: 'Genuine Samsung & Apple products at great prices',
-    cta_link: createPageUrl('BrandProducts?brand=Samsung'),
-    cta_text: 'Shop Brands',
+    id: 'fixed-smartwatch',
+    type: 'built_in',
+    title: 'SMART WATCH',
+    subtitle: 'Stay connected with stylish smart watches and wearables.',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784302040/ChatGPT_Image_Jul_17_2026_03_27_00_PM_tv3lay.png',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
   },
   {
-    id: 'default-5',
-    badge: '🎧 Accessories',
-    title: 'Earphones & Speakers',
-    subtitle: 'Premium sound at affordable prices — Oraimo, JBL & more',
-    cta_link: createPageUrl('Shop?category=earphones'),
-    cta_text: 'Shop Now',
+    id: 'fixed-television',
+    type: 'built_in',
+    title: 'TELEVISION',
+    subtitle: 'Big-screen viewing with sharp picture and dependable performance.',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1783605377/SLE32S700TCS-2_mowhla.jpg',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
   },
   {
-    id: 'default-6',
-    badge: '⌚ Smart Wear',
-    title: 'Smart Watches',
-    subtitle: 'Stay connected with the latest smartwatches',
-    cta_link: createPageUrl('Shop?category=smart_watches'),
-    cta_text: 'Shop Now',
+    id: 'fixed-projectors',
+    type: 'built_in',
+    title: 'PROJECTORS',
+    subtitle: 'Project larger, brighter visuals for home and office use.',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1783605199/519qw7On-vL_b03hux.jpg',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
+  },
+  {
+    id: 'fixed-laptops',
+    type: 'built_in',
+    title: 'LAPTOPS',
+    subtitle: 'Affordable and high-quality laptops for work, school and business.',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784634806/laptop-new-arrivals-cheap-price-laptops-high-quality-core-i7-laptops-brand-new-b0c29e0018_qehdjx.jpg',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
+  },
+  {
+    id: 'fixed-infrared-cooker',
+    type: 'built_in',
+    title: 'INFRARED COOKER',
+    subtitle: 'Fast, compact cooking made easy for modern kitchens.',
+    imageUrl: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784635290/Single-Burner-Electric-Infrared-Cooker-Ceramic-Stove-Hob-Cooktop-Electrical_ucsfgz.jpg',
+    gradient: BLUE_GRADIENT,
+    titleClass: BLUE_TITLE,
   },
 ];
 
+function WelcomePhonePreview() {
+  return (
+    <div className="relative mx-auto w-full max-w-[96px] sm:max-w-[118px] md:max-w-[178px] lg:max-w-[196px]">
+      <div className="absolute -bottom-1.5 left-1/2 h-4 w-[86%] -translate-x-1/2 rounded-full bg-[#02153f]/70 blur-md md:-bottom-2 md:h-5" />
+      <div className="absolute -bottom-0.5 left-1/2 h-2.5 w-[92%] -translate-x-1/2 rounded-[999px] border border-[#1e5bb8]/35 bg-[#072764] md:h-3" />
+
+      <div className="relative ml-auto w-[82px] rotate-[9deg] rounded-[1.35rem] border border-white/18 bg-[#0d1629] p-[4px] shadow-[0_14px_32px_rgba(0,0,0,0.28)] md:w-[164px] md:rounded-[2rem] md:p-[6px] lg:w-[182px]">
+        <div className="absolute left-1/2 top-[6px] z-20 h-[6px] w-[28px] -translate-x-1/2 rounded-full bg-[#101827] md:top-2.5 md:h-3 md:w-14" />
+
+        <div className="overflow-hidden rounded-[1rem] bg-white md:rounded-[1.5rem]">
+          <div className="px-2 pt-3 pb-2 md:px-3 md:pt-4 md:pb-2.5">
+            <div className="flex items-center justify-between text-[#0f224f]">
+              <Menu className="h-3 w-3 md:h-4 md:w-4" />
+              <div className="flex items-center gap-1 text-[7px] font-black tracking-tight md:text-[11px]">
+                <span style={{ color: BLUE_ACCENT }}>FMM</span>
+                <span>CLASSICO</span>
+              </div>
+              <Bell className="h-3 w-3 md:h-4 md:w-4" />
+            </div>
+
+            <div className="mt-2 flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 md:gap-1.5 md:px-2.5 md:py-1.5">
+              <Search className="h-2.5 w-2.5 text-slate-400 md:h-3 md:w-3" />
+              <span className="text-[5.8px] text-slate-400 md:text-[8px]">Search products...</span>
+            </div>
+
+            <div className="mt-2 rounded-[0.8rem] bg-gradient-to-r from-[#03143f] via-[#0b2a63] to-[#2E86C1] px-2 py-2 text-white md:mt-3 md:rounded-[1rem] md:px-3 md:py-3">
+              <p className="text-[7px] font-black leading-tight md:text-[12px]">iPhone 15 Pro</p>
+              <p className="mt-0.5 text-[5px] text-white/80 md:text-[7px]">Titanium. So strong.</p>
+              <div className="mt-1 inline-flex rounded-full bg-white px-1.5 py-0.5 text-[4.8px] font-bold text-[#0b3ea9] md:mt-2 md:text-[6px]">
+                Shop Now
+              </div>
+            </div>
+
+            <div className="mt-2 grid grid-cols-5 gap-1 text-center text-[4.8px] font-medium text-slate-600 md:text-[6px]">
+              <div className="flex flex-col items-center gap-0.5"><Smartphone className="h-2 w-2 md:h-3 md:w-3" /><span>Phones</span></div>
+              <div className="flex flex-col items-center gap-0.5"><ShoppingBag className="h-2 w-2 md:h-3 md:w-3" /><span>Accessories</span></div>
+              <div className="flex flex-col items-center gap-0.5"><ShieldCheck className="h-2 w-2 md:h-3 md:w-3" /><span>Electronics</span></div>
+              <div className="flex flex-col items-center gap-0.5"><ReceiptText className="h-2 w-2 md:h-3 md:w-3" /><span>Appliances</span></div>
+              <div className="flex flex-col items-center gap-0.5"><Heart className="h-2 w-2 md:h-3 md:w-3" /><span>Lifestyle</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewBannerSlide({ slide }) {
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-[#03143f]">
+      <div className="absolute inset-0 bg-gradient-to-r from-[#03143f] via-[#082a6f] to-[#0b3ea9]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.10),transparent_30%),radial-gradient(circle_at_84%_18%,rgba(255,255,255,0.08),transparent_24%),radial-gradient(circle_at_80%_84%,rgba(46,134,193,0.16),transparent_22%)]" />
+
+      <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_92px] items-center gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_112px] sm:px-4 md:grid-cols-[minmax(0,1.08fr)_184px] md:gap-4 md:px-7 md:py-4 lg:grid-cols-[minmax(0,1.08fr)_200px] lg:px-8 lg:py-4">
+        <div className="min-w-0 self-center text-white">
+          <span className="inline-flex items-center rounded-full border border-[#5daeff]/35 bg-[#0d2f79]/55 px-2.5 py-1 text-[7px] font-bold uppercase tracking-[0.18em] text-[#d9ecff] sm:text-[8px] md:px-3 md:py-1.5 md:text-[10px]">
+            {slide.eyebrow}
+          </span>
+
+          <h2 className="mt-2 text-[14px] font-black leading-[1.04] tracking-[-0.03em] text-white sm:text-[16px] md:mt-3 md:max-w-[11ch] md:text-[28px] lg:text-[32px]">
+            <span className="block">{slide.titleLead}</span>
+            <span className="mt-1 block text-[#8dc3ff]">{slide.titleAccent}</span>
+          </h2>
+
+          <p className="mt-2 max-w-[27ch] text-[8px] leading-[1.38] text-white/86 sm:text-[8.8px] md:mt-2.5 md:max-w-[40ch] md:text-[12px] md:leading-5 lg:text-[13px]">
+            {slide.description}
+          </p>
+
+          <div className="mt-3 grid grid-cols-3 gap-1.5 md:mt-3 md:gap-2 lg:gap-2.5">
+            {slide.features.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <div key={feature.title} className="rounded-xl border border-white/12 bg-white/8 px-1.5 py-1.5 text-white/94 backdrop-blur-[2px] md:rounded-2xl md:px-2 md:py-2">
+                  <div className="flex items-center gap-1 md:gap-1.5">
+                    <Icon className="h-2.5 w-2.5 text-[#8dc3ff] md:h-3.5 md:w-3.5" />
+                    <span className="text-[5.9px] font-semibold leading-tight sm:text-[6.2px] md:text-[9px] lg:text-[10px]">{feature.title}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[7px] text-white/80 sm:text-[7.5px] md:mt-3 md:gap-x-4 md:text-[10px] lg:text-[11px]">
+            {slide.trustItems.map((item) => (
+              <div key={item} className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-2.5 w-2.5 text-[#8dc3ff] md:h-3.5 md:w-3.5" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex h-full items-center justify-center md:justify-end">
+          <WelcomePhonePreview />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BuiltInBannerSlide({ slide }) {
+  return (
+    <div className={`relative h-full w-full overflow-hidden bg-gradient-to-r ${slide.gradient}`}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_20%,rgba(255,255,255,0.10),transparent_35%)]" />
+      <div className="relative z-10 grid h-full grid-cols-2 items-center gap-2 px-3 py-3 sm:px-5 md:grid-cols-[1.05fr_0.95fr] md:px-7 md:py-5 lg:px-8 lg:py-5">
+        <div className="min-w-0 self-center">
+          <h2 className={`text-[22px] sm:text-[30px] md:text-[42px] lg:text-[48px] font-black tracking-tight leading-none ${slide.titleClass}`}>
+            {slide.title}
+          </h2>
+          <p className="mt-2 max-w-xl text-[11px] sm:text-sm md:text-[17px] lg:text-[18px] leading-snug text-white/90">
+            {slide.subtitle}
+          </p>
+        </div>
+
+        <div className="flex h-full items-center justify-center md:justify-end">
+          <img
+            src={slide.imageUrl}
+            alt={slide.title}
+            className="max-h-[120px] sm:max-h-[170px] md:max-h-[255px] w-auto object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.26)]"
+            loading="eager"
+            fetchPriority="high"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UploadedBannerSlide({ slide, isMobile }) {
+  const imageSrc = pickHeroImage(slide, isMobile);
+  if (!imageSrc) return null;
+  return (
+    <div className="fmm-flyer-hero-slide">
+      <img
+        src={imageSrc}
+        alt={slide.title}
+        className="fmm-flyer-hero-image"
+        loading="eager"
+        fetchPriority="high"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+    </div>
+  );
+}
+
 export default function HeroBanner() {
   const [current, setCurrent] = useState(0);
-  const [slides] = useState(DEFAULT_SLIDES);
   const [touchStart, setTouchStart] = useState(null);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  const { data: promoBanners = [] } = useQuery({
+    queryKey: ['promoBanners'],
+    queryFn: async () => {
+      try {
+        const result = await appClient.entities.PromoBanner.list('order', 500);
+        return normalizeQueryResult(result);
+      } catch {
+        return [];
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   useEffect(() => {
-    if (slides.length <= 1) return;
-    const timer = setInterval(() => {
-      setCurrent(prev => (prev + 1) % slides.length);
-    }, 7000);
-    return () => clearInterval(timer);
-  }, [slides.length]);
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-  const prev = () => setCurrent(p => (p - 1 + slides.length) % slides.length);
-  const next = () => setCurrent(p => (p + 1) % slides.length);
+  const uploadedSlides = useMemo(() => {
+    return (Array.isArray(promoBanners) ? promoBanners : [])
+      .filter((banner) => {
+        const hasImage = !!(banner?.desktop_image_url || banner?.mobile_image_url || banner?.image_url);
+        return banner?.is_active !== false && hasImage;
+      })
+      .sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0))
+      .map((banner, index) => ({
+        id: banner.id || `hero-flyer-${index}`,
+        type: 'uploaded',
+        title: banner.title || `Hero Flyer ${index + 1}`,
+        image_url: banner.image_url || '',
+        desktop_image_url: banner.desktop_image_url || '',
+        mobile_image_url: banner.mobile_image_url || '',
+      }));
+  }, [promoBanners]);
+
+  const slides = useMemo(() => [REVIEW_SLIDE, ...BUILT_IN_BANNERS, ...uploadedSlides], [uploadedSlides]);
+
+  useEffect(() => {
+    if (current >= slides.length) setCurrent(0);
+  }, [current, slides.length]);
+
+  useEffect(() => {
+    if (slides.length <= 1) return undefined;
+    const timer = window.setTimeout(() => {
+      setCurrent((prev) => (prev + 1) % slides.length);
+    }, current === 0 ? 10000 : 6000);
+    return () => window.clearTimeout(timer);
+  }, [current, slides.length]);
+
+  const prev = () => {
+    if (slides.length <= 1) return;
+    setCurrent((prevIndex) => (prevIndex - 1 + slides.length) % slides.length);
+  };
+
+  const next = () => {
+    if (slides.length <= 1) return;
+    setCurrent((prevIndex) => (prevIndex + 1) % slides.length);
+  };
 
   const handleTouchStart = (e) => setTouchStart(e.touches[0].clientX);
   const handleTouchEnd = (e) => {
-    if (touchStart === null) return;
+    if (touchStart === null || slides.length <= 1) return;
     const diff = touchStart - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 40) { diff > 0 ? next() : prev(); }
+    if (Math.abs(diff) > 40) {
+      diff > 0 ? next() : prev();
+    }
     setTouchStart(null);
   };
 
-  const slide = slides[current % slides.length];
-  const IllustrationComponent = SLIDE_ILLUSTRATIONS[slide.id] || PhoneSVG;
+  if (slides.length === 0) {
+    return <div className="fmm-flyer-hero-shell"><div className="fmm-flyer-hero-frame fmm-flyer-hero-empty" /></div>;
+  }
 
-  const ctaHref = (() => {
-    const link = slide.cta_link;
-    if (!link) return createPageUrl('Shop');
-    if (link.startsWith('http')) return link;
-    if (link.startsWith('/')) return link;
-    return '/' + link;
-  })();
+  const slide = slides[current];
+
+  const flyerContent = (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={`${slide.id}-${isMobile ? 'mobile' : 'desktop'}`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
+        className="h-full"
+      >
+        {slide.type === 'review'
+          ? <ReviewBannerSlide slide={slide} />
+          : slide.type === 'built_in'
+            ? <BuiltInBannerSlide slide={slide} />
+            : <UploadedBannerSlide slide={slide} isMobile={isMobile} />}
+      </motion.div>
+    </AnimatePresence>
+  );
 
   return (
-    <div
-      className="relative w-full rounded-xl overflow-hidden mx-auto"
-      style={{ background: 'linear-gradient(135deg, #031725 0%, #0A2E60 50%, #102C54 100%)' }}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={slide.id}
-          initial={{ opacity: 0, x: 60 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -60 }}
-          transition={{ duration: 0.4 }}
-          className="flex items-center min-h-[220px] md:min-h-[300px] px-5 md:px-8 py-6"
-        >
-          {/* Text content - left side */}
-          <div className="flex-1 z-10">
-            {slide.badge && (
-              <span className="inline-block text-xs font-bold bg-white/15 backdrop-blur text-white px-3 py-1 rounded-full mb-3">
-                {slide.badge}
-              </span>
-            )}
-            <h2 className="text-2xl md:text-3xl font-extrabold text-white leading-tight mb-2">
-              {slide.title}
-            </h2>
-            {slide.subtitle && (
-              <p className="text-sm md:text-base text-blue-100/90 mb-4 max-w-[280px]">
-                {slide.subtitle}
-              </p>
-            )}
-            <Link to={ctaHref}>
-              <Button size="sm" className="bg-white text-[#0A2E60] font-bold hover:bg-blue-50 rounded-full px-5 gap-1">
-                {slide.cta_text || 'Shop Now'} <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
+    <div className="fmm-flyer-hero-shell" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div className="fmm-flyer-hero-frame">
+        <div className="fmm-flyer-hero-static">{flyerContent}</div>
 
-          {/* Illustration - right side (inline SVG, no loading) */}
-          <div className="flex-shrink-0 w-[120px] h-[160px] md:w-[160px] md:h-[200px] flex items-center justify-center opacity-90">
-            <IllustrationComponent />
+        {slides.length > 1 && (
+          <div className="fmm-flyer-hero-dots">
+            {slides.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setCurrent(index)}
+                className={`fmm-flyer-hero-dot ${index === current ? 'is-active' : ''}`}
+                aria-label={`Go to flyer ${index + 1}`}
+              />
+            ))}
           </div>
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Dots */}
-      {slides.length > 1 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrent(i)}
-              className={`rounded-full transition-all ${i === current ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/50'}`}
-            />
-          ))}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

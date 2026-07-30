@@ -8,7 +8,6 @@ import ProductCard from '@/components/products/ProductCard';
 import PageNotFound from '@/lib/PageNotFound';
 import { Button } from '@/components/ui/button';
 import AllBrands from './AllBrands';
-import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Filter, ChevronRight, X } from 'lucide-react';
 
@@ -19,8 +18,6 @@ export default function CollectionPage() {
   const [subcategoryFilter, setSubcategoryFilter] = useState('all');
   const [brandFilter, setBrandFilter] = useState('all');
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const { data: allProducts = [], isLoading } = useQuery({
@@ -62,13 +59,6 @@ export default function CollectionPage() {
       products = products.filter((product) => product.stock === 0 || String(product.availability || '').toLowerCase() === 'out of stock');
     }
 
-    if (minPrice !== '') {
-      products = products.filter((product) => Number(product.price) >= Number(minPrice));
-    }
-
-    if (maxPrice !== '') {
-      products = products.filter((product) => Number(product.price) <= Number(maxPrice));
-    }
 
     switch (sortBy) {
       case 'best_selling':
@@ -93,7 +83,7 @@ export default function CollectionPage() {
     }
 
     return products;
-  }, [collection, sortBy, categoryFilter, subcategoryFilter, brandFilter, availabilityFilter, minPrice, maxPrice]);
+  }, [collection, sortBy, categoryFilter, subcategoryFilter, brandFilter, availabilityFilter]);
 
   const brands = useMemo(() => getAvailableBrands(collection?.products || []), [collection]);
   const subcategories = useMemo(() => getAvailableSubcategories(collection?.products || []), [collection]);
@@ -108,8 +98,6 @@ export default function CollectionPage() {
     setSubcategoryFilter('all');
     setBrandFilter('all');
     setAvailabilityFilter('all');
-    setMinPrice('');
-    setMaxPrice('');
   };
 
   const activeFilters = [
@@ -117,8 +105,6 @@ export default function CollectionPage() {
     subcategoryFilter !== 'all' ? `Subcategory: ${subcategoryFilter}` : null,
     brandFilter !== 'all' ? `Brand: ${brandFilter}` : null,
     availabilityFilter !== 'all' ? `Availability: ${availabilityFilter.replace('_', ' ')}` : null,
-    minPrice !== '' ? `Min: ₵${minPrice}` : null,
-    maxPrice !== '' ? `Max: ₵${maxPrice}` : null,
     sortBy !== 'newest' ? `Sort: ${sortBy.replace('_', ' ')}` : null,
   ].filter(Boolean);
 
@@ -166,34 +152,35 @@ export default function CollectionPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Subcategory</label>
-                <select value={subcategoryFilter} onChange={(e) => setSubcategoryFilter(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white">
-                  <option value="all">All Subcategories</option>
-                  {subcategories.map((subcategory) => <option key={subcategory} value={subcategory}>{subcategory}</option>)}
-                </select>
+                <label className="text-xs font-medium text-gray-600 block mb-2">Subcategory</label>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setSubcategoryFilter('all')} className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${subcategoryFilter === 'all' ? 'border-[#0A2E60] bg-[#0A2E60] text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-[#2E86C1] hover:text-[#0A2E60]'}`}>All Subcategories</button>
+                  {subcategories.map((subcategory) => <button key={subcategory} type="button" onClick={() => setSubcategoryFilter(subcategory)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${subcategoryFilter === subcategory ? 'border-[#0A2E60] bg-[#0A2E60] text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-[#2E86C1] hover:text-[#0A2E60]'}`}>{subcategory}</button>)}
+                </div>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Brand</label>
-                <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white">
-                  <option value="all">All Brands</option>
-                  {brands.map((brand) => <option key={brand} value={brand}>{brand}</option>)}
-                </select>
+                <label className="text-xs font-medium text-gray-600 block mb-2">Brand</label>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setBrandFilter('all')} className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${brandFilter === 'all' ? 'border-[#0A2E60] bg-[#0A2E60] text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-[#2E86C1] hover:text-[#0A2E60]'}`}>All Brands</button>
+                  {brands.map((brand) => <button key={brand} type="button" onClick={() => setBrandFilter(brand)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${brandFilter === brand ? 'border-[#0A2E60] bg-[#0A2E60] text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-[#2E86C1] hover:text-[#0A2E60]'}`}>{brand}</button>)}
+                </div>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Availability</label>
-                <select value={availabilityFilter} onChange={(e) => setAvailabilityFilter(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white">
-                  <option value="all">All</option>
-                  <option value="in_stock">In Stock</option>
-                  <option value="out_of_stock">Out of Stock</option>
-                  <option value="preorder">Pre-order</option>
-                </select>
+                <label className="text-xs font-medium text-gray-600 block mb-2">Availability</label>
+                <div className="flex flex-wrap gap-2">
+                  {['all','in_stock','out_of_stock','preorder'].map((value) => (
+                    <button key={value} type="button" onClick={() => setAvailabilityFilter(value)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold capitalize transition ${availabilityFilter === value ? 'border-[#0A2E60] bg-[#0A2E60] text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-[#2E86C1] hover:text-[#0A2E60]'}`}>
+                      {value === 'all' ? 'All' : value.replace(/_/g, ' ')}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">Sort By</label>
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white">
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full border rounded-2xl px-3 py-2.5 text-sm bg-white">
                   <option value="newest">Newest</option>
                   <option value="best_selling">Best Selling</option>
                   <option value="most_popular">Most Popular</option>
@@ -201,17 +188,6 @@ export default function CollectionPage() {
                   <option value="price_low">Price Low → High</option>
                   <option value="price_high">Price High → Low</option>
                 </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">Min Price</label>
-                  <Input value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="0" type="number" className="rounded-xl" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">Max Price</label>
-                  <Input value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="5000" type="number" className="rounded-xl" />
-                </div>
               </div>
 
               <div className="flex gap-3 pt-2">

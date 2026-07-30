@@ -1,8 +1,3 @@
-/* ═══════════════════════════════════════════════════
-   FMM CLASSICO — Hero Banner Overrides
-   Responsive, no-crop, consistent across all devices
-   ═══════════════════════════════════════════════════ */
-
 .fmm-flyer-hero-shell {
   width: 100%;
   padding: 0;
@@ -12,117 +7,105 @@
 .fmm-flyer-hero-frame {
   position: relative;
   width: 100%;
-  border-radius: 0.75rem;
+  height: 172px;
+  min-height: 172px;
+  border-radius: 0;
   overflow: hidden;
-  background: linear-gradient(90deg, #03143f 0%, #06286d 50%, #0b3ea9 100%);
-  /* Responsive height: phone, tablet, desktop */
-  min-height: 200px;
-  height: clamp(200px, 32vw, 360px);
-}
-
-.fmm-flyer-hero-frame.fmm-flyer-hero-empty {
-  min-height: 180px;
+  background: #031725;
 }
 
 .fmm-flyer-hero-static {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  cursor: default;
+}
+
+@media (min-width: 640px) {
+  .fmm-flyer-hero-frame {
+    height: 212px;
+    min-height: 212px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .fmm-flyer-hero-frame {
+    height: 252px;
+    min-height: 252px;
+    max-height: 252px;
+    aspect-ratio: unset;
+  }
+}
+
+@media (min-width: 1280px) {
+  .fmm-flyer-hero-frame {
+    height: 264px;
+    min-height: 264px;
+    max-height: 264px;
+  }
+}
+
+.fmm-flyer-hero-slide {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-/* ─── Dot indicators ─── */
-.fmm-flyer-hero-dots {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 6px;
-  z-index: 20;
-}
-
-.fmm-flyer-hero-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.45);
-  border: none;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  padding: 0;
-}
-
-.fmm-flyer-hero-dot.is-active {
-  width: 22px;
-  background: #ffffff;
-}
-
-.fmm-flyer-hero-dot:hover:not(.is-active) {
-  background: rgba(255, 255, 255, 0.7);
-}
-
-/* ─── Uploaded flyer/banner slides ─── */
-.fmm-flyer-hero-slide {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
 }
 
 .fmm-flyer-hero-image {
   width: 100%;
   height: 100%;
+  display: block;
   object-fit: contain;
   object-position: center;
+  background: #031725;
 }
 
-/* ─── Phone sizes (< 640px) ─── */
-@media (max-width: 639px) {
+.fmm-flyer-hero-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 0.58rem;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.32rem;
+  z-index: 3;
+}
+
+.fmm-flyer-hero-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  transition: all 0.2s ease;
+}
+
+.fmm-flyer-hero-dot.is-active {
+  width: 1.1rem;
+  background: #ffffff;
+}
+
+@media (max-width: 767px) {
   .fmm-flyer-hero-frame {
-    min-height: 190px;
-    height: 200px;
-    border-radius: 0.5rem;
+    height: 172px;
+    min-height: 172px;
+    background: linear-gradient(135deg, #03143f, #06286d, #0b3ea9);
+  }
+
+  .fmm-flyer-hero-image {
+    padding: 4px;
+    background: transparent;
   }
 
   .fmm-flyer-hero-dots {
-    bottom: 8px;
-    gap: 5px;
+    bottom: 0.36rem;
+    gap: 0.24rem;
   }
 
   .fmm-flyer-hero-dot {
-    width: 6px;
-    height: 6px;
+    width: 0.36rem;
+    height: 0.36rem;
   }
 
   .fmm-flyer-hero-dot.is-active {
-    width: 18px;
-  }
-}
-
-/* ─── Tablets (640px - 1023px) ─── */
-@media (min-width: 640px) and (max-width: 1023px) {
-  .fmm-flyer-hero-frame {
-    min-height: 240px;
-    height: 280px;
-  }
-}
-
-/* ─── Desktop (1024px+) ─── */
-@media (min-width: 1024px) {
-  .fmm-flyer-hero-frame {
-    min-height: 300px;
-    height: 340px;
-    border-radius: 1rem;
-  }
-}
-
-/* ─── Large desktop (1440px+) ─── */
-@media (min-width: 1440px) {
-  .fmm-flyer-hero-frame {
-    max-height: 400px;
+    width: 0.92rem;
   }
 }

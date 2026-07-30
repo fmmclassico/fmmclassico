@@ -54,14 +54,28 @@
   justify-content: center;
 }
 
+.fmm-flyer-hero-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: blur(26px);
+  opacity: 0.22;
+  transform: scale(1.08);
+}
+
 .fmm-flyer-hero-image {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   display: block;
   object-fit: contain;
   object-position: center;
   background: linear-gradient(135deg, #03143f, #082a6f, #2E86C1);
-  padding: clamp(6px, 1.3vw, 16px);
+  padding: clamp(4px, 1vw, 10px);
 }
 
 .fmm-flyer-hero-dots {
@@ -94,8 +108,13 @@
     background: linear-gradient(135deg, #03143f, #06286d, #0b3ea9);
   }
 
+  .fmm-flyer-hero-backdrop {
+    opacity: 0.18;
+    filter: blur(18px);
+  }
+
   .fmm-flyer-hero-image {
-    padding: 6px;
+    padding: 4px;
     background: transparent;
   }
 

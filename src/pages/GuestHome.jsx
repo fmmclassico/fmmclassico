@@ -8,7 +8,8 @@ import { ChevronRight, Home as HomeIcon, Smartphone, Headphones, Tv, Gem } from 
 import guestCart from '@/lib/guest-cart';
 import HeroBanner from '../components/home/HeroBanner';
 import GuestWelcomeModal from '../components/guest/GuestWelcomeModal';
-import { getVisibleBrandDirectory, getBrandLogoSrc, getSectionLimit } from '@/lib/brandDirectory';
+import { getVisibleBrandDirectory, getBrandLogoSources, getSectionLimit } from '@/lib/brandDirectory';
+import BrandLogoMark from '@/components/brands/BrandLogoMark';
 
 var CATEGORY_BRANDS = {
   phones: [
@@ -91,7 +92,7 @@ export default function GuestHome() {
     .map(function(entry) {
       return {
         ...entry,
-        logoSrc: getBrandLogoSrc(settings, entry.sourceName),
+        logoSources: getBrandLogoSources(settings, entry.sourceName),
       };
     });
   var flashItems = visibleProducts.filter(function(p) { return p.flash_sale && (!p.flash_sale_end || new Date(p.flash_sale_end) > new Date()); });
@@ -224,7 +225,7 @@ export default function GuestHome() {
         <div className="mt-3 mx-2 md:mx-4"><div className="bg-white rounded-2xl shadow-sm overflow-hidden"><div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100"><h2 className="font-black text-gray-900 text-sm">Shop by Brand</h2><Link to="/brands" className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link></div>
           <div className="fmm-stable-rail overflow-x-auto flex gap-4 p-4">
             {homepageBrands.length === 0 ? <p className="text-xs text-gray-400">No brands are configured yet.</p> : homepageBrands.map(function(brand) {
-              return <Link key={brand.key} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.sourceName))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-20"><div className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2 overflow-hidden">{brand.logoSrc ? <img src={brand.logoSrc} alt={brand.displayName} className="max-w-full max-h-full object-contain" onError={function(event) { event.currentTarget.style.display='none'; var fallback = event.currentTarget.parentElement?.querySelector('[data-brand-fallback]'); if (fallback) fallback.classList.remove('hidden'); }} /> : null}<span data-brand-fallback className={'text-lg font-bold text-gray-400 ' + (brand.logoSrc ? 'hidden' : '')}>{brand.displayName[0]}</span></div><span className="text-[10px] font-semibold text-gray-700 text-center leading-tight">{brand.displayName}</span></Link>;
+              return <Link key={brand.key} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.sourceName))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-20"><BrandLogoMark sources={brand.logoSources} alt={brand.displayName} fallbackLabel={brand.displayName[0]} wrapperClassName="w-14 h-14 rounded-xl bg-gradient-to-br from-white to-slate-50 border border-gray-100 flex items-center justify-center p-2 overflow-hidden shadow-sm" imageClassName="max-w-full max-h-full object-contain" fallbackClassName="text-lg font-bold text-gray-400" /><span className="text-[10px] font-semibold text-gray-700 text-center leading-tight">{brand.displayName}</span></Link>;
             })}
           </div>
         </div></div>

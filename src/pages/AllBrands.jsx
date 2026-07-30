@@ -5,7 +5,8 @@ import { appClient } from '@/api/appClient.js';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Gem } from 'lucide-react';
-import { getVisibleBrandDirectory, getBrandLogoSrc, getBrandProductCount } from '@/lib/brandDirectory';
+import { getVisibleBrandDirectory, getBrandLogoSources, getBrandProductCount } from '@/lib/brandDirectory';
+import BrandLogoMark from '@/components/brands/BrandLogoMark';
 
 export default function AllBrands() {
   const { data: appSettings = [], isLoading: settingsLoading } = useQuery({
@@ -38,7 +39,7 @@ export default function AllBrands() {
   const safeProducts = Array.isArray(products) ? products : [];
   const brands = getVisibleBrandDirectory(settings, safeProducts).map((entry) => ({
     ...entry,
-    logoSrc: getBrandLogoSrc(settings, entry.sourceName),
+    logoSources: getBrandLogoSources(settings, entry.sourceName),
     productCount: getBrandProductCount(safeProducts, entry),
   }));
   const isLoading = settingsLoading || productsLoading;
@@ -74,26 +75,14 @@ export default function AllBrands() {
                 to={createPageUrl(`BrandProducts?brand=${encodeURIComponent(brand.sourceName)}`)}
                 className="flex flex-col items-center gap-3 p-4 bg-white rounded-2xl border border-gray-200 hover:border-[#0A2E60]/40 hover:shadow-md transition-all group"
               >
-                <div className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden p-2 group-hover:scale-105 transition-transform">
-                  {brand.logoSrc ? (
-                    <img
-                      src={brand.logoSrc}
-                      alt={brand.displayName}
-                      className="max-w-full max-h-full object-contain"
-                      onError={(event) => {
-                        event.currentTarget.style.display = 'none';
-                        const fallback = event.currentTarget.parentElement?.querySelector('[data-brand-fallback]');
-                        if (fallback) fallback.classList.remove('hidden');
-                      }}
-                    />
-                  ) : null}
-                  <span
-                    data-brand-fallback
-                    className={`text-lg font-bold text-gray-400 ${brand.logoSrc ? 'hidden' : ''}`}
-                  >
-                    {brand.displayName.charAt(0)}
-                  </span>
-                </div>
+                <BrandLogoMark
+                  sources={brand.logoSources}
+                  alt={brand.displayName}
+                  fallbackLabel={brand.displayName.charAt(0)}
+                  wrapperClassName="w-16 h-16 rounded-2xl bg-gradient-to-br from-white to-slate-50 border border-gray-100 flex items-center justify-center overflow-hidden p-2 shadow-sm group-hover:scale-105 transition-transform"
+                  imageClassName="max-w-full max-h-full object-contain"
+                  fallbackClassName="text-lg font-bold text-gray-400"
+                />
 
                 <div className="text-center">
                   <p className="text-sm font-semibold text-gray-800 leading-tight">{brand.displayName}</p>

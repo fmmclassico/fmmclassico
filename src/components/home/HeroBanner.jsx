@@ -38,10 +38,10 @@ const REVIEW_SLIDE = {
   id: 'fmm-welcome-slide',
   type: 'review',
   eyebrow: 'WELCOME TO FMM CLASSICO',
-  titleLead: 'Your Trusted Destination for',
-  titleAccent: 'Quality Products',
+  titleLead: 'Welcome to',
+  titleAccent: 'FMM CLASSICO',
   description:
-    'Shop smartphones, phone accessories, electronics, home appliances, and many more, all in one place.',
+    'FMM CLASSICO is an online shopping platform for smartphones, phone accessories, electronics, home appliances, and lifestyle products.',
   features: [
     { title: 'Save Wishlist', icon: Heart },
     { title: 'Track Orders', icon: Truck },
@@ -50,7 +50,7 @@ const REVIEW_SLIDE = {
     { title: 'Secure Checkout', icon: ShieldCheck },
     { title: 'Exclusive Offers', icon: BadgePercent },
   ],
-  trustItems: ['100% Genuine Products', 'Trusted Support', 'Fast & Reliable Delivery'],
+  trustItems: ['Phones & Accessories', 'Electronics', 'Home Appliances'],
 };
 
 const BUILT_IN_BANNERS = [
@@ -201,7 +201,7 @@ function ReviewBannerSlide({ slide }) {
             <span className="block text-[#8dc3ff] md:inline">{slide.titleAccent}</span>
           </h2>
 
-          <p className="mt-2 max-w-[27ch] text-[8px] leading-[1.38] text-white/86 sm:text-[8.8px] md:mt-2.5 md:max-w-[44ch] md:text-[12px] md:leading-5 lg:max-w-none lg:text-[13px] lg:whitespace-nowrap">
+          <p className="mt-2 max-w-[27ch] text-[8px] leading-[1.38] text-white/86 sm:text-[8.8px] md:mt-2.5 md:max-w-[56ch] md:text-[12px] md:leading-5 lg:max-w-[66ch] lg:text-[13px]">
             {slide.description}
           </p>
 
@@ -411,3 +411,4 @@ export default function HeroBanner() {
     </div>
   );
 }
+

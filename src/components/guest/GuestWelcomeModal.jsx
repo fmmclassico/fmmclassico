@@ -1,276 +1,151 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Link, useLocation } from 'react-router-dom';
-import { X, Heart, PackageCheck, History, UserCog, ShieldCheck, BadgePercent } from 'lucide-react';
-import GoogleIcon from '@/components/GoogleIcon';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/AuthContext';
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { BadgePercent, Heart, ReceiptText, ShieldCheck, Truck, UserCircle2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import GoogleIcon from "@/components/GoogleIcon";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/AuthContext";
+import { createPageUrl } from "@/lib/utils";
 
-const STORAGE_KEY = 'fmm_guest_welcome_modal_v1';
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-const FOCUSABLE_SELECTOR = [
-  'button:not([disabled])',
-  'a[href]',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',');
+const DISMISS_KEY = "fmm_guest_welcome_modal_dismissed_at";
+const SIXTY_DAYS_IN_MS = 60 * 24 * 60 * 60 * 1000;
 
 const BENEFITS = [
-  { icon: Heart, title: 'Save wishlist', description: 'Keep favourite items ready for later.' },
-  { icon: PackageCheck, title: 'Track orders', description: 'Follow your delivery progress with ease.' },
-  { icon: History, title: 'View order history', description: 'See past purchases in one place.' },
-  { icon: UserCog, title: 'Manage account information', description: 'Update your details whenever you need.' },
-  { icon: ShieldCheck, title: 'Faster and more secure checkout', description: 'Complete purchases more smoothly.' },
-  { icon: BadgePercent, title: 'Access exclusive promotions', description: 'Stay close to special offers and deals.' },
+  { label: "Save wishlist", icon: Heart },
+  { label: "Track orders", icon: Truck },
+  { label: "View order history", icon: ReceiptText },
+  { label: "Manage account information", icon: UserCircle2 },
+  { label: "Faster and more secure checkout", icon: ShieldCheck },
+  { label: "Access exclusive promotions", icon: BadgePercent },
 ];
 
-function shouldShowAgain() {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return true;
-    const parsed = JSON.parse(raw);
-    if (!parsed?.expiresAt) return true;
-    return Date.now() > Number(parsed.expiresAt);
-  } catch (_) {
-    return true;
-  }
-}
-
-function persistDismissal(useThirtyDays) {
-  try {
-    if (!useThirtyDays) {
-      window.localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ expiresAt: Date.now() + THIRTY_DAYS_MS })
-    );
-  } catch (_) {
-    // ignore storage issues
-  }
+function shouldDisplayWelcomeModal() {
+  if (typeof window === "undefined") return false;
+  const storedValue = window.localStorage.getItem(DISMISS_KEY);
+  if (!storedValue) return true;
+  const dismissedAt = Number(storedValue);
+  if (!Number.isFinite(dismissedAt)) return true;
+  return Date.now() - dismissedAt >= SIXTY_DAYS_IN_MS;
 }
 
 export default function GuestWelcomeModal() {
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const location = useLocation();
   const [open, setOpen] = useState(false);
-  const [dontShowAgain, setDontShowAgain] = useState(false);
-  const modalRef = useRef(null);
-  const firstActionRef = useRef(null);
-  const lastFocusedRef = useRef(null);
-
-  const isBlockedRoute = useMemo(() => {
-    const path = location.pathname.toLowerCase();
-    return ['/checkout', '/login', '/register', '/forgot-password', '/reset-password'].includes(path);
-  }, [location.pathname]);
 
   useEffect(() => {
-    if (isAuthenticated || isBlockedRoute) {
+    if (typeof window === "undefined") return;
+    if (isAuthenticated) {
       setOpen(false);
       return;
     }
-    if (location.pathname !== '/') {
-      setOpen(false);
-      return;
-    }
-    if (!shouldShowAgain()) return;
 
-    const timer = window.setTimeout(() => {
-      lastFocusedRef.current = document.activeElement;
+    const isHomepage = window.location.pathname === "/";
+    if (isHomepage && shouldDisplayWelcomeModal()) {
       setOpen(true);
-    }, 180);
+    }
+  }, [isAuthenticated]);
 
-    return () => window.clearTimeout(timer);
-  }, [isAuthenticated, isBlockedRoute, location.pathname]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const focusTimer = window.setTimeout(() => {
-      firstActionRef.current?.focus();
-    }, 30);
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        handleClose();
-        return;
-      }
-
-      if (event.key !== 'Tab' || !modalRef.current) return;
-      const focusable = Array.from(modalRef.current.querySelectorAll(FOCUSABLE_SELECTOR)).filter((element) => !element.hasAttribute('disabled'));
-      if (!focusable.length) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-
-      if (event.shiftKey && active === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      window.clearTimeout(focusTimer);
-      document.removeEventListener('keydown', handleKeyDown);
-      if (lastFocusedRef.current && typeof lastFocusedRef.current.focus === 'function') {
-        lastFocusedRef.current.focus();
-      }
-    };
-  }, [open]);
-
-  const handleClose = () => {
-    persistDismissal(dontShowAgain);
+  const dismissModal = React.useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(DISMISS_KEY, String(Date.now()));
+    }
     setOpen(false);
-  };
+  }, []);
+
+  const actionBaseClass = useMemo(
+    () => "h-12 w-full rounded-xl text-sm font-semibold shadow-sm transition-transform hover:-translate-y-0.5",
+    []
+  );
 
   const handleGoogle = async () => {
-    persistDismissal(dontShowAgain);
     await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: "google",
       options: {
-        redirectTo: window.location.origin + '/',
-        queryParams: { prompt: 'select_account' },
+        redirectTo: `${window.location.origin}/`,
+        queryParams: { prompt: "select_account" },
       },
     });
   };
 
-  if (!open || isAuthenticated || isBlockedRoute || location.pathname !== '/') return null;
+  const goTo = (path) => {
+    setOpen(false);
+    navigate(path);
+  };
+
+  if (isAuthenticated) return null;
 
   return (
-    <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/65 px-3 py-4 backdrop-blur-[2px] sm:px-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        aria-hidden={false}
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) dismissModal(); }}>
+      <DialogContent
+        aria-describedby="fmm-welcome-modal-description"
+        className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-[880px] overflow-y-auto rounded-[28px] border-0 bg-white p-0 shadow-[0_24px_80px_rgba(3,20,63,0.28)]"
       >
-        <motion.div
-          ref={modalRef}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="fmm-welcome-modal-title"
-          aria-describedby="fmm-welcome-modal-description"
-          className="relative w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/15 bg-[#081b44] shadow-[0_20px_80px_rgba(2,12,27,0.45)]"
-          initial={{ opacity: 0, scale: 0.97, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.98, y: 6 }}
-          transition={{ duration: 0.22, ease: 'easeOut' }}
-        >
-          <button
-            type="button"
-            onClick={handleClose}
-            className="absolute right-4 top-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/70"
-            aria-label="Close welcome dialog"
-          >
-            <X className="h-5 w-5" />
-          </button>
+        <div className="relative overflow-hidden rounded-[28px]">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#03143f] via-[#0b2a63] to-[#2E86C1]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(141,195,255,0.18),transparent_25%)]" />
 
-          <div className="grid lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="relative overflow-hidden bg-gradient-to-br from-[#03143f] via-[#0b2a63] to-[#2E86C1] px-5 py-6 text-white sm:px-7 sm:py-8 lg:px-8 lg:py-9">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.08),transparent_28%)]" />
-              <div className="relative z-10">
-                <div className="mb-4 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-white/90">
-                  FMM CLASSICO
-                </div>
-                <h2 id="fmm-welcome-modal-title" className="max-w-2xl text-2xl font-black leading-tight text-white sm:text-3xl lg:text-4xl">
+          <div className="relative z-10 grid gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+            <div className="px-5 pb-6 pt-8 text-white sm:px-8 sm:pb-8 sm:pt-10">
+              <div className="mb-4 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-3 py-2 backdrop-blur-sm">
+                <img src="/logo.png" alt="FMM CLASSICO logo" className="h-10 w-10 rounded-full border border-white/20 object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+                <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/85">Guest welcome</span>
+              </div>
+
+              <DialogHeader className="space-y-3 text-left">
+                <DialogTitle className="text-3xl font-black tracking-tight text-white sm:text-4xl">
                   Welcome to FMM CLASSICO
-                </h2>
-                <p id="fmm-welcome-modal-description" className="mt-4 max-w-2xl text-sm leading-7 text-white/92 sm:text-base">
-                  FMM CLASSICO is an online shopping platform for smartphones, phone accessories, electronics, home appliances, and lifestyle products.
-                </p>
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-white/84 sm:text-base">
-                  Create an account or sign in to save your wishlist, track orders, view order history, manage account information, enjoy faster and more secure checkout, and access exclusive promotions.
-                </p>
+                </DialogTitle>
+                <DialogDescription id="fmm-welcome-modal-description" className="max-w-2xl text-sm leading-7 text-white/85 sm:text-base">
+                  FMM CLASSICO is an online shopping platform for smartphones, phone accessories, electronics, home appliances, and lifestyle products. You can keep shopping as a guest, or create an account for a smoother experience.
+                </DialogDescription>
+              </DialogHeader>
 
-                <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {BENEFITS.map(({ icon: Icon, title, description }) => (
-                    <div key={title} className="rounded-[1.35rem] border border-white/15 bg-white/10 px-4 py-4 backdrop-blur-sm">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/12 text-white">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <p className="mt-3 text-sm font-extrabold text-white">{title}</p>
-                      <p className="mt-1 text-xs leading-6 text-white/78 sm:text-sm">{description}</p>
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {BENEFITS.map(({ label, icon: Icon }) => (
+                  <div key={label} className="rounded-2xl border border-white/14 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                    <Icon className="mb-2 h-4 w-4 text-[#8dc3ff]" />
+                    <p className="text-sm font-semibold leading-6 text-white/95">{label}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="bg-white px-5 py-6 sm:px-7 sm:py-8 lg:px-8 lg:py-9">
-              <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 sm:p-6">
-                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#2E86C1]">Get started</p>
-                <h3 className="mt-2 text-xl font-black text-slate-900 sm:text-2xl">Shop your way</h3>
-                <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Continue with Google, sign in, create an account, or simply continue as a guest. Closing this message never blocks shopping.
+            <div className="relative border-t border-white/10 bg-white/96 px-5 py-6 sm:px-8 sm:py-8 lg:border-l lg:border-t-0">
+              <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <h3 className="text-base font-bold text-[#0A2E60]">Choose how you want to continue</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Signing in keeps your wishlist, orders, profile details, and exclusive promotions connected across devices. Guests can still browse and shop without interruption.
                 </p>
 
                 <div className="mt-5 space-y-3">
-                  <button
-                    ref={firstActionRef}
-                    type="button"
-                    onClick={handleGoogle}
-                    className="inline-flex w-full items-center justify-center rounded-2xl bg-[#2E86C1] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#2578ae] focus:outline-none focus:ring-2 focus:ring-[#2E86C1]/50"
-                  >
+                  <Button type="button" className={`${actionBaseClass} bg-[#0A2E60] text-white hover:bg-[#082752]`} onClick={handleGoogle}>
                     <GoogleIcon className="mr-2 h-5 w-5" />
                     Continue with Google
-                  </button>
+                  </Button>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Link
-                      to="/login"
-                      onClick={() => persistDismissal(dontShowAgain)}
-                      className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      to="/register"
-                      onClick={() => persistDismissal(dontShowAgain)}
-                      className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                    >
-                      Create Account
-                    </Link>
-                  </div>
+                  <Button type="button" variant="outline" className={`${actionBaseClass} border-[#2E86C1] text-[#2E86C1] hover:bg-[#2E86C1]/5`} onClick={() => goTo(createPageUrl('Login'))}>
+                    Sign In
+                  </Button>
 
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="inline-flex w-full items-center justify-center rounded-2xl border border-transparent bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  >
+                  <Button type="button" variant="outline" className={`${actionBaseClass} border-slate-300 text-slate-700 hover:bg-slate-50`} onClick={() => goTo(createPageUrl('Register'))}>
+                    Create Account
+                  </Button>
+
+                  <Button type="button" variant="ghost" className="h-12 w-full rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100" onClick={dismissModal}>
                     Continue as Guest
-                  </button>
+                  </Button>
                 </div>
-
-                <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={dontShowAgain}
-                    onChange={(event) => setDontShowAgain(event.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-slate-300 text-[#2E86C1] focus:ring-[#2E86C1]"
-                  />
-                  <span>Don't show again for 30 days</span>
-                </label>
               </div>
+
+              <p className="mt-4 text-center text-xs leading-5 text-slate-500">
+                Closing this message never blocks shopping. It will stay hidden in this browser for 60 days after dismissal.
+              </p>
             </div>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

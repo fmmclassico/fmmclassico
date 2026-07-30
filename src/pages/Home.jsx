@@ -7,6 +7,7 @@ import { ChevronRight, Zap, Star, Tag, Home as HomeIcon, Smartphone, Headphones,
 import { useAuth } from '@/lib/AuthContext';
 import HeroBanner from '../components/home/HeroBanner';
 import FlashSaleTimer from '../components/home/FlashSaleTimer';
+import BrandLogoMark from '@/components/brands/BrandLogoMark';
 
 var CATEGORY_BRANDS = {
   phones: [
@@ -324,12 +325,9 @@ export default function Home() {
                 { name: 'JBL', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784125078/JBL-Logo.svg_a4jkuo.webp' },
               ].map(function(brand) {
                 var uploadedLogo = settings.find(function(s) { return s.key === 'brand_logo_' + brand.name.toLowerCase().replace(/ /g,'_'); })?.value;
-                var logoSrc = uploadedLogo || brand.fallback;
                 return (
                   <Link key={brand.name} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.name))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16">
-                    <div className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2">
-                      {logoSrc ? <img src={logoSrc} alt={brand.name} className="max-w-full max-h-full object-contain" onError={function(e) { e.target.style.display='none'; }} /> : <span className="text-lg font-bold text-gray-400">{brand.name[0]}</span>}
-                    </div>
+                    <BrandLogoMark sources={[uploadedLogo, brand.fallback]} alt={brand.name} fallbackLabel={brand.name[0]} wrapperClassName="w-14 h-14 rounded-xl bg-gradient-to-br from-white to-slate-50 border border-gray-100 flex items-center justify-center p-2 shadow-sm" imageClassName="max-w-full max-h-full object-contain" fallbackClassName="text-lg font-bold text-gray-400" />
                     <span className="text-[10px] font-semibold text-gray-700 text-center">{brand.name}</span>
                   </Link>
                 );

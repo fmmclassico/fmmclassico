@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ShoppingCart, Star, Plus, Minus, ExternalLink, PlayCircle } from 'lucide-react';
 import ReviewSection from '@/components/products/ReviewSection';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+import InlineNotice from '@/components/ui/InlineNotice';
 
 const categoryNames = {
   phone_cases: 'Phone Cases',
@@ -148,6 +148,7 @@ export default function ProductDetail() {
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedWattage, setSelectedWattage] = useState(null);
   const [selectedType, setSelectedType] = useState(null);
+  const [feedback, setFeedback] = useState(null);
   const queryClient = useQueryClient();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -249,10 +250,18 @@ export default function ProductDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems', user?.email] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast.success('Added to cart!');
+      setFeedback({
+        variant: 'success',
+        title: 'Cart updated',
+        message: 'This item was added to your cart successfully.',
+      });
     },
     onError: (error) => {
-      toast.error(error?.message || 'Could not add item to cart.');
+      setFeedback({
+        variant: 'error',
+        title: 'Unable to add item',
+        message: error?.message || 'Could not add this item to your cart right now.',
+      });
     },
   });
 
@@ -357,7 +366,7 @@ export default function ProductDetail() {
                     <motion.video
                       key={`video-${selectedImageIndex}`}
                       src={selectedGalleryItem.url}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain bg-slate-950"
                       controls
                       playsInline
                       initial={{ opacity: 0 }}
@@ -387,7 +396,7 @@ export default function ProductDetail() {
                     key={selectedImageIndex}
                     src={selectedGalleryItem?.url}
                     alt={product.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain bg-white p-3"
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -30 }}
@@ -521,6 +530,13 @@ export default function ProductDetail() {
             </div>
             {product.stock != null && <span className={`text-xs font-semibold ${product.stock <= 5 ? 'text-red-500' : 'text-gray-500'}`}>{product.stock} in stock</span>}
           </div>
+
+          <InlineNotice
+            variant={feedback?.variant}
+            title={feedback?.title}
+            message={feedback?.message}
+            onDismiss={() => setFeedback(null)}
+          />
 
           <div className="flex gap-3">
             <Button size="lg" className="flex-1 bg-[#2E86C1] hover:bg-[#2578ae] text-white font-bold shadow-lg" onClick={() => addToCartMutation.mutate()} disabled={addToCartMutation.isPending}>

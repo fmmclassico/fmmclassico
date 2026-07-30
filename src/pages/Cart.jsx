@@ -14,11 +14,13 @@ import {
   ShoppingBag,
   ArrowRight
 } from 'lucide-react';
+import InlineNotice from '@/components/ui/InlineNotice';
 
 export default function Cart() {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [feedback, setFeedback] = useState(null);
 
   const { data: cartItems = [], isLoading } = useQuery({
     queryKey: ['cartItems', user?.email],
@@ -69,7 +71,11 @@ export default function Cart() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cartItems', user?.email] });
-      toast.success('Item removed');
+      setFeedback({
+        variant: 'info',
+        title: 'Cart updated',
+        message: 'The item was removed from your cart.',
+      });
     }
   });
 
@@ -96,6 +102,13 @@ export default function Cart() {
   return (
     <div className="w-full max-w-full px-3 py-4 sm:px-4 sm:py-6 mx-auto sm:container">
       <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Shopping Cart</h1>
+      <InlineNotice
+        variant={feedback?.variant}
+        title={feedback?.title}
+        message={feedback?.message}
+        onDismiss={() => setFeedback(null)}
+        className="mb-4"
+      />
 
       <div className="space-y-4">
         {/* Cart Items */}

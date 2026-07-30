@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Package, Trash2, Loader2, Wallet } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
+import InlineNotice from '@/components/ui/InlineNotice';
 import { useAuth } from '@/lib/AuthContext';
 
 const statusConfig = {
@@ -63,6 +63,7 @@ export default function Orders() {
   const queryClient = useQueryClient();
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationDone, setVerificationDone] = useState(false);
+  const [feedback, setFeedback] = useState(null);
 
   useEffect(() => { if (!isAuthenticated && user === null) navigateToLogin(); }, [isAuthenticated, user, navigateToLogin]);
 
@@ -82,6 +83,10 @@ export default function Orders() {
     refetchInterval: 3000,
     refetchOnWindowFocus: true,
   });
+
+  const showFeedback = (variant, message, title) => {
+    setFeedback({ variant, message, title });
+  };
 
   useEffect(() => {
     if (!user || verificationDone) return;
@@ -130,18 +135,18 @@ export default function Orders() {
             }).catch(() => {});
           }
           queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
-          toast.success(paymentStage === 'balance' ? 'Remaining balance payment confirmed!' : 'Payment confirmed! Your order has been placed.');
+          showFeedback('success', paymentStage === 'balance' ? 'Your remaining balance payment was confirmed successfully.' : 'Payment confirmed successfully. Your order is now visible in this page.', 'Payment confirmed');
         } else if (!paid && currentOrder && paymentStage === 'balance' && ['failed', 'cancelled', 'canceled', 'unpaid'].includes(hubtelStatus || status || '')) {
           await appClient.entities.Order.update(currentOrder.id, { balance_payment_status: hubtelStatus === 'cancelled' || hubtelStatus === 'canceled' ? 'cancelled' : 'failed', payment_stage: 'balance_payment_failed', tracking_updates: (currentOrder.tracking_updates || []).concat([{ status: 'Balance Payment Failed', message: 'Customer did not complete the balance payment successfully.', timestamp: new Date().toISOString() }]) });
-          toast.error('Balance payment was not completed.');
+          showFeedback('warning', 'The balance payment was not completed.', 'Payment not completed');
           queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
         } else if (!paid && status !== 'success') {
-          toast.error('Payment verification failed. If your amount was deducted, contact Hubtel support.');
+          showFeedback('error', 'Payment verification failed. If your amount was deducted, contact Hubtel support.', 'Verification failed');
           setTimeout(() => navigate(createPageUrl('Cart')), 3000);
         }
       }).catch(() => {
-        if (status === 'success') toast.success('Payment submitted. Refreshing your orders...');
-        else toast.error('Payment verification failed. If amount was deducted, contact Hubtel support.');
+        if (status === 'success') showFeedback('info', 'Your payment was submitted. Refreshing your orders now...', 'Payment submitted');
+        else showFeedback('error', 'Payment verification failed. If your amount was deducted, contact Hubtel support.', 'Verification failed');
       }).finally(() => {
         setIsVerifying(false);
         setVerificationDone(true);
@@ -159,8 +164,8 @@ export default function Orders() {
 
   const visibleOrders = orders.filter(isVisibleOrder);
 
-  const deleteOrdersMutation = useMutation({ mutationFn: async (orderIds) => Promise.all(orderIds.map((id) => appClient.entities.Order.delete(id))), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['orders'] }); setSelectedOrders([]); toast.success('Deleted'); } });
-  const cancelOrderMutation = useMutation({ mutationFn: async ({ order, reason }) => { const newTracking = (order.tracking_updates || []).concat([{ status: 'Cancelled', message: `Cancelled by customer. Reason: ${reason || 'No reason'}`, timestamp: new Date().toISOString() }]); await appClient.entities.Order.update(order.id, { status: 'cancelled', tracking_updates: newTracking }); await appClient.entities.Notification.create({ user_email: order.customer_email, title: 'Order Cancelled', message: `Your order #${order.order_number} has been cancelled. Contact 0208207543 for refund.`, type: 'order_cancelled', order_id: order.id, order_number: order.order_number, is_read: false }); }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['orders'] }); setCancellingOrder(null); setCancelReason(''); toast.success('Order cancelled.'); } });
+  const deleteOrdersMutation = useMutation({ mutationFn: async (orderIds) => Promise.all(orderIds.map((id) => appClient.entities.Order.delete(id))), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['orders'] }); setSelectedOrders([]); showFeedback('info', 'The selected orders were removed.', 'Orders deleted'); } });
+  const cancelOrderMutation = useMutation({ mutationFn: async ({ order, reason }) => { const newTracking = (order.tracking_updates || []).concat([{ status: 'Cancelled', message: `Cancelled by customer. Reason: ${reason || 'No reason'}`, timestamp: new Date().toISOString() }]); await appClient.entities.Order.update(order.id, { status: 'cancelled', tracking_updates: newTracking }); await appClient.entities.Notification.create({ user_email: order.customer_email, title: 'Order Cancelled', message: `Your order #${order.order_number} has been cancelled. Contact 0208207543 for refund.`, type: 'order_cancelled', order_id: order.id, order_number: order.order_number, is_read: false }); }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['orders'] }); setCancellingOrder(null); setCancelReason(''); showFeedback('info', 'Your order was cancelled successfully.', 'Order cancelled'); } });
 
   const handleBalancePayment = async (order) => {
     setPayingBalanceFor(order.id);
@@ -171,13 +176,13 @@ export default function Orders() {
       const cancellationUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${encodeURIComponent(reference)}&paymentStage=balance&status=cancelled&orderId=${order.id}`;
       const result = await initiateBalancePayment({ order, callbackUrl, returnUrl, cancellationUrl });
       if (result?.data?.checkoutUrl) {
-        toast.success('Redirecting to Hubtel for balance payment...');
+        showFeedback('info', 'Redirecting you to Hubtel for the remaining balance payment...', 'Opening payment');
         window.location.href = result.data.checkoutUrl;
         return;
       }
-      toast.error(result?.error || 'Unable to start balance payment.');
+      showFeedback('error', result?.error || 'Unable to start the balance payment.', 'Unable to continue');
     } catch (error) {
-      toast.error(error.message || 'Unable to start balance payment.');
+      showFeedback('error', error.message || 'Unable to start the balance payment.', 'Unable to continue');
     } finally {
       setPayingBalanceFor(null);
     }
@@ -196,6 +201,13 @@ export default function Orders() {
     <div className="min-h-screen bg-gray-50 pb-24">
       <div className="max-w-2xl mx-auto px-4 pt-6">
         <div className="flex items-center justify-between mb-4"><div><h1 className="text-xl font-bold text-gray-900">My Orders</h1><p className="text-xs text-gray-500">{orders.length} order{orders.length !== 1 ? 's' : ''}</p></div>{selectedOrders.length > 0 && <Button size="sm" variant="destructive" onClick={handleDeleteSelected}><Trash2 className="h-3 w-3 mr-1" /> Delete {selectedOrders.length}</Button>}</div>
+        <InlineNotice
+          variant={feedback?.variant}
+          title={feedback?.title}
+          message={feedback?.message}
+          onDismiss={() => setFeedback(null)}
+          className="mb-4"
+        />
         {orders.length > 0 && <div className="flex items-center gap-2 mb-3"><input type="checkbox" checked={selectedOrders.length === orders.length && orders.length > 0} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer" /><span className="text-xs text-gray-500">Select All</span></div>}
         <div className="space-y-4">
           {isLoading ? Array(3).fill(0).map((_, index) => <Skeleton key={index} className="h-56 rounded-xl" />) : visibleOrders.map((order) => {
@@ -224,5 +236,3 @@ export default function Orders() {
     </div>
   );
 }
-
- 

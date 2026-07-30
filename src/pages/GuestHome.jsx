@@ -5,9 +5,10 @@ import { createPageUrl } from '@/lib/utils';
 import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { ChevronRight, Home as HomeIcon, Smartphone, Headphones, Tv, Gem } from 'lucide-react';
-import { toast } from 'sonner';
 import guestCart from '@/lib/guest-cart';
 import HeroBanner from '../components/home/HeroBanner';
+import AboutFmmClassicoSection from '../components/home/AboutFmmClassicoSection';
+import GuestWelcomeModal from '../components/guest/GuestWelcomeModal';
 import { getVisibleBrandDirectory, getBrandLogoSrc, getSectionLimit } from '@/lib/brandDirectory';
 
 var CATEGORY_BRANDS = {
@@ -46,14 +47,6 @@ var CATEGORY_BRANDS = {
   ],
 };
 
-function slugifyCollection(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
 
 var HOME_CATEGORIES = [
   { id: 'phones', label: 'Phones', icon: Smartphone, link: createPageUrl('phones'), match: function(p) { return p.category === 'phones'; }, brands: CATEGORY_BRANDS.phones, chipColor: 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100' },
@@ -89,7 +82,6 @@ export default function GuestHome() {
   var addToCartMutation = useMutation({
     mutationFn: async function(product) {
       guestCart.addItem({ id: product.id, product_id: product.id, product_name: product.name, product_image: product.image_url, product_price: product.price, quantity: 1 });
-      toast.success('Added to cart!');
     },
   });
 
@@ -111,7 +103,9 @@ export default function GuestHome() {
   return (
     <div className="pb-4 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
 
+      <GuestWelcomeModal />
       <HeroBanner />
+      <AboutFmmClassicoSection showAccountActions />
 
       {/* CATEGORIES */}
 <div className="bg-white mt-2 mx-2 md:mx-4 rounded-2xl shadow-sm px-3 pt-1.5 pb-2 md:px-4 md:pt-2 md:pb-2.5">
@@ -156,13 +150,13 @@ export default function GuestHome() {
           Shop {cat.label} by Brand
         </p>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1 md:overflow-visible md:pb-0">
           {cat.brands.map(b => {
             return (
               <Link
                 key={b.brand + (b.category || '')}
-                to={createPageUrl(slugifyCollection(b.brand))}
-                className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}
+                to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(b.brand) + '&category=' + (b.category || ''))}
+                className={'inline-flex shrink-0 items-center whitespace-nowrap text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}
               >
                 {b.label}
               </Link>
@@ -171,7 +165,7 @@ export default function GuestHome() {
 
           <Link
             to={cat.link}
-            className={'text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}
+            className={'inline-flex shrink-0 items-center whitespace-nowrap text-xs font-semibold border rounded-full px-3 py-1 transition-colors ' + cat.chipColor}
           >
             All {cat.label}
           </Link>

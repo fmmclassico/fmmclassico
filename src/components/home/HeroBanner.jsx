@@ -37,7 +37,6 @@ const BLUE_ACCENT = '#2E86C1';
 const REVIEW_SLIDE = {
   id: 'fmm-welcome-slide',
   type: 'review',
-  eyebrow: 'WELCOME TO FMM CLASSICO',
   titleLead: 'Welcome to',
   titleAccent: 'FMM CLASSICO',
   description:

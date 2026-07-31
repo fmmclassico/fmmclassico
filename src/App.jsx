@@ -234,6 +234,22 @@ const AuthenticatedApp = () => {
       <Route path="/DownloadApp" element={<DownloadApp />} />
       <Route path="/Policies" element={<Policies />} />
       <Route
+        path="/privacy-policy"
+        element={
+          <LayoutWrapper currentPageName="Policies" isAuthenticated={isAuthenticated}>
+            <Policies documentType="privacy" />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/terms-of-service"
+        element={
+          <LayoutWrapper currentPageName="Policies" isAuthenticated={isAuthenticated}>
+            <Policies documentType="terms" />
+          </LayoutWrapper>
+        }
+      />
+      <Route
         path="/BrandProducts"
         element={
           <LayoutWrapper currentPageName="BrandProducts" isAuthenticated={isAuthenticated}>

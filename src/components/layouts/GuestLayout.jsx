@@ -91,7 +91,15 @@ export default function GuestLayout({ children, currentPageName }) {
       <header className="sticky top-0 z-50 shadow-lg" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
         <div className="w-full px-4 md:px-8 xl:px-[2cm]">
          <div className="flex items-center justify-between h-16 gap-2">
-  <Link to={createPageUrl('Home')} className="flex items-center flex-shrink-0 -ml-1 md:ml-0">
+  <Link to={createPageUrl('Home')} className="flex items-center gap-2 flex-shrink-0 -ml-1 md:ml-0">
+    {currentPageName === 'GuestHome' && (
+      <img
+        src="/logo.png"
+        alt="FMM CLASSICO logo"
+        className="h-8 w-auto shrink-0 object-contain sm:h-9 md:h-10"
+        loading="eager"
+      />
+    )}
     <h1 className="text-lg sm:text-xl md:text-3xl font-black text-white tracking-tight">
       FMM <span className="text-white">CLASSICO</span>
     </h1>

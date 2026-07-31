@@ -7,7 +7,6 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { ChevronRight, Home as HomeIcon, Smartphone, Headphones, Tv, Gem } from 'lucide-react';
 import guestCart from '@/lib/guest-cart';
 import HeroBanner from '../components/home/HeroBanner';
-import GuestWelcomeModal from '../components/guest/GuestWelcomeModal';
 import { getVisibleBrandDirectory, getBrandLogoSources, getSectionLimit } from '@/lib/brandDirectory';
 import BrandLogoMark from '@/components/brands/BrandLogoMark';
 
@@ -101,9 +100,8 @@ export default function GuestHome() {
   var topSellingFallback = visibleProducts.filter(function(p) { return p.top_selling; });
 
   return (
-    <div className="pb-4 bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
+    <div className="bg-gray-100 min-h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
 
-      <GuestWelcomeModal />
       <HeroBanner />
 
       {/* CATEGORIES */}
@@ -259,7 +257,80 @@ export default function GuestHome() {
         </div>
       </div></div>
 
-      <div className="h-6" />
+
+
+      <footer className="mt-6 border-t border-[#0f2f62] bg-[#0B2450] text-white" aria-label="Guest homepage footer">
+        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <section aria-labelledby="guest-footer-brand">
+              <h2 id="guest-footer-brand" className="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">Brand</h2>
+              <div className="mt-3 flex items-center gap-3">
+                <img
+                  src="/logo.png"
+                  alt="FMM CLASSICO logo"
+                  className="h-9 w-auto shrink-0 object-contain sm:h-10"
+                  loading="lazy"
+                />
+                <span className="text-base font-black tracking-[0.18em] text-white sm:text-lg">FMM CLASSICO</span>
+              </div>
+              <a
+                href="mailto:fmmclassico@gmail.com"
+                className="mt-3 inline-flex text-sm text-blue-100 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2450]"
+              >
+                fmmclassico@gmail.com
+              </a>
+            </section>
+
+            <nav aria-labelledby="guest-footer-service">
+              <h2 id="guest-footer-service" className="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">Customer Service</h2><ul className="mt-3 space-y-2">
+                <li>
+                  <Link
+                    to={createPageUrl('HowToUse')}
+                    className="text-sm text-blue-100 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2450]"
+                  >
+                    Help Center
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to={createPageUrl('About')}
+                    className="text-sm text-blue-100 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2450]"
+                  >
+                    Contact Us
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+
+            <nav aria-labelledby="guest-footer-legal">
+              <h2 id="guest-footer-legal" className="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">Legal</h2><ul className="mt-3 space-y-2">
+                <li>
+                  <Link
+                    to="/privacy-policy"
+                    className="text-sm text-blue-100 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2450]"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/terms-of-service"
+                    className="text-sm text-blue-100 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2450]"
+                  >
+                    Terms of Service
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+          </div>
+
+          <div className="mt-6 border-t border-white/15 pt-4">
+            <p className="text-xs text-blue-100 sm:text-sm">© {new Date().getFullYear()} FMM CLASSICO. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
+
+      <div className="h-4" />
     </div>
   );
 }

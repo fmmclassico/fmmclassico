@@ -1,5 +1,5 @@
 const SITE_NAME = 'FMM CLASSICO';
-const SITE_URL = 'https://www.fmmclassico.com';
+const SITE_URL = 'https://fmmclassico.com';
 const DEFAULT_IMAGE = `${SITE_URL}/logo.png`;
 const DEFAULT_KEYWORDS = 'FMM CLASSICO, FMM, CLASSICO, FMM CLASSICO Ghana, phones Ghana, phone accessories Ghana, electronics Ghana, home appliances Ghana, branded products Ghana, online store Ghana, shop in Ghana, phone shop in Ghana, electronics shop in Ghana';
 const INDEX_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
@@ -45,6 +45,14 @@ const PATH_META = {
     description: 'Browse every brand configured in FMM CLASSICO.',
     canonicalPath: '/brands',
     robots: NOINDEX_ROBOTS,
+  },
+  '/privacy-policy': {
+    title: 'Privacy Policy | FMM CLASSICO',
+    description: 'Read the FMM CLASSICO privacy policy and learn how customer information is collected, used and protected.',
+  },
+  '/terms-of-service': {
+    title: 'Terms of Service | FMM CLASSICO',
+    description: 'Read the FMM CLASSICO terms of service for using the website and placing orders.',
   },
 };
 

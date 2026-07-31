@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { appClient } from '@/api/appClient.js';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +6,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/lib/AuthContext';
+import { appClient } from '@/api/appClient.js';
+
+function isTwoStageOrder(order) {
+  return ['deposit_balance', 'pay_on_delivery'].includes(order?.payment_method || '');
+}
+
+function hasVerifiedCompletePayment(order) {
+  if (isTwoStageOrder(order)) {
+    return order?.remaining_balance_paid === true || order?.balance_payment_status === 'paid' || order?.is_fully_paid === true || order?.payment_stage === 'fully_paid';
+  }
+
+  return order?.payment_status === 'paid' || order?.initial_payment_status === 'paid' || order?.is_fully_paid === true || order?.payment_stage === 'fully_paid';
+}
+
+function toNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
 
 export default function Invoices() {
   const { user, isAuthenticated, navigateToLogin } = useAuth();
@@ -32,15 +49,15 @@ export default function Invoices() {
     staleTime: 10000,
   });
 
-  const paidOrders = orders.filter(o => o.payment_status === 'paid' || o.status === 'delivered' || o.status === 'shipped' || o.status === 'confirmed');
+  const paidOrders = orders.filter(hasVerifiedCompletePayment);
 
   const handlePrint = (order) => {
-    const subtotal = order.items?.reduce((s, i) => s + i.price * i.quantity, 0) || 0;
-    const shipping = order.total_amount - subtotal;
-    const itemsHtml = order.items?.map(item => `<tr><td style="padding:10px;border-bottom:1px solid #e5e7eb">${item.product_name}</td><td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:center">${item.quantity}</td><td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:right">₵${item.price?.toFixed(2)}</td><td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:right">₵${(item.price * item.quantity)?.toFixed(2)}</td></tr>`).join('') || '';
+    const subtotal = order.items?.reduce((sum, item) => sum + (toNumber(item.price) * toNumber(item.quantity, 1)), 0) || 0;
+    const shipping = toNumber(order.total_amount) - subtotal;
+    const itemsHtml = order.items?.map((item) => `<tr><td style="padding:10px;border-bottom:1px solid #e5e7eb">${item.product_name}</td><td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:center">${item.quantity}</td><td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:right">₵${toNumber(item.price).toFixed(2)}</td><td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:right">₵${(toNumber(item.price) * toNumber(item.quantity, 1)).toFixed(2)}</td></tr>`).join('') || '';
 
     const win = window.open('', '_blank');
-    win.document.write(`<html><head><title>Invoice #${order.order_number}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f8fafc;padding:20px}table{width:100%;border-collapse:collapse}.invoice{max-width:700px;margin:0 auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#031725,#0A2E60);color:white;padding:30px;text-align:center}.header h1{font-size:24px;margin-bottom:4px}.header p{opacity:0.8;font-size:13px}@media print{body{padding:0;background:white}.invoice{box-shadow:none}}</style></head><body><div class="invoice"><div class="header"><h1>FMM CLASSICO</h1><p>Phones & Accessories · Electronics · Home Appliances</p><p style="margin-top:8px;font-size:12px">Tarkwa (UMAT Campus) & Accra (Ashongman Estate)</p></div><div style="padding:30px"><div style="display:flex;justify-content:space-between;margin-bottom:20px"><div><h3 style="color:#0A2E60;margin-bottom:8px">INVOICE</h3><p style="font-size:14px"><strong>#${order.order_number}</strong></p><p style="font-size:13px;color:#6b7280">Date: ${order.created_date ? format(new Date(order.created_date), 'dd MMM yyyy, h:mm a') : '-'}</p></div><div style="text-align:right"><p style="font-size:13px;font-weight:bold">Bill To:</p><p style="font-size:13px">${order.customer_name || ''}</p><p style="font-size:12px;color:#6b7280">${order.customer_email || ''}</p><p style="font-size:12px;color:#6b7280">${order.customer_phone || ''}</p></div></div><table style="margin-top:16px"><thead><tr style="background:#f1f5f9"><th style="padding:10px;text-align:left;font-size:13px">Product</th><th style="padding:10px;text-align:center;font-size:13px">Qty</th><th style="padding:10px;text-align:right;font-size:13px">Price</th><th style="padding:10px;text-align:right;font-size:13px">Total</th></tr></thead><tbody>${itemsHtml}</tbody></table><div style="margin-top:20px;text-align:right;border-top:2px solid #e5e7eb;padding-top:16px"><p style="font-size:13px;margin-bottom:4px">Subtotal: ₵${subtotal.toFixed(2)}</p>${shipping > 0 ? `<p style="font-size:13px;margin-bottom:4px">Delivery: ₵${shipping.toFixed(2)}</p>` : ''}<p style="font-size:18px;font-weight:bold;color:#0A2E60;margin-top:8px">TOTAL: ₵${order.total_amount?.toFixed(2)}</p></div><div style="margin-top:30px;text-align:center;padding:16px;background:#f8fafc;border-radius:8px"><p style="font-size:13px;color:#6b7280">Thank you for shopping with FMM CLASSICO! 🧡</p><p style="font-size:11px;color:#9ca3af;margin-top:4px">WhatsApp: 0208207543 | fmmclassico@gmail.com</p></div></div></div></body></html>`);
+    win.document.write(`<html><head><title>Invoice #${order.order_number}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f8fafc;padding:20px}table{width:100%;border-collapse:collapse}.invoice{max-width:700px;margin:0 auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#031725,#0A2E60);color:white;padding:30px;text-align:center}.header h1{font-size:24px;margin-bottom:4px}.header p{opacity:0.8;font-size:13px}@media print{body{padding:0;background:white}.invoice{box-shadow:none}}</style></head><body><div class="invoice"><div class="header"><h1>FMM CLASSICO</h1><p>Phones & Accessories · Electronics · Home Appliances</p><p style="margin-top:8px;font-size:12px">Tarkwa (UMAT Campus) & Accra (Ashongman Estate)</p></div><div style="padding:30px"><div style="display:flex;justify-content:space-between;margin-bottom:20px"><div><h3 style="color:#0A2E60;margin-bottom:8px">INVOICE</h3><p style="font-size:14px"><strong>#${order.order_number}</strong></p><p style="font-size:13px;color:#6b7280">Date: ${order.created_date ? format(new Date(order.created_date), 'dd MMM yyyy, h:mm a') : '-'}</p></div><div style="text-align:right"><p style="font-size:13px;font-weight:bold">Bill To:</p><p style="font-size:13px">${order.customer_name || ''}</p><p style="font-size:12px;color:#6b7280">${order.customer_email || ''}</p><p style="font-size:12px;color:#6b7280">${order.customer_phone || ''}</p></div></div><table style="margin-top:16px"><thead><tr style="background:#f1f5f9"><th style="padding:10px;text-align:left;font-size:13px">Product</th><th style="padding:10px;text-align:center;font-size:13px">Qty</th><th style="padding:10px;text-align:right;font-size:13px">Price</th><th style="padding:10px;text-align:right;font-size:13px">Total</th></tr></thead><tbody>${itemsHtml}</tbody></table><div style="margin-top:20px;text-align:right;border-top:2px solid #e5e7eb;padding-top:16px"><p style="font-size:13px;margin-bottom:4px">Subtotal: ₵${subtotal.toFixed(2)}</p>${shipping > 0 ? `<p style="font-size:13px;margin-bottom:4px">Delivery: ₵${shipping.toFixed(2)}</p>` : ''}<p style="font-size:18px;font-weight:bold;color:#0A2E60;margin-top:8px">TOTAL: ₵${toNumber(order.total_amount).toFixed(2)}</p></div><div style="margin-top:30px;text-align:center;padding:16px;background:#f8fafc;border-radius:8px"><p style="font-size:13px;color:#6b7280">Thank you for shopping with FMM CLASSICO! 🧡</p><p style="font-size:11px;color:#9ca3af;margin-top:4px">WhatsApp: 0208207543 | fmmclassico@gmail.com</p></div></div></div></body></html>`);
     win.document.close();
     win.focus();
     setTimeout(() => { win.print(); }, 500);
@@ -55,7 +72,7 @@ export default function Invoices() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900">My Invoices</h1>
-            <p className="text-xs text-gray-500">View and download your order invoices</p>
+            <p className="text-xs text-gray-500">View and download your fully verified order invoices</p>
           </div>
         </div>
 
@@ -67,14 +84,14 @@ export default function Invoices() {
           <div className="text-center py-16">
             <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 font-medium">No invoices yet</p>
-            <p className="text-sm text-gray-400 mt-1">Invoices appear after you place an order</p>
+            <p className="text-sm text-gray-400 mt-1">Invoices appear after your payment is fully verified.</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {paidOrders.map(order => {
+            {paidOrders.map((order) => {
               const isExpanded = expandedInvoice === order.id;
-              const subtotal = order.items?.reduce((s, i) => s + i.price * i.quantity, 0) || 0;
-              const shipping = order.total_amount - subtotal;
+              const subtotal = order.items?.reduce((sum, item) => sum + (toNumber(item.price) * toNumber(item.quantity, 1)), 0) || 0;
+              const shipping = toNumber(order.total_amount) - subtotal;
 
               return (
                 <Card key={order.id} className="overflow-hidden">
@@ -89,7 +106,7 @@ export default function Invoices() {
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right">
-                          <p className="text-sm font-bold text-[#0A2E60]">₵{order.total_amount?.toFixed(2)}</p>
+                          <p className="text-sm font-bold text-[#0A2E60]">₵{toNumber(order.total_amount).toFixed(2)}</p>
                           <Badge variant="outline" className="text-[10px]">{order.status}</Badge>
                         </div>
                         {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
@@ -99,7 +116,6 @@ export default function Invoices() {
 
                   {isExpanded && (
                     <div className="border-t bg-gradient-to-b from-[#f8fafc] to-white p-4">
-                      {/* Invoice Preview */}
                       <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
                         <div className="bg-gradient-to-r from-[#031725] to-[#0A2E60] p-4 text-center">
                           <h3 className="text-white font-bold text-lg">FMM CLASSICO</h3>
@@ -118,16 +134,16 @@ export default function Invoices() {
                           </div>
                           <div className="border-t pt-2 space-y-1">
                             {order.items?.map((item, idx) => (
-                              <div key={idx} className="flex justify-between text-xs">
+                              <div key={idx} className="flex justify-between text-xs gap-3">
                                 <span className="text-gray-700">{item.product_name} x{item.quantity}</span>
-                                <span className="font-medium">₵{(item.price * item.quantity).toFixed(2)}</span>
+                                <span className="font-medium">₵{(toNumber(item.price) * toNumber(item.quantity, 1)).toFixed(2)}</span>
                               </div>
                             ))}
                           </div>
                           <div className="border-t mt-2 pt-2 space-y-1">
                             <div className="flex justify-between text-xs"><span className="text-gray-500">Subtotal</span><span>₵{subtotal.toFixed(2)}</span></div>
                             {shipping > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Delivery</span><span>₵{shipping.toFixed(2)}</span></div>}
-                            <div className="flex justify-between text-sm font-bold text-[#0A2E60] pt-1"><span>TOTAL</span><span>₵{order.total_amount?.toFixed(2)}</span></div>
+                            <div className="flex justify-between text-sm font-bold text-[#0A2E60] pt-1"><span>TOTAL</span><span>₵{toNumber(order.total_amount).toFixed(2)}</span></div>
                           </div>
                         </div>
                       </div>

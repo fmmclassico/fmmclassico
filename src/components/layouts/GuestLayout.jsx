@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import HeaderSearchBar from '@/components/search/HeaderSearchBar';
 import { createPageUrl } from '@/lib/utils';
-import { 
-  Search, 
-  Info, 
+import {
+  Search,
+  Info,
   ShoppingCart,
   User,
   ChevronUp,
@@ -28,6 +27,8 @@ export default function GuestLayout({ children, currentPageName }) {
   const location = useLocation();
   const { } = useAuth();
 
+  const isGuestHomepage = location.pathname === '/' || location.pathname.toLowerCase() === '/home';
+
   useEffect(() => {
     const updateCartCount = (event) => {
       try {
@@ -41,7 +42,7 @@ export default function GuestLayout({ children, currentPageName }) {
     updateCartCount();
     window.addEventListener('storage', updateCartCount);
     window.addEventListener('fmm-cart-updated', updateCartCount);
-    
+
     return () => {
       window.removeEventListener('storage', updateCartCount);
       window.removeEventListener('fmm-cart-updated', updateCartCount);
@@ -87,23 +88,27 @@ export default function GuestLayout({ children, currentPageName }) {
   }, [location.pathname, location.search]);
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full" style={{maxWidth:'100vw', boxSizing:'border-box'}}>
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full" style={{ maxWidth: '100vw', boxSizing: 'border-box' }}>
       <header className="sticky top-0 z-50 shadow-lg" style={{ background: `linear-gradient(90deg, ${ASH} 0%, ${ASH_HOVER} 100%)` }}>
         <div className="w-full px-4 md:px-8 xl:px-[2cm]">
-         <div className="flex items-center justify-between h-16 gap-2">
-  <Link to={createPageUrl('Home')} className="flex items-center gap-2 flex-shrink-0 -ml-1 md:ml-0">
-    {currentPageName === 'GuestHome' && (
-      <img
-        src="/logo.png"
-        alt="FMM CLASSICO logo"
-        className="h-8 w-auto shrink-0 object-contain sm:h-9 md:h-10"
-        loading="eager"
-      />
-    )}
-    <h1 className="text-lg sm:text-xl md:text-3xl font-black text-white tracking-tight">
-      FMM <span className="text-white">CLASSICO</span>
-    </h1>
-  </Link>
+          <div className="flex items-center justify-between h-16 gap-2">
+            <Link to={createPageUrl('Home')} className="flex items-center gap-2 flex-shrink-0 -ml-1 md:ml-0">
+              {isGuestHomepage && (
+                <span className="flex h-8 w-auto min-w-[32px] items-center justify-center overflow-hidden sm:h-9 md:h-10">
+                  <img
+                    src="/logo.png"
+                    alt="FMM CLASSICO logo"
+                    className="block h-full w-auto shrink-0 object-contain"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                  />
+                </span>
+              )}
+              <h1 className="text-lg sm:text-xl md:text-3xl font-black text-white tracking-tight">
+                FMM <span className="text-white">CLASSICO</span>
+              </h1>
+            </Link>
 
             <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl mx-4 lg:mx-6 xl:mx-8">
               <div className="relative w-full">
@@ -114,9 +119,9 @@ export default function GuestLayout({ children, currentPageName }) {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-4 pr-12 py-2 rounded-full border-0 bg-white/90 focus:bg-white"
                 />
-                <Button 
+                <Button
                   type="submit"
-                  size="icon" 
+                  size="icon"
                   className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-8 w-8 text-white"
                   style={{ background: ASH }}
                 >
@@ -127,9 +132,9 @@ export default function GuestLayout({ children, currentPageName }) {
 
             <div className="flex items-center gap-1 sm:gap-2 ml-2 md:ml-0 flex-shrink-0">
               <div className="relative" ref={accountRef}>
-                <button 
-                  className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors" 
-                  onClick={() => setAccountOpen(o => !o)}
+                <button
+                  className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors"
+                  onClick={() => setAccountOpen((open) => !open)}
                   title="Account Menu"
                 >
                   <User className="h-5 w-5" />
@@ -147,8 +152,8 @@ export default function GuestLayout({ children, currentPageName }) {
                 )}
               </div>
 
-              <Link 
-                to={createPageUrl('Cart')} 
+              <Link
+                to={createPageUrl('Cart')}
                 className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors relative"
                 title="Shopping Cart"
               >
@@ -164,9 +169,9 @@ export default function GuestLayout({ children, currentPageName }) {
               </Link>
 
               <div className="relative" ref={helpRef}>
-                <button 
-                  className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors" 
-                  onClick={() => setHelpOpen(o => !o)}
+                <button
+                  className="flex flex-col items-center text-white hover:bg-white/10 rounded-md px-2 py-1 transition-colors"
+                  onClick={() => setHelpOpen((open) => !open)}
                   title="Help & Support"
                 >
                   <Info className="h-5 w-5" />
@@ -205,9 +210,97 @@ export default function GuestLayout({ children, currentPageName }) {
         {children}
       </main>
 
+      {isGuestHomepage && (
+        <footer className="border-t border-[#0f2f62] bg-[#0B2450] text-white" aria-label="Guest homepage footer">
+          <div className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              <section>
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-auto min-w-[36px] items-center justify-center overflow-hidden sm:h-10">
+                    <img
+                      src="/logo.png"
+                      alt="FMM CLASSICO logo"
+                      className="block h-full w-auto object-contain"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </span>
+                  <span className="text-base font-black tracking-[0.18em] text-white sm:text-lg">FMM CLASSICO</span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-blue-100">
+                  <a
+                    href="mailto:fmmclassico@gmail.com?subject=FMM%20CLASSICO%20Support"
+                    className="max-w-full break-all transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2450]"
+                  >
+                    Email: fmmclassico@gmail.com
+                  </a>
+                  <span aria-hidden="true" className="hidden text-white/40 sm:inline">|</span>
+                  <a
+                    href="https://wa.me/233208207543"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2450]"
+                  >
+                    Whatsapp: 0208207543
+                  </a>
+                </div>
+              </section>
+
+              <nav aria-labelledby="guest-footer-service">
+                <h2 id="guest-footer-service" className="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">Customer Service</h2><ul className="mt-3 space-y-2">
+                  <li>
+                    <a
+                      href="mailto:fmmclassico@gmail.com?subject=FMM%20CLASSICO%20Help%20Center"
+                      className="text-sm text-blue-100 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2450]"
+                    >
+                      Help Center
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://wa.me/233208207543"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-100 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2450]"
+                    >
+                      Contact Us
+                    </a>
+                  </li>
+                </ul>
+              </nav>
+
+              <nav aria-labelledby="guest-footer-legal">
+                <h2 id="guest-footer-legal" className="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">Legal</h2><ul className="mt-3 space-y-2">
+                  <li>
+                    <Link
+                      to="/privacy-policy"
+                      className="text-sm text-blue-100 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2450]"
+                    >
+                      Privacy Policy
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/terms-of-service"
+                      className="text-sm text-blue-100 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2450]"
+                    >
+                      Terms of Service
+                    </Link>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+
+            <div className="mt-6 border-t border-white/15 pt-4">
+              <p className="text-xs text-blue-100 sm:text-sm">© {new Date().getFullYear()} FMM CLASSICO. All rights reserved.</p>
+            </div>
+          </div>
+        </footer>
+      )}
+
       <div className="h-4" />
 
-      {showScrollTop && currentPageName === 'Home' && (
+      {showScrollTop && (currentPageName === 'Home' || isGuestHomepage) && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           className="fixed bottom-8 right-4 z-50 text-white rounded-full p-2.5 shadow-xl transition-all hover:scale-110 active:scale-95"

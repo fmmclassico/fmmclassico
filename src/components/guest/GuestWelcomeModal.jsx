@@ -91,7 +91,7 @@ export default function GuestWelcomeModal() {
             <div className="px-5 pb-6 pt-8 text-white sm:px-8 sm:pb-8 sm:pt-10">
               <div className="mb-4 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-3 py-2 backdrop-blur-sm">
                 <img src="/logo.png" alt="FMM CLASSICO logo" className="h-10 w-10 rounded-full border border-white/20 object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
-                <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/85">Guest welcome</span>
+                <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/85">FMM CLASSICO</span>
               </div>
 
               <DialogHeader className="space-y-3 text-left">

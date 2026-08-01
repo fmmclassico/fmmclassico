@@ -160,7 +160,7 @@ export default function Layout({ children, currentPageName }) {
     const merchantEmail = 'fmmclassico@gmail.com';
     const merchantWhatsapp = 'https://wa.me/233208207543';
 
-    document.title = 'FMM Classico – Phones & Accessories, Home Appliances and Electronics';
+    document.title = 'FMM CLASSICO – Phones & Accessories, Home Appliances and Electronics';
 
     const setMeta = (attr, key, content) => {
       let el = document.querySelector(`meta[${attr}="${key}"]`);
@@ -171,17 +171,17 @@ export default function Layout({ children, currentPageName }) {
     const siteDescription = 'FMM CLASSICO – Your trusted online store for phones & accessories, home appliances, and electronics in Ghana.';
 
     setMeta('name', 'description', siteDescription);
-    setMeta('name', 'keywords', 'FMM Classico, phones & Accessories Ghana, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronics Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Kumasi phone shop, Ashongman Estate, Airport Residential Area, online shopping Ghana, wholesale electronics Ghana');
+    setMeta('name', 'keywords', 'FMM CLASSICO, phones & Accessories Ghana, phone accessories Ghana, buy phones Ghana, chargers Ghana, earphones Ghana, smart watches Ghana, electronics Ghana, home appliances Ghana, Tarkwa accessories, UMAT campus shop, Accra phone shop, Kumasi phone shop, Ashongman Estate, Airport Residential Area, online shopping Ghana, wholesale electronics Ghana');
     setMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
     setMeta('name', 'googlebot', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
-    setMeta('name', 'author', 'FMM Classico');
+    setMeta('name', 'author', 'FMM CLASSICO');
     setMeta('property', 'og:type', 'website');
-    setMeta('property', 'og:site_name', 'FMM Classico');
-    setMeta('property', 'og:title', 'FMM Classico – Phones & Accessories, Home Appliances and Electronics');
+    setMeta('property', 'og:site_name', 'FMM CLASSICO');
+    setMeta('property', 'og:title', 'FMM CLASSICO – Phones & Accessories, Home Appliances and Electronics');
     setMeta('property', 'og:description', siteDescription);
     setMeta('property', 'og:url', window.location.origin);
     setMeta('name', 'twitter:card', 'summary_large_image');
-    setMeta('name', 'twitter:title', 'FMM Classico – Phones & Accessories, Home Appliances and Electronics');
+    setMeta('name', 'twitter:title', 'FMM CLASSICO – Phones & Accessories, Home Appliances and Electronics');
     setMeta('name', 'twitter:description', siteDescription);
 
     let canonical = document.querySelector('link[rel="canonical"]');
@@ -194,7 +194,7 @@ export default function Layout({ children, currentPageName }) {
       {
         "@context": "https://schema.org",
         "@type": "OnlineStore",
-        "name": "FMM Classico",
+        "name": "FMM CLASSICO",
         "description": siteDescription,
         "url": window.location.origin,
         "telephone": "+233208207543",
@@ -223,16 +223,16 @@ export default function Layout({ children, currentPageName }) {
         "jobTitle": "CEO & Founder",
         "worksFor": {
           "@type": "Organization",
-          "name": "FMM Classico",
+          "name": "FMM CLASSICO",
           "url": window.location.origin
         },
-        "description": "Fedra Mensah Martha is the CEO and Founder of FMM Classico, a trusted retail and wholesale store in Accra, Kumasi and Tarkwa, Ghana specializing in phones, phone accessories, electronics, and home appliances.",
+        "description": "Fedra Mensah Martha is the CEO and Founder of FMM CLASSICO, a trusted retail and wholesale store in Accra, Kumasi and Tarkwa, Ghana specializing in phones, phone accessories, electronics, and home appliances.",
         "nationality": "Ghanaian"
       },
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
-        "name": "FMM Classico",
+        "name": "FMM CLASSICO",
         "url": window.location.origin,
         "potentialAction": {
           "@type": "SearchAction",

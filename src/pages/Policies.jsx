@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Edit2, Save, Loader2, Shield } from 'lucide-react';
+import { Edit2, Save, Loader2, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 const DEFAULT_RETURN_POLICY = `Return Policy for FMM CLASSICO
@@ -181,9 +181,9 @@ export default function Policies({ documentType = 'store-policies' }) {
   const [policyValues, setPolicyValues] = useState(POLICY_CONTENT);
 
   useEffect(() => {
-    appClient.auth.me().then((u) => {
-      setUser(u);
-      setIsAdmin(u?.role === 'admin');
+    appClient.auth.me().then((currentUser) => {
+      setUser(currentUser);
+      setIsAdmin(currentUser?.role === 'admin');
     }).catch(() => {
       setUser(null);
       setIsAdmin(false);
@@ -246,14 +246,23 @@ export default function Policies({ documentType = 'store-policies' }) {
   const ASH = '#2E86C1';
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: ASH }}>
-          <FileText className="h-6 w-6 text-white" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-black text-gray-900">{pageConfig.title}</h1>
-          <p className="text-gray-600 text-sm">{pageConfig.subtitle}</p>
+    <div className="container mx-auto max-w-5xl px-4 py-8">
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+          <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-[#2E86C1]/10">
+            <img
+              src="/logo.png"
+              alt="FMM CLASSICO logo"
+              className="h-10 w-auto object-contain"
+              loading="eager"
+              decoding="async"
+            />
+          </span>
+          <div>
+            <p className="text-xs font-bold tracking-[0.22em] text-[#2E86C1]">FMM CLASSICO</p>
+            <h1 className="text-3xl font-black text-gray-900">{pageConfig.title}</h1>
+            <p className="text-sm text-gray-600">{pageConfig.subtitle}</p>
+          </div>
         </div>
         {isAdmin && (
           <Badge className="ml-auto" style={{ background: ASH }}>Admin Access</Badge>
@@ -265,14 +274,15 @@ export default function Policies({ documentType = 'store-policies' }) {
         const isEditing = editMode === section.key;
         const isStorePolicy = section.key === 'return_policy' || section.key === 'cancellation_policy';
         const canEdit = isAdmin && (isStorePolicy || documentType !== 'store-policies');
+        const currentSection = sectionByKey[section.key] || section;
 
         return (
           <Card key={section.key} className="mb-6">
             <CardHeader className="border-b" style={{ background: 'linear-gradient(90deg, #2E86C1 0%, #2578ae 100%)' }}>
               <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-white flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white">
                   <Shield className="h-5 w-5" />
-                  {section.title}
+                  {currentSection.title}
                 </CardTitle>
                 {canEdit && !isEditing && (
                   <Button
@@ -320,7 +330,7 @@ export default function Policies({ documentType = 'store-policies' }) {
                 </div>
               ) : (
                 <div className="prose prose-sm max-w-none">
-                  <pre className="whitespace-pre-wrap text-gray-700 font-sans text-sm leading-relaxed">
+                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-700">
                     {value}
                   </pre>
                 </div>

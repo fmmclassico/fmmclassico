@@ -1,14 +1,14 @@
 const SITE_NAME = 'FMM CLASSICO';
-const SITE_URL = 'https://fmmclassico.com';
+const SITE_URL = 'https://www.fmmclassico.com';
 const DEFAULT_IMAGE = `${SITE_URL}/logo.png`;
-const DEFAULT_KEYWORDS = 'FMM CLASSICO, FMM, CLASSICO, FMM CLASSICO Ghana, phones Ghana, phone accessories Ghana, electronics Ghana, home appliances Ghana, branded products Ghana, online store Ghana, shop in Ghana, phone shop in Ghana, electronics shop in Ghana';
+const DEFAULT_KEYWORDS = 'FMM CLASSICO, FMM, fmm, classico, fedra, fedra martha, FMM Classico, CLASSICO, Classico, fmmclassico, FMM CLASSICO Ghana, phones Ghana, phone accessories Ghana, electronics Ghana, home appliances Ghana, branded products Ghana, online store Ghana, shop in Ghana, phone shop in Ghana, electronics shop in Ghana';
 const INDEX_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 const NOINDEX_ROBOTS = 'noindex, follow';
 
 const PATH_META = {
   '/': {
     title: 'FMM CLASSICO | Phones, Phone Accessories, Electronics, Home Appliances & Branded Products',
-    description: 'FMM CLASSICO is your trusted destination in Ghana for smartphones, phone accessories, electronics, home appliances and branded products.',
+    description: 'FMM CLASSICO, also known as FMM and Classico, is your trusted destination in Ghana for smartphones, phone accessories, electronics, home appliances and branded products.',
   },
   '/phones': {
     title: 'Phones | FMM CLASSICO',

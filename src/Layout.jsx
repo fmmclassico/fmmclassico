@@ -253,7 +253,17 @@ export default function Layout({ children, currentPageName }) {
         <div className="flex items-center justify-between h-16 gap-2">
 
           {/* Logo */}
-          <Link to={createPageUrl('Home')} className="flex items-center flex-shrink-0">
+          <Link to={createPageUrl('Home')} className="flex items-center gap-2 flex-shrink-0">
+            <span className="flex h-8 w-auto min-w-[32px] items-center justify-center overflow-hidden sm:h-9 md:h-10">
+              <img
+                src="/logo.png"
+                alt="FMM CLASSICO logo"
+                className="block h-full w-auto shrink-0 object-contain"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+              />
+            </span>
             <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">
               FMM <span className="text-white">CLASSICO</span>
             </h1>
@@ -332,28 +342,35 @@ export default function Layout({ children, currentPageName }) {
                 <span className="text-[10px] font-semibold leading-tight">Help</span>
               </button>
               {helpOpen && (
-                <div className="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 py-2 overflow-hidden">
-                  <p className="text-xs font-bold text-gray-400 uppercase px-4 pt-1 pb-2 tracking-wider">Help Center</p>
-                  <div className="px-4 py-2 text-xs text-gray-600 bg-gray-50 border-b border-gray-100">
-                    <p className="font-semibold text-gray-700 mb-1">👋 Need help?</p>
-                    <p>Browse the guides below or chat with us on WhatsApp.</p>
+                <div className="absolute right-0 top-12 z-50 w-72 overflow-hidden rounded-2xl border border-gray-100 bg-white py-2 shadow-2xl">
+                  <p className="px-4 pt-1 pb-2 text-xs font-bold uppercase tracking-wider text-gray-400">Help Center</p>
+                  <div className="border-b border-gray-100 bg-gray-50 px-4 py-3 text-xs text-gray-600">
+                    <p className="mb-1 font-semibold text-gray-700">Quick help</p>
+                    <p>Review the store policies, privacy notice and terms before ordering. Need direct help? Contact us first, then start live support if needed.</p>
                   </div>
                   {[
                     { label: '🛍️ How to Place an Order', page: 'HowToUse' },
-                    { label: '💳 How to Pay for an Order', page: 'HowToUse' },
                     { label: '📄 Store Policies', page: 'Policies' },
+                    { label: '🔒 Privacy Policy', path: '/privacy-policy' },
+                    { label: '📘 Terms of Service', path: '/terms-of-service' },
                     { label: 'ℹ️ About Us', page: 'About' },
-                  ].map(item => (
-                    <Link key={item.page + item.label} to={createPageUrl(item.page)} onClick={() => setHelpOpen(false)}
-                      className="flex items-center px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
+                  ].map((item) => (
+                    <Link
+                      key={(item.page || item.path) + item.label}
+                      to={item.path || createPageUrl(item.page)}
+                      onClick={() => setHelpOpen(false)}
+                      className="flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
                       {item.label}
                     </Link>
                   ))}
-                  <div className="border-t my-1" />
+                  <div className="my-1 border-t" />
+                  <a href="mailto:fmmclassico@gmail.com?subject=FMM%20CLASSICO%20Support" className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50">
+                    ✉️ Contact Us
+                  </a>
                   <a href="https://wa.me/233208207543" target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2.5 hover:bg-green-50 text-sm text-green-700 font-medium transition-colors">
-                    <svg className="h-4 w-4 fill-green-600" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                    WhatsApp Support
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-50">
+                    💬 Live Support
                   </a>
                 </div>
               )}
@@ -409,11 +426,21 @@ export default function Layout({ children, currentPageName }) {
               </SheetContent>
             </Sheet>
 
-            <Link to={createPageUrl('Home')} className="flex items-center -ml-1 md:ml-0">
-  <h1 className="text-lg sm:text-xl md:text-3xl font-black text-white tracking-tight">
-    FMM <span className="text-white">CLASSICO</span>
-  </h1>
-</Link>
+            <Link to={createPageUrl('Home')} className="flex items-center gap-2 -ml-1 md:ml-0">
+              <span className="flex h-8 w-auto min-w-[32px] items-center justify-center overflow-hidden sm:h-9 md:h-10">
+                <img
+                  src="/logo.png"
+                  alt="FMM CLASSICO logo"
+                  className="block h-full w-auto shrink-0 object-contain"
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              </span>
+              <h1 className="text-lg sm:text-xl md:text-3xl font-black text-white tracking-tight">
+                FMM <span className="text-white">CLASSICO</span>
+              </h1>
+            </Link>
 
           </div>
 
@@ -434,34 +461,41 @@ export default function Layout({ children, currentPageName }) {
                 <span className="text-[10px] font-semibold leading-tight">Help</span>
               </button>
               {helpOpen && (
-                <div className="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 py-2 overflow-hidden">
-                  <p className="text-xs font-bold text-gray-400 uppercase px-4 pt-1 pb-2 tracking-wider">Help Center</p>
-                  <div className="px-4 py-2 text-xs text-gray-600 bg-gray-50 border-b border-gray-100">
-                    <p className="font-semibold text-gray-700 mb-1">👋 Need help?</p>
-                    <p>Browse the guides below or chat with us directly on WhatsApp or our AI Chat.</p>
+                <div className="absolute right-0 top-12 z-50 w-72 overflow-hidden rounded-2xl border border-gray-100 bg-white py-2 shadow-2xl">
+                  <p className="px-4 pt-1 pb-2 text-xs font-bold uppercase tracking-wider text-gray-400">Help Center</p>
+                  <div className="border-b border-gray-100 bg-gray-50 px-4 py-3 text-xs text-gray-600">
+                    <p className="mb-1 font-semibold text-gray-700">Quick help</p>
+                    <p>Review the key store policies, privacy notice and terms before ordering. Need direct help? Contact us first, then continue to live support.</p>
                   </div>
                   {[
                     { label: '🛍️ How to Place an Order', page: 'HowToUse' },
-                    { label: '💳 How to Pay for an Order', page: 'HowToUse' },
                     { label: '📦 Track Your Order', page: 'Orders' },
                     { label: '❌ Cancel an Order', page: 'Orders' },
                     { label: '📄 Store Policies', page: 'Policies' },
-                  ].map(item => (
-                    <Link key={item.page + item.label} to={createPageUrl(item.page)} onClick={() => setHelpOpen(false)}
-                      className="flex items-center px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
+                    { label: '🔒 Privacy Policy', path: '/privacy-policy' },
+                    { label: '📘 Terms of Service', path: '/terms-of-service' },
+                  ].map((item) => (
+                    <Link
+                      key={(item.page || item.path) + item.label}
+                      to={item.path || createPageUrl(item.page)}
+                      onClick={() => setHelpOpen(false)}
+                      className="flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
                       {item.label}
                     </Link>
                   ))}
-                  <div className="border-t my-1" />
-                  <a href="https://wa.me/233208207543" target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2.5 hover:bg-green-50 text-sm text-green-700 font-medium transition-colors">
-                    <svg className="h-4 w-4 fill-green-600" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                    WhatsApp Support
+                  <div className="my-1 border-t" />
+                  <a href="mailto:fmmclassico@gmail.com?subject=FMM%20CLASSICO%20Support" className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50">
+                    ✉️ Contact Us
                   </a>
                   <Link to={createPageUrl('Chat')} onClick={() => setHelpOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
-                    <Bot className="h-4 w-4" /> Live Chat
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                    <Bot className="h-4 w-4" /> Live Support
                   </Link>
+                  <a href="https://wa.me/233208207543" target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-50">
+                    💬 WhatsApp Support
+                  </a>
                 </div>
               )}
             </div>

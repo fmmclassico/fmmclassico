@@ -14,7 +14,7 @@ import { Truck, CreditCard, Loader2, Info, MapPin, AlertTriangle, ShieldCheck } 
 import InlineNotice from '@/components/ui/InlineNotice';
 
 const DELIVERY_ZONES = [
-  { id: 'accra', label: 'Within Accra Delivery', fee: 0.5 },
+  { id: 'accra', label: 'Within Accra Delivery', fee: 30 },
   { id: 'kumasi', label: 'Within Kumasi Delivery', fee: 30 },
   { id: 'umat_doorstep', label: 'UMaT Main Campus – Doorstep Delivery', fee: 10 },
   { id: 'tarkwa', label: 'Approved Tarkwa In-Town Delivery', fee: 25 },
@@ -25,7 +25,7 @@ const DELIVERY_ZONES = [
 const TWO_STAGE_ZONE_IDS = ['accra', 'umat_doorstep', 'tarkwa'];
 const REGION_AREAS = {
   accra: ['accra', 'tema', 'madina', 'east legon', 'spintex', 'adenta', 'ashongman', 'kasoa', 'osu', 'labone', 'cantonments', 'airport', 'circle', 'makola', 'dansoman', 'kaneshie', 'achimota', 'legon', 'teshie', 'nungua', 'labadi', 'korle bu', 'weija', 'gbawe', 'mallam', 'lapaz', 'tesano', 'north kaneshie', 'abeka'],
-  tarkwa: ['tarkwa', 'umat', 'aboso', 'nsuta', 'bogoso', 'prestea', 'huni valley'],
+  tarkwa: ['tarkwa', 'umat', 'tarkwa new site', 'tarkwa old station', 'tamso', 'aboso'],
 };
 
 const HUBTEL_CALLBACK_URL = 'https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback';
@@ -104,13 +104,7 @@ export default function Checkout() {
   const deliveryFee = selectedZone ? selectedZone.fee : 0;
   const isTwoStageZoneEligible = TWO_STAGE_ZONE_IDS.includes(selectedZoneId);
 
-  const locationMismatch = useMemo(() => {
-    const regionGroup = inferRegionGroup(formData.region);
-    const city = String(formData.city || '').toLowerCase().trim();
-    if (!regionGroup || !city) return false;
-    const allowedTowns = REGION_AREAS[regionGroup] || [];
-    return !allowedTowns.some((town) => city.includes(town) || town.includes(city));
-  }, [formData.region, formData.city]);
+  const locationMismatch = false;
 
   const strictTwoStageLocationMatch = useMemo(() => {
     if (!isTwoStageZoneEligible) return false;

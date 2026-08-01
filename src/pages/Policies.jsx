@@ -78,7 +78,7 @@ const DEFAULT_CANCELLATION_POLICY = `Cancellation Policy for FMM CLASSICO
 - Pre-order items: Can be cancelled before shipment date
 - Custom orders: Non-cancellable once production begins`;
 
-const DEFAULT_PRIVACY_POLICY = `Privacy Policy for FMM CLASSICO
+const DEFAULT_PRIVACY_POLICY = `Privacy Policy
 
 1. INFORMATION WE COLLECT
 - Contact details you provide during checkout or account creation, such as your name, phone number and email address
@@ -110,7 +110,7 @@ const DEFAULT_PRIVACY_POLICY = `Privacy Policy for FMM CLASSICO
 7. CONTACT
 - For privacy questions, contact FMM CLASSICO at fmmclassico@gmail.com`;
 
-const DEFAULT_TERMS_OF_SERVICE = `Terms of Service for FMM CLASSICO
+const DEFAULT_TERMS_OF_SERVICE = `Terms of Service
 
 1. ACCEPTANCE OF TERMS
 - By accessing or using FMM CLASSICO, you agree to use the website lawfully and in line with these terms
@@ -160,16 +160,16 @@ const PAGE_CONFIG = {
   },
   privacy: {
     title: 'Privacy Policy',
-    subtitle: 'How FMM CLASSICO collects, uses and protects customer information',
+    subtitle: '',
     sections: [
-      { key: 'privacy_policy', title: 'Privacy Policy' },
+      { key: 'privacy_policy', title: 'How FMM CLASSICO collects, uses and protects customer information' },
     ],
   },
   terms: {
     title: 'Terms of Service',
-    subtitle: 'Terms that apply when using FMM CLASSICO',
+    subtitle: '',
     sections: [
-      { key: 'terms_of_service', title: 'Terms of Service' },
+      { key: 'terms_of_service', title: 'Terms that apply when using FMM CLASSICO' },
     ],
   },
 };
@@ -248,21 +248,30 @@ export default function Policies({ documentType = 'store-policies' }) {
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8">
       <div className="mb-6 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
-          <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-[#2E86C1]/10">
-            <img
-              src="/logo.png"
-              alt="FMM CLASSICO logo"
-              className="h-10 w-auto object-contain"
-              loading="eager"
-              decoding="async"
-            />
-          </span>
-          <div>
-            <p className="text-xs font-bold tracking-[0.22em] text-[#2E86C1]">FMM CLASSICO</p>
-            <h1 className="text-3xl font-black text-gray-900">{pageConfig.title}</h1>
-            <p className="text-sm text-gray-600">{pageConfig.subtitle}</p>
-          </div>
+        <div className="rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+          {documentType === 'store-policies' ? (
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-[#2E86C1]/10">
+                <img
+                  src="/logo.png"
+                  alt="FMM CLASSICO logo"
+                  className="h-10 w-auto object-contain"
+                  loading="eager"
+                  decoding="async"
+                />
+              </span>
+              <div>
+                <p className="text-xs font-bold tracking-[0.22em] text-[#2E86C1]">FMM CLASSICO</p>
+                <h1 className="text-3xl font-black text-gray-900">{pageConfig.title}</h1>
+                {pageConfig.subtitle && <p className="text-sm text-gray-600">{pageConfig.subtitle}</p>}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <h1 className="text-3xl font-black text-gray-900">{pageConfig.title}</h1>
+              {pageConfig.subtitle && <p className="text-sm text-gray-600">{pageConfig.subtitle}</p>}
+            </div>
+          )}
         </div>
         {isAdmin && (
           <Badge className="ml-auto" style={{ background: ASH }}>Admin Access</Badge>

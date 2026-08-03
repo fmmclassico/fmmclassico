@@ -2,6 +2,24 @@
 
 const GUEST_CART_KEY = 'fmm_guest_cart';
 
+function buildItemKey(item = {}) {
+  const existingKey = String(item?.cart_item_key || item?.id || '').trim();
+  if (existingKey) return existingKey;
+
+  const productId = String(item?.product_id || '').trim() || 'guest-item';
+  const signature = String(item?.options_signature || 'default').trim() || 'default';
+  return `${productId}-${signature}`;
+}
+
+function normalizeGuestItem(item = {}) {
+  const cartItemKey = buildItemKey(item);
+  return {
+    ...item,
+    id: cartItemKey,
+    cart_item_key: cartItemKey,
+  };
+}
+
 export const guestCart = {
   /**
    * Get all items in guest cart
@@ -9,7 +27,9 @@ export const guestCart = {
   getItems: () => {
     try {
       const items = localStorage.getItem(GUEST_CART_KEY);
-      return items ? JSON.parse(items) : [];
+      if (!items) return [];
+      const parsed = JSON.parse(items);
+      return Array.isArray(parsed) ? parsed.map(normalizeGuestItem) : [];
     } catch (e) {
       console.error('Failed to load guest cart:', e);
       return [];
@@ -22,20 +42,20 @@ export const guestCart = {
   addItem: (item) => {
     try {
       const items = guestCart.getItems();
-      const existingIndex = items.findIndex(i => i.id === item.id);
-      
+      const normalizedItem = normalizeGuestItem(item);
+      const itemKey = buildItemKey(normalizedItem);
+      const existingIndex = items.findIndex((entry) => buildItemKey(entry) === itemKey);
+
       if (existingIndex >= 0) {
-        // Item already in cart, increase quantity
-        items[existingIndex].quantity = (items[existingIndex].quantity || 1) + (item.quantity || 1);
+        items[existingIndex].quantity = (items[existingIndex].quantity || 1) + (normalizedItem.quantity || 1);
       } else {
-        // New item
         items.push({
-          ...item,
-          quantity: item.quantity || 1,
-          addedAt: new Date().toISOString(),
+          ...normalizedItem,
+          quantity: normalizedItem.quantity || 1,
+          addedAt: normalizedItem.addedAt || new Date().toISOString(),
         });
       }
-      
+
       localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
       guestCart.notifyUpdate();
       return items;
@@ -50,8 +70,13 @@ export const guestCart = {
    */
   removeItem: (itemId) => {
     try {
+      const targetKey = String(itemId || '').trim();
       const items = guestCart.getItems();
-      const filtered = items.filter(i => i.id !== itemId);
+      const filtered = items.filter((item) => {
+        const itemKey = buildItemKey(item);
+        const productId = String(item?.product_id || '').trim();
+        return itemKey !== targetKey && productId !== targetKey;
+      });
       localStorage.setItem(GUEST_CART_KEY, JSON.stringify(filtered));
       guestCart.notifyUpdate();
       return filtered;
@@ -66,12 +91,13 @@ export const guestCart = {
    */
   updateQuantity: (itemId, quantity) => {
     try {
+      const targetKey = String(itemId || '').trim();
       const items = guestCart.getItems();
-      const item = items.find(i => i.id === itemId);
+      const item = items.find((entry) => buildItemKey(entry) === targetKey || String(entry?.product_id || '').trim() === targetKey);
       if (item) {
         item.quantity = Math.max(0, quantity);
         if (item.quantity === 0) {
-          return guestCart.removeItem(itemId);
+          return guestCart.removeItem(targetKey);
         }
         localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
         guestCart.notifyUpdate();
@@ -115,3 +141,4 @@ export const guestCart = {
 };
 
 export default guestCart;
+

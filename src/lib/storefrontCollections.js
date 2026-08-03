@@ -15,8 +15,8 @@ export const CATEGORY_LABELS = {
 
 export const SECTION_CONFIG = {
   'classico-deals': {
-    title: 'Classico Deals',
-    description: 'All products in Classico Deals.',
+    title: 'FMM CLASSICO Deals',
+    description: 'All products in FMM CLASSICO Deals.',
     match: (product) => product.flash_sale === true,
   },
   'donkomi-deals': {
@@ -160,3 +160,4 @@ export function resolveCollectionFromSlug(slug, products = []) {
 
   return null;
 }
+

@@ -1,14 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { uniqueMediaCandidates } from '@/lib/media';
+import { buildSrcSet, getOptimizedMediaUrl, uniqueMediaCandidates } from '@/lib/media';
 
-/**
- * OptimizedImage - Professional image component with:
- * - Shimmer/pulse placeholder while loading
- * - Smooth fade-in when loaded
- * - Lazy loading for off-screen images
- * - Graceful error fallback
- */
-export default function OptimizedImage({
+function OptimizedImage({
   src,
   alt = '',
   className = '',
@@ -19,15 +12,23 @@ export default function OptimizedImage({
   fallbackIcon = null,
   fallbackSrcs = [],
   onLoad: externalOnLoad,
+  sizes,
+  widths = [320, 480, 640, 768, 960, 1200],
+  quality = 70,
+  width,
+  height,
+  imgClassName = '',
 }) {
-  const candidates = useMemo(() => uniqueMediaCandidates([src, ...(Array.isArray(fallbackSrcs) ? fallbackSrcs : [fallbackSrcs])]), [src, fallbackSrcs]);
+  const candidates = useMemo(
+    () => uniqueMediaCandidates([src, ...(Array.isArray(fallbackSrcs) ? fallbackSrcs : [fallbackSrcs])]),
+    [src, fallbackSrcs],
+  );
   const [sourceIndex, setSourceIndex] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
   const imgRef = useRef(null);
   const activeSrc = candidates[sourceIndex] || '';
 
-  // If the image is already cached by the browser, it loads instantly
   useEffect(() => {
     if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
       setLoaded(true);
@@ -39,6 +40,12 @@ export default function OptimizedImage({
     setLoaded(false);
     setError(false);
   }, [candidates.join('||')]);
+
+  const srcSet = useMemo(() => buildSrcSet(activeSrc, widths, { quality }), [activeSrc, widths, quality]);
+  const resolvedSrc = useMemo(
+    () => getOptimizedMediaUrl(activeSrc, { width: priority ? 1200 : 960, quality }),
+    [activeSrc, priority, quality],
+  );
 
   const handleLoad = () => {
     setLoaded(true);
@@ -57,9 +64,9 @@ export default function OptimizedImage({
 
   if (!activeSrc || error) {
     return (
-      <div className={`flex items-center justify-center bg-gray-100 ${containerClassName}`}>
+      <div className={`flex items-center justify-center bg-gray-100 ${containerClassName}`.trim()}>
         {fallbackIcon || (
-          <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="h-8 w-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         )}
@@ -68,26 +75,26 @@ export default function OptimizedImage({
   }
 
   return (
-    <div className={`relative overflow-hidden ${containerClassName}`}>
-      {/* Shimmer placeholder - visible until image loads */}
-      {!loaded && (
-        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-      )}
-
-      {/* Actual image */}
+    <div className={`relative overflow-hidden ${containerClassName}`.trim()}>
+      {!loaded && <div className="absolute inset-0 animate-pulse bg-gray-200" />}
       <img
         ref={imgRef}
-        src={activeSrc}
+        src={resolvedSrc}
+        srcSet={srcSet || undefined}
+        sizes={sizes}
         alt={alt}
+        width={width}
+        height={height}
         loading={priority ? 'eager' : lazy ? 'lazy' : undefined}
+        fetchPriority={priority ? 'high' : undefined}
         decoding="async"
         onLoad={handleLoad}
         onError={handleError}
-        className={`transition-opacity duration-300 ease-in-out ${
-          loaded ? 'opacity-100' : 'opacity-0'
-        } ${className}`}
+        className={`transition-opacity duration-300 ease-in-out ${loaded ? 'opacity-100' : 'opacity-0'} ${className} ${imgClassName}`.trim()}
         style={{ objectFit }}
       />
     </div>
   );
 }
+
+export default React.memo(OptimizedImage);

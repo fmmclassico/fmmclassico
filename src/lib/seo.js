@@ -1,14 +1,15 @@
-const SITE_NAME = 'FMM CLASSICO';
-const SITE_URL = 'https://www.fmmclassico.com';
-const DEFAULT_IMAGE = `${SITE_URL}/logo.png`;
-const DEFAULT_KEYWORDS = 'FMM CLASSICO, FMM, fmm, classico, fedra, fedra martha, FMM Classico, CLASSICO, Classico, fmmclassico, FMM CLASSICO Ghana, phones Ghana, phone accessories Ghana, electronics Ghana, home appliances Ghana, branded products Ghana, online store Ghana, shop in Ghana, phone shop in Ghana, electronics shop in Ghana';
+export const SITE_NAME = 'FMM CLASSICO';
+export const COMPANY_SHORT_DESCRIPTION = 'Your trusted Destination for Quality Products';
+export const SITE_URL = 'https://www.fmmclassico.com';
+export const DEFAULT_IMAGE = `${SITE_URL}/logo.png`;
+const DEFAULT_KEYWORDS = 'FMM CLASSICO, FMM CLASSICO Ghana, phones Ghana, phone accessories Ghana, electronics Ghana, home appliances Ghana, online store Ghana, shop in Ghana, phone shop in Ghana, electronics shop in Ghana';
 const INDEX_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 const NOINDEX_ROBOTS = 'noindex, follow';
 
 const PATH_META = {
   '/': {
     title: 'FMM CLASSICO | Phones, Phone Accessories, Electronics, Home Appliances & Branded Products',
-    description: 'FMM CLASSICO, also known as FMM and Classico, is your trusted destination in Ghana for smartphones, phone accessories, electronics, home appliances and branded products.',
+    description: `FMM CLASSICO — ${COMPANY_SHORT_DESCRIPTION}. Shop smartphones, phone accessories, electronics, home appliances and branded products in Ghana.`,
   },
   '/phones': {
     title: 'Phones | FMM CLASSICO',
@@ -33,12 +34,10 @@ const PATH_META = {
   '/categories': {
     title: 'Shop by Category | FMM CLASSICO',
     description: 'Browse FMM CLASSICO departments for phones, accessories, electronics and home appliances.',
-    robots: NOINDEX_ROBOTS,
   },
   '/about': {
     title: 'About FMM CLASSICO',
-    description: 'Learn more about FMM CLASSICO, our stores and how we serve shoppers across Ghana.',
-    robots: NOINDEX_ROBOTS,
+    description: `Learn more about FMM CLASSICO and ${COMPANY_SHORT_DESCRIPTION.toLowerCase()}.`,
   },
   '/allbrands': {
     title: 'All Brands | FMM CLASSICO',
@@ -72,9 +71,6 @@ const NOINDEX_PATHS = new Set([
   '/reset-password',
   '/brandproducts',
   '/home',
-  '/about',
-  '/categories',
-  '/policies',
   '/downloadapp',
   '/mobileappguide',
   '/feedback',
@@ -116,6 +112,83 @@ function setCanonical(pathname) {
   canonical.href = `${SITE_URL}${canonicalPath}`;
 }
 
+function structuredDataForPath(pathname = '/', search = '') {
+  const meta = buildSeoMetadata(pathname, search);
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: `${SITE_URL}/`,
+      logo: {
+        '@type': 'ImageObject',
+        url: DEFAULT_IMAGE,
+      },
+      description: COMPANY_SHORT_DESCRIPTION,
+      contactPoint: {
+        '@type': 'ContactPoint',
+        telephone: '+233208207543',
+        contactType: 'customer service',
+        email: 'fmmclassico@gmail.com',
+        availableLanguage: ['English'],
+      },
+      sameAs: [
+        'https://instagram.com/fmmclassico',
+        'https://tiktok.com/@fmmclassico',
+        'https://youtube.com/@fmmclassico',
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': ['OnlineStore', 'Store'],
+      '@id': `${SITE_URL}/#store`,
+      name: SITE_NAME,
+      url: `${SITE_URL}/`,
+      image: DEFAULT_IMAGE,
+      description: COMPANY_SHORT_DESCRIPTION,
+      telephone: '+233208207543',
+      email: 'fmmclassico@gmail.com',
+      priceRange: 'GH₵',
+      currenciesAccepted: 'GHS',
+      paymentAccepted: 'Mobile Money, Card Payment, Online Payment',
+      areaServed: [
+        { '@type': 'City', name: 'Accra' },
+        { '@type': 'City', name: 'Kumasi' },
+        { '@type': 'City', name: 'Tarkwa' },
+        { '@type': 'Country', name: 'Ghana' },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: `${SITE_URL}/`,
+      name: SITE_NAME,
+      description: COMPANY_SHORT_DESCRIPTION,
+      publisher: { '@id': `${SITE_URL}/#organization` },
+      inLanguage: 'en-GH',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: `${SITE_URL}/shop?search={search_term_string}`,
+        },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      '@id': `${SITE_URL}${meta.canonicalPath || pathname || '/'}#webpage`,
+      name: meta.title,
+      description: meta.description,
+      url: `${SITE_URL}${meta.canonicalPath || pathname || '/'}`,
+      isPartOf: { '@id': `${SITE_URL}/#website` },
+    },
+  ];
+}
+
 export function buildSeoMetadata(pathname = '/', search = '') {
   const safePath = pathname || '/';
   const lowerPath = safePath.toLowerCase();
@@ -136,7 +209,7 @@ export function buildSeoMetadata(pathname = '/', search = '') {
     };
   }
 
-  if (lowerPath === '/shop' || lowerPath === '/search') {
+  if (lowerPath === '/shop') {
     const titlePart = subcategory
       ? decodeURIComponent(subcategory)
       : category
@@ -148,6 +221,15 @@ export function buildSeoMetadata(pathname = '/', search = '') {
     return {
       title: `${titlePart} | ${SITE_NAME}`,
       description: `Browse ${titlePart.toLowerCase()} products from FMM CLASSICO Ghana.`,
+      canonicalPath: fullPath,
+      robots: searchTerm || category || subcategory ? NOINDEX_ROBOTS : INDEX_ROBOTS,
+    };
+  }
+
+  if (lowerPath === '/search') {
+    return {
+      title: `Search | ${SITE_NAME}`,
+      description: `Search products at ${SITE_NAME}.`,
       canonicalPath: fullPath,
       robots: NOINDEX_ROBOTS,
     };
@@ -193,9 +275,22 @@ export function applySeoMetadata(meta = {}) {
   setMeta('property', 'og:url', `${SITE_URL}${canonicalPath}`);
   setMeta('property', 'og:image', DEFAULT_IMAGE);
   setMeta('property', 'og:image:alt', 'FMM CLASSICO logo');
+  setMeta('property', 'og:locale', 'en_GH');
   setMeta('name', 'twitter:card', 'summary_large_image');
   setMeta('name', 'twitter:title', title);
   setMeta('name', 'twitter:description', description);
   setMeta('name', 'twitter:image', DEFAULT_IMAGE);
   setCanonical(canonicalPath);
 }
+
+export function applyStructuredData(pathname = '/', search = '') {
+  let script = document.querySelector('#fmm-structured-data');
+  if (!script) {
+    script = document.createElement('script');
+    script.id = 'fmm-structured-data';
+    script.type = 'application/ld+json';
+    document.head.appendChild(script);
+  }
+  script.textContent = JSON.stringify(structuredDataForPath(pathname, search));
+}
+

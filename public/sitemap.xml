@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://www.fmmclassico.com/</loc></url>
+  <url><loc>https://www.fmmclassico.com/shop</loc></url>
+  <url><loc>https://www.fmmclassico.com/categories</loc></url>
+  <url><loc>https://www.fmmclassico.com/brands</loc></url>
+  <url><loc>https://www.fmmclassico.com/about</loc></url>
   <url><loc>https://www.fmmclassico.com/phones</loc></url>
   <url><loc>https://www.fmmclassico.com/phone-accessories</loc></url>
   <url><loc>https://www.fmmclassico.com/electronics</loc></url>
@@ -8,4 +12,3 @@
   <url><loc>https://www.fmmclassico.com/privacy-policy</loc></url>
   <url><loc>https://www.fmmclassico.com/terms-of-service</loc></url>
 </urlset>
-

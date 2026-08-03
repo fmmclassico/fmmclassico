@@ -51,7 +51,7 @@ export default function Cart() {
         }
       } else {
         const newQty = (item.quantity || 1) + delta;
-        guestCart.updateQuantity(item.product_id || item.id, newQty);
+        guestCart.updateQuantity(item.id, newQty);
         setGuestItems(guestCart.getItems());
       }
     },
@@ -65,7 +65,7 @@ export default function Cart() {
       if (user) {
         await appClient.entities.CartItem.delete(item.id);
       } else {
-        guestCart.removeItem(item.product_id || item.id);
+        guestCart.removeItem(item.id);
         setGuestItems(guestCart.getItems());
       }
     },
@@ -175,3 +175,4 @@ export default function Cart() {
     </div>
   );
 }
+

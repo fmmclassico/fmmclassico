@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/lib/AuthContext';
 import guestCart from '@/lib/guest-cart';
-import { applySeoMetadata, buildSeoMetadata } from '@/lib/seo';
+import { applySeoMetadata, applyStructuredData, buildSeoMetadata } from '@/lib/seo';
 
 export default function GuestLayout({ children, currentPageName }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,6 +85,7 @@ export default function GuestLayout({ children, currentPageName }) {
 
   useEffect(() => {
     applySeoMetadata(buildSeoMetadata(location.pathname, location.search));
+    applyStructuredData(location.pathname, location.search);
   }, [location.pathname, location.search]);
 
   return (
@@ -93,18 +94,16 @@ export default function GuestLayout({ children, currentPageName }) {
         <div className="w-full px-4 md:px-8 xl:px-[2cm]">
           <div className="flex items-center justify-between h-16 gap-2">
             <Link to={createPageUrl('Home')} className="flex items-center gap-2 flex-shrink-0 -ml-1 md:ml-0">
-              {isGuestHomepage && (
-                <span className="flex h-8 w-auto min-w-[32px] items-center justify-center overflow-hidden sm:h-9 md:h-10">
-                  <img
-                    src="/logo.png"
-                    alt="FMM CLASSICO logo"
-                    className="block h-full w-auto shrink-0 object-contain"
-                    loading="eager"
-                    fetchPriority="high"
-                    decoding="async"
-                  />
-                </span>
-              )}
+              <span className="flex h-8 w-auto min-w-[32px] items-center justify-center overflow-hidden sm:h-9 md:h-10">
+                <img
+                  src="/logo.png"
+                  alt="FMM CLASSICO logo"
+                  className="block h-full w-auto shrink-0 object-contain"
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              </span>
               <h1 className="text-lg sm:text-xl md:text-3xl font-black text-white tracking-tight">
                 FMM <span className="text-white">CLASSICO</span>
               </h1>
@@ -313,3 +312,4 @@ export default function GuestLayout({ children, currentPageName }) {
     </div>
   );
 }
+

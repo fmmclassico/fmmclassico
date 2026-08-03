@@ -12,21 +12,22 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Truck, CreditCard, Loader2, Info, MapPin, AlertTriangle, ShieldCheck } from 'lucide-react';
 import InlineNotice from '@/components/ui/InlineNotice';
+import {
+  getAllowedDeliveryZoneIds,
+  isTwoStagePaymentEligibleForZone,
+  validateGhanaLocationPair,
+} from '@/lib/ghanaLocations';
 
 const DELIVERY_ZONES = [
   { id: 'accra', label: 'Within Accra Delivery', fee: 30 },
   { id: 'kumasi', label: 'Within Kumasi Delivery', fee: 30 },
   { id: 'umat_doorstep', label: 'UMaT Main Campus – Doorstep Delivery', fee: 10 },
   { id: 'tarkwa', label: 'Approved Tarkwa In-Town Delivery', fee: 25 },
-  { id: 'outside', label: 'Outside Accra, Tarkwa & Kumasi', fee: 50 },
+  { id: 'outside', label: 'Outside Kumasi, Accra & Tarkwa', fee: 50 },
   { id: 'bus_station', label: 'Delivery to Bus Stations', fee: 25 },
 ];
 
-const TWO_STAGE_ZONE_IDS = ['accra', 'umat_doorstep', 'tarkwa'];
-const REGION_AREAS = {
-  accra: ['accra', 'tema', 'madina', 'east legon', 'spintex', 'adenta', 'ashongman', 'kasoa', 'osu', 'labone', 'cantonments', 'airport', 'circle', 'makola', 'dansoman', 'kaneshie', 'achimota', 'legon', 'teshie', 'nungua', 'labadi', 'korle bu', 'weija', 'gbawe', 'mallam', 'lapaz', 'tesano', 'north kaneshie', 'abeka'],
-  tarkwa: ['tarkwa', 'umat', 'tarkwa new site', 'tarkwa old station', 'tamso', 'aboso'],
-};
+const TWO_STAGE_ZONE_IDS = ['accra', 'kumasi', 'umat_doorstep', 'tarkwa'];
 
 const HUBTEL_CALLBACK_URL = 'https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback';
 
@@ -48,14 +49,6 @@ function formatVariantSummary(item) {
   if (item?.selected_wattage) parts.push(`Wattage: ${item.selected_wattage}`);
   if (item?.selected_type) parts.push(`Type: ${item.selected_type}`);
   return parts.join(' • ');
-}
-
-function inferRegionGroup(region) {
-  const normalized = String(region || '').toLowerCase().trim();
-  if (normalized.includes('accra')) return 'accra';
-  if (normalized.includes('tarkwa') || normalized.includes('western')) return 'tarkwa';
-  if (normalized.includes('kumasi') || normalized.includes('ashanti')) return 'kumasi';
-  return null;
 }
 
 export default function Checkout() {
@@ -100,30 +93,43 @@ export default function Checkout() {
 
   const safeCartItems = ensureArray(cartItems);
   const subtotal = useMemo(() => safeCartItems.reduce((sum, item) => sum + (toNumber(item.product_price) * toNumber(item.quantity, 1)), 0), [safeCartItems]);
+  const locationValidation = useMemo(() => validateGhanaLocationPair({
+    regionInput: formData.region,
+    cityInput: formData.city,
+  }), [formData.region, formData.city]);
+
+  const allowedZoneIds = useMemo(() => getAllowedDeliveryZoneIds({
+    regionInput: formData.region,
+    cityInput: formData.city,
+    addressInput: formData.delivery_address,
+    landmarkInput: formData.delivery_landmark,
+  }), [formData.region, formData.city, formData.delivery_address, formData.delivery_landmark]);
+
+  const availableDeliveryZones = useMemo(() => DELIVERY_ZONES.filter((zone) => allowedZoneIds.includes(zone.id)), [allowedZoneIds]);
   const selectedZone = DELIVERY_ZONES.find((zone) => zone.id === selectedZoneId);
   const deliveryFee = selectedZone ? selectedZone.fee : 0;
   const isTwoStageZoneEligible = TWO_STAGE_ZONE_IDS.includes(selectedZoneId);
 
-  const locationMismatch = false;
+  const locationMismatch = locationValidation.isReady && !locationValidation.isValid;
 
   const strictTwoStageLocationMatch = useMemo(() => {
     if (!isTwoStageZoneEligible) return false;
-    const regionGroup = inferRegionGroup(formData.region);
-    const city = String(formData.city || '').toLowerCase().trim();
-    const landmark = String(formData.delivery_landmark || '').trim();
-    const address = String(formData.delivery_address || '').trim();
-    if (!regionGroup || !city || !landmark || !address) return false;
-    if (selectedZoneId === 'accra') {
-      return regionGroup === 'accra' && REGION_AREAS.accra.some((town) => city.includes(town) || town.includes(city));
-    }
-    if (selectedZoneId === 'umat_doorstep') {
-      return regionGroup === 'tarkwa' && (city.includes('umat') || city.includes('tarkwa'));
-    }
-    if (selectedZoneId === 'tarkwa') {
-      return regionGroup === 'tarkwa' && REGION_AREAS.tarkwa.some((town) => city.includes(town) || town.includes(city));
-    }
-    return false;
+    return isTwoStagePaymentEligibleForZone(selectedZoneId, {
+      regionInput: formData.region,
+      cityInput: formData.city,
+      addressInput: formData.delivery_address,
+      landmarkInput: formData.delivery_landmark,
+    });
   }, [selectedZoneId, isTwoStageZoneEligible, formData]);
+
+  useEffect(() => {
+    if (selectedZoneId && !allowedZoneIds.includes(selectedZoneId)) {
+      setSelectedZoneId('');
+      setPaymentMethod('');
+      setDepositWarningAccepted(false);
+      setPodWarningAccepted(false);
+    }
+  }, [allowedZoneIds, selectedZoneId]);
 
   const requiresTermsAcceptance = paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery';
   const termsAccepted = paymentMethod === 'deposit_balance'
@@ -190,12 +196,12 @@ export default function Checkout() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
-    if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !formData.delivery_landmark || !formData.region || !formData.city) {
-      showFeedback('error', 'Please fill in all required delivery fields, including a landmark.', 'Complete the form');
+    if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !formData.region || !formData.city) {
+      showFeedback('error', 'Please fill in all required delivery fields before continuing.', 'Complete the form');
       return;
     }
-    if (locationMismatch) {
-      showFeedback('error', 'Your region and city or town do not match. Please correct them before continuing.', 'Address check');
+    if (!locationValidation.isValid) {
+      showFeedback('error', locationValidation.message || 'Please enter a valid Ghana Region and City/Town combination before continuing.', 'Address check');
       return;
     }
     if (!selectedZoneId) {
@@ -207,7 +213,7 @@ export default function Checkout() {
       return;
     }
     if ((paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery') && !strictTwoStageLocationMatch) {
-      showFeedback('warning', 'Deposit and pay-on-delivery are only available for approved Accra and Tarkwa addresses. Use the full online payment option if your address does not qualify.', 'Delivery restriction');
+      showFeedback('warning', 'Deposit and pay-on-delivery are only available for approved Accra, Kumasi and Tarkwa addresses. Use the full online payment option if your address does not qualify.', 'Delivery restriction');
       return;
     }
     if (paymentMethod === 'deposit_balance' && !depositWarningAccepted) {
@@ -417,22 +423,22 @@ export default function Checkout() {
                 <Input name="delivery_address" value={formData.delivery_address} onChange={handleInputChange} placeholder="House number, street name, area" required className="mt-1" />
               </div>
               <div>
-                <Label className="text-sm font-medium">Nearest Landmark *</Label>
-                <Input name="delivery_landmark" value={formData.delivery_landmark} onChange={handleInputChange} placeholder="Nearest landmark or reference point" required className="mt-1" />
+                <Label className="text-sm font-medium">Nearest Landmark <span className="text-gray-400">(Optional)</span></Label>
+                <Input name="delivery_landmark" value={formData.delivery_landmark} onChange={handleInputChange} placeholder="Nearest landmark or reference point" className="mt-1" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-sm font-medium">Region *</Label>
-                  <Input name="region" value={formData.region} onChange={handleInputChange} required className={`mt-1 ${locationMismatch ? 'border-red-500 ring-1 ring-red-500' : ''}`} />
+                  <Input name="region" value={formData.region} onChange={handleInputChange} placeholder="e.g. Greater Accra, Accra, Ashanti or Kumasi" required className={`mt-1 ${locationMismatch ? 'border-red-500 ring-1 ring-red-500' : ''}`} />
                 </div>
                 <div>
                   <Label className="text-sm font-medium">City/Town *</Label>
-                  <Input name="city" value={formData.city} onChange={handleInputChange} required className={`mt-1 ${locationMismatch ? 'border-red-500 ring-1 ring-red-500' : ''}`} />
+                  <Input name="city" value={formData.city} onChange={handleInputChange} placeholder="e.g. East Legon, Madina, Manhyia or Abuakwa" required className={`mt-1 ${locationMismatch ? 'border-red-500 ring-1 ring-red-500' : ''}`} />
                 </div>
               </div>
-              {locationMismatch && (
-                <p className="text-xs text-red-600 flex items-center gap-1 font-medium">
-                  <AlertTriangle className="h-3 w-3" /> Region and City/Town do not match. Please correct.
+              {locationValidation.isReady && (
+                <p className={`text-xs flex items-center gap-1 font-medium ${locationValidation.isValid ? 'text-green-600' : 'text-red-600'}`}>
+                  <AlertTriangle className="h-3 w-3" /> {locationValidation.message}
                 </p>
               )}
               <div>
@@ -452,19 +458,23 @@ export default function Checkout() {
             <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Truck className="h-5 w-5 text-blue-600" /> Delivery Method
             </h2>
-            <Select value={selectedZoneId} onValueChange={(value) => { setSelectedZoneId(value); setPaymentMethod(''); setDepositWarningAccepted(false); setPodWarningAccepted(false); }}>
+            <Select value={selectedZoneId} onValueChange={(value) => { setSelectedZoneId(value); setPaymentMethod(''); setDepositWarningAccepted(false); setPodWarningAccepted(false); }} disabled={!locationValidation.isValid}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select delivery method" />
+                <SelectValue placeholder={locationValidation.isValid ? 'Select delivery method' : 'Enter a valid Ghana location first'} />
               </SelectTrigger>
               <SelectContent>
-                {DELIVERY_ZONES.map((zone) => (
+                {availableDeliveryZones.map((zone) => (
                   <SelectItem key={zone.id} value={zone.id}>
                     {zone.label} — ₵{zone.fee}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {selectedZone && <p className="text-xs text-blue-600 mt-2 font-medium">Delivery fee: ₵{deliveryFee.toFixed(2)}</p>}
+            {!locationValidation.isValid && <p className="text-xs text-gray-500 mt-2">Available delivery methods will appear automatically after the Region and City/Town are validated.</p>}
+            {locationValidation.isValid && selectedZone && <p className="text-xs text-blue-600 mt-2 font-medium">Delivery fee: ₵{deliveryFee.toFixed(2)}</p>}
+            {locationValidation.isValid && availableDeliveryZones.length > 0 && availableDeliveryZones.every((zone) => zone.id === 'outside' || zone.id === 'bus_station') && (
+              <p className="text-xs text-amber-700 mt-2">This validated address is outside the local Accra, Kumasi and Tarkwa delivery areas, so only outside-area and bus-station delivery options are available.</p>
+            )}
           </Card>
 
           {selectedZoneId && (
@@ -485,13 +495,13 @@ export default function Checkout() {
 
               {!isTwoStageZoneEligible && (
                 <p className="text-xs text-gray-500 mt-2">
-                  Deposit and Pay on Delivery are only available in Accra and Tarkwa. Please use the first option.
+                  Deposit and Pay on Delivery are only available in approved Accra, Kumasi and Tarkwa service areas. Please use the first option.
                 </p>
               )}
 
               {isTwoStageZoneEligible && !strictTwoStageLocationMatch && paymentMethod !== 'full_payment' && (
                 <p className="text-xs text-amber-700 mt-2 flex items-center gap-1">
-                  <Info className="h-3 w-3" /> Deposit and Pay on Delivery are only available in Accra and Tarkwa. Please use the first option if your address does not qualify.
+                  <Info className="h-3 w-3" /> Deposit and Pay on Delivery are only available in approved Accra, Kumasi and Tarkwa service areas. Please use the first option if your address does not qualify.
                 </p>
               )}
 
@@ -598,3 +608,4 @@ export default function Checkout() {
     </div>
   );
 }
+

@@ -14,6 +14,7 @@ import ReviewSection from '@/components/products/ReviewSection';
 import { motion, AnimatePresence } from 'framer-motion';
 import InlineNotice from '@/components/ui/InlineNotice';
 import { normalizeMediaUrl } from '@/lib/media';
+import { calculateReviewStats, getApprovedReviews } from '@/lib/reviews';
 
 const categoryNames = {
   phone_cases: 'Phone Cases',
@@ -155,12 +156,23 @@ export default function ProductDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const productId = urlParams.get('id');
 
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => appClient.entities.Product.list(),
+  const { data: product = null, isLoading } = useQuery({
+    queryKey: ['product', productId],
+    queryFn: async () => {
+      const result = await appClient.entities.Product.filter({ id: productId }, '-created_date', 1);
+      const records = Array.isArray(result) ? result : result?.data || [];
+      return records[0] || null;
+    },
+    enabled: !!productId,
+    staleTime: 60 * 1000,
   });
 
-  const product = products.find((item) => item.id === productId);
+  const { data: reviewSummary = { average: 0, count: 0 } } = useQuery({
+    queryKey: ['product-review-summary', productId],
+    queryFn: async () => calculateReviewStats(await getApprovedReviews(productId)),
+    enabled: !!productId,
+    staleTime: 60 * 1000,
+  });
   const galleryItems = useMemo(() => buildGalleryItems(product), [product]);
   const variantPayload = useMemo(() => buildVariantPayload({ selectedColor, selectedWattage, selectedType }), [selectedColor, selectedWattage, selectedType]);
 
@@ -485,10 +497,10 @@ export default function ProductDetail() {
             <div className="flex items-center gap-1.5">
               <div className="flex items-center">
                 {[1, 2, 3, 4, 5].map((index) => (
-                  <Star key={index} className={`h-3.5 w-3.5 ${index <= (product.rating || 4) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                  <Star key={index} className={`h-3.5 w-3.5 ${index <= Math.round(Number(reviewSummary.average || product.rating || 0)) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
                 ))}
               </div>
-              <span className="text-gray-500 text-xs">({product.reviews_count || 0} reviews)</span>
+              <span className="text-gray-500 text-xs">({reviewSummary.count || 0} reviews)</span>
             </div>
           </div>
 

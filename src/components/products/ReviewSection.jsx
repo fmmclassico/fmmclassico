@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { appClient } from '@/api/appClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -24,19 +24,20 @@ const MODERATION_KEYWORDS = [
   'very bad',
 ];
 
-function hasDeliveredPurchase(orders = [], productId = '') {
-  return (Array.isArray(orders) ? orders : []).some((order) => {
-    const status = String(order?.status || '').toLowerCase();
-    if (status !== 'delivered') return false;
-
-    const items = Array.isArray(order?.items) ? order.items : [];
-    return items.some((item) => String(item?.product_id || '') === String(productId));
-  });
-}
+const INELIGIBLE_REVIEW_MESSAGE = 'Kindly purchase this product and leave a review after you receive it.';
 
 function requiresManualApproval(comment = '', rating = 0) {
   const normalizedComment = String(comment || '').trim().toLowerCase();
   return Number(rating) <= 2 || MODERATION_KEYWORDS.some((keyword) => normalizedComment.includes(keyword));
+}
+
+function getReviewErrorMessage(error) {
+  const message = String(error?.message || '').trim();
+  if (!message) return 'Failed to submit review. Please try again.';
+  if (/purchase this product|leave a review after you receive it|delivered order/i.test(message)) {
+    return INELIGIBLE_REVIEW_MESSAGE;
+  }
+  return message;
 }
 
 export default function ReviewSection({ product, user }) {
@@ -64,32 +65,13 @@ export default function ReviewSection({ product, user }) {
     },
   });
 
-  const { data: customerOrders = [] } = useQuery({
-    queryKey: ['reviewEligibleOrders', user?.email],
-    queryFn: async () => {
-      if (!user?.email) return [];
-      const result = await appClient.entities.Order.filter({ customer_email: user.email }, '-created_date', 200);
-      return Array.isArray(result) ? result : result?.data || [];
-    },
-    enabled: !!user?.email,
-  });
-
   const autoApprove = settings.find((setting) => setting.key === 'auto_approve_reviews')?.value === 'true';
-
-  const verifiedPurchase = useMemo(() => {
-    if (!user?.email || !product?.id) return false;
-    return hasDeliveredPurchase(customerOrders, product.id);
-  }, [customerOrders, product?.id, user?.email]);
 
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!user) {
         appClient.auth.redirectToLogin(window.location.href);
         return { redirected: true };
-      }
-
-      if (!verifiedPurchase) {
-        throw new Error('Only customers who have bought and received this product can post a review.');
       }
 
       const needsApproval = requiresManualApproval(comment, rating);
@@ -112,7 +94,7 @@ export default function ReviewSection({ product, user }) {
       if (result?.needsApproval) {
         toast.success('Review submitted for admin approval before it goes live.');
       } else if (autoApprove) {
-        toast.success('Verified review posted successfully!');
+        toast.success('Review submitted successfully!');
       } else {
         toast.success('Review submitted! It will appear after admin approval.');
       }
@@ -125,7 +107,7 @@ export default function ReviewSection({ product, user }) {
     },
     onError: (error) => {
       console.error('Review submit error:', error);
-      toast.error(error?.message || 'Failed to submit review. Please try again.');
+      toast.error(getReviewErrorMessage(error));
     }
   });
 
@@ -138,11 +120,6 @@ export default function ReviewSection({ product, user }) {
   const handleReviewToggle = () => {
     if (!user) {
       appClient.auth.redirectToLogin(window.location.href);
-      return;
-    }
-
-    if (!verifiedPurchase) {
-      toast.error('Only customers with a delivered order for this product can post a review.');
       return;
     }
 
@@ -171,18 +148,12 @@ export default function ReviewSection({ product, user }) {
             </Button>
           )}
           <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={handleReviewToggle}>
-            {!user ? 'Sign in to Review' : verifiedPurchase ? (showForm ? 'Cancel' : 'Write a Review') : 'Verified Buyers Only'}
+            {showForm ? 'Cancel' : 'Write a Review'}
           </Button>
         </div>
       </div>
 
-      {user && !verifiedPurchase && (
-        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Only customers with a delivered order for this product can post a review. Reviews from verified buyers show a <span className="font-semibold">Verified</span> badge.
-        </div>
-      )}
-
-      {showForm && user && verifiedPurchase && (
+      {showForm && user && (
         <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3">
           <div>
             <p className="text-sm font-medium mb-1">Your Rating</p>
@@ -210,9 +181,6 @@ export default function ReviewSection({ product, user }) {
             onChange={(event) => setComment(event.target.value)}
             rows={3}
           />
-          <p className="text-xs text-gray-500">
-            Verified reviews can go live automatically when auto-approve is on. Low-rated or strongly negative reviews will stay pending for admin approval first.
-          </p>
           <Button
             type="button"
             onClick={() => submitMutation.mutate()}
@@ -249,3 +217,4 @@ export default function ReviewSection({ product, user }) {
     </div>
   );
 }
+

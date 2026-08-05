@@ -454,282 +454,460 @@ onProductMapped={handleImportedProduct}
               <Input value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} placeholder="e.g. iPhone 14 Pro Max" />
             </div>
 
-    <div>
+   {/* CATEGORY INTELLIGENCE SECTION */}
 
-<Label>
-Main Group *
+<div>
+  <Label>
+    Main Group *
 
-{importMode && (
-<span className="ml-2 text-xs text-green-600">
-✓ Automatically detected
-</span>
-)}
+    {importMode && (
+      <span className="ml-2 text-xs text-green-600">
+        ✓ Auto detected from Excel
+      </span>
+    )}
 
-</Label>
-
-
-{importMode ? (
-
-<Input
-value={form.main_group || ""}
-readOnly
-className="bg-green-50"
-/>
+  </Label>
 
 
-) : (
+  {importMode ? (
 
-<Select
+    <Input
+      value={form.main_group || ""}
+      readOnly
+      className="bg-green-50"
+    />
 
-value={form.main_group}
+  ) : (
 
-onValueChange={(value)=>
+    <Select
 
-setForm(current=>({
+      value={form.main_group || ""}
 
-...current,
+      onValueChange={(value)=>
+        setForm((current)=>({
 
-main_group:value,
+          ...current,
 
-category:'',
-brand:'',
-subcategory:''
+          main_group:value,
 
-}))
+          category:"",
+          brand:"",
+          subcategory:"",
 
-}
+          custom_brand:"",
+          custom_subcategory:""
 
->
+        }))
+      }
 
-<SelectTrigger>
-<SelectValue placeholder="Select main group"/>
-</SelectTrigger>
+    >
+
+      <SelectTrigger>
+        <SelectValue placeholder="Select main group" />
+      </SelectTrigger>
 
 
-<SelectContent>
+      <SelectContent>
 
-{MAIN_CATEGORY_GROUPS.map(group=>(
+        {MAIN_CATEGORY_GROUPS.map((group)=>(
 
-<SelectItem
+          <SelectItem
 
-key={group.id}
+            key={group.id}
 
-value={group.id}
+            value={group.id}
 
->
+          >
 
-{group.label}
+            {group.label}
 
-</SelectItem>
+          </SelectItem>
 
-))}
+        ))}
 
-</SelectContent>
+      </SelectContent>
 
-</Select>
 
-)}
+    </Select>
+
+  )}
 
 </div>
 
-            <div>
-              <Label>
-Category *
 
-{importMode && (
-<span className="ml-2 text-xs text-green-600">
-✓ Auto detected from Excel
-</span>
-)}
 
-</Label>
-{importMode ? (
+<div>
 
-<Input
+  <Label>
 
-value={form.category || ""}
+    Category *
 
-readOnly
+    {importMode && (
+      <span className="ml-2 text-xs text-green-600">
+        ✓ Auto detected from Excel
+      </span>
+    )}
 
-className="bg-green-50"
+  </Label>
 
-/>
 
 
-) : (
+  {importMode ? (
 
-<Select
+    <Input
 
-value={form.category}
+      value={form.category || ""}
 
-onValueChange={(value)=>
+      readOnly
 
-setForm(current=>({
+      className="bg-green-50"
 
-...current,
+    />
 
-category:value,
+  ) : (
 
-brand:'',
+    <Select
 
-subcategory:''
+      value={form.category || ""}
 
-}))
 
-}
+      onValueChange={(value)=>
 
-disabled={!form.main_group}
+        setForm((current)=>({
 
->
+          ...current,
 
+          category:value,
 
-<SelectTrigger>
+          brand:"",
+          subcategory:"",
 
-<SelectValue placeholder="Select category"/>
+          custom_brand:"",
+          custom_subcategory:""
 
-</SelectTrigger>
+        }))
 
+      }
 
-<SelectContent>
 
-{(GROUP_CATEGORIES[form.main_group] || []).map(category=>(
+      disabled={!form.main_group}
 
-<SelectItem
+    >
 
-key={category.value}
+      <SelectTrigger>
 
-value={category.value}
+        <SelectValue
 
->
+          placeholder={
+            form.main_group
+            ?
+            "Select category"
+            :
+            "Select main group first"
+          }
 
-{category.label}
+        />
 
-</SelectItem>
+      </SelectTrigger>
 
-))}
 
-</SelectContent>
+      <SelectContent>
 
 
-</Select>
+        {(GROUP_CATEGORIES[form.main_group] || [])
+          .map((category)=>(
 
-)}
-                </SelectContent>
-              </Select>
-            </div>
 
-            <div>
-              <Label>
-Brand *
+          <SelectItem
 
-{importMode && (
-<span className="ml-2 text-xs text-green-600">
-✓ Auto detected from Excel
-</span>
-)}
+            key={category.value}
 
-</Label>
-              <Select
-                value={form.brand}
-                onValueChange={(value) => setForm((current) => ({ ...current, brand: value, custom_brand: '', subcategory: '', custom_subcategory: '' }))}
-                disabled={!form.category}
-              >
-                <SelectTrigger><SelectValue placeholder={form.category ? 'Select brand' : 'Select category first'} /></SelectTrigger>
-                <SelectContent>
-                  {(GROUP_BRANDS[form.main_group] || []).map((brand) => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {form.brand === 'Other (type below)' && (
-                <Input
-                  className="mt-2"
-                  placeholder="Type your brand name..."
-                  value={form.custom_brand}
-                  onChange={(e) => setForm((current) => ({ ...current, custom_brand: e.target.value }))}
-                />
-              )}
-            </div>
+            value={category.value}
 
-            <div>
-              <Label>
+          >
 
-Product Type / Subcategory
+            {category.label}
 
-{importMode && (
-<span className="ml-2 text-xs text-green-600">
-✓ Auto detected from Excel
-</span>
-)}
+          </SelectItem>
 
-</Label>
-              {importMode ? (
 
-<Input
+        ))}
 
-value={form.subcategory || ""}
 
-readOnly
+      </SelectContent>
 
-className="bg-green-50"
 
-/>
+    </Select>
 
+  )}
 
-) : (
+</div>
 
-<Select
 
-value={form.subcategory}
 
-onValueChange={(value)=>
 
-setForm(current=>({
+<div>
 
-...current,
+  <Label>
 
-subcategory:value
+    Brand *
 
-}))
+    {importMode && (
+      <span className="ml-2 text-xs text-green-600">
+        ✓ Auto detected from Excel
+      </span>
+    )}
 
-}
+  </Label>
 
-disabled={!form.category}
 
->
 
+  {importMode ? (
 
-<SelectTrigger>
+    <Input
 
-<SelectValue placeholder="Select product type"/>
+      value={form.brand || ""}
 
-</SelectTrigger>
+      readOnly
 
+      className="bg-green-50"
 
-<SelectContent>
+    />
 
-{availableSubcategories.map(item=>(
+  ) : (
 
-<SelectItem
+    <Select
 
-key={item}
 
-value={item}
+      value={form.brand || ""}
 
->
 
-{item}
+      onValueChange={(value)=>
 
-</SelectItem>
+        setForm((current)=>({
 
-))}
+          ...current,
 
+          brand:value,
 
-</SelectContent>
+          custom_brand:""
 
+        }))
 
-</Select>
+      }
 
-)}
-            </div>
+
+      disabled={!form.category}
+
+    >
+
+      <SelectTrigger>
+
+        <SelectValue
+
+          placeholder={
+            form.category
+            ?
+            "Select brand"
+            :
+            "Select category first"
+          }
+
+        />
+
+      </SelectTrigger>
+
+
+
+      <SelectContent>
+
+
+        {(GROUP_BRANDS[form.main_group] || [])
+          .map((brand)=>(
+
+
+          <SelectItem
+
+            key={brand}
+
+            value={brand}
+
+          >
+
+            {brand}
+
+          </SelectItem>
+
+
+        ))}
+
+
+      </SelectContent>
+
+
+    </Select>
+
+
+  )}
+
+
+
+</div>
+
+
+
+
+
+<div>
+
+  <Label>
+
+    Product Type / Subcategory *
+
+    {importMode && (
+      <span className="ml-2 text-xs text-green-600">
+        ✓ Auto detected from Excel
+      </span>
+    )}
+
+  </Label>
+
+
+
+
+  {importMode ? (
+
+    <Input
+
+      value={form.subcategory || ""}
+
+      readOnly
+
+      className="bg-green-50"
+
+    />
+
+
+
+  ) : (
+
+
+    <Select
+
+
+      value={form.subcategory || ""}
+
+
+      onValueChange={(value)=>
+
+        setForm((current)=>({
+
+          ...current,
+
+          subcategory:value,
+
+          custom_subcategory:""
+
+        }))
+
+      }
+
+
+      disabled={!form.category}
+
+
+    >
+
+
+      <SelectTrigger>
+
+
+        <SelectValue
+
+          placeholder={
+            form.category
+            ?
+            "Select product type"
+            :
+            "Select category first"
+          }
+
+        />
+
+
+      </SelectTrigger>
+
+
+
+      <SelectContent>
+
+
+        {availableSubcategories.map((item)=>(
+
+
+          <SelectItem
+
+            key={item}
+
+            value={item}
+
+          >
+
+            {item}
+
+          </SelectItem>
+
+
+        ))}
+
+
+        <SelectItem value="__custom__">
+
+          Other (type my own)
+
+        </SelectItem>
+
+
+      </SelectContent>
+
+
+    </Select>
+
+
+  )}
+
+
+
+  {!importMode && form.subcategory === "__custom__" && (
+
+    <Input
+
+      className="mt-2"
+
+      placeholder="Type product type / subcategory"
+
+      value={form.custom_subcategory || ""}
+
+      onChange={(e)=>
+
+        setForm((current)=>({
+
+          ...current,
+
+          custom_subcategory:e.target.value
+
+        }))
+
+      }
+
+    />
+
+  )}
+
+
+
+</div>
+          
 
             <div>
               <Label>Price (₵) *</Label>

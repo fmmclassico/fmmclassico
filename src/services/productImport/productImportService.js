@@ -165,7 +165,13 @@ function splitMultiValue(value) {
   } catch (_) {
     // ignore
   }
-  return normalizeStringArray(trimmed.split(/\r?\n|;/));
+  return normalizeStringArray(
+  trimmed
+    .split('\n')
+    .join(',')
+    .split(';')
+    .join(',')
+);
 
 function parseBooleanish(value, defaultValue = false) {
   if (typeof value === 'boolean') return value;

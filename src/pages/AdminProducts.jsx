@@ -9,223 +9,19 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload, X, Pencil, Plus, ImagePlus, Loader2, Check, Video, Eye, EyeOff, Link2 } from 'lucide-react';
+import { Upload, X, Pencil, Plus, ImagePlus, Loader2, Check, Video, Eye, EyeOff, Link2, FileSpreadsheet } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import { toast } from 'sonner';
-
-const MAIN_CATEGORY_GROUPS = [
-  { label: 'Phones', id: 'phones' },
-  { label: 'Phone Accessories', id: 'phone_accessories' },
-  { label: 'Electronics', id: 'electronics' },
-  { label: 'Home Appliances', id: 'home_appliances_group' },
-];
-
-const GROUP_CATEGORIES = {
-  phones: [{ value: 'phones', label: 'Phones' }],
-  phone_accessories: [
-    { value: 'phone_cases', label: 'Phone Cases' },
-    { value: 'chargers', label: 'Chargers' },
-    { value: 'earphones', label: 'Earphones' },
-    { value: 'cables', label: 'Cables' },
-    { value: 'power_banks', label: 'Power Banks' },
-    { value: 'screen_protectors', label: 'Screen Protectors' },
-    { value: 'holders', label: 'Holders & Mounts' },
-    { value: 'speakers', label: 'Speakers' },
-    { value: 'smart_watches', label: 'Smart Watches' },
-  ],
-  electronics: [{ value: 'electronic_appliances', label: 'Electronic Appliances' }],
-  home_appliances_group: [{ value: 'home_appliances', label: 'Home Appliances' }],
-};
-
-const GROUP_BRANDS = {
-  phones: ['Apple', 'Samsung', 'Tecno', 'Infinix', 'Itel', 'Other (type below)'],
-  phone_accessories: ['Apple', 'Samsung', 'Oraimo', 'JBL', 'Sony', 'LG', 'Other (type below)'],
-  electronics: ['Samsung', 'Sony', 'LG', 'TCL', 'Hisense', 'Midea', 'Other (type below)'],
-  home_appliances_group: ['Samsung', 'LG', 'Hisense', 'TCL', 'Midea', 'Roch', 'Silver Crest', 'Nasco', 'Hoffman', 'Other (type below)'],
-};
-
-const CATEGORY_SUBCATEGORIES = {
-  phones: [
-    'iPhone SE', 'iPhone 11', 'iPhone 12 Series', 'iPhone 13 Series', 'iPhone 14 Series', 'iPhone 15 Series', 'iPhone 16 Series',
-    'Galaxy A Series', 'Galaxy S Series', 'Galaxy Z Fold/Flip',
-    'Tecno Spark Series', 'Tecno Camon Series', 'Tecno Phantom Series', 'Tecno Pop Series',
-    'Infinix Hot Series', 'Infinix Note Series', 'Infinix Smart Series', 'Infinix Zero Series',
-    'Itel A Series', 'Itel S Series', 'Itel P Series (Big Battery)',
-  ],
-  phone_cases: [
-    'iPhone Cases', 'Samsung Galaxy Cases', 'Tecno Cases', 'Infinix Cases', 'Universal Cases',
-    'Clear Cases', 'Leather Cases', 'Wallet Cases', 'Rugged / Armor Cases', 'Silicone Cases',
-  ],
-  chargers: [
-    'Apple 20W Charger', 'MagSafe Charger', 'Apple Car Charger',
-    'Samsung Fast Charger', 'Samsung Wireless Charger',
-    'Oraimo Fast Charger 20W', 'Oraimo Car Charger', 'Oraimo Wireless Charger', 'Oraimo Multi-port Charger',
-    'USB-C Charger', 'USB-A Charger', 'Wireless Charger', 'Car Charger', 'Desktop / Travel Charger',
-  ],
-  earphones: [
-    'AirPods', 'AirPods Pro', 'AirPods Max',
-    'Samsung Galaxy Buds', 'Samsung Galaxy Buds Pro',
-    'Oraimo FreePods (Wireless Earbuds)', 'Oraimo Neckband Earphones', 'Oraimo Wired Earphones', 'Oraimo Bluetooth Headphones',
-    'JBL Tune Earbuds', 'JBL Free X', 'JBL Live Series', 'JBL Wired Earphones',
-    'Sony WF Series (Earbuds)', 'Sony WH Series (Headphones)', 'Sony Wired Earphones',
-    'Wired Earphones', 'Wireless Earbuds', 'Over-Ear Headphones', 'Neckband / Sports Earphones',
-  ],
-  cables: [
-    'Lightning Cable', 'USB-C to Lightning', 'USB-C Cable', 'Micro USB Cable',
-    'Braided Cable', 'Samsung Data Cable', 'Fast Charging Cable', 'Data Transfer Cable', '3-in-1 Cable',
-  ],
-  power_banks: [
-    'Power Bank 5,000mAh', 'Power Bank 10,000mAh', 'Power Bank 20,000mAh', 'Solar Power Bank',
-    'Mini Power Bank', 'Fast Charge Power Bank', 'Wireless Power Bank',
-  ],
-  screen_protectors: [
-    'iPhone Screen Protector', 'Samsung Galaxy Screen Protector', 'Universal Screen Protector',
-    'Tempered Glass', 'Anti-Glare Screen Protector', 'Privacy Screen Protector', 'Camera Lens Protector',
-  ],
-  holders: [
-    'Car Phone Holder', 'Desk Stand / Phone Stand', 'Ring Holder', 'Tripod Stand',
-    'Dashboard Mount', 'Windshield Mount', 'Vent Clip Holder',
-  ],
-  speakers: [
-    'JBL Go', 'JBL Flip', 'JBL Charge', 'JBL Xtreme', 'JBL PartyBox',
-    'Sony Portable Speaker', 'Sony Party Speaker',
-    'Oraimo Bluetooth Speaker', 'Oraimo Mini Speaker',
-    'Portable Bluetooth Speaker', 'Party / Large Speaker', 'Mini Speaker', 'Soundbar',
-  ],
-  smart_watches: [
-    'Apple Watch SE', 'Apple Watch Series 8', 'Apple Watch Series 9', 'Apple Watch Ultra',
-    'Samsung Galaxy Watch', 'Oraimo Watch', 'Oraimo Watch Pro',
-    'Fitness Tracker / Band', 'Smart Watch with Calling', 'Kids Smart Watch',
-  ],
-  electronic_appliances: [
-    'Smart TV 24"', 'Smart TV 32"', 'Smart TV 43"', 'Smart TV 50"', 'Smart TV 55"', 'Smart TV 65"', 'Smart TV 75"',
-    '4K UHD TV', 'OLED TV', 'QLED TV', 'Android TV',
-    'Soundbar', 'Home Theatre',
-    'Air Conditioner Split Unit', 'Air Purifier',
-    'Projector', 'Digital Camera', 'Laptop', 'Desktop Computer',
-  ],
-  home_appliances: [
-    'Refrigerator (Single Door)', 'Refrigerator (Double Door)', 'Refrigerator (Side-by-Side)',
-    'Chest Freezer', 'Upright Freezer',
-    'Washing Machine (Front Load)', 'Washing Machine (Top Load)',
-    'Air Conditioner (Window)', 'Air Conditioner (Split Unit)',
-    'Microwave Oven', 'Electric Oven',
-    'Blender', 'Rice Cooker', 'Electric Kettle', 'Toaster', 'Sandwich Maker',
-    'Food Processor', 'Juicer', 'Hand Mixer',
-    'Standing Fan', 'Ceiling Fan', 'Table Fan', 'Tower Fan',
-    'Water Dispenser', 'Iron',
-  ],
-};
-
-const HOME_SECTIONS = [
-  { key: 'flash_sale', label: '⚡ CLASSICO Deals (Flash Sale)' },
-  { key: 'featured', label: '⭐ Featured / Classico Picks' },
-  { key: 'donkomi', label: '🔥 Donkomi Deals (Best Prices)' },
-  { key: 'new_arrival', label: '🆕 New Arrivals' },
-  { key: 'top_selling', label: '📈 Top Selling' },
-];
-
-const QUILL_MODULES = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    [{ font: [] }],
-    [{ size: ['small', false, 'large', 'huge'] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ color: [] }, { background: [] }],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    [{ indent: '-1' }, { indent: '+1' }],
-    [{ align: [] }],
-    ['clean'],
-  ],
-};
-
-const PRESET_COLORS = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Gold', 'Silver', 'Rose Gold', 'Purple', 'Orange', 'Pink', 'Navy', 'Grey', 'Clear/Transparent'];
-
-const EMPTY_FORM = {
-  name: '',
-  description: '',
-  price: '',
-  original_price: '',
-  main_group: '',
-  category: '',
-  brand: '',
-  custom_brand: '',
-  subcategory: '',
-  custom_subcategory: '',
-  stock: '',
-  home_sections: [],
-  review_enabled: true,
-  rating: '',
-  reviews_count: '',
-  image_url: '',
-  image_urls: [],
-  video_url: '',
-  flash_sale_end: '',
-  is_visible: true,
-  show_colors: false,
-  available_colors: [],
-  color_input: '',
-  show_wattage: false,
-  available_wattage: [],
-  wattage_input: '',
-  show_type: false,
-  available_types: [],
-  type_input: '',
-};
-
-function isHttpUrl(value) {
-  try {
-    const url = new URL(String(value || '').trim());
-    return url.protocol === 'http:' || url.protocol === 'https:';
-  } catch (_) {
-    return false;
-  }
-}
-
-function splitUrlList(value) {
-  return [...new Set(
-    String(value || '')
-      .split(String.fromCharCode(13)).join('')
-      .split(String.fromCharCode(10))
-      .flatMap((item) => item.split(','))
-      .map((item) => item.trim())
-      .filter((item) => isHttpUrl(item))
-  )];
-}
-
-function normalizeProductMedia(mainImage, extraImages) {
-  const merged = [...new Set([mainImage, ...(extraImages || [])].map((item) => String(item || '').trim()).filter(Boolean))];
-  return {
-    image_url: merged[0] || '',
-    image_urls: merged.slice(1),
-  };
-}
-
-function normalizeStringArray(value) {
-  if (Array.isArray(value)) {
-    return [...new Set(value.map((item) => String(item || '').trim()).filter(Boolean))];
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) return [];
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) {
-        return normalizeStringArray(parsed);
-      }
-    } catch (_) {
-      return splitUrlList(trimmed).length > 0 ? splitUrlList(trimmed) : [trimmed];
-    }
-  }
-  return [];
-}
+import ProductImportCenter from '@/components/admin/ProductImportCenter.jsx';
+import { CATEGORY_SUBCATEGORIES, GROUP_BRANDS, GROUP_CATEGORIES, HOME_SECTIONS, MAIN_CATEGORY_GROUPS, PRESET_COLORS, buildEmptyProductForm, hydrateProductForm, normalizeProductMedia, normalizeStringArray, saveProduct, splitUrlList } from '@/services/products/productWriteService.js';
 
 export default function AdminProducts() {
   const [user, setUser] = React.useState(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showImportCenter, setShowImportCenter] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(buildEmptyProductForm());
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
@@ -263,50 +59,7 @@ export default function AdminProducts() {
   ), [products]);
 
   const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      const { main_group, home_sections, custom_brand, custom_subcategory, color_input, wattage_input, type_input, ...rest } = data;
-      const sections = home_sections || [];
-      const finalBrand = rest.brand === 'Other (type below)' ? (custom_brand || 'Other') : rest.brand;
-      const finalSubcategory = rest.subcategory === '__custom__' ? (custom_subcategory || '') : rest.subcategory;
-      const stockValue = typeof data.stock === 'string' ? data.stock.trim() : data.stock;
-      const stockNumber = stockValue === '' ? null : parseInt(stockValue, 10);
-      const media = normalizeProductMedia(rest.image_url, normalizeStringArray(rest.image_urls));
-
-      const payload = {
-        name: rest.name?.trim(),
-        description: rest.description,
-        price: parseFloat(data.price) || 0,
-        original_price: data.original_price ? parseFloat(data.original_price) : null,
-        category: rest.category,
-        brand: finalBrand,
-        subcategory: finalSubcategory,
-        stock: stockValue === '' ? null : Number.isNaN(stockNumber) ? null : stockNumber,
-        rating: data.rating ? parseFloat(data.rating) : null,
-        reviews_count: data.reviews_count ? parseInt(data.reviews_count, 10) : null,
-        review_enabled: rest.review_enabled !== false,
-        is_visible: data.is_visible !== false,
-        image_url: media.image_url || null,
-        image_urls: media.image_urls,
-        video_url: rest.video_url?.trim() || null,
-        flash_sale_end: rest.flash_sale_end || null,
-        featured: sections.includes('featured'),
-        flash_sale: sections.includes('flash_sale'),
-        donkomi: sections.includes('donkomi'),
-        new_arrival: sections.includes('new_arrival'),
-        top_selling: sections.includes('top_selling'),
-        show_colors: rest.show_colors || false,
-        available_colors: normalizeStringArray(rest.available_colors),
-        show_wattage: rest.show_wattage || false,
-        available_wattage: normalizeStringArray(rest.available_wattage),
-        show_type: rest.show_type || false,
-        available_types: normalizeStringArray(rest.available_types),
-      };
-
-      if (editingProduct) {
-        return appClient.entities.Product.update(editingProduct.id, payload);
-      }
-      return appClient.entities.Product.create(payload);
-    },
+    mutationFn: (data) => saveProduct({ formData: data, productId: editingProduct?.id || null }),
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: ['products'] });
       queryClient.removeQueries({ queryKey: ['products-admin'] });
@@ -315,7 +68,7 @@ export default function AdminProducts() {
       toast.success(editingProduct ? 'Product updated!' : 'Product created!');
       setShowForm(false);
       setEditingProduct(null);
-      setForm(EMPTY_FORM);
+      setForm(buildEmptyProductForm());
       setExtraImageUrlInput('');
     },
     onError: (error) => {
@@ -403,63 +156,7 @@ export default function AdminProducts() {
 
   const handleEdit = (product) => {
     setEditingProduct(product);
-    const cat = product.category || '';
-    let main_group = '';
-    if (cat === 'phones') main_group = 'phones';
-    else if (cat === 'electronic_appliances') main_group = 'electronics';
-    else if (cat === 'home_appliances') main_group = 'home_appliances_group';
-    else if (cat) main_group = 'phone_accessories';
-
-    const home_sections = [];
-    if (product.featured) home_sections.push('featured');
-    if (product.flash_sale) home_sections.push('flash_sale');
-    if (product.donkomi) home_sections.push('donkomi');
-    if (product.new_arrival) home_sections.push('new_arrival');
-    if (product.top_selling) home_sections.push('top_selling');
-
-    const knownBrands = GROUP_BRANDS[main_group] || [];
-    const knownBrandNames = knownBrands.map((brand) => brand.replace(' (type below)', ''));
-    const brandIsKnown = knownBrandNames.includes(product.brand);
-    const brandValue = brandIsKnown ? product.brand : 'Other (type below)';
-    const customBrand = brandIsKnown ? '' : (product.brand || '');
-
-    const knownSubs = CATEGORY_SUBCATEGORIES[cat] || [];
-    const subIsKnown = knownSubs.includes(product.subcategory);
-    const subValue = subIsKnown ? product.subcategory : (product.subcategory ? '__custom__' : '');
-    const customSub = subIsKnown ? '' : (product.subcategory || '');
-    const media = normalizeProductMedia(product.image_url, normalizeStringArray(product.image_urls));
-
-    setForm({
-      name: product.name || '',
-      description: product.description || '',
-      price: product.price ?? '',
-      original_price: product.original_price ?? '',
-      main_group,
-      category: product.category || '',
-      brand: brandValue,
-      custom_brand: customBrand,
-      subcategory: subValue,
-      custom_subcategory: customSub,
-      stock: product.stock ?? '',
-      home_sections,
-      review_enabled: product.review_enabled !== false,
-      rating: product.rating ?? '',
-      reviews_count: product.reviews_count ?? '',
-      image_url: media.image_url || '',
-      image_urls: media.image_urls,
-      video_url: product.video_url || '',
-      flash_sale_end: product.flash_sale_end || '',
-      is_visible: product.is_visible !== false,
-      show_colors: product.show_colors || false,
-      available_colors: normalizeStringArray(product.available_colors),
-      color_input: '',
-      show_wattage: product.show_wattage || false,
-      available_wattage: normalizeStringArray(product.available_wattage),
-      wattage_input: '',
-      show_type: product.show_type || false,
-      available_types: normalizeStringArray(product.available_types),
-      type_input: '',
-    });
+    setForm(hydrateProductForm(product));
     setExtraImageUrlInput('');
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -467,7 +164,7 @@ export default function AdminProducts() {
 
   const handleNew = () => {
     setEditingProduct(null);
-    setForm(EMPTY_FORM);
+    setForm(buildEmptyProductForm());
     setExtraImageUrlInput('');
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -480,12 +177,21 @@ export default function AdminProducts() {
   const availableSubcategories = CATEGORY_SUBCATEGORIES[form.category] || [];
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Manage Products</h1>
-        <Button onClick={handleNew} className="gap-2 bg-blue-600 hover:bg-blue-700">
-          <Plus className="h-4 w-4" /> Add Product
-        </Button>
+    <div className="container mx-auto max-w-5xl px-4 py-6">
+      <ProductImportCenter open={showImportCenter} onOpenChange={setShowImportCenter} />
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Manage Products</h1>
+          <p className="text-sm text-gray-500">Create products manually or open the new bulk import workflow without replacing the existing editor.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={() => setShowImportCenter(true)} className="gap-2 border-blue-200 text-blue-700 hover:bg-blue-50">
+            <FileSpreadsheet className="h-4 w-4" /> Bulk Import Products
+          </Button>
+          <Button onClick={handleNew} className="gap-2 bg-blue-600 hover:bg-blue-700">
+            <Plus className="h-4 w-4" /> Add Product
+          </Button>
+        </div>
       </div>
 
       {showForm && (
@@ -532,7 +238,7 @@ export default function AdminProducts() {
                     </div>
                   </div>
 
-                  {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Main image ready</p>}
+                  {form.image_url && <p className="text-xs text-green-600 font-medium">âœ“ Main image ready</p>}
                 </div>
               </div>
             </div>
@@ -610,7 +316,7 @@ export default function AdminProducts() {
               </div>
 
               {form.video_url && (
-                <p className="text-xs text-green-600 mt-2 font-medium">✓ Video ready: {form.video_url.length > 80 ? `${form.video_url.slice(0, 80)}...` : form.video_url}</p>
+                <p className="text-xs text-green-600 mt-2 font-medium">âœ“ Video ready: {form.video_url.length > 80 ? `${form.video_url.slice(0, 80)}...` : form.video_url}</p>
               )}
             </div>
 
@@ -620,7 +326,7 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Step 1 — Main Category *</Label>
+              <Label>Step 1 â€” Main Category *</Label>
               <Select value={form.main_group} onValueChange={(value) => setForm((current) => ({ ...current, main_group: value, category: '', brand: '', custom_brand: '', subcategory: '', custom_subcategory: '' }))}>
                 <SelectTrigger><SelectValue placeholder="Select main category" /></SelectTrigger>
                 <SelectContent>
@@ -630,7 +336,7 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Step 2 — Category *</Label>
+              <Label>Step 2 â€” Category *</Label>
               <Select
                 value={form.category}
                 onValueChange={(value) => setForm((current) => ({ ...current, category: value, brand: '', custom_brand: '', subcategory: '', custom_subcategory: '' }))}
@@ -644,7 +350,7 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Step 3 — Brand *</Label>
+              <Label>Step 3 â€” Brand *</Label>
               <Select
                 value={form.brand}
                 onValueChange={(value) => setForm((current) => ({ ...current, brand: value, custom_brand: '', subcategory: '', custom_subcategory: '' }))}
@@ -666,7 +372,7 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Step 4 — Product Type / Subcategory</Label>
+              <Label>Step 4 â€” Product Type / Subcategory</Label>
               <Select
                 value={form.subcategory}
                 onValueChange={(value) => setForm((current) => ({ ...current, subcategory: value, custom_subcategory: '' }))}
@@ -677,7 +383,7 @@ export default function AdminProducts() {
                   {availableSubcategories.map((subcategory) => (
                     <SelectItem key={subcategory} value={subcategory}>{subcategory}</SelectItem>
                   ))}
-                  <SelectItem value="__custom__">✏️ Other (type my own...)</SelectItem>
+                  <SelectItem value="__custom__">âœï¸ Other (type my own...)</SelectItem>
                 </SelectContent>
               </Select>
               {form.subcategory === '__custom__' && (
@@ -691,11 +397,11 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Price (₵) *</Label>
+              <Label>Price (â‚µ) *</Label>
               <Input type="number" value={form.price} onChange={(e) => setForm((current) => ({ ...current, price: e.target.value }))} placeholder="0.00" />
             </div>
             <div>
-              <Label>Original Price (₵) — for discount display</Label>
+              <Label>Original Price (â‚µ) â€” for discount display</Label>
               <Input type="number" value={form.original_price} onChange={(e) => setForm((current) => ({ ...current, original_price: e.target.value }))} placeholder="0.00" />
             </div>
 
@@ -722,7 +428,7 @@ export default function AdminProducts() {
             </div>
 
             <div className="md:col-span-2">
-              <Label className="font-semibold block mb-1">📍 Homepage Sections</Label>
+              <Label className="font-semibold block mb-1">ðŸ“ Homepage Sections</Label>
               <p className="text-xs text-gray-500 mb-3">Select which sections this product appears in.</p>
               <div className="flex flex-wrap gap-3">
                 {HOME_SECTIONS.map(({ key, label }) => {
@@ -750,7 +456,7 @@ export default function AdminProducts() {
             </div>
 
             <div className="md:col-span-2 space-y-4">
-              <Label className="font-semibold block">🎨 Customer Options (optional)</Label>
+              <Label className="font-semibold block">ðŸŽ¨ Customer Options (optional)</Label>
               <p className="text-xs text-gray-400 -mt-3">Enable any option to let customers choose before adding to cart. Leave off if not applicable.</p>
 
               <div className="border rounded-xl p-3 space-y-2">
@@ -876,7 +582,7 @@ export default function AdminProducts() {
                   <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form.review_enabled ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                     {form.review_enabled && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                   </div>
-                  <span className="text-sm font-medium text-gray-700">💬 Reviews Enabled</span>
+                  <span className="text-sm font-medium text-gray-700">ðŸ’¬ Reviews Enabled</span>
                 </label>
 
                 <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors ${form.is_visible ? 'border-green-400 bg-green-50' : 'border-red-300 bg-red-50'}`}
@@ -885,7 +591,7 @@ export default function AdminProducts() {
                     {form.is_visible ? <Eye className="h-3 w-3 text-white" /> : <EyeOff className="h-3 w-3 text-red-500" />}
                   </div>
                   <span className="text-sm font-medium text-gray-700">
-                    {form.is_visible ? '👁️ Visible to Customers' : '🚫 Hidden from Customers'}
+                    {form.is_visible ? 'ðŸ‘ï¸ Visible to Customers' : 'ðŸš« Hidden from Customers'}
                   </span>
                 </label>
               </div>
@@ -901,7 +607,7 @@ export default function AdminProducts() {
               {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               {editingProduct ? 'Save Changes' : 'Create Product'}
             </Button>
-            <Button variant="outline" onClick={() => { setShowForm(false); setEditingProduct(null); setForm(EMPTY_FORM); setExtraImageUrlInput(''); }}>
+            <Button variant="outline" onClick={() => { setShowForm(false); setEditingProduct(null); setForm(buildEmptyProductForm()); setExtraImageUrlInput(''); }}>
               Cancel
             </Button>
           </div>
@@ -939,7 +645,7 @@ export default function AdminProducts() {
                 </div>
                 <div className="p-2">
                   <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
-                  <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
+                  <p className="text-sm font-black text-gray-900">â‚µ{product.price?.toLocaleString()}</p>
                   {product.stock != null && (
                     <p className={`text-[10px] font-medium ${product.stock === 0 ? 'text-red-500' : 'text-gray-400'}`}>
                       Stock: {product.stock === 0 ? 'Out of Stock' : product.stock}
@@ -950,7 +656,7 @@ export default function AdminProducts() {
                       size="sm"
                       variant="outline"
                       className={`h-7 w-7 p-0 flex-shrink-0 ${isHidden ? 'text-red-500 border-red-300 hover:bg-red-50' : 'text-green-600 border-green-300 hover:bg-green-50'}`}
-                      title={isHidden ? 'Hidden — click to show' : 'Visible — click to hide'}
+                      title={isHidden ? 'Hidden â€” click to show' : 'Visible â€” click to hide'}
                       onClick={() => toggleVisibilityMutation.mutate({ id: product.id, is_visible: !product.is_visible })}
                     >
                       {isHidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}

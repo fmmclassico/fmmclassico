@@ -336,7 +336,7 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Step 1 â€” Main Category *</Label>
+              <Label>Step 1 - Main Category *</Label>
               <Select value={form.main_group} onValueChange={(value) => setForm((current) => ({ ...current, main_group: value, category: '', brand: '', custom_brand: '', subcategory: '', custom_subcategory: '' }))}>
                 <SelectTrigger><SelectValue placeholder="Select main category" /></SelectTrigger>
                 <SelectContent>
@@ -346,7 +346,7 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Step 2 â€” Category *</Label>
+              <Label>Step 2 - Category *</Label>
               <Select
                 value={form.category}
                 onValueChange={(value) => setForm((current) => ({ ...current, category: value, brand: '', custom_brand: '', subcategory: '', custom_subcategory: '' }))}
@@ -360,7 +360,7 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Step 3 â€” Brand *</Label>
+              <Label>Step 3 - Brand *</Label>
               <Select
                 value={form.brand}
                 onValueChange={(value) => setForm((current) => ({ ...current, brand: value, custom_brand: '', subcategory: '', custom_subcategory: '' }))}
@@ -382,7 +382,7 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Step 4 â€” Product Type / Subcategory</Label>
+              <Label>Step 4 - Product Type / Subcategory</Label>
               <Select
                 value={form.subcategory}
                 onValueChange={(value) => setForm((current) => ({ ...current, subcategory: value, custom_subcategory: '' }))}
@@ -666,7 +666,7 @@ export default function AdminProducts() {
                       size="sm"
                       variant="outline"
                       className={`h-7 w-7 p-0 flex-shrink-0 ${isHidden ? 'text-red-500 border-red-300 hover:bg-red-50' : 'text-green-600 border-green-300 hover:bg-green-50'}`}
-                      title={isHidden ? 'Hidden â€” click to show' : 'Visible â€” click to hide'}
+                      title={isHidden ? 'Hidden - click to show' : 'Visible - click to hide'}
                       onClick={() => toggleVisibilityMutation.mutate({ id: product.id, is_visible: !product.is_visible })}
                     >
                       {isHidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}

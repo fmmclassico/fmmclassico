@@ -166,12 +166,9 @@ function splitMultiValue(value) {
     // ignore
   }
   return normalizeStringArray(
-  trimmed
-    .split('\n')
-    .join(',')
-    .split(';')
-    .join(',')
-);
+    trimmed
+    .split('').join(',').split(';').join(','));
+}
 
 function parseBooleanish(value, defaultValue = false) {
   if (typeof value === 'boolean') return value;

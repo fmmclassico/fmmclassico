@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload, X, Pencil, Plus, ImagePlus, Loader2, Check, Video, Eye, EyeOff, Link2, FileSpreadsheet } from 'lucide-react';
+import { Upload, X, Pencil, Plus, ImagePlus, Loader2, Check, Video, Eye, EyeOff, Link2, FileSpreadsheet, Trash2 } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import { toast } from 'sonner';
 import ProductImportCenter from '@/components/admin/ProductImportCenter.jsx';
@@ -164,6 +164,44 @@ const handleImportedProduct = (excelRow) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
     }
   });
+
+  const deleteMutation = useMutation({
+
+  mutationFn: (id) =>
+    appClient.entities.Product.delete(id),
+
+  onSuccess: () => {
+
+    queryClient.invalidateQueries({
+      queryKey: ['products-admin']
+    });
+
+    queryClient.invalidateQueries({
+      queryKey: ['products']
+    });
+
+
+    toast.success("Product deleted successfully");
+
+  },
+
+
+  onError: (error)=>{
+
+    console.error(
+      "Delete product error:",
+      error
+    );
+
+
+    toast.error(
+      error.message ||
+      "Failed to delete product"
+    );
+
+  }
+
+});
 
   const handleUploadMain = async (e) => {
     const file = e.target.files?.[0];
@@ -792,6 +830,37 @@ Product Type / Subcategory
                     <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={() => handleEdit(product)}>
                       <Pencil className="h-3 w-3" /> Edit
                     </Button>
+                    <Button
+
+size="sm"
+
+variant="outline"
+
+className="h-7 w-7 p-0 text-red-600 border-red-300 hover:bg-red-50"
+
+title="Delete product"
+
+onClick={() => {
+
+const confirmed =
+window.confirm(
+`Are you sure you want to permanently delete "${product.name}"?`
+);
+
+
+if(confirmed){
+
+deleteMutation.mutate(product.id);
+
+}
+
+}}
+
+>
+
+<Trash2 className="h-3 w-3" />
+
+</Button>
                   </div>
                 </div>
               </Card>

@@ -46,6 +46,7 @@ const COLUMN_ALIASES = {
   extraImageUrls: ['extra image urls', 'gallery image urls', 'gallery images', 'extra images', 'image urls', 'additional images'],
   videoUrl: ['video url', 'video', 'product video'],
   sku: ['sku', 'product sku'],
+  slug: ['slug', 'product slug', 'seo slug', 'url slug', 'handle'],
   barcode: ['barcode', 'ean', 'upc'],
   tags: ['tags', 'labels'],
   warranty: ['warranty'],
@@ -102,7 +103,7 @@ const BRAND_SYNONYMS = {
   midea: ['midea'],
   tcl: ['tcl'],
   roch: ['roch'],
-  silver crest: ['silver crest', 'silvercrest'],
+  'silver crest': ['silver crest', 'silvercrest'],
   nasco: ['nasco'],
   hoffman: ['hoffman'],
   jbl: ['jbl'],
@@ -130,7 +131,7 @@ function normalizeKey(value) {
 function slugify(value = '') {
   return String(value || '')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
@@ -164,7 +165,8 @@ function splitMultiValue(value) {
   } catch (_) {
     // ignore
   }
-  return normalizeStringArray(trimmed.split('\n').join(',').split(';').join(','));
+  return normalizeStringArray(trimmed.split('
+').join(',').split(';').join(','));
 }
 
 function parseBooleanish(value, defaultValue = false) {

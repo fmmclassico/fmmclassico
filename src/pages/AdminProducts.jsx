@@ -454,7 +454,7 @@ onProductMapped={handleImportedProduct}
               <Input value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} placeholder="e.g. iPhone 14 Pro Max" />
             </div>
 
-           <div>
+    <div>
 
 <Label>
 Main Group *
@@ -501,11 +501,8 @@ subcategory:''
 
 >
 
-
 <SelectTrigger>
-
 <SelectValue placeholder="Select main group"/>
-
 </SelectTrigger>
 
 
@@ -527,9 +524,7 @@ value={group.id}
 
 ))}
 
-
 </SelectContent>
-
 
 </Select>
 
@@ -548,7 +543,7 @@ Category *
 )}
 
 </Label>
-              <{importMode ? (
+{importMode ? (
 
 <Input
 

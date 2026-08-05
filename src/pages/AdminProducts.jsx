@@ -411,7 +411,7 @@ export default function AdminProducts() {
               <Input type="number" value={form.price} onChange={(e) => setForm((current) => ({ ...current, price: e.target.value }))} placeholder="0.00" />
             </div>
             <div>
-              <Label>Original Price (â‚µ) â€” for discount display</Label>
+              <Label>Original Price (₵) — for discount display</Label>
               <Input type="number" value={form.original_price} onChange={(e) => setForm((current) => ({ ...current, original_price: e.target.value }))} placeholder="0.00" />
             </div>
 
@@ -655,7 +655,7 @@ export default function AdminProducts() {
                 </div>
                 <div className="p-2">
                   <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
-                  <p className="text-sm font-black text-gray-900">â‚µ{product.price?.toLocaleString()}</p>
+                  <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
                   {product.stock != null && (
                     <p className={`text-[10px] font-medium ${product.stock === 0 ? 'text-red-500' : 'text-gray-400'}`}>
                       Stock: {product.stock === 0 ? 'Out of Stock' : product.stock}

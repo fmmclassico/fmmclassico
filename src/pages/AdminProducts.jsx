@@ -397,7 +397,7 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Price (â‚µ) *</Label>
+              <Label>Price (₵) *</Label>
               <Input type="number" value={form.price} onChange={(e) => setForm((current) => ({ ...current, price: e.target.value }))} placeholder="0.00" />
             </div>
             <div>

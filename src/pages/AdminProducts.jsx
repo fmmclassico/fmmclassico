@@ -13,7 +13,36 @@ import { Upload, X, Pencil, Plus, ImagePlus, Loader2, Check, Video, Eye, EyeOff,
 import ReactQuill from 'react-quill';
 import { toast } from 'sonner';
 import ProductImportCenter from '@/components/admin/ProductImportCenter.jsx';
-import { CATEGORY_SUBCATEGORIES, GROUP_BRANDS, GROUP_CATEGORIES, HOME_SECTIONS, MAIN_CATEGORY_GROUPS, PRESET_COLORS, buildEmptyProductForm, hydrateProductForm, normalizeProductMedia, normalizeStringArray, saveProduct, splitUrlList } from '@/services/products/productWriteService.js';
+import {
+  CATEGORY_SUBCATEGORIES,
+  GROUP_BRANDS,
+  GROUP_CATEGORIES,
+  HOME_SECTIONS,
+  MAIN_CATEGORY_GROUPS,
+  PRESET_COLORS,
+  buildEmptyProductForm,
+  hydrateProductForm,
+  normalizeProductMedia,
+  normalizeStringArray,
+  saveProduct,
+  splitUrlList
+} from '@/services/products/productWriteService.js';
+
+
+import {
+  autoMapProduct,
+  validateImportedProduct
+} from '@/services/product-engine/productMapper.js';
+
+
+import {
+  generateSEO
+} from '@/services/product-engine/seoGenerator.js';
+
+
+import {
+  generateDescription
+} from '@/services/product-engine/descriptionGenerator.js';
 
 const QUILL_MODULES = {
   toolbar: [
@@ -29,15 +58,56 @@ export default function AdminProducts() {
   const [user, setUser] = React.useState(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [showImportCenter, setShowImportCenter] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [form, setForm] = useState(buildEmptyProductForm());
+const [showImportCenter, setShowImportCenter] = useState(false);
+
+const [importMode, setImportMode] = useState(false);
+
+const [editingProduct, setEditingProduct] = useState(null);
+
+const [form, setForm] = useState(buildEmptyProductForm());
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [extraImageUrlInput, setExtraImageUrlInput] = useState('');
   const queryClient = useQueryClient();
+const handleImportedProduct = (excelRow) => {
 
+  const mappedProduct = autoMapProduct(excelRow);
+
+
+  const seo = generateSEO(mappedProduct);
+
+
+  setImportMode(true);
+
+
+  setForm((current) => ({
+
+    ...current,
+
+    ...mappedProduct,
+
+
+    description:
+      mappedProduct.description ||
+      generateDescription(mappedProduct),
+
+
+    seo_title:
+      seo.title,
+
+
+    seo_description:
+      seo.description
+
+  }));
+
+
+  toast.success(
+    "Product automatically analyzed from Excel"
+  );
+
+};
   React.useEffect(() => {
     appClient.auth.me()
       .then((authUser) => {
@@ -173,8 +243,11 @@ export default function AdminProducts() {
   };
 
   const handleNew = () => {
-    setEditingProduct(null);
-    setForm(buildEmptyProductForm());
+    setImportMode(false);
+
+setEditingProduct(null);
+
+setForm(buildEmptyProductForm());
     setExtraImageUrlInput('');
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -188,7 +261,15 @@ export default function AdminProducts() {
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-6">
-      <ProductImportCenter open={showImportCenter} onOpenChange={setShowImportCenter} />
+      <ProductImportCenter
+
+open={showImportCenter}
+
+onOpenChange={setShowImportCenter}
+
+onProductMapped={handleImportedProduct}
+
+/>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Manage Products</h1>
@@ -248,7 +329,7 @@ export default function AdminProducts() {
                     </div>
                   </div>
 
-                  {form.image_url && <p className="text-xs text-green-600 font-medium">âœ“ Main image ready</p>}
+                  {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Main image ready</p>}
                 </div>
               </div>
             </div>
@@ -336,7 +417,16 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Step 1 - Main Category *</Label>
+              <Label>
+Main Category *
+
+{importMode && (
+<span className="ml-2 text-xs text-green-600">
+✓ Auto detected from Excel
+</span>
+)}
+
+</Label>
               <Select value={form.main_group} onValueChange={(value) => setForm((current) => ({ ...current, main_group: value, category: '', brand: '', custom_brand: '', subcategory: '', custom_subcategory: '' }))}>
                 <SelectTrigger><SelectValue placeholder="Select main category" /></SelectTrigger>
                 <SelectContent>
@@ -346,7 +436,16 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Step 2 - Category *</Label>
+              <Label>
+Category *
+
+{importMode && (
+<span className="ml-2 text-xs text-green-600">
+✓ Auto detected from Excel
+</span>
+)}
+
+</Label>
               <Select
                 value={form.category}
                 onValueChange={(value) => setForm((current) => ({ ...current, category: value, brand: '', custom_brand: '', subcategory: '', custom_subcategory: '' }))}
@@ -360,7 +459,16 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Step 3 - Brand *</Label>
+              <Label>
+Brand *
+
+{importMode && (
+<span className="ml-2 text-xs text-green-600">
+✓ Auto detected from Excel
+</span>
+)}
+
+</Label>
               <Select
                 value={form.brand}
                 onValueChange={(value) => setForm((current) => ({ ...current, brand: value, custom_brand: '', subcategory: '', custom_subcategory: '' }))}
@@ -382,7 +490,17 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <Label>Step 4 - Product Type / Subcategory</Label>
+              <Label>
+
+Product Type / Subcategory
+
+{importMode && (
+<span className="ml-2 text-xs text-green-600">
+✓ Auto detected from Excel
+</span>
+)}
+
+</Label>
               <Select
                 value={form.subcategory}
                 onValueChange={(value) => setForm((current) => ({ ...current, subcategory: value, custom_subcategory: '' }))}
@@ -393,7 +511,7 @@ export default function AdminProducts() {
                   {availableSubcategories.map((subcategory) => (
                     <SelectItem key={subcategory} value={subcategory}>{subcategory}</SelectItem>
                   ))}
-                  <SelectItem value="__custom__">âœï¸ Other (type my own...)</SelectItem>
+                  <SelectItem value="__custom__">Other (type my own...)</SelectItem>
                 </SelectContent>
               </Select>
               {form.subcategory === '__custom__' && (
@@ -438,7 +556,7 @@ export default function AdminProducts() {
             </div>
 
             <div className="md:col-span-2">
-              <Label className="font-semibold block mb-1">ðŸ“ Homepage Sections</Label>
+              <Label className="font-semibold block mb-1">Homepage Sections</Label>
               <p className="text-xs text-gray-500 mb-3">Select which sections this product appears in.</p>
               <div className="flex flex-wrap gap-3">
                 {HOME_SECTIONS.map(({ key, label }) => {
@@ -466,7 +584,7 @@ export default function AdminProducts() {
             </div>
 
             <div className="md:col-span-2 space-y-4">
-              <Label className="font-semibold block">ðŸŽ¨ Customer Options (optional)</Label>
+              <Label className="font-semibold block">Customer Options (optional)</Label>
               <p className="text-xs text-gray-400 -mt-3">Enable any option to let customers choose before adding to cart. Leave off if not applicable.</p>
 
               <div className="border rounded-xl p-3 space-y-2">
@@ -592,7 +710,7 @@ export default function AdminProducts() {
                   <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${form.review_enabled ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                     {form.review_enabled && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                   </div>
-                  <span className="text-sm font-medium text-gray-700">ðŸ’¬ Reviews Enabled</span>
+                  <span className="text-sm font-medium text-gray-700">Reviews Enabled</span>
                 </label>
 
                 <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors ${form.is_visible ? 'border-green-400 bg-green-50' : 'border-red-300 bg-red-50'}`}
@@ -601,7 +719,7 @@ export default function AdminProducts() {
                     {form.is_visible ? <Eye className="h-3 w-3 text-white" /> : <EyeOff className="h-3 w-3 text-red-500" />}
                   </div>
                   <span className="text-sm font-medium text-gray-700">
-                    {form.is_visible ? 'ðŸ‘ï¸ Visible to Customers' : 'ðŸš« Hidden from Customers'}
+                    {form.is_visible ? 'Visible to Customers' : 'ðŸš« Hidden from Customers'}
                   </span>
                 </label>
               </div>

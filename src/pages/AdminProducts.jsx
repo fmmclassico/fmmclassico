@@ -15,6 +15,16 @@ import { toast } from 'sonner';
 import ProductImportCenter from '@/components/admin/ProductImportCenter.jsx';
 import { CATEGORY_SUBCATEGORIES, GROUP_BRANDS, GROUP_CATEGORIES, HOME_SECTIONS, MAIN_CATEGORY_GROUPS, PRESET_COLORS, buildEmptyProductForm, hydrateProductForm, normalizeProductMedia, normalizeStringArray, saveProduct, splitUrlList } from '@/services/products/productWriteService.js';
 
+const QUILL_MODULES = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    ['link'],
+    ['clean']
+  ]
+};
+
 export default function AdminProducts() {
   const [user, setUser] = React.useState(null);
   const [isAdmin, setIsAdmin] = React.useState(false);

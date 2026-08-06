@@ -549,7 +549,7 @@ onProductMapped={handleImportedProduct}
               </div>
 
               {form.video_url && (
-                <p className="text-xs text-green-600 mt-2 font-medium">✓ Video ready: {form.video_url.length > 80 ? `${form.video_url.slice(0, 80)}...` : form.video_url}</p>
+                <p className="text-xs text-green-600 mt-2 font-medium">Ã¢Å“â€œ Video ready: {form.video_url.length > 80 ? `${form.video_url.slice(0, 80)}...` : form.video_url}</p>
               )}
             </div>
 
@@ -942,7 +942,7 @@ onProductMapped={handleImportedProduct}
                     {form.is_visible ? <Eye className="h-3 w-3 text-white" /> : <EyeOff className="h-3 w-3 text-red-500" />}
                   </div>
                   <span className="text-sm font-medium text-gray-700">
-                    {form.is_visible ? 'Visible to Customers' : 'Hidden from Customers'}
+                    {form.is_visible ? 'Visible to Customers' : 'Ã°Å¸Å¡Â« Hidden from Customers'}
                   </span>
                 </label>
               </div>

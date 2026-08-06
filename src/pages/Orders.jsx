@@ -11,6 +11,7 @@ import { Package, Trash2, Loader2, Wallet } from 'lucide-react';
 import { format } from 'date-fns';
 import InlineNotice from '@/components/ui/InlineNotice';
 import { useAuth } from '@/lib/AuthContext';
+import { getHubtelCallbackUrl } from '@/lib/runtime-config';
 
 const statusConfig = {
   confirmed: { color: 'bg-blue-100 text-blue-800', label: 'Confirmed' },
@@ -170,7 +171,7 @@ export default function Orders() {
     setPayingBalanceFor(order.id);
     try {
       const reference = order.balance_payment_reference || createBalancePaymentReference(order.order_number);
-      const callbackUrl = 'https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback';
+      const callbackUrl = getHubtelCallbackUrl();
       const returnUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${encodeURIComponent(reference)}&paymentStage=balance&status=success&orderId=${order.id}`;
       const cancellationUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${encodeURIComponent(reference)}&paymentStage=balance&status=cancelled&orderId=${order.id}`;
       const result = await initiateBalancePayment({ order, callbackUrl, returnUrl, cancellationUrl });

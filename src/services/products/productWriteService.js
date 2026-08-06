@@ -1,4 +1,5 @@
 import { appClient } from '@/api/appClient.js';
+import { normalizeText, normalizeTextDeep } from '@/lib/text';
 
 export const MAIN_CATEGORY_GROUPS = [
   { label: 'Phones', id: 'phones' },
@@ -187,11 +188,11 @@ export function normalizeProductMedia(mainImage, extraImages) {
 
 export function normalizeStringArray(value) {
   if (Array.isArray(value)) {
-    return [...new Set(value.map((item) => String(item || '').trim()).filter(Boolean))];
+    return [...new Set(value.map((item) => normalizeText(String(item || '')).trim()).filter(Boolean))];
   }
 
   if (typeof value === 'string') {
-    const trimmed = value.trim();
+    const trimmed = normalizeText(value).trim();
     if (!trimmed) return [];
 
     try {
@@ -214,67 +215,68 @@ export function deriveMainGroupFromCategory(category = '') {
 }
 
 export function hydrateProductForm(product = {}) {
-  const main_group = deriveMainGroupFromCategory(product.category);
-  const home_sections = HOME_SECTION_KEYS.filter((key) => product[key]);
+  const normalizedProduct = normalizeTextDeep(product);
+  const main_group = deriveMainGroupFromCategory(normalizedProduct.category);
+  const home_sections = HOME_SECTION_KEYS.filter((key) => normalizedProduct[key]);
 
   const knownBrands = GROUP_BRANDS[main_group] || [];
   const knownBrandNames = knownBrands.map((brand) => brand.replace(' (type below)', ''));
-  const brandIsKnown = knownBrandNames.includes(product.brand);
-  const brandValue = brandIsKnown ? product.brand : 'Other (type below)';
-  const customBrand = brandIsKnown ? '' : (product.brand || '');
+  const brandIsKnown = knownBrandNames.includes(normalizedProduct.brand);
+  const brandValue = brandIsKnown ? normalizedProduct.brand : 'Other (type below)';
+  const customBrand = brandIsKnown ? '' : (normalizedProduct.brand || '');
 
-  const knownSubs = CATEGORY_SUBCATEGORIES[product.category] || [];
-  const subIsKnown = knownSubs.includes(product.subcategory);
-  const subValue = subIsKnown ? product.subcategory : (product.subcategory ? '__custom__' : '');
-  const customSub = subIsKnown ? '' : (product.subcategory || '');
-  const media = normalizeProductMedia(product.image_url, normalizeStringArray(product.image_urls));
+  const knownSubs = CATEGORY_SUBCATEGORIES[normalizedProduct.category] || [];
+  const subIsKnown = knownSubs.includes(normalizedProduct.subcategory);
+  const subValue = subIsKnown ? normalizedProduct.subcategory : (normalizedProduct.subcategory ? '__custom__' : '');
+  const customSub = subIsKnown ? '' : (normalizedProduct.subcategory || '');
+  const media = normalizeProductMedia(normalizedProduct.image_url, normalizeStringArray(normalizedProduct.image_urls));
 
   return {
     ...buildEmptyProductForm(),
-    name: product.name || '',
-    description: product.description || '',
-    price: product.price ?? '',
-    original_price: product.original_price ?? '',
+    name: normalizedProduct.name || '',
+    description: normalizedProduct.description || '',
+    price: normalizedProduct.price ?? '',
+    original_price: normalizedProduct.original_price ?? '',
     main_group,
-    category: product.category || '',
+    category: normalizedProduct.category || '',
     brand: brandValue,
     custom_brand: customBrand,
     subcategory: subValue,
     custom_subcategory: customSub,
-    stock: product.stock ?? '',
+    stock: normalizedProduct.stock ?? '',
     home_sections,
-    review_enabled: product.review_enabled !== false,
-    rating: product.rating ?? '',
-    reviews_count: product.reviews_count ?? '',
+    review_enabled: normalizedProduct.review_enabled !== false,
+    rating: normalizedProduct.rating ?? '',
+    reviews_count: normalizedProduct.reviews_count ?? '',
     image_url: media.image_url || '',
     image_urls: media.image_urls,
-    video_url: product.video_url || '',
-    flash_sale_end: product.flash_sale_end || '',
-    is_visible: product.is_visible !== false,
-    show_colors: product.show_colors || false,
-    available_colors: normalizeStringArray(product.available_colors),
+    video_url: normalizedProduct.video_url || '',
+    flash_sale_end: normalizedProduct.flash_sale_end || '',
+    is_visible: normalizedProduct.is_visible !== false,
+    show_colors: normalizedProduct.show_colors || false,
+    available_colors: normalizeStringArray(normalizedProduct.available_colors),
     color_input: '',
-    show_wattage: product.show_wattage || false,
-    available_wattage: normalizeStringArray(product.available_wattage),
+    show_wattage: normalizedProduct.show_wattage || false,
+    available_wattage: normalizeStringArray(normalizedProduct.available_wattage),
     wattage_input: '',
-    show_type: product.show_type || false,
-    available_types: normalizeStringArray(product.available_types),
+    show_type: normalizedProduct.show_type || false,
+    available_types: normalizeStringArray(normalizedProduct.available_types),
     type_input: '',
-    sku: product.sku || '',
-    barcode: product.barcode || '',
-    tags: normalizeStringArray(product.tags),
-    warranty: product.warranty || '',
-    voltage: product.voltage || '',
-    power: product.power || '',
-    capacity: product.capacity || '',
-    ram: product.ram || '',
-    storage: product.storage || '',
-    screen_size: product.screen_size || '',
-    features: product.features || '',
-    seo_title: product.seo_title || '',
-    seo_description: product.seo_description || '',
-    keywords: normalizeStringArray(product.keywords),
-    slug: product.slug || '',
+    sku: normalizedProduct.sku || '',
+    barcode: normalizedProduct.barcode || '',
+    tags: normalizeStringArray(normalizedProduct.tags),
+    warranty: normalizedProduct.warranty || '',
+    voltage: normalizedProduct.voltage || '',
+    power: normalizedProduct.power || '',
+    capacity: normalizedProduct.capacity || '',
+    ram: normalizedProduct.ram || '',
+    storage: normalizedProduct.storage || '',
+    screen_size: normalizedProduct.screen_size || '',
+    features: normalizedProduct.features || '',
+    seo_title: normalizedProduct.seo_title || '',
+    seo_description: normalizedProduct.seo_description || '',
+    keywords: normalizeStringArray(normalizedProduct.keywords),
+    slug: normalizedProduct.slug || '',
   };
 }
 
@@ -326,6 +328,7 @@ function sanitizeOptionalFields(source = {}) {
 }
 
 export function buildProductPayload(data = {}) {
+  const normalizedData = normalizeTextDeep(data);
   const {
     main_group,
     home_sections,
@@ -335,28 +338,28 @@ export function buildProductPayload(data = {}) {
     wattage_input,
     type_input,
     ...rest
-  } = data;
+  } = normalizedData;
 
   const sections = Array.isArray(home_sections) ? home_sections : [];
   const finalBrand = rest.brand === 'Other (type below)' ? (custom_brand || 'Other') : rest.brand;
   const finalSubcategory = rest.subcategory === '__custom__' ? (custom_subcategory || '') : rest.subcategory;
-  const stockValue = typeof data.stock === 'string' ? data.stock.trim() : data.stock;
+  const stockValue = typeof normalizedData.stock === 'string' ? normalizeText(normalizedData.stock).trim() : normalizedData.stock;
   const stockNumber = stockValue === '' ? null : parseInt(stockValue, 10);
   const media = normalizeProductMedia(rest.image_url, normalizeStringArray(rest.image_urls));
 
   const payload = {
     name: rest.name?.trim(),
     description: typeof rest.description === 'string' ? rest.description : '',
-    price: parseNullableNumber(data.price) ?? 0,
-    original_price: parseNullableNumber(data.original_price),
+    price: parseNullableNumber(normalizedData.price) ?? 0,
+    original_price: parseNullableNumber(normalizedData.original_price),
     category: rest.category,
     brand: finalBrand,
     subcategory: finalSubcategory,
     stock: stockValue === '' ? null : Number.isNaN(stockNumber) ? null : stockNumber,
-    rating: parseNullableNumber(data.rating),
-    reviews_count: data.reviews_count === '' ? null : parseNullableNumber(parseInt(data.reviews_count, 10)),
+    rating: parseNullableNumber(normalizedData.rating),
+    reviews_count: normalizedData.reviews_count === '' ? null : parseNullableNumber(parseInt(normalizedData.reviews_count, 10)),
     review_enabled: rest.review_enabled !== false,
-    is_visible: data.is_visible !== false,
+    is_visible: normalizedData.is_visible !== false,
     image_url: media.image_url || null,
     image_urls: media.image_urls,
     video_url: trimOrNull(rest.video_url),

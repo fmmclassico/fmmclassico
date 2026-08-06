@@ -30,6 +30,14 @@ export function getSupabaseFunctionUrl(functionName) {
   return `${getSupabaseConfig().url}/functions/v1/${String(functionName || '').replace(/^\/+/, '')}`;
 }
 
+export function getHubtelInitiateUrl() {
+  return getSupabaseFunctionUrl('hubtel-initiate');
+}
+
+export function getHubtelStatusUrl() {
+  return getSupabaseFunctionUrl('hubtel-status');
+}
+
 export function getHubtelCallbackUrl() {
   return getSupabaseFunctionUrl('hubtel-callback');
 }

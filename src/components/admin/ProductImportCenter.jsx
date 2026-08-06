@@ -22,7 +22,7 @@ function ResultBadge({ row }) {
   return <Badge className="bg-emerald-100 text-emerald-800">Create</Badge>;
 }
 
-export default function ProductImportCenter({ open, onOpenChange }) {
+export default function ProductImportCenter({ open, onOpenChange, onProductMapped }) {
   const {
     job,
     history,
@@ -41,9 +41,14 @@ export default function ProductImportCenter({ open, onOpenChange }) {
 
   const percent = progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0;
 
+  const handleOpenInEditor = (row) => {
+    onProductMapped?.(row);
+    onOpenChange?.(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl h-[90vh] overflow-hidden p-0">
+      <DialogContent className="flex max-w-6xl h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <FileSpreadsheet className="h-5 w-5 text-blue-600" />
@@ -54,7 +59,7 @@ export default function ProductImportCenter({ open, onOpenChange }) {
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="import" className="flex h-full flex-col">
+        <Tabs defaultValue="import" className="flex h-full min-h-0 flex-col">
           <div className="border-b px-6 py-3">
             <TabsList>
               <TabsTrigger value="import">Import</TabsTrigger>
@@ -62,9 +67,9 @@ export default function ProductImportCenter({ open, onOpenChange }) {
             </TabsList>
           </div>
 
-          <TabsContent value="import" className="m-0 flex-1 overflow-hidden">
-            <div className="grid h-full grid-cols-1 gap-6 overflow-hidden px-6 py-5 lg:grid-cols-[380px_minmax(0,1fr)]">
-              <div className="space-y-4 overflow-y-auto pr-1">
+          <TabsContent value="import" className="m-0 flex-1 min-h-0 overflow-hidden">
+            <div className="grid h-full min-h-0 grid-cols-1 gap-6 overflow-hidden px-6 py-5 lg:grid-cols-[380px_minmax(0,1fr)]">
+              <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
                 <Card className="p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <div>
@@ -188,8 +193,8 @@ export default function ProductImportCenter({ open, onOpenChange }) {
                 )}
               </div>
 
-              <div className="overflow-hidden">
-                <Card className="flex h-full flex-col overflow-hidden">
+              <div className="min-h-0 overflow-hidden">
+                <Card className="flex h-full min-h-0 flex-col overflow-hidden">
                   <div className="border-b px-4 py-3">
                     <h3 className="font-semibold text-gray-900">Validation preview</h3>
                     <p className="text-sm text-gray-500">Review the first rows before import. Unknown columns are ignored safely.</p>
@@ -204,8 +209,8 @@ export default function ProductImportCenter({ open, onOpenChange }) {
                       </div>
                     </div>
                   ) : (
-                    <ScrollArea className="h-full">
-                      <div className="p-4">
+                    <ScrollArea className="h-full w-full">
+                      <div className="min-w-[980px] p-4">
                         {summary?.failedRows > 0 && (
                           <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
                             <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
@@ -227,6 +232,7 @@ export default function ProductImportCenter({ open, onOpenChange }) {
                               <TableHead>Price</TableHead>
                               <TableHead>Stock</TableHead>
                               <TableHead>Warnings / Errors</TableHead>
+                              <TableHead className="text-right">Editor</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -266,6 +272,17 @@ export default function ProductImportCenter({ open, onOpenChange }) {
                                     {!row.warnings?.length && !row.errors?.length ? <span className="text-emerald-700">Ready</span> : null}
                                   </div>
                                 </TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={row.errors?.length > 0}
+                                    onClick={() => handleOpenInEditor(row)}
+                                  >
+                                    Open in editor
+                                  </Button>
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -278,7 +295,7 @@ export default function ProductImportCenter({ open, onOpenChange }) {
             </div>
           </TabsContent>
 
-          <TabsContent value="history" className="m-0 flex-1 overflow-y-auto px-6 py-5">
+          <TabsContent value="history" className="m-0 flex-1 min-h-0 overflow-y-auto px-6 py-5">
             <div className="space-y-4">
               {history.length === 0 ? (
                 <Card className="flex min-h-[240px] flex-col items-center justify-center gap-3 text-center text-gray-500">

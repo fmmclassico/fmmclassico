@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
+import { appClient } from '@/api/appClient.js';
 
 export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }) {
   const [password, setPassword] = useState('');
@@ -15,19 +15,14 @@ export default function AdminAuthModal({ isOpen, onClose, onSuccess, userEmail }
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.rpc('verify_admin_password', {
-        input_password: password
-      });
+      const result = await appClient.auth.verifyAdminAccess(password);
 
-      if (error) {
-        console.error('Verification error:', error);
-        toast.error('Unable to verify. Please try again.');
-      } else if (data === true) {
+      if (result?.success) {
         onSuccess();
         toast.success('Admin access granted!');
         setPassword('');
       } else {
-        toast.error('Invalid password');
+        toast.error(result?.error || 'Invalid password');
       }
     } catch (err) {
       console.error('Admin auth error:', err);

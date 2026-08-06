@@ -1,4 +1,9 @@
-import { getSupabaseConfig, getSupabaseFunctionUrl } from '@/lib/runtime-config';
+import {
+  getHubtelCallbackUrl,
+  getHubtelInitiateUrl,
+  getHubtelStatusUrl,
+  getSupabaseConfig,
+} from '@/lib/runtime-config';
 
 function authHeaders() {
   const { anonKey } = getSupabaseConfig();
@@ -23,6 +28,20 @@ function withMeta(result, response) {
     ok: response.ok,
     httpStatus: response.status,
   };
+}
+
+async function readJsonResponse(response, fallbackErrorMessage) {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    return {
+      error: fallbackErrorMessage,
+      raw: text,
+    };
+  }
 }
 
 function sanitizeDescription(value = '') {
@@ -57,6 +76,10 @@ export function getHubtelStatusValue(result) {
   ).toLowerCase();
 }
 
+export function getHubtelCallbackTarget() {
+  return getHubtelCallbackUrl();
+}
+
 export async function initiatePayment({
   totalAmount,
   description,
@@ -69,7 +92,7 @@ export async function initiatePayment({
   payeeEmail,
 }) {
   try {
-    const response = await fetch(getSupabaseFunctionUrl('hubtel-checkout'), {
+    const response = await fetch(getHubtelInitiateUrl(), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({
@@ -85,7 +108,7 @@ export async function initiatePayment({
       }),
     });
 
-    const result = await response.json();
+    const result = await readJsonResponse(response, 'Unable to parse Hubtel initiation response.');
     return withMeta(result, response);
   } catch (error) {
     console.error('[HubtelClient] Error initiating payment:', error);
@@ -93,17 +116,25 @@ export async function initiatePayment({
   }
 }
 
-export async function checkPaymentStatus(clientReference) {
+export async function checkPaymentStatus(clientReference, extraQuery = {}) {
   try {
-    const response = await fetch(
-      `${getSupabaseFunctionUrl('hubtel-checkout')}?clientReference=${encodeURIComponent(clientReference)}`,
-      {
-        method: 'GET',
-        headers: authHeaders(),
-      }
-    );
+    const url = new URL(getHubtelStatusUrl());
+    if (clientReference) {
+      url.searchParams.set('clientReference', clientReference);
+    }
 
-    const result = await response.json();
+    Object.entries(extraQuery || {}).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && String(value).trim()) {
+        url.searchParams.set(key, String(value).trim());
+      }
+    });
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: authHeaders(),
+    });
+
+    const result = await readJsonResponse(response, 'Unable to parse Hubtel status response.');
     return withMeta(result, response);
   } catch (error) {
     console.error('[HubtelClient] Status check error:', error);
@@ -148,7 +179,7 @@ export async function initiateBalancePayment({ order, callbackUrl, returnUrl, ca
   return initiatePayment({
     totalAmount: amount,
     description,
-    callbackUrl,
+    callbackUrl: callbackUrl || getHubtelCallbackUrl(),
     returnUrl,
     cancellationUrl,
     clientReference,

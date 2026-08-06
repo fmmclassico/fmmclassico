@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload, X, Pencil, Plus, ImagePlus, Loader2, Check, Video, Eye, EyeOff, Link2, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { Upload, X, Pencil, Plus, ImagePlus, Loader2, Check, Video, Eye, EyeOff, Link2, FileSpreadsheet, Trash2, Sparkles } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import { toast } from 'sonner';
 import ProductImportCenter from '@/components/admin/ProductImportCenter.jsx';
@@ -27,13 +27,6 @@ import {
   saveProduct,
   splitUrlList
 } from '@/services/products/productWriteService.js';
-
-
-import {
-  autoMapProduct,
-  validateImportedProduct
-} from '@/services/product-engine/productMapper.js';
-
 
 import {
   generateSEO
@@ -54,13 +47,103 @@ const QUILL_MODULES = {
   ]
 };
 
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+
+async function askGemini(prompt, systemContext) {
+  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': GEMINI_API_KEY,
+    },
+    body: JSON.stringify({
+      contents: [
+        { role: 'user', parts: [{ text: systemContext }] },
+        { role: 'model', parts: [{ text: 'Understood. I will return clean product copy.' }] },
+        { role: 'user', parts: [{ text: prompt }] },
+      ],
+    }),
+  });
+
+  const data = await response.json();
+  if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+    return data.candidates[0].content.parts[0].text;
+  }
+  throw new Error(data?.error?.message || 'No response from AI service.');
+}
+
+function buildImportedEditorPayload(row = {}) {
+  const source = row?.original ? { ...row.original, ...row } : row;
+  const inferredExtraImages = normalizeStringArray(source.image_urls).length
+    ? normalizeStringArray(source.image_urls)
+    : [source['Extra Image 1'], source['Extra Image 2'], source['Extra Image 3'], source['Extra Image 4']].filter(Boolean);
+  const media = normalizeProductMedia(
+    source.image_url || source['Main Image'] || source['Image URL'] || '',
+    inferredExtraImages,
+  );
+  const home_sections = Array.isArray(source.home_sections)
+    ? source.home_sections
+    : normalizeStringArray(source['Homepage Sections'] || source.home_sections || '');
+  const details = {
+    name: source.name || source['Product Name'] || source.product_name || source.product || '',
+    price: source.price ?? source.Price ?? source.price ?? '',
+    original_price: source.original_price ?? source['Original Price'] ?? source.original_price ?? '',
+    main_group: source.main_group || '',
+    category: source.category || source.Category || '',
+    brand: source.brand || source.Brand || '',
+    subcategory: source.subcategory || source['Product Type'] || source.Subcategory || '',
+    stock: source.stock ?? source.Stock ?? source.stock ?? '',
+    description: source.description || source.Description || '',
+    image_url: media.image_url,
+    image_urls: media.image_urls,
+    video_url: source.video_url || source['Video URL'] || '',
+    sku: source.sku || source.SKU || '',
+    barcode: source.barcode || source.Barcode || '',
+    warranty: source.warranty || source.Warranty || '',
+    voltage: source.voltage || source.Voltage || '',
+    power: source.power || source.Power || '',
+    capacity: source.capacity || source.Capacity || '',
+    ram: source.ram || source.RAM || '',
+    storage: source.storage || source.Storage || '',
+    screen_size: source.screen_size || source['Screen Size'] || '',
+    features: source.features || source.Features || '',
+    flash_sale_end: source.flash_sale_end || source['Flash Sale End Date'] || '',
+    is_visible: source.is_visible !== false,
+    review_enabled: source.review_enabled !== false,
+    show_colors: source.show_colors || normalizeStringArray(source.colors || source.Colors).length > 0,
+    available_colors: source.available_colors || normalizeStringArray(source.colors || source.Colors),
+    show_wattage: source.show_wattage || Boolean(source.power || source.Power),
+    available_wattage: source.available_wattage || normalizeStringArray(source.power || source.Power),
+    show_type: source.show_type || normalizeStringArray(source.variants || source.Variants).length > 0,
+    available_types: source.available_types || normalizeStringArray(source.variants || source.Variants),
+    tags: Array.isArray(source.tags) ? source.tags : normalizeStringArray(source.tags || source.Tags),
+    keywords: Array.isArray(source.keywords) ? source.keywords : normalizeStringArray(source.keywords || source.Keywords),
+    seo_title: source.seo_title || '',
+    seo_description: source.seo_description || '',
+    slug: source.slug || '',
+    home_sections,
+  };
+
+  const hydrated = hydrateProductForm({
+    ...details,
+    ...Object.fromEntries(HOME_SECTIONS.map(({ key }) => [key, home_sections.includes(key)])),
+  });
+
+  return {
+    ...hydrated,
+    ...details,
+    main_group: details.main_group || hydrated.main_group,
+    description: details.description || generateDescription(details),
+  };
+}
+
 export default function AdminProducts() {
   const [user, setUser] = React.useState(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [showForm, setShowForm] = useState(false);
 const [showImportCenter, setShowImportCenter] = useState(false);
-
 const [importMode, setImportMode] = useState(false);
+const [generatingDescription, setGeneratingDescription] = useState(false);
 
 const [editingProduct, setEditingProduct] = useState(null);
 
@@ -71,42 +154,61 @@ const [form, setForm] = useState(buildEmptyProductForm());
   const [extraImageUrlInput, setExtraImageUrlInput] = useState('');
   const queryClient = useQueryClient();
 const handleImportedProduct = (excelRow) => {
-
-  const mappedProduct = autoMapProduct(excelRow);
-
-
+  const mappedProduct = buildImportedEditorPayload(excelRow);
   const seo = generateSEO(mappedProduct);
 
-
   setImportMode(true);
-setShowForm(true);
-
-  setForm((current) => ({
-
-    ...current,
-
+  setEditingProduct(null);
+  setExtraImageUrlInput('');
+  setShowImportCenter(false);
+  setShowForm(true);
+  setForm({
     ...mappedProduct,
+    seo_title: mappedProduct.seo_title || seo.title,
+    seo_description: mappedProduct.seo_description || seo.description,
+  });
 
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  toast.success('Spreadsheet row loaded into the editor. Review the preview, adjust anything you want, then create the product.');
+};
 
-    description:
-      mappedProduct.description ||
-      generateDescription(mappedProduct),
+const handleGenerateDescription = async () => {
+  if (!String(form.name || '').trim()) {
+    toast.error('Enter the product name first.');
+    return;
+  }
 
+  const fallbackDescription = generateDescription(form);
+  setGeneratingDescription(true);
 
-    seo_title:
-      seo.title,
+  try {
+    if (!GEMINI_API_KEY) {
+      setForm((current) => ({ ...current, description: fallbackDescription }));
+      toast.success('Description generated from the product details.');
+      return;
+    }
 
+    const systemContext = 'You are a product copywriter for FMM CLASSICO in Ghana. Return clean HTML using only h2, h3, p, ul, and li tags. Focus on benefits, trust, and clear specifications. Do not wrap the response in markdown fences.';
+    const prompt = [
+      `Product name: ${form.name || ''}`,
+      `Brand: ${form.brand === 'Other (type below)' ? form.custom_brand : form.brand || ''}`,
+      `Category: ${form.category || ''}`,
+      `Subcategory: ${form.subcategory === '__custom__' ? form.custom_subcategory : form.subcategory || ''}`,
+      `Price: ${form.price || ''}`,
+      `Features: ${Array.isArray(form.available_types) ? form.available_types.join(', ') : ''}`,
+      `Colours: ${Array.isArray(form.available_colors) ? form.available_colors.join(', ') : ''}`,
+      `Specs: storage=${form.storage || ''}, ram=${form.ram || ''}, capacity=${form.capacity || ''}, power=${form.power || ''}, voltage=${form.voltage || ''}, warranty=${form.warranty || ''}`,
+    ].join('\n');
 
-    seo_description:
-      seo.description
-
-  }));
-
-
-  toast.success(
-    "Product automatically analyzed from Excel"
-  );
-
+    const aiDescription = await askGemini(prompt, systemContext);
+    setForm((current) => ({ ...current, description: aiDescription || fallbackDescription }));
+    toast.success('Description generated and inserted into the editor.');
+  } catch (error) {
+    setForm((current) => ({ ...current, description: fallbackDescription }));
+    toast.error(`AI description failed, so a local description template was added instead. ${error.message || ''}`.trim());
+  } finally {
+    setGeneratingDescription(false);
+  }
 };
   React.useEffect(() => {
     appClient.auth.me()
@@ -147,6 +249,7 @@ setShowForm(true);
       queryClient.invalidateQueries({ queryKey: ['products-admin'] });
       toast.success(editingProduct ? 'Product updated!' : 'Product created!');
       setShowForm(false);
+      setImportMode(false);
       setEditingProduct(null);
       setForm(buildEmptyProductForm());
       setExtraImageUrlInput('');
@@ -273,6 +376,7 @@ setShowForm(true);
   };
 
   const handleEdit = (product) => {
+    setImportMode(false);
     setEditingProduct(product);
     setForm(hydrateProductForm(product));
     setExtraImageUrlInput('');
@@ -327,7 +431,7 @@ onProductMapped={handleImportedProduct}
         <Card className="p-5 mb-8 border-2 border-blue-200 shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-lg text-gray-800">{editingProduct ? 'Edit Product' : 'New Product'}</h2>
-            <button onClick={() => setShowForm(false)}><X className="h-5 w-5 text-gray-400" /></button>
+            <button onClick={() => { setShowForm(false); setImportMode(false); setEditingProduct(null); setForm(buildEmptyProductForm()); setExtraImageUrlInput(''); }}><X className="h-5 w-5 text-gray-400" /></button>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -367,7 +471,7 @@ onProductMapped={handleImportedProduct}
                     </div>
                   </div>
 
-                  {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Main image ready</p>}
+                  {form.image_url && <p className="text-xs text-green-600 font-medium">âœ“ Main image ready</p>}
                 </div>
               </div>
             </div>
@@ -445,7 +549,7 @@ onProductMapped={handleImportedProduct}
               </div>
 
               {form.video_url && (
-                <p className="text-xs text-green-600 mt-2 font-medium">âœ“ Video ready: {form.video_url.length > 80 ? `${form.video_url.slice(0, 80)}...` : form.video_url}</p>
+                <p className="text-xs text-green-600 mt-2 font-medium">Ã¢Å“â€œ Video ready: {form.video_url.length > 80 ? `${form.video_url.slice(0, 80)}...` : form.video_url}</p>
               )}
             </div>
 
@@ -454,467 +558,149 @@ onProductMapped={handleImportedProduct}
               <Input value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} placeholder="e.g. iPhone 14 Pro Max" />
             </div>
 
-   {/* CATEGORY INTELLIGENCE SECTION */}
-
-<div>
-  <Label>
-    Main Group *
-
-    {importMode && (
-      <span className="ml-2 text-xs text-green-600">
-        ✓ Auto detected from Excel
-      </span>
-    )}
-
-  </Label>
-
-
-  {importMode ? (
-
-    <Input
-      value={form.main_group || ""}
-      readOnly
-      className="bg-green-50"
-    />
-
-  ) : (
-
-    <Select
-
-      value={form.main_group || ""}
-
-      onValueChange={(value)=>
-        setForm((current)=>({
-
-          ...current,
-
-          main_group:value,
-
-          category:"",
-          brand:"",
-          subcategory:"",
-
-          custom_brand:"",
-          custom_subcategory:""
-
-        }))
-      }
-
-    >
-
-      <SelectTrigger>
-        <SelectValue placeholder="Select main group" />
-      </SelectTrigger>
-
-
-      <SelectContent>
-
-        {MAIN_CATEGORY_GROUPS.map((group)=>(
-
-          <SelectItem
-
-            key={group.id}
-
-            value={group.id}
-
-          >
-
-            {group.label}
-
-          </SelectItem>
-
-        ))}
-
-      </SelectContent>
-
-
-    </Select>
-
-  )}
-
-</div>
-
-
-
-<div>
-
-  <Label>
-
-    Category *
-
-    {importMode && (
-      <span className="ml-2 text-xs text-green-600">
-        ✓ Auto detected from Excel
-      </span>
-    )}
-
-  </Label>
-
-
-
-  {importMode ? (
-
-    <Input
-
-      value={form.category || ""}
-
-      readOnly
-
-      className="bg-green-50"
-
-    />
-
-  ) : (
-
-    <Select
-
-      value={form.category || ""}
-
-
-      onValueChange={(value)=>
-
-        setForm((current)=>({
-
-          ...current,
-
-          category:value,
-
-          brand:"",
-          subcategory:"",
-
-          custom_brand:"",
-          custom_subcategory:""
-
-        }))
-
-      }
-
-
-      disabled={!form.main_group}
-
-    >
-
-      <SelectTrigger>
-
-        <SelectValue
-
-          placeholder={
-            form.main_group
-            ?
-            "Select category"
-            :
-            "Select main group first"
-          }
-
-        />
-
-      </SelectTrigger>
-
-
-      <SelectContent>
-
-
-        {(GROUP_CATEGORIES[form.main_group] || [])
-          .map((category)=>(
-
-
-          <SelectItem
-
-            key={category.value}
-
-            value={category.value}
-
-          >
-
-            {category.label}
-
-          </SelectItem>
-
-
-        ))}
-
-
-      </SelectContent>
-
-
-    </Select>
-
-  )}
-
-</div>
-
-
-
-
-<div>
-
-  <Label>
-
-    Brand *
-
-    {importMode && (
-      <span className="ml-2 text-xs text-green-600">
-        ✓ Auto detected from Excel
-      </span>
-    )}
-
-  </Label>
-
-
-
-  {importMode ? (
-
-    <Input
-
-      value={form.brand || ""}
-
-      readOnly
-
-      className="bg-green-50"
-
-    />
-
-  ) : (
-
-    <Select
-
-
-      value={form.brand || ""}
-
-
-      onValueChange={(value)=>
-
-        setForm((current)=>({
-
-          ...current,
-
-          brand:value,
-
-          custom_brand:""
-
-        }))
-
-      }
-
-
-      disabled={!form.category}
-
-    >
-
-      <SelectTrigger>
-
-        <SelectValue
-
-          placeholder={
-            form.category
-            ?
-            "Select brand"
-            :
-            "Select category first"
-          }
-
-        />
-
-      </SelectTrigger>
-
-
-
-      <SelectContent>
-
-
-        {(GROUP_BRANDS[form.main_group] || [])
-          .map((brand)=>(
-
-
-          <SelectItem
-
-            key={brand}
-
-            value={brand}
-
-          >
-
-            {brand}
-
-          </SelectItem>
-
-
-        ))}
-
-
-      </SelectContent>
-
-
-    </Select>
-
-
-  )}
-
-
-
-</div>
-
-
-
-
-
-<div>
-
-  <Label>
-
-    Product Type / Subcategory *
-
-    {importMode && (
-      <span className="ml-2 text-xs text-green-600">
-        ✓ Auto detected from Excel
-      </span>
-    )}
-
-  </Label>
-
-
-
-
-  {importMode ? (
-
-    <Input
-
-      value={form.subcategory || ""}
-
-      readOnly
-
-      className="bg-green-50"
-
-    />
-
-
-
-  ) : (
-
-
-    <Select
-
-
-      value={form.subcategory || ""}
-
-
-      onValueChange={(value)=>
-
-        setForm((current)=>({
-
-          ...current,
-
-          subcategory:value,
-
-          custom_subcategory:""
-
-        }))
-
-      }
-
-
-      disabled={!form.category}
-
-
-    >
-
-
-      <SelectTrigger>
-
-
-        <SelectValue
-
-          placeholder={
-            form.category
-            ?
-            "Select product type"
-            :
-            "Select category first"
-          }
-
-        />
-
-
-      </SelectTrigger>
-
-
-
-      <SelectContent>
-
-
-        {availableSubcategories.map((item)=>(
-
-
-          <SelectItem
-
-            key={item}
-
-            value={item}
-
-          >
-
-            {item}
-
-          </SelectItem>
-
-
-        ))}
-
-
-        <SelectItem value="__custom__">
-
-          Other (type my own)
-
-        </SelectItem>
-
-
-      </SelectContent>
-
-
-    </Select>
-
-
-  )}
-
-
-
-  {!importMode && form.subcategory === "__custom__" && (
-
-    <Input
-
-      className="mt-2"
-
-      placeholder="Type product type / subcategory"
-
-      value={form.custom_subcategory || ""}
-
-      onChange={(e)=>
-
-        setForm((current)=>({
-
-          ...current,
-
-          custom_subcategory:e.target.value
-
-        }))
-
-      }
-
-    />
-
-  )}
-
-
-
-</div>
-          
+            {importMode && (
+              <div className="md:col-span-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                This product was auto-filled from the spreadsheet. You can change any field before you create it.
+              </div>
+            )}
 
             <div>
-              <Label>Price (₵) *</Label>
+              <Label>
+                Main Group *
+                {importMode && <span className="ml-2 text-xs text-green-600">âœ“ Auto-filled from the spreadsheet</span>}
+              </Label>
+              <Select
+                value={form.main_group || ""}
+                onValueChange={(value) => setForm((current) => ({
+                  ...current,
+                  main_group: value,
+                  category: "",
+                  brand: "",
+                  subcategory: "",
+                  custom_brand: "",
+                  custom_subcategory: "",
+                }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select main group" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MAIN_CATEGORY_GROUPS.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>
+                Category *
+                {importMode && <span className="ml-2 text-xs text-green-600">âœ“ Auto-filled when possible</span>}
+              </Label>
+              <Select
+                value={form.category || ""}
+                onValueChange={(value) => setForm((current) => ({
+                  ...current,
+                  category: value,
+                  brand: "",
+                  subcategory: "",
+                  custom_brand: "",
+                  custom_subcategory: "",
+                }))}
+                disabled={!form.main_group}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={form.main_group ? "Select category" : "Select main group first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(GROUP_CATEGORIES[form.main_group] || []).map((category) => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>
+                Brand *
+                {importMode && <span className="ml-2 text-xs text-green-600">âœ“ Auto-filled when possible</span>}
+              </Label>
+              <Select
+                value={form.brand || ""}
+                onValueChange={(value) => setForm((current) => ({
+                  ...current,
+                  brand: value,
+                  custom_brand: value === 'Other (type below)' ? current.custom_brand : "",
+                }))}
+                disabled={!form.main_group}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={form.main_group ? "Select brand" : "Select main group first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(GROUP_BRANDS[form.main_group] || []).map((brand) => (
+                    <SelectItem key={brand} value={brand}>
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.brand === 'Other (type below)' && (
+                <Input
+                  className="mt-2"
+                  placeholder="Type the brand name"
+                  value={form.custom_brand || ""}
+                  onChange={(e) => setForm((current) => ({ ...current, custom_brand: e.target.value }))}
+                />
+              )}
+            </div>
+
+            <div>
+              <Label>
+                Product Type / Subcategory *
+                {importMode && <span className="ml-2 text-xs text-green-600">âœ“ Auto-filled when possible</span>}
+              </Label>
+              <Select
+                value={form.subcategory || ""}
+                onValueChange={(value) => setForm((current) => ({
+                  ...current,
+                  subcategory: value,
+                  custom_subcategory: value === '__custom__' ? current.custom_subcategory : "",
+                }))}
+                disabled={!form.category}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={form.category ? "Select product type" : "Select category first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSubcategories.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {item}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="__custom__">Other (type my own)</SelectItem>
+                </SelectContent>
+              </Select>
+              {form.subcategory === "__custom__" && (
+                <Input
+                  className="mt-2"
+                  placeholder="Type product type / subcategory"
+                  value={form.custom_subcategory || ""}
+                  onChange={(e) => setForm((current) => ({ ...current, custom_subcategory: e.target.value }))}
+                />
+              )}
+            </div>
+
+            <div>
+              <Label>Price (â‚µ) *</Label>
               <Input type="number" value={form.price} onChange={(e) => setForm((current) => ({ ...current, price: e.target.value }))} placeholder="0.00" />
             </div>
             <div>
-              <Label>Original Price (₵) — for discount display</Label>
+              <Label>Original Price (â‚µ) â€” for discount display</Label>
               <Input type="number" value={form.original_price} onChange={(e) => setForm((current) => ({ ...current, original_price: e.target.value }))} placeholder="0.00" />
             </div>
 
@@ -927,8 +713,22 @@ onProductMapped={handleImportedProduct}
             </div>
 
             <div className="md:col-span-2">
-              <Label className="font-semibold block mb-2">Description (Rich Text)</Label>
-              <p className="text-xs text-gray-500 mb-2">Use the toolbar to format text with bold, bullets, headings, font size, and more.</p>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <Label className="font-semibold block">Description (Rich Text)</Label>
+                  <p className="text-xs text-gray-500">Use the toolbar to format text with bold, bullets, headings, font size, and more.</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleGenerateDescription}
+                  disabled={generatingDescription || !String(form.name || '').trim()}
+                  className="gap-2"
+                >
+                  {generatingDescription ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {GEMINI_API_KEY ? 'Generate with AI' : 'Generate description'}
+                </Button>
+              </div>
               <div className="border border-gray-200 rounded-lg overflow-hidden admin-quill">
                 <ReactQuill
                   theme="snow"
@@ -937,6 +737,44 @@ onProductMapped={handleImportedProduct}
                   modules={QUILL_MODULES}
                   placeholder="Write a detailed, well-formatted product description..."
                 />
+              </div>
+            </div>
+
+            <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-slate-900">Live preview before create</h3>
+                  <p className="text-xs text-slate-500">Review how the product information looks before saving it.</p>
+                </div>
+                <Badge variant="outline">Preview</Badge>
+              </div>
+              <div className="grid gap-4 md:grid-cols-[140px_minmax(0,1fr)]">
+                <div className="overflow-hidden rounded-xl border bg-white aspect-square">
+                  {form.image_url ? (
+                    <img src={form.image_url} alt={form.name || 'Product preview'} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-gray-400">No image selected</div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-lg font-semibold text-slate-900">{form.name || 'Product name preview'}</h4>
+                    {!form.is_visible && <Badge className="bg-red-100 text-red-700">Hidden</Badge>}
+                  </div>
+                  <p className="text-sm text-slate-600">
+                    {[form.main_group, form.category, form.subcategory === '__custom__' ? form.custom_subcategory : form.subcategory].filter(Boolean).join(' â€¢ ') || 'Category details will appear here'}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    Brand: {form.brand === 'Other (type below)' ? (form.custom_brand || 'Custom brand') : (form.brand || 'Not selected')}
+                  </p>
+                  <p className="text-base font-semibold text-slate-900">
+                    {form.price ? `â‚µ${form.price}` : 'Set a price'}
+                    {form.original_price ? <span className="ml-2 text-sm font-normal text-slate-500 line-through">â‚µ{form.original_price}</span> : null}
+                  </p>
+                  <div className="rounded-xl bg-white p-3 text-sm text-slate-700">
+                    <div dangerouslySetInnerHTML={{ __html: form.description || '<p>Description preview will appear here.</p>' }} />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1104,7 +942,7 @@ onProductMapped={handleImportedProduct}
                     {form.is_visible ? <Eye className="h-3 w-3 text-white" /> : <EyeOff className="h-3 w-3 text-red-500" />}
                   </div>
                   <span className="text-sm font-medium text-gray-700">
-                    {form.is_visible ? 'Visible to Customers' : 'ðŸš« Hidden from Customers'}
+                    {form.is_visible ? 'Visible to Customers' : 'Ã°Å¸Å¡Â« Hidden from Customers'}
                   </span>
                 </label>
               </div>
@@ -1120,7 +958,7 @@ onProductMapped={handleImportedProduct}
               {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               {editingProduct ? 'Save Changes' : 'Create Product'}
             </Button>
-            <Button variant="outline" onClick={() => { setShowForm(false); setEditingProduct(null); setForm(buildEmptyProductForm()); setExtraImageUrlInput(''); }}>
+            <Button variant="outline" onClick={() => { setShowForm(false); setImportMode(false); setEditingProduct(null); setForm(buildEmptyProductForm()); setExtraImageUrlInput(''); }}>
               Cancel
             </Button>
           </div>
@@ -1158,7 +996,7 @@ onProductMapped={handleImportedProduct}
                 </div>
                 <div className="p-2">
                   <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
-                  <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
+                  <p className="text-sm font-black text-gray-900">â‚µ{product.price?.toLocaleString()}</p>
                   {product.stock != null && (
                     <p className={`text-[10px] font-medium ${product.stock === 0 ? 'text-red-500' : 'text-gray-400'}`}>
                       Stock: {product.stock === 0 ? 'Out of Stock' : product.stock}

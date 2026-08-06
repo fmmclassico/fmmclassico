@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getSupabaseConfig, getSupabaseFunctionUrl } from '@/lib/runtime-config';
 
 const PROMO_BANNER_RESPONSIVE_FIELDS = ['desktop_image_url', 'mobile_image_url'];
 const PRODUCT_ARRAY_FIELDS = ['image_urls', 'available_colors', 'available_wattage', 'available_types'];
@@ -457,8 +458,7 @@ const appLogs = {
   logUserInApp() { return Promise.resolve(); }
 };
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://kptlejtauwqvaapsrjfx.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const { anonKey: SUPABASE_ANON_KEY } = getSupabaseConfig();
 
 const integrations = {
   Core: {
@@ -478,7 +478,7 @@ const integrations = {
 
     async SendEmail({ to, from_name, subject, body }) {
       try {
-        const response = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
+        const response = await fetch(getSupabaseFunctionUrl('send-email'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -507,7 +507,7 @@ const integrations = {
 
     async SendSMS({ to, message }) {
       try {
-        const response = await fetch(SUPABASE_URL + '/functions/v1/send-sms', {
+        const response = await fetch(getSupabaseFunctionUrl('send-sms'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

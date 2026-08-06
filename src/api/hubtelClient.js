@@ -1,9 +1,11 @@
-const SUPABASE_URL = "https://kptlejtauwqvaapsrjfx.supabase.co";
+import { getSupabaseConfig, getSupabaseFunctionUrl } from '@/lib/runtime-config';
 
 function authHeaders() {
+  const { anonKey } = getSupabaseConfig();
+
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'}`,
+    Authorization: `Bearer ${anonKey}`,
   };
 }
 
@@ -23,7 +25,7 @@ export function getBaseOrderReference(reference = '') {
 
 export async function initiatePayment({ totalAmount, description, callbackUrl, returnUrl, cancellationUrl, clientReference }) {
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/hubtel-checkout`, {
+    const response = await fetch(getSupabaseFunctionUrl('hubtel-checkout'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ totalAmount, description, callbackUrl, returnUrl, cancellationUrl, clientReference }),
@@ -38,7 +40,7 @@ export async function initiatePayment({ totalAmount, description, callbackUrl, r
 
 export async function checkPaymentStatus(clientReference) {
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/hubtel-checkout?clientReference=${encodeURIComponent(clientReference)}`, {
+    const response = await fetch(`${getSupabaseFunctionUrl('hubtel-checkout')}?clientReference=${encodeURIComponent(clientReference)}`, {
       method: 'GET',
       headers: authHeaders(),
     });

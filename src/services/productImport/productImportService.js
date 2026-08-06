@@ -14,6 +14,7 @@ import {
   splitUrlList,
   uploadFiles,
 } from '@/services/products/productWriteService.js';
+import { generateDescription } from '@/services/product-engine/descriptionGenerator.js';
 
 export const SUPPORTED_IMPORT_ACCEPT = '.xlsx,.xls,.csv';
 export const DEFAULT_BATCH_SIZE = 50;
@@ -33,8 +34,8 @@ export const IMPORT_MODES = [
 ];
 
 const COLUMN_ALIASES = {
-  productName: ['product name', 'name', 'product', 'title', 'product title'],
-  mainCategory: ['main category', 'main_category', 'parent category', 'department'],
+  productName: ['product name', 'name', 'product', 'title', 'product title', 'item name', 'item', 'item title', 'model', 'model name'],
+  mainCategory: ['main category', 'main_category', 'parent category', 'department', 'main group', 'product department'],
   category: ['category', 'product category'],
   subcategory: ['subcategory', 'sub category', 'sub-category', 'product type', 'type'],
   brand: ['brand', 'manufacturer', 'make'],
@@ -131,7 +132,7 @@ function normalizeKey(value) {
 function slugify(value = '') {
   return String(value || '')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[Ì€-Í¯]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
@@ -156,6 +157,7 @@ function sanitizeDescription(value = '') {
 
 function splitMultiValue(value) {
   if (Array.isArray(value)) return normalizeStringArray(value);
+  if (typeof value === 'number') return [String(value)];
   if (typeof value !== 'string') return [];
   const trimmed = value.trim();
   if (!trimmed) return [];
@@ -167,7 +169,11 @@ function splitMultiValue(value) {
   }
   return normalizeStringArray(
     trimmed
-    .split('').join(',').split(';').join(','));
+      .replace(/\r/g, '\n')
+      .split(/[\n,;|]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+  );
 }
 
 function parseBooleanish(value, defaultValue = false) {
@@ -242,6 +248,19 @@ function buildHeaderMap(headers = []) {
       map[field] = fuzzyMatch.raw;
     }
   });
+
+  if (!map.productName) {
+    const nameLikeHeader = normalizedHeaders.find(({ normalized }) => (
+      (normalized.includes('product') || normalized.includes('item') || normalized.includes('model'))
+      && (normalized.includes('name') || normalized.includes('title'))
+    ));
+    if (nameLikeHeader) map.productName = nameLikeHeader.raw;
+  }
+
+  if (!map.description) {
+    const descriptionLikeHeader = normalizedHeaders.find(({ normalized }) => normalized.includes('description') || normalized.includes('details'));
+    if (descriptionLikeHeader) map.description = descriptionLikeHeader.raw;
+  }
 
   return map;
 }
@@ -511,6 +530,75 @@ function buildImportContext(products, settings) {
   };
 }
 
+function inferCategoryFromName(name, categoryIndex = []) {
+  const normalizedName = normalizeKey(name);
+  if (!normalizedName) return null;
+
+  const containsMatch = categoryIndex.find((entry) => entry.synonyms.some((alias) => {
+    const normalizedAlias = normalizeKey(alias);
+    return normalizedAlias && normalizedName.includes(normalizedAlias);
+  }));
+  if (containsMatch) return containsMatch;
+
+  const fuzzy = categoryIndex
+    .map((entry) => ({
+      entry,
+      score: entry.synonyms.reduce((best, alias) => Math.max(best, similarity(alias, name)), 0),
+    }))
+    .sort((left, right) => right.score - left.score)[0];
+
+  if (fuzzy?.score >= 0.56) return fuzzy.entry;
+  return null;
+}
+
+function inferBrandFromName(name, brandIndex = []) {
+  const normalizedName = normalizeKey(name);
+  if (!normalizedName) return { brand: '', created: false, matched: false };
+
+  const exact = brandIndex.find((entry) => entry.synonyms.some((alias) => {
+    const normalizedAlias = normalizeKey(alias);
+    return normalizedAlias && normalizedName.includes(normalizedAlias);
+  }));
+  if (exact) {
+    return { brand: exact.brand, created: false, matched: true };
+  }
+
+  const fuzzy = brandIndex
+    .map((entry) => ({
+      entry,
+      score: Math.max(
+        similarity(entry.brand, name),
+        entry.synonyms.reduce((best, alias) => Math.max(best, similarity(alias, name)), 0)
+      ),
+    }))
+    .sort((left, right) => right.score - left.score)[0];
+
+  if (fuzzy?.score >= 0.65) {
+    return { brand: fuzzy.entry.brand, created: false, matched: true };
+  }
+
+  return { brand: '', created: false, matched: false };
+}
+
+function inferSubcategoryFromName(categoryKey, name) {
+  const options = CATEGORY_SUBCATEGORIES[categoryKey] || [];
+  const normalizedName = normalizeKey(name);
+  if (!normalizedName || options.length === 0) return '';
+
+  const containsMatch = options.find((option) => {
+    const normalizedOption = normalizeKey(option);
+    return normalizedOption && normalizedName.includes(normalizedOption);
+  });
+  if (containsMatch) return containsMatch;
+
+  const fuzzy = options
+    .map((option) => ({ option, score: similarity(option, name) }))
+    .sort((left, right) => right.score - left.score)[0];
+
+  if (fuzzy?.score >= 0.58) return fuzzy.option;
+  return '';
+}
+
 function buildRowWarnings() {
   return [];
 }
@@ -555,20 +643,24 @@ function buildRowFingerprint(row) {
 function buildPreparedRow(row, index, headerMap, context) {
   const warnings = buildRowWarnings();
   const name = trimOrEmpty(getCellValue(row, headerMap, 'productName'));
-  const categoryMatch = resolveCategory({
+  const explicitCategoryMatch = resolveCategory({
     categoryValue: getCellValue(row, headerMap, 'category'),
     mainCategoryValue: getCellValue(row, headerMap, 'mainCategory'),
   }, context.categoryIndex);
+  const inferredCategoryMatch = explicitCategoryMatch ? null : inferCategoryFromName(name, context.categoryIndex);
+  const categoryMatch = explicitCategoryMatch || inferredCategoryMatch;
   const category = categoryMatch?.value || '';
-  const brandResolution = resolveBrand(getCellValue(row, headerMap, 'brand'), context.brandIndex);
+  const explicitBrandResolution = resolveBrand(getCellValue(row, headerMap, 'brand'), context.brandIndex);
+  const inferredBrandResolution = explicitBrandResolution.brand ? null : inferBrandFromName(name, context.brandIndex);
+  const brandResolution = explicitBrandResolution.brand ? explicitBrandResolution : (inferredBrandResolution || explicitBrandResolution);
   const brand = brandResolution.brand;
-  const subcategory = resolveSubcategory(category, getCellValue(row, headerMap, 'subcategory'));
+  const subcategory = resolveSubcategory(category, getCellValue(row, headerMap, 'subcategory') || inferSubcategoryFromName(category, name));
   const mainImageUrl = toHttpsUrl(getCellValue(row, headerMap, 'mainImageUrl'));
   const extraImageUrls = splitUrlList(toHttpsUrl(getCellValue(row, headerMap, 'extraImageUrls')) || getCellValue(row, headerMap, 'extraImageUrls'));
   const image_url = mainImageUrl || extraImageUrls[0] || '';
   const image_urls = mainImageUrl ? extraImageUrls : extraImageUrls.slice(1);
   const videoUrl = toHttpsUrl(getCellValue(row, headerMap, 'videoUrl'));
-  const description = sanitizeDescription(getCellValue(row, headerMap, 'description'));
+  const rawDescription = sanitizeDescription(getCellValue(row, headerMap, 'description'));
   const price = parseNumberish(getCellValue(row, headerMap, 'price'));
   const original_price = parseNumberish(getCellValue(row, headerMap, 'originalPrice'));
   const stock = parseNumberish(getCellValue(row, headerMap, 'stock'));
@@ -577,6 +669,22 @@ function buildPreparedRow(row, index, headerMap, context) {
   const keywords = splitMultiValue(getCellValue(row, headerMap, 'keywords'));
   const tags = splitMultiValue(getCellValue(row, headerMap, 'tags'));
   const home_sections = buildHomepageSections(row, headerMap);
+  const description = rawDescription || (name ? generateDescription({
+    name,
+    brand,
+    category: categoryMatch?.label || category,
+    subcategory,
+    features: trimOrEmpty(getCellValue(row, headerMap, 'features')),
+    warranty: trimOrEmpty(getCellValue(row, headerMap, 'warranty')),
+    storage: trimOrEmpty(getCellValue(row, headerMap, 'storage')),
+    ram: trimOrEmpty(getCellValue(row, headerMap, 'ram')),
+    capacity: trimOrEmpty(getCellValue(row, headerMap, 'capacity')),
+    power: trimOrEmpty(getCellValue(row, headerMap, 'power')),
+    voltage: trimOrEmpty(getCellValue(row, headerMap, 'voltage')),
+    screen_size: trimOrEmpty(getCellValue(row, headerMap, 'screenSize')),
+    available_colors: colors,
+    available_types: variants,
+  }) : '');
   const seoDefaults = buildSeoDefaults({ name, brand, subcategory });
 
   const normalizedRow = {
@@ -590,6 +698,7 @@ function buildPreparedRow(row, index, headerMap, context) {
     brand,
     subcategory,
     description,
+    descriptionAutoGenerated: !rawDescription && !!description,
     price,
     original_price,
     stock,
@@ -638,6 +747,14 @@ function buildPreparedRow(row, index, headerMap, context) {
   }
   if (!normalizedRow.category) {
     warnings.push('Category could not be matched automatically.');
+  } else if (!explicitCategoryMatch && inferredCategoryMatch) {
+    warnings.push(`Category was inferred from the product name as ${normalizedRow.categoryLabel || normalizedRow.category}.`);
+  }
+  if (!explicitBrandResolution.brand && brandResolution.brand) {
+    warnings.push(`Brand was inferred from the product name as ${normalizedRow.brand}.`);
+  }
+  if (!rawDescription && normalizedRow.description) {
+    warnings.push('Description was generated automatically because the spreadsheet did not provide one.');
   }
 
   return normalizedRow;
@@ -778,7 +895,7 @@ function buildImportForm(row, mode, existingProduct) {
   const next = { ...base };
 
   applyImportedValue(next, 'name', row.name, !!row.name || mode === 'replace');
-  applyImportedValue(next, 'description', row.description, row.presence.description || mode === 'replace');
+  applyImportedValue(next, 'description', row.description, row.presence.description || row.descriptionAutoGenerated || mode === 'replace');
   applyImportedValue(next, 'price', row.price ?? '', row.presence.price || mode === 'replace');
   applyImportedValue(next, 'original_price', row.original_price ?? '', row.presence.originalPrice || mode === 'replace');
   applyImportedValue(next, 'main_group', row.main_group, !!row.category || !!row.main_group);

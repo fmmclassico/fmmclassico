@@ -1,17 +1,32 @@
-const HUBTEL_CLIENT_ID = process.env.HUBTEL_CLIENT_ID || '';
-const HUBTEL_CLIENT_SECRET = process.env.HUBTEL_CLIENT_SECRET || '';
-const MERCHANT_ACCOUNT_NUMBER = process.env.HUBTEL_MERCHANT_ACCOUNT_NUMBER || '';
+const HUBTEL_CLIENT_ID = Deno.env.get('HUBTEL_CLIENT_ID')?.trim() || '';
+const HUBTEL_CLIENT_SECRET = Deno.env.get('HUBTEL_CLIENT_SECRET')?.trim() || '';
+const MERCHANT_ACCOUNT_NUMBER = Deno.env.get('HUBTEL_MERCHANT_ACCOUNT_NUMBER')?.trim() || '';
 
 const UAT_INIT_SAMPLES = [];
 const MAX_SAMPLES = 50;
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+    },
+  });
+}
 
 function isConfigured() {
   return Boolean(HUBTEL_CLIENT_ID && HUBTEL_CLIENT_SECRET && MERCHANT_ACCOUNT_NUMBER);
 }
 
 function createAuthHeader() {
-  const auth = Buffer.from(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`).toString('base64');
-  return `Basic ${auth}`;
+  return `Basic ${btoa(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`)}`;
 }
 
 function sanitizeDescription(value = '') {
@@ -34,14 +49,9 @@ function toAmount(value) {
 
 async function parseJsonBody(req) {
   try {
-    if (typeof req.json === 'function') {
-      return await req.json();
-    }
-    if (req.body && typeof req.body === 'object') {
-      return req.body;
-    }
-    const raw = await getRawBody(req);
-    return raw ? JSON.parse(raw) : null;
+    const text = await req.text();
+    if (!text) return null;
+    return JSON.parse(text);
   } catch (_) {
     return null;
   }
@@ -106,32 +116,32 @@ function buildPayload(body = {}) {
   };
 }
 
-export default async function handler(req, res) {
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+    return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
   if (!isConfigured()) {
     console.error('[Hubtel Init] Missing HUBTEL_CLIENT_ID, HUBTEL_CLIENT_SECRET, or HUBTEL_MERCHANT_ACCOUNT_NUMBER');
-    res.status(500).json({ error: 'Hubtel gateway is not configured.' });
-    return;
+    return jsonResponse({ error: 'Hubtel gateway is not configured.' }, 500);
   }
 
   const body = await parseJsonBody(req);
   if (!body || typeof body !== 'object') {
-    res.status(400).json({ error: 'Missing or invalid request body.' });
-    return;
+    return jsonResponse({ error: 'Missing or invalid request body.' }, 400);
   }
 
   const { payload, missingFields } = buildPayload(body);
   if (missingFields.length > 0) {
     console.warn('[Hubtel Init] Validation failed:', { missingFields, receivedKeys: Object.keys(body || {}) });
-    res.status(400).json({
+    return jsonResponse({
       error: 'Missing or invalid required fields.',
       missingFields,
-    });
-    return;
+    }, 400);
   }
 
   console.log('[Hubtel Init] Starting checkout:', {
@@ -184,23 +194,12 @@ export default async function handler(req, res) {
       console.warn('[Hubtel Init] Hubtel did not accept the checkout request:', parsed.body);
     }
 
-    res.status(parsed.httpStatus).json(parsed.body);
+    return jsonResponse(parsed.body, parsed.httpStatus);
   } catch (error) {
     console.error('[Hubtel Init] Network or fetch error:', error);
-    res.status(502).json({
+    return jsonResponse({
       error: 'Failed to reach Hubtel.',
       details: error instanceof Error ? error.message : String(error),
-    });
+    }, 502);
   }
-}
-
-async function getRawBody(req) {
-  return new Promise((resolve, reject) => {
-    let data = '';
-    req.on('data', (chunk) => {
-      data += chunk;
-    });
-    req.on('end', () => resolve(data));
-    req.on('error', reject);
-  });
-}
+});

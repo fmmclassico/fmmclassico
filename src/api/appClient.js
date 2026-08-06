@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { getSupabaseConfig, getSupabaseFunctionUrl } from '@/lib/runtime-config';
+import { normalizeTextDeep } from '@/lib/text';
 
 const PROMO_BANNER_RESPONSIVE_FIELDS = ['desktop_image_url', 'mobile_image_url'];
 const PRODUCT_ARRAY_FIELDS = ['image_urls', 'available_colors', 'available_wattage', 'available_types'];
@@ -103,8 +104,13 @@ function normalizeUrlValue(value) {
   return trimmed || null;
 }
 
+const ADMIN_ACCESS_SETTING_KEY = 'admin_access_controls';
+const ADMIN_VERIFICATION_STORAGE_KEY = 'fmmclassico_admin_verified';
+const ADMIN_CONFIG_CACHE_TTL_MS = 60 * 1000;
+let adminAccessConfigCache = { value: null, expiresAt: 0 };
+
 function normalizeProductRecord(record = {}) {
-  const product = { ...record };
+  const product = normalizeTextDeep({ ...record });
 
   product.image_url = normalizeUrlValue(product.image_url);
   product.image_urls = parseArrayValue(product.image_urls);
@@ -139,7 +145,7 @@ function normalizeProductRecord(record = {}) {
 function normalizeRecord(tableName, record) {
   if (!record || typeof record !== 'object') return record;
   if (tableName === 'products') return normalizeProductRecord(record);
-  return record;
+  return normalizeTextDeep(record);
 }
 
 function normalizeRecords(tableName, records) {
@@ -159,18 +165,149 @@ function getUserMetadata(user) {
   return user.user_metadata && typeof user.user_metadata === 'object' ? user.user_metadata : {};
 }
 
-function buildAuthUser(user) {
+function parseAdminAccessControls(value) {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  return {};
+}
+
+function getStoredAdminVerification() {
+  if (typeof window === 'undefined') return {};
+
+  try {
+    const raw = sessionStorage.getItem(ADMIN_VERIFICATION_STORAGE_KEY);
+    return raw ? JSON.parse(raw) || {} : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function setStoredAdminVerification(state = {}) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    if (!state || Object.keys(state).length === 0) {
+      sessionStorage.removeItem(ADMIN_VERIFICATION_STORAGE_KEY);
+      return;
+    }
+
+    sessionStorage.setItem(ADMIN_VERIFICATION_STORAGE_KEY, JSON.stringify(state));
+  } catch (_) {
+    // ignore storage failures
+  }
+}
+
+function clearStoredAdminVerification(email) {
+  const current = getStoredAdminVerification();
+  if (!email) {
+    setStoredAdminVerification({});
+    return;
+  }
+
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail || !current[normalizedEmail]) return;
+
+  const nextState = { ...current };
+  delete nextState[normalizedEmail];
+  setStoredAdminVerification(nextState);
+}
+
+function markAdminVerified(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return;
+
+  const current = getStoredAdminVerification();
+  setStoredAdminVerification({
+    ...current,
+    [normalizedEmail]: true,
+  });
+}
+
+async function loadAdminAccessConfig(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && adminAccessConfigCache.value && adminAccessConfigCache.expiresAt > now) {
+    return adminAccessConfigCache.value;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', ADMIN_ACCESS_SETTING_KEY)
+      .limit(1);
+
+    if (error) throw error;
+
+    const controls = parseAdminAccessControls(data?.[0]?.value);
+    adminAccessConfigCache = {
+      value: controls,
+      expiresAt: now + ADMIN_CONFIG_CACHE_TTL_MS,
+    };
+    return controls;
+  } catch (error) {
+    console.error('load admin access config:', error);
+    adminAccessConfigCache = {
+      value: {},
+      expiresAt: now + ADMIN_CONFIG_CACHE_TTL_MS,
+    };
+    return {};
+  }
+}
+
+async function getAdminPasswordValue() {
+  const { data, error } = await supabase
+    .from('admin_passwords')
+    .select('password_hash')
+    .order('last_changed', { ascending: false, nullsFirst: false })
+    .limit(1);
+
+  if (error) {
+    const message = getErrorMessage(error).toLowerCase();
+    if (!message.includes('last_changed')) {
+      throw error;
+    }
+
+    const fallbackResult = await supabase
+      .from('admin_passwords')
+      .select('password_hash')
+      .limit(1);
+
+    if (fallbackResult.error) throw fallbackResult.error;
+    return fallbackResult.data?.[0]?.password_hash || import.meta.env.VITE_ADMIN_PASSWORD || '';
+  }
+
+  return data?.[0]?.password_hash || import.meta.env.VITE_ADMIN_PASSWORD || '';
+}
+
+async function buildAuthUser(user) {
   if (!user) return null;
 
   const adminList = getAdminEmailList();
   const metadata = getUserMetadata(user);
-  const isAdmin = adminList.includes(user.email?.toLowerCase());
+  const email = String(user.email || '').trim().toLowerCase();
+  const isConfiguredAdmin = adminList.includes(email);
+  const controls = isConfiguredAdmin ? await loadAdminAccessConfig() : {};
+  const emailControl = controls[email];
+  const isMasterAdmin = email === String(import.meta.env.VITE_MASTER_ADMIN_EMAIL || '').trim().toLowerCase();
+  const adminEnabled = isConfiguredAdmin && (isMasterAdmin || emailControl?.enabled !== false);
+  const adminVerified = isMasterAdmin || !!getStoredAdminVerification()[email];
 
   return {
     id: user.id,
     email: user.email || '',
-    role: isAdmin ? 'admin' : 'user',
-    isAdmin,
+    role: adminEnabled ? 'admin' : 'user',
+    isAdmin: adminEnabled,
+    admin_requires_verification: adminEnabled && !adminVerified,
     full_name: metadata.full_name || '',
     phone: metadata.phone || '',
     address: metadata.address || '',
@@ -252,10 +389,11 @@ function withFilters(query, filters) {
 }
 
 function normalizeWritePayload(tableName, payload) {
+  const normalizedPayload = normalizeTextDeep(payload);
   if (tableName === 'products') {
-    return normalizeProductRecord(payload);
+    return normalizeProductRecord(normalizedPayload);
   }
-  return payload;
+  return normalizedPayload;
 }
 
 function createEntity(tableName) {
@@ -398,12 +536,17 @@ function toTableName(name) {
 }
 
 const auth = {
-  async me() {
+  async me(options = {}) {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) {
       console.error('auth me:', error);
       return null;
     }
+
+    if (options?.forceAdminRefresh) {
+      await loadAdminAccessConfig(true);
+    }
+
     return buildAuthUser(user);
   },
 
@@ -451,6 +594,35 @@ const auth = {
       // ignore
     }
     window.location.href = '/login';
+  },
+
+  async verifyAdminAccess(password) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) {
+      return { success: false, error: 'Please sign in again before verifying admin access.' };
+    }
+
+    const authUser = await buildAuthUser(user);
+    if (!authUser?.isAdmin) {
+      clearStoredAdminVerification(user.email);
+      return { success: false, error: 'This email no longer has admin access.' };
+    }
+
+    const expectedPassword = await getAdminPasswordValue();
+    if (!expectedPassword) {
+      return { success: false, error: 'Admin password is not configured yet.' };
+    }
+
+    if (String(password || '') !== String(expectedPassword)) {
+      return { success: false, error: 'Invalid password.' };
+    }
+
+    markAdminVerified(user.email);
+    return { success: true };
+  },
+
+  clearAdminVerification(email) {
+    clearStoredAdminVerification(email);
   }
 };
 

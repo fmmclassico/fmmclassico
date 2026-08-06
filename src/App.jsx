@@ -124,11 +124,11 @@ const ProtectedLayout = ({ children, currentPageName, isAuthenticated, isLogging
 
 const AuthenticatedApp = () => {
   const {
+    user,
     isLoadingAuth,
     isLoggingOut,
     authError,
     navigateToLogin,
-    verifyAdminPassword,
     isAuthenticated
   } = useAuth();
 
@@ -177,6 +177,14 @@ const AuthenticatedApp = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </>
+    );
+  }
+
+  if (isAdminPath && isAuthenticated && user?.isAdmin !== true) {
+    return (
+      <Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     );
   }
 

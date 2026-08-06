@@ -49,6 +49,12 @@ const QUILL_MODULES = {
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
+function ensureArray(value) {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.data)) return value.data;
+  return [];
+}
+
 async function askGemini(prompt, systemContext) {
   const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
     method: 'POST',
@@ -140,6 +146,7 @@ function buildImportedEditorPayload(row = {}) {
 export default function AdminProducts() {
   const [user, setUser] = React.useState(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [authChecked, setAuthChecked] = React.useState(false);
   const [showForm, setShowForm] = useState(false);
 const [showImportCenter, setShowImportCenter] = useState(false);
 const [importMode, setImportMode] = useState(false);
@@ -211,34 +218,48 @@ const handleGenerateDescription = async () => {
   }
 };
   React.useEffect(() => {
+    let active = true;
+
     appClient.auth.me()
       .then((authUser) => {
+        if (!active) return;
+        const hasAdminAccess = authUser?.isAdmin === true || authUser?.role === 'admin';
         setUser(authUser);
-        setIsAdmin(authUser?.role === 'admin');
+        setIsAdmin(hasAdminAccess);
       })
       .catch(() => {
+        if (!active) return;
         setUser(null);
         setIsAdmin(false);
+      })
+      .finally(() => {
+        if (active) {
+          setAuthChecked(true);
+        }
       });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: productsResponse = [], isLoading } = useQuery({
     queryKey: ['products-admin'],
-    queryFn: () => appClient.entities.Product.list('-created_date', 200),
+    queryFn: async () => ensureArray(await appClient.entities.Product.list('-created_date', 200)),
     enabled: isAdmin,
     staleTime: 60000,
     gcTime: 5 * 60 * 1000,
   });
 
   const displayProducts = useMemo(() => (
-    products.map((product) => {
+    productsResponse.map((product) => {
       const normalizedImages = normalizeProductMedia(product.image_url, normalizeStringArray(product.image_urls));
       return {
         ...product,
         ...normalizedImages,
       };
     })
-  ), [products]);
+  ), [productsResponse]);
 
   const saveMutation = useMutation({
     mutationFn: (data) => saveProduct({ formData: data, productId: editingProduct?.id || null }),
@@ -395,7 +416,15 @@ setForm(buildEmptyProductForm());
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (user && !isAdmin) {
+  if (!authChecked) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
     return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
   }
 

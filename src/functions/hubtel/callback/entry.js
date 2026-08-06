@@ -1,16 +1,40 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')?.trim() || Deno.env.get('VITE_SUPABASE_URL')?.trim() || '';
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim() || '';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')?.trim() || Deno.env.get('VITE_SUPABASE_ANON_KEY')?.trim() || '';
 const ADMIN_EMAILS = [...new Set(
-  (process.env.ADMIN_EMAILS || process.env.VITE_ADMIN_EMAILS || process.env.VITE_ALLOWED_ADMIN_EMAILS || '')
+  (Deno.env.get('ADMIN_EMAILS')?.trim() || Deno.env.get('VITE_ADMIN_EMAILS')?.trim() || Deno.env.get('VITE_ALLOWED_ADMIN_EMAILS')?.trim() || '')
     .split(',')
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean)
 )];
 
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+    },
+  });
+}
+
+function createSupabaseAdminClient() {
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    return null;
+  }
+
+  return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 function getBaseOrderReference(reference = '') {
   return String(reference || '').replace(/-(INIT|DEL|FULL|BAL)$/i, '');
@@ -22,12 +46,43 @@ function getPaymentStage(reference = '') {
   return 'initial';
 }
 
-function normalizeHubtelStatus(status = '') {
-  const value = String(status || '').toLowerCase();
-  if (['success', 'successful', 'paid'].includes(value)) return 'paid';
-  if (['failed', 'unpaid'].includes(value)) return 'failed';
-  if (['cancelled', 'canceled'].includes(value)) return 'cancelled';
+function normalizeHubtelStatus({ responseCode = '', callbackStatus = '', transactionStatus = '' } = {}) {
+  const normalizedResponseCode = String(responseCode || '').trim();
+  const normalizedCallbackStatus = String(callbackStatus || '').toLowerCase().trim();
+  const normalizedTransactionStatus = String(transactionStatus || '').toLowerCase().trim();
+  const statusValue = normalizedTransactionStatus || normalizedCallbackStatus;
+
+  if (normalizedResponseCode === '0000' || ['success', 'successful', 'paid'].includes(statusValue)) return 'paid';
+  if (['failed', 'unpaid'].includes(statusValue)) return 'failed';
+  if (['cancelled', 'canceled'].includes(statusValue)) return 'cancelled';
+  if (normalizedResponseCode === '0005') return 'pending_payment';
   return 'pending_payment';
+}
+
+function getHubtelEnvelope(body = {}) {
+  const data = body?.Data || body?.data || {};
+  return {
+    responseCode: body?.ResponseCode ?? body?.responseCode ?? '',
+    callbackStatus: body?.Status ?? body?.status ?? '',
+    transactionStatus: data?.Status ?? data?.status ?? '',
+    clientReference: data?.ClientReference ?? data?.clientReference ?? body?.clientReference ?? '',
+    amount: Number(data?.Amount ?? data?.amount ?? body?.amount ?? 0) || 0,
+    checkoutId: data?.CheckoutId ?? data?.checkoutId ?? body?.checkoutId ?? null,
+    salesInvoiceId: data?.SalesInvoiceId ?? data?.salesInvoiceId ?? null,
+    customerPhoneNumber: data?.CustomerPhoneNumber ?? data?.customerPhoneNumber ?? null,
+    paymentDetails: data?.PaymentDetails ?? data?.paymentDetails ?? {},
+    description: data?.Description ?? data?.description ?? '',
+  };
+}
+
+async function parseJsonBody(req) {
+  try {
+    const text = await req.text();
+    if (!text) return null;
+    return JSON.parse(text);
+  } catch (_) {
+    return null;
+  }
 }
 
 async function sendEmail(to, subject, body) {
@@ -46,49 +101,66 @@ async function sendEmail(to, subject, body) {
   }
 }
 
-async function createNotification(payload) {
+async function createNotification(supabase, payload) {
   const { error } = await supabase.from('notifications').insert({
     ...payload,
     is_read: false,
     created_date: new Date().toISOString(),
   });
+
   if (error) {
     console.error('[Hubtel Callback] notification insert error:', error);
   }
 }
 
-export default async function handler(req, res) {
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return jsonResponse({ error: 'Method not allowed' }, 405);
+  }
+
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('[Hubtel Callback] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    return jsonResponse({ error: 'Server configuration is incomplete.' }, 500);
   }
 
   try {
-    let body;
-    try {
-      body = typeof req.json === 'function' ? await req.json() : req.body || await readBody(req);
-    } catch {
-      body = null;
+    const body = await parseJsonBody(req);
+
+    if (!body || typeof body !== 'object') {
+      return jsonResponse({ error: 'Invalid JSON' }, 400);
     }
 
-    if (!body) {
-      return res.status(400).json({ error: 'Invalid JSON' });
+    console.log('[Hubtel Callback] Raw payload:', JSON.stringify(body));
+
+    const envelope = getHubtelEnvelope(body);
+    const normalizedStatus = normalizeHubtelStatus(envelope);
+
+    console.log('[Hubtel Callback] Normalized event:', {
+      responseCode: envelope.responseCode || null,
+      callbackStatus: envelope.callbackStatus || null,
+      transactionStatus: envelope.transactionStatus || null,
+      normalizedStatus,
+      clientReference: envelope.clientReference || null,
+      checkoutId: envelope.checkoutId || null,
+      salesInvoiceId: envelope.salesInvoiceId || null,
+      amount: envelope.amount,
+      paymentType: envelope.paymentDetails?.PaymentType || null,
+      channel: envelope.paymentDetails?.Channel || null,
+      customerPhoneNumber: envelope.customerPhoneNumber || null,
+    });
+
+    if (!envelope.clientReference || (!envelope.transactionStatus && !envelope.callbackStatus && !envelope.responseCode)) {
+      console.warn('[Hubtel Callback] Missing clientReference or status information. Acknowledging without update.');
+      return jsonResponse({ message: 'Partial data received' }, 200);
     }
 
-    console.log('[Hubtel Callback] payload:', JSON.stringify(body));
-
-    const clientReference = body?.Data?.ClientReference ?? body?.clientReference ?? null;
-    const status = body?.Data?.Status ?? body?.status ?? null;
-    const amount = Number(body?.Data?.Amount ?? body?.amount ?? 0) || 0;
-    const checkoutId = body?.Data?.CheckoutId ?? body?.checkoutId ?? null;
-    const paymentDetails = body?.Data?.PaymentDetails ?? {};
-
-    if (!clientReference || !status) {
-      return res.status(200).json({ message: 'Partial data received' });
-    }
-
-    const baseReference = getBaseOrderReference(clientReference);
-    const paymentStage = getPaymentStage(clientReference);
-    const normalizedStatus = normalizeHubtelStatus(status);
+    const baseReference = getBaseOrderReference(envelope.clientReference);
+    const paymentStage = getPaymentStage(envelope.clientReference);
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -103,25 +175,40 @@ export default async function handler(req, res) {
 
     if (!order) {
       console.warn(`[Hubtel Callback] No order found for ${baseReference}`);
-      return res.status(200).json({ message: 'No order found' });
+      return jsonResponse({ message: 'No order found' }, 200);
     }
 
     const now = new Date().toISOString();
     const stageLabel = paymentStage === 'balance' ? 'Balance Payment' : 'Initial Payment';
     const trackingUpdates = Array.isArray(order.tracking_updates) ? order.tracking_updates : [];
+    const paymentType = envelope.paymentDetails?.PaymentType || 'N/A';
+    const paymentChannel = envelope.paymentDetails?.Channel || 'N/A';
+    const networkReference = envelope.paymentDetails?.MobileMoneyNumber || envelope.customerPhoneNumber || 'N/A';
+
     const trackingUpdate = {
-      status: `${stageLabel} ${status}`,
-      message: `Hubtel ${stageLabel.toLowerCase()}: ${status}. GHS ${amount.toFixed(2)}. Via ${paymentDetails?.PaymentType || 'N/A'}.`,
+      status: `${stageLabel} ${normalizedStatus}`,
+      message: `Hubtel ${stageLabel.toLowerCase()} callback: ${normalizedStatus}. ResponseCode ${envelope.responseCode || 'N/A'}. Amount GHS ${envelope.amount.toFixed(2)}. Type ${paymentType}. Channel ${paymentChannel}. Ref ${networkReference}.`,
       timestamp: now,
-      checkoutId,
-      clientReference,
+      checkoutId: envelope.checkoutId,
+      clientReference: envelope.clientReference,
+      responseCode: envelope.responseCode || null,
+      callbackStatus: envelope.callbackStatus || null,
+      transactionStatus: envelope.transactionStatus || null,
+      salesInvoiceId: envelope.salesInvoiceId || null,
     };
 
+    /** @type {Record<string, any>} */
     const updates = {
       tracking_updates: [...trackingUpdates, trackingUpdate],
-      payment_reference: clientReference,
-      hubtel_transaction_id: checkoutId || order.hubtel_transaction_id || null,
-      hubtel_status: normalizedStatus === 'paid' ? 'successful' : normalizedStatus === 'pending_payment' ? 'pending' : 'failed',
+      payment_reference: envelope.clientReference,
+      hubtel_transaction_id: envelope.checkoutId || order.hubtel_transaction_id || null,
+      hubtel_status: normalizedStatus === 'paid'
+        ? 'successful'
+        : normalizedStatus === 'cancelled'
+          ? 'cancelled'
+          : normalizedStatus === 'failed'
+            ? 'failed'
+            : 'pending',
     };
 
     let notifyCustomer = false;
@@ -134,8 +221,8 @@ export default async function handler(req, res) {
     let adminEmailSubject = '';
 
     if (paymentStage === 'balance') {
-      updates.balance_checkout_id = checkoutId || order.balance_checkout_id || null;
-      updates.balance_payment_reference = clientReference;
+      updates.balance_checkout_id = envelope.checkoutId || order.balance_checkout_id || null;
+      updates.balance_payment_reference = envelope.clientReference;
 
       if (normalizedStatus === 'paid') {
         const firstTimeSuccess = order.balance_payment_status !== 'paid';
@@ -166,10 +253,11 @@ export default async function handler(req, res) {
         customerEmailSubject = `Remaining Balance Payment Failed - #${order.order_number}`;
       } else if (normalizedStatus === 'cancelled') {
         updates.balance_payment_status = 'cancelled';
+        updates.payment_stage = 'balance_payment_failed';
       }
     } else {
-      updates.initial_checkout_id = checkoutId || order.initial_checkout_id || null;
-      updates.initial_payment_reference = clientReference;
+      updates.initial_checkout_id = envelope.checkoutId || order.initial_checkout_id || null;
+      updates.initial_payment_reference = envelope.clientReference;
       updates.payment_status = normalizedStatus;
 
       if (normalizedStatus === 'paid') {
@@ -200,14 +288,27 @@ export default async function handler(req, res) {
         }
       } else if (normalizedStatus === 'failed') {
         updates.initial_payment_status = 'failed';
+        updates.payment_stage = 'awaiting_initial_payment';
         notifyCustomer = order.initial_payment_status !== 'failed';
         customerTitle = 'Payment Failed';
         customerMessage = `Payment failed for order #${order.order_number}. The order was not placed and the cart remains available.`;
         customerEmailSubject = `Payment Failed - #${order.order_number}`;
       } else if (normalizedStatus === 'cancelled') {
         updates.initial_payment_status = 'cancelled';
+        updates.payment_stage = 'awaiting_initial_payment';
       }
     }
+
+    console.log('[Hubtel Callback] Applying order updates:', {
+      orderNumber: order.order_number,
+      paymentStage,
+      normalizedStatus,
+      paymentStatus: updates.payment_status || null,
+      initialPaymentStatus: updates.initial_payment_status || null,
+      balancePaymentStatus: updates.balance_payment_status || null,
+      paymentStageValue: updates.payment_stage || null,
+      isFullyPaid: updates.is_fully_paid ?? null,
+    });
 
     const { error: updateError } = await supabase.from('orders').update(updates).eq('id', order.id);
     if (updateError) {
@@ -216,7 +317,7 @@ export default async function handler(req, res) {
     }
 
     if (notifyCustomer) {
-      await createNotification({
+      await createNotification(supabase, {
         user_email: order.customer_email,
         title: customerTitle,
         message: customerMessage,
@@ -237,7 +338,7 @@ FMM CLASSICO`
 
     if (notifyAdmins) {
       for (const email of ADMIN_EMAILS) {
-        await createNotification({
+        await createNotification(supabase, {
           user_email: email,
           title: adminTitle,
           message: adminMessage,
@@ -249,35 +350,16 @@ FMM CLASSICO`
       }
     }
 
-    return res.status(200).json({
+    return jsonResponse({
       success: true,
       paymentStatus: normalizedStatus,
       paymentStage,
       baseReference,
-    });
-  } catch (err) {
-    console.error('[Hubtel Callback] fatal error:', err);
-    return res.status(500).json({
-      error: err instanceof Error ? err.message : 'Server error',
-    });
+    }, 200);
+  } catch (error) {
+    console.error('[Hubtel Callback] fatal error:', error);
+    return jsonResponse({
+      error: error instanceof Error ? error.message : 'Server error',
+    }, 500);
   }
-}
-
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    let data = '';
-    req.on('data', (chunk) => {
-      data += chunk;
-    });
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(data));
-      } catch (error) {
-        reject(error);
-      }
-    });
-    req.on('error', reject);
-  });
-}
-
- 
+});

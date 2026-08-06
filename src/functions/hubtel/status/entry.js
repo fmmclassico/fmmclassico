@@ -1,17 +1,32 @@
-const HUBTEL_CLIENT_ID = process.env.HUBTEL_CLIENT_ID || '';
-const HUBTEL_CLIENT_SECRET = process.env.HUBTEL_CLIENT_SECRET || '';
-const MERCHANT_ACCOUNT_NUMBER = process.env.HUBTEL_MERCHANT_ACCOUNT_NUMBER || '';
+const HUBTEL_CLIENT_ID = Deno.env.get('HUBTEL_CLIENT_ID')?.trim() || '';
+const HUBTEL_CLIENT_SECRET = Deno.env.get('HUBTEL_CLIENT_SECRET')?.trim() || '';
+const MERCHANT_ACCOUNT_NUMBER = Deno.env.get('HUBTEL_MERCHANT_ACCOUNT_NUMBER')?.trim() || '';
 
 const UAT_STATUS_SAMPLES = [];
 const MAX_SAMPLES = 50;
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+};
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+    },
+  });
+}
 
 function isConfigured() {
   return Boolean(HUBTEL_CLIENT_ID && HUBTEL_CLIENT_SECRET && MERCHANT_ACCOUNT_NUMBER);
 }
 
 function createAuthHeader() {
-  const auth = Buffer.from(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`).toString('base64');
-  return `Basic ${auth}`;
+  return `Basic ${btoa(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`)}`;
 }
 
 async function parseHubtelResponse(response) {
@@ -43,28 +58,29 @@ function buildStatusEndpoint(query) {
   return `https://api-txnstatus.hubtel.com/transactions/${MERCHANT_ACCOUNT_NUMBER}/status?${params.toString()}`;
 }
 
-export default async function handler(req, res) {
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   if (req.method !== 'GET') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+    return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
   if (!isConfigured()) {
     console.error('[Hubtel Status] Missing HUBTEL_CLIENT_ID, HUBTEL_CLIENT_SECRET, or HUBTEL_MERCHANT_ACCOUNT_NUMBER');
-    res.status(500).json({ error: 'Hubtel gateway is not configured.' });
-    return;
+    return jsonResponse({ error: 'Hubtel gateway is not configured.' }, 500);
   }
 
-  const url = new URL(req.url || '', 'http://localhost');
+  const url = new URL(req.url);
   const query = {
-    clientReference: url.searchParams.get('clientReference') || req.query?.clientReference || '',
-    hubtelTransactionId: url.searchParams.get('hubtelTransactionId') || req.query?.hubtelTransactionId || '',
-    networkTransactionId: url.searchParams.get('networkTransactionId') || req.query?.networkTransactionId || '',
+    clientReference: url.searchParams.get('clientReference') || '',
+    hubtelTransactionId: url.searchParams.get('hubtelTransactionId') || '',
+    networkTransactionId: url.searchParams.get('networkTransactionId') || '',
   };
 
   if (!query.clientReference && !query.hubtelTransactionId && !query.networkTransactionId) {
-    res.status(400).json({ error: 'Missing clientReference, hubtelTransactionId, or networkTransactionId.' });
-    return;
+    return jsonResponse({ error: 'Missing clientReference, hubtelTransactionId, or networkTransactionId.' }, 400);
   }
 
   const endpoint = buildStatusEndpoint(query);
@@ -107,16 +123,12 @@ export default async function handler(req, res) {
       UAT_STATUS_SAMPLES.shift();
     }
 
-    res.status(parsed.httpStatus).json(parsed.body);
+    return jsonResponse(parsed.body, parsed.httpStatus);
   } catch (error) {
     console.error('[Hubtel Status] Network or fetch error:', error);
-    res.status(502).json({
+    return jsonResponse({
       error: 'Failed to reach Hubtel status API.',
       details: error instanceof Error ? error.message : String(error),
-    });
+    }, 502);
   }
-}
-
-export function getStatusSamples() {
-  return UAT_STATUS_SAMPLES;
-}
+});

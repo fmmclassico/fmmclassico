@@ -32,7 +32,10 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const nextUser = await withTimeout(appClient.auth.me(), AUTH_LOAD_TIMEOUT_MS);
+      const nextUser = await withTimeout(
+        appClient.auth.me({ forceAdminRefresh: isAdminPathname(window.location.pathname) }),
+        AUTH_LOAD_TIMEOUT_MS
+      );
 
       if (!nextUser) {
         setUser(null);
@@ -68,6 +71,19 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     checkUser();
 
+    const handleVisibilityRefresh = () => {
+      if (document.visibilityState === 'visible') {
+        checkUser({ showLoader: false });
+      }
+    };
+
+    const handleWindowFocus = () => {
+      checkUser({ showLoader: false });
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityRefresh);
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -87,6 +103,8 @@ export const AuthProvider = ({ children }) => {
 
     return () => {
       subscription?.unsubscribe?.();
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityRefresh);
     };
   }, [checkUser]);
 

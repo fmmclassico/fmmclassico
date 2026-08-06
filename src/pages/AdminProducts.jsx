@@ -22,6 +22,7 @@ import {
   PRESET_COLORS,
   buildEmptyProductForm,
   hydrateProductForm,
+  deriveMainGroupFromCategory,
   normalizeProductMedia,
   normalizeStringArray,
   saveProduct,
@@ -223,7 +224,7 @@ const handleGenerateDescription = async () => {
     appClient.auth.me()
       .then((authUser) => {
         if (!active) return;
-        const hasAdminAccess = authUser?.isAdmin === true || authUser?.role === 'admin';
+        const hasAdminAccess = authUser?.role === 'admin';
         setUser(authUser);
         setIsAdmin(hasAdminAccess);
       })
@@ -428,7 +429,19 @@ setForm(buildEmptyProductForm());
     return <div className="p-8 text-center text-gray-500">Admin access required.</div>;
   }
 
-  const availableSubcategories = CATEGORY_SUBCATEGORIES[form.category] || [];
+  const availableCategories = useMemo(() => Object.values(GROUP_CATEGORIES).flat(), []);
+  const availableBrands = useMemo(() => {
+    if (form.main_group) return GROUP_BRANDS[form.main_group] || [];
+
+    const inferredGroup = deriveMainGroupFromCategory(form.category);
+    if (inferredGroup) return GROUP_BRANDS[inferredGroup] || [];
+
+    return [...new Set(Object.values(GROUP_BRANDS).flat())];
+  }, [form.main_group, form.category]);
+  const availableSubcategories = useMemo(() => {
+    if (form.category) return CATEGORY_SUBCATEGORIES[form.category] || [];
+    return [...new Set(Object.values(CATEGORY_SUBCATEGORIES).flat())];
+  }, [form.category]);
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-6">
@@ -500,7 +513,7 @@ onProductMapped={handleImportedProduct}
                     </div>
                   </div>
 
-                  {form.image_url && <p className="text-xs text-green-600 font-medium">âœ“ Main image ready</p>}
+                  {form.image_url && <p className="text-xs text-green-600 font-medium">✓ Main image ready</p>}
                 </div>
               </div>
             </div>
@@ -578,7 +591,7 @@ onProductMapped={handleImportedProduct}
               </div>
 
               {form.video_url && (
-                <p className="text-xs text-green-600 mt-2 font-medium">Ã¢Å“â€œ Video ready: {form.video_url.length > 80 ? `${form.video_url.slice(0, 80)}...` : form.video_url}</p>
+                <p className="text-xs text-green-600 mt-2 font-medium">✓ Video ready: {form.video_url.length > 80 ? `${form.video_url.slice(0, 80)}...` : form.video_url}</p>
               )}
             </div>
 
@@ -596,7 +609,7 @@ onProductMapped={handleImportedProduct}
             <div>
               <Label>
                 Main Group *
-                {importMode && <span className="ml-2 text-xs text-green-600">âœ“ Auto-filled from the spreadsheet</span>}
+                {importMode && <span className="ml-2 text-xs text-green-600">✓ Auto-filled from the spreadsheet</span>}
               </Label>
               <Select
                 value={form.main_group || ""}
@@ -626,25 +639,25 @@ onProductMapped={handleImportedProduct}
             <div>
               <Label>
                 Category *
-                {importMode && <span className="ml-2 text-xs text-green-600">âœ“ Auto-filled when possible</span>}
+                {importMode && <span className="ml-2 text-xs text-green-600">✓ Auto-filled when possible</span>}
               </Label>
               <Select
                 value={form.category || ""}
                 onValueChange={(value) => setForm((current) => ({
                   ...current,
+                  main_group: deriveMainGroupFromCategory(value) || current.main_group,
                   category: value,
                   brand: "",
                   subcategory: "",
                   custom_brand: "",
                   custom_subcategory: "",
                 }))}
-                disabled={!form.main_group}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={form.main_group ? "Select category" : "Select main group first"} />
+                  <SelectValue placeholder={form.main_group ? "Select category" : "Select category or choose a main group first"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {(GROUP_CATEGORIES[form.main_group] || []).map((category) => (
+                  {availableCategories.map((category) => (
                     <SelectItem key={category.value} value={category.value}>
                       {category.label}
                     </SelectItem>
@@ -656,7 +669,7 @@ onProductMapped={handleImportedProduct}
             <div>
               <Label>
                 Brand *
-                {importMode && <span className="ml-2 text-xs text-green-600">âœ“ Auto-filled when possible</span>}
+                {importMode && <span className="ml-2 text-xs text-green-600">✓ Auto-filled when possible</span>}
               </Label>
               <Select
                 value={form.brand || ""}
@@ -665,13 +678,12 @@ onProductMapped={handleImportedProduct}
                   brand: value,
                   custom_brand: value === 'Other (type below)' ? current.custom_brand : "",
                 }))}
-                disabled={!form.main_group}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={form.main_group ? "Select brand" : "Select main group first"} />
+                  <SelectValue placeholder={form.main_group || form.category ? "Select brand" : "Select brand or choose a main group first"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {(GROUP_BRANDS[form.main_group] || []).map((brand) => (
+                  {availableBrands.map((brand) => (
                     <SelectItem key={brand} value={brand}>
                       {brand}
                     </SelectItem>
@@ -691,7 +703,7 @@ onProductMapped={handleImportedProduct}
             <div>
               <Label>
                 Product Type / Subcategory *
-                {importMode && <span className="ml-2 text-xs text-green-600">âœ“ Auto-filled when possible</span>}
+                {importMode && <span className="ml-2 text-xs text-green-600">✓ Auto-filled when possible</span>}
               </Label>
               <Select
                 value={form.subcategory || ""}
@@ -700,10 +712,9 @@ onProductMapped={handleImportedProduct}
                   subcategory: value,
                   custom_subcategory: value === '__custom__' ? current.custom_subcategory : "",
                 }))}
-                disabled={!form.category}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={form.category ? "Select product type" : "Select category first"} />
+                  <SelectValue placeholder={form.category ? "Select product type" : "Select product type or choose a category first"} />
                 </SelectTrigger>
                 <SelectContent>
                   {availableSubcategories.map((item) => (
@@ -725,11 +736,11 @@ onProductMapped={handleImportedProduct}
             </div>
 
             <div>
-              <Label>Price (â‚µ) *</Label>
+              <Label>Price (₵) *</Label>
               <Input type="number" value={form.price} onChange={(e) => setForm((current) => ({ ...current, price: e.target.value }))} placeholder="0.00" />
             </div>
             <div>
-              <Label>Original Price (â‚µ) â€” for discount display</Label>
+              <Label>Original Price (₵) — for discount display</Label>
               <Input type="number" value={form.original_price} onChange={(e) => setForm((current) => ({ ...current, original_price: e.target.value }))} placeholder="0.00" />
             </div>
 
@@ -791,14 +802,14 @@ onProductMapped={handleImportedProduct}
                     {!form.is_visible && <Badge className="bg-red-100 text-red-700">Hidden</Badge>}
                   </div>
                   <p className="text-sm text-slate-600">
-                    {[form.main_group, form.category, form.subcategory === '__custom__' ? form.custom_subcategory : form.subcategory].filter(Boolean).join(' â€¢ ') || 'Category details will appear here'}
+                    {[form.main_group, form.category, form.subcategory === '__custom__' ? form.custom_subcategory : form.subcategory].filter(Boolean).join(' • ') || 'Category details will appear here'}
                   </p>
                   <p className="text-sm text-slate-600">
                     Brand: {form.brand === 'Other (type below)' ? (form.custom_brand || 'Custom brand') : (form.brand || 'Not selected')}
                   </p>
                   <p className="text-base font-semibold text-slate-900">
-                    {form.price ? `â‚µ${form.price}` : 'Set a price'}
-                    {form.original_price ? <span className="ml-2 text-sm font-normal text-slate-500 line-through">â‚µ{form.original_price}</span> : null}
+                    {form.price ? `₵${form.price}` : 'Set a price'}
+                    {form.original_price ? <span className="ml-2 text-sm font-normal text-slate-500 line-through">₵{form.original_price}</span> : null}
                   </p>
                   <div className="rounded-xl bg-white p-3 text-sm text-slate-700">
                     <div dangerouslySetInnerHTML={{ __html: form.description || '<p>Description preview will appear here.</p>' }} />
@@ -971,7 +982,7 @@ onProductMapped={handleImportedProduct}
                     {form.is_visible ? <Eye className="h-3 w-3 text-white" /> : <EyeOff className="h-3 w-3 text-red-500" />}
                   </div>
                   <span className="text-sm font-medium text-gray-700">
-                    {form.is_visible ? 'Visible to Customers' : 'Ã°Å¸Å¡Â« Hidden from Customers'}
+                    {form.is_visible ? 'Visible to Customers' : 'Hidden from Customers'}
                   </span>
                 </label>
               </div>
@@ -1025,7 +1036,7 @@ onProductMapped={handleImportedProduct}
                 </div>
                 <div className="p-2">
                   <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight mb-1">{product.name}</p>
-                  <p className="text-sm font-black text-gray-900">â‚µ{product.price?.toLocaleString()}</p>
+                  <p className="text-sm font-black text-gray-900">₵{product.price?.toLocaleString()}</p>
                   {product.stock != null && (
                     <p className={`text-[10px] font-medium ${product.stock === 0 ? 'text-red-500' : 'text-gray-400'}`}>
                       Stock: {product.stock === 0 ? 'Out of Stock' : product.stock}

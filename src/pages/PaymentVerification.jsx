@@ -72,7 +72,39 @@ export default function PaymentVerification() {
           const result = await checkPaymentStatus(ref).catch(() => null);
           const statusValue = getStatusValue(result);
 
+          if (statusValue === 'paid' || statusValue === 'success' || statusValue === 'successful') {
+            if (currentOrder) {
+              const now = new Date().toISOString();
+              await appClient.entities.Order.update(currentOrder.id, {
+                payment_status: 'paid',
+                initial_payment_status: 'paid',
+                payment_stage: Number(currentOrder.balance_due || 0) > 0 ? 'initial_payment_paid' : 'fully_paid',
+                balance_payment_status: Number(currentOrder.balance_due || 0) > 0 ? (currentOrder.balance_payment_status || 'pending') : 'not_required',
+                is_fully_paid: Number(currentOrder.balance_due || 0) <= 0,
+                remaining_balance_paid: Number(currentOrder.balance_due || 0) <= 0,
+                remaining_balance_paid_at: Number(currentOrder.balance_due || 0) <= 0 ? now : currentOrder.remaining_balance_paid_at,
+                status: 'confirmed',
+                tracking_updates: (currentOrder.tracking_updates || []).concat([{ status: 'Initial Payment Confirmed', message: `Payment status check confirmed order #${currentOrder.order_number} as paid.`, timestamp: now }]),
+              });
+              queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+            }
+            await clearLoggedInCart(user.email, queryClient);
+            setStatusTone('success');
+            setMessage('Payment confirmed successfully. Redirecting you to your orders...');
+            setTimeout(() => navigate(createPageUrl('Orders'), { replace: true }), 1200);
+            return;
+          }
+
           if (statusValue === 'failed' || statusValue === 'unpaid') {
+            if (currentOrder) {
+              await appClient.entities.Order.update(currentOrder.id, {
+                payment_status: 'failed',
+                initial_payment_status: 'failed',
+                payment_stage: 'awaiting_initial_payment',
+                tracking_updates: (currentOrder.tracking_updates || []).concat([{ status: 'Initial Payment Failed', message: `Payment status check returned ${statusValue || 'failed'} for order #${currentOrder.order_number}.`, timestamp: new Date().toISOString() }]),
+              });
+              queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+            }
             setStatusTone('error');
             setMessage('Payment failed. Your cart is still available. Redirecting you back to checkout...');
             setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1400);
@@ -80,6 +112,15 @@ export default function PaymentVerification() {
           }
 
           if (statusValue === 'cancelled' || statusValue === 'canceled') {
+            if (currentOrder) {
+              await appClient.entities.Order.update(currentOrder.id, {
+                payment_status: 'cancelled',
+                initial_payment_status: 'cancelled',
+                payment_stage: 'awaiting_initial_payment',
+                tracking_updates: (currentOrder.tracking_updates || []).concat([{ status: 'Initial Payment Cancelled', message: `Payment was cancelled for order #${currentOrder.order_number}.`, timestamp: new Date().toISOString() }]),
+              });
+              queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+            }
             setStatusTone('warning');
             setMessage('Payment was cancelled. Your cart is still available. Redirecting you back to checkout...');
             setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1400);

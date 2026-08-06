@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/AuthContext';
 import HeroBanner from '../components/home/HeroBanner';
 import FlashSaleTimer from '../components/home/FlashSaleTimer';
 import BrandLogoMark from '@/components/brands/BrandLogoMark';
+import { DEFAULT_BRAND_DIRECTORY } from '@/lib/brandDirectory';
 
 var CATEGORY_BRANDS = {
   phones: [
@@ -314,16 +315,10 @@ export default function Home() {
               <Link to="/brands" className="text-[#2E86C1] text-xs font-semibold flex items-center">See All <ChevronRight className="h-3 w-3" /></Link>
             </div>
             <div className="fmm-stable-rail overflow-x-auto flex gap-4 p-4">
-              {[
-                { name: 'Apple', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124420/SzZdRSkx_400x400_tbfe0u.png'},
-                { name: 'Samsung', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124507/360_197_1_dnlnk4.avif' },
-                { name: 'Tecno', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124576/Tecno_Mobile_logo.svg_q82f72.webp' },
-                { name: 'Hisense', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124629/hisense-logo-png_seeklogo-285063_n8qoro.png' },
-                { name: 'TCL', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124688/images_jwltph.png' },
-                { name: 'Oraimo', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124735/images_puin9l.jpg' },
-                { name: 'Sony', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784124971/sony-logo-png_seeklogo-129420_kd8rt7.png' },
-                { name: 'JBL', fallback: 'https://res.cloudinary.com/xz7s2qzt/image/upload/v1784125078/JBL-Logo.svg_a4jkuo.webp' },
-              ].map(function(brand) {
+              {DEFAULT_BRAND_DIRECTORY
+                .filter(function(brand) { return brand.fallback; })
+                .slice(0, 8)
+                .map(function(brand) {
                 var uploadedLogo = settings.find(function(s) { return s.key === 'brand_logo_' + brand.name.toLowerCase().replace(/ /g,'_'); })?.value;
                 return (
                   <Link key={brand.name} to={createPageUrl('BrandProducts?brand=' + encodeURIComponent(brand.name))} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16">

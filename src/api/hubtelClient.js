@@ -2,18 +2,18 @@ import {
   getHubtelCallbackUrl,
   getHubtelInitiateUrl,
   getHubtelStatusUrl,
-  getSupabaseConfig,
 } from '@/lib/runtime-config';
 
-function authHeaders() {
-  const { anonKey } = getSupabaseConfig();
-
-  return {
+function buildRequestHeaders({ includeJsonContentType = false } = {}) {
+  const headers = {
     Accept: 'application/json',
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${anonKey}`,
-    apikey: anonKey,
   };
+
+  if (includeJsonContentType) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  return headers;
 }
 
 function withMeta(result, response) {
@@ -59,6 +59,28 @@ function compactMessage(value = '', maxLength = 240) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, maxLength);
+}
+
+function isNetworkBoundaryError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return error instanceof TypeError
+    || message.includes('failed to fetch')
+    || message.includes('networkerror')
+    || message.includes('load failed')
+    || message.includes('cors');
+}
+
+function createReachabilityError(endpoint, error, fallback) {
+  const likelyCorsOrDeploymentIssue = isNetworkBoundaryError(error);
+
+  return {
+    error: likelyCorsOrDeploymentIssue
+      ? 'The Hubtel Supabase function could not be reached.'
+      : fallback,
+    technicalError: error?.message || 'Unknown network error.',
+    likelyCorsOrDeploymentIssue,
+    endpoint,
+  };
 }
 
 export function createInitialPaymentReference(orderNumber, paymentMethod) {
@@ -123,6 +145,10 @@ export function getHubtelPaidAmount(result) {
 }
 
 export function getHubtelErrorMessage(result, fallback = 'Unable to continue with Hubtel right now.') {
+  if (result?.likelyCorsOrDeploymentIssue) {
+    return 'The live Supabase payment function could not be reached. This is usually a CORS, deployment, or missing-environment problem on Supabase.';
+  }
+
   const genericErrors = new Set([
     'Unable to start payment.',
     'Unable to verify payment status.',
@@ -203,7 +229,7 @@ export async function initiatePayment({
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: authHeaders(),
+      headers: buildRequestHeaders({ includeJsonContentType: true }),
       cache: 'no-store',
       body: JSON.stringify({
         totalAmount,
@@ -225,30 +251,27 @@ export async function initiatePayment({
     };
   } catch (error) {
     console.error('[HubtelClient] Error initiating payment:', error);
-    return {
-      error: 'Unable to start payment.',
-      technicalError: error?.message || 'Unknown network error.',
-      endpoint,
-    };
+    return createReachabilityError(endpoint, error, 'Unable to start payment.');
   }
 }
 
 export async function checkPaymentStatus(clientReference, extraQuery = {}) {
-  try {
-    const url = new URL(getHubtelStatusUrl());
-    if (clientReference) {
-      url.searchParams.set('clientReference', clientReference);
+  const url = new URL(getHubtelStatusUrl());
+
+  if (clientReference) {
+    url.searchParams.set('clientReference', clientReference);
+  }
+
+  Object.entries(extraQuery || {}).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && String(value).trim()) {
+      url.searchParams.set(key, String(value).trim());
     }
+  });
 
-    Object.entries(extraQuery || {}).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && String(value).trim()) {
-        url.searchParams.set(key, String(value).trim());
-      }
-    });
-
+  try {
     const response = await fetch(url.toString(), {
       method: 'GET',
-      headers: authHeaders(),
+      headers: buildRequestHeaders(),
       cache: 'no-store',
     });
 
@@ -259,10 +282,7 @@ export async function checkPaymentStatus(clientReference, extraQuery = {}) {
     };
   } catch (error) {
     console.error('[HubtelClient] Status check error:', error);
-    return {
-      error: 'Unable to verify payment status.',
-      technicalError: error?.message || 'Unknown network error.',
-    };
+    return createReachabilityError(url.toString(), error, 'Unable to verify payment status.');
   }
 }
 

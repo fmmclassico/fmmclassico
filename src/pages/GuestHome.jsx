@@ -9,6 +9,7 @@ import guestCart from '@/lib/guest-cart';
 import HeroBanner from '../components/home/HeroBanner';
 import { getVisibleBrandDirectory, getBrandLogoSources, getSectionLimit } from '@/lib/brandDirectory';
 import BrandLogoMark from '@/components/brands/BrandLogoMark';
+import OptimizedImage from '@/components/ui/optimized-image';
 
 var CATEGORY_BRANDS = {
   phones: [
@@ -124,7 +125,7 @@ export default function GuestHome() {
         >
           <div className={`w-16 h-16 sm:w-[4.25rem] sm:h-[4.25rem] md:w-[4.5rem] md:h-[4.5rem] rounded-2xl ${cat.color} flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform`}>
             {adminImg ? (
-              <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
+              <OptimizedImage src={adminImg} alt={cat.label} containerClassName="w-full h-full" className="w-full h-full object-cover" lazy />
             ) : null}
           </div>
 
@@ -183,7 +184,7 @@ export default function GuestHome() {
             {orderedCards.map(function(card) {
               var CardWrapper = card.link ? Link : 'div';
               var wrapperProps = card.link ? { to: card.link } : {};
-              return <CardWrapper key={card.key} {...wrapperProps} className="fmm-stable-promo-card flex-shrink-0 relative overflow-hidden" style={{ minHeight: 130 }}><div className={'absolute inset-0 bg-gradient-to-r ' + (card.gradient || 'from-blue-600 to-blue-400')} />{card.image_url && <img src={card.image_url} alt={card.title} className="absolute inset-0 w-full h-full object-cover opacity-60" />}<div className="relative z-10 p-3 h-full flex flex-col justify-between" style={{ minHeight: 130 }}><div><p className="text-white font-black text-sm leading-tight drop-shadow">{card.title}</p>{card.subtitle && <p className="text-white/90 text-xs font-bold mt-0.5">{card.subtitle}</p>}{card.description && <p className="text-white/80 text-[11px] mt-1 leading-snug">{card.description}</p>}</div>{card.cta_text && <span className="mt-2 inline-block bg-white text-[11px] font-bold text-blue-700 px-3 py-1 rounded-full w-fit">{card.cta_text}</span>}</div></CardWrapper>;
+              return <CardWrapper key={card.key} {...wrapperProps} className="fmm-stable-promo-card flex-shrink-0 relative overflow-hidden" style={{ minHeight: 130 }}><div className={'absolute inset-0 bg-gradient-to-r ' + (card.gradient || 'from-blue-600 to-blue-400')} />{card.image_url && <OptimizedImage src={card.image_url} alt={card.title} containerClassName="absolute inset-0" className="w-full h-full object-cover opacity-60" lazy />}<div className="relative z-10 p-3 h-full flex flex-col justify-between" style={{ minHeight: 130 }}><div><p className="text-white font-black text-sm leading-tight drop-shadow">{card.title}</p>{card.subtitle && <p className="text-white/90 text-xs font-bold mt-0.5">{card.subtitle}</p>}{card.description && <p className="text-white/80 text-[11px] mt-1 leading-snug">{card.description}</p>}</div>{card.cta_text && <span className="mt-2 inline-block bg-white text-[11px] font-bold text-blue-700 px-3 py-1 rounded-full w-fit">{card.cta_text}</span>}</div></CardWrapper>;
             })}
           </div></div></div>
         );
@@ -196,7 +197,7 @@ export default function GuestHome() {
             : flashItems.length === 0 ? <p className="text-gray-400 text-xs px-2">No products yet.</p>
             : flashItems.map(function(product) { return (
               <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div>{product.original_price > product.price && <span className="absolute top-1 left-1 bg-red-500 text-white text-[9px] font-bold px-1 py-0.5 rounded">-{Math.round((1 - product.price / product.original_price) * 100)}%</span>}</div>
+                <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <OptimizedImage src={product.image_url} alt={product.name} containerClassName="w-full h-full" className="w-full h-full object-cover" lazy /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div>{product.original_price > product.price && <span className="absolute top-1 left-1 bg-red-500 text-white text-[9px] font-bold px-1 py-0.5 rounded">-{Math.round((1 - product.price / product.original_price) * 100)}%</span>}</div>
                 <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}</div>
               </Link>
             ); })}
@@ -210,7 +211,7 @@ export default function GuestHome() {
             : donkomiDeals.length === 0 ? <p className="text-gray-400 text-xs px-2">No products yet.</p>
             : donkomiDeals.map(function(product) { return (
               <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
+                <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <OptimizedImage src={product.image_url} alt={product.name} containerClassName="w-full h-full" className="w-full h-full object-cover" lazy /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
                 <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}</div>
               </Link>
             ); })}
@@ -235,7 +236,7 @@ export default function GuestHome() {
             : newArrivals.length === 0 ? <p className="text-gray-400 text-xs px-2">No products yet.</p>
             : newArrivals.map(function(product) { return (
               <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
+                <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <OptimizedImage src={product.image_url} alt={product.name} containerClassName="w-full h-full" className="w-full h-full object-cover" lazy /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
                 <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.original_price > product.price && <p className="text-[10px] text-gray-400 line-through">₵{product.original_price?.toLocaleString()}</p>}</div>
               </Link>
             ); })}
@@ -249,7 +250,7 @@ export default function GuestHome() {
             : topSellingFallback.length === 0 ? <p className="text-gray-400 text-xs px-2">No products yet.</p>
             : topSellingFallback.map(function(product) { return (
               <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
+                <div className="relative"><div className="w-full aspect-square bg-gray-200">{product.image_url ? <OptimizedImage src={product.image_url} alt={product.name} containerClassName="w-full h-full" className="w-full h-full object-cover" lazy /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}</div></div>
                 <div className="p-2"><p className="text-[11px] text-gray-700 font-medium line-clamp-2 leading-tight">{product.name}</p><p className="text-xs font-extrabold text-gray-900 mt-1">₵{product.price?.toLocaleString()}</p>{product.reviews_count > 0 && <p className="text-[10px] text-gray-400">{product.reviews_count} sold</p>}</div>
               </Link>
             ); })}

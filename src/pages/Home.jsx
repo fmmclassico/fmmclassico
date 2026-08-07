@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/AuthContext';
 import HeroBanner from '../components/home/HeroBanner';
 import FlashSaleTimer from '../components/home/FlashSaleTimer';
 import BrandLogoMark from '@/components/brands/BrandLogoMark';
+import OptimizedImage from '@/components/ui/optimized-image';
 import { DEFAULT_BRAND_DIRECTORY } from '@/lib/brandDirectory';
 
 var CATEGORY_BRANDS = {
@@ -173,7 +174,7 @@ export default function Home() {
     <div key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-1.5 group">
       <div className={`w-16 h-16 sm:w-[4.25rem] sm:h-[4.25rem] md:w-[4.5rem] md:h-[4.5rem] rounded-2xl ${cat.color} flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform`}>
         {adminImg
-          ? <img src={adminImg} alt={cat.label} className="w-full h-full object-cover" />
+          ? <OptimizedImage src={adminImg} alt={cat.label} containerClassName="w-full h-full" className="w-full h-full object-cover" lazy />
           : null}
       </div>
       <span className="text-[11px] md:text-xs leading-tight font-medium text-gray-700 text-center">{cat.label}</span>
@@ -224,7 +225,7 @@ export default function Home() {
                   return (
                     <CardWrapper key={card.key} {...wrapperProps} className="fmm-stable-promo-card flex-shrink-0 relative overflow-hidden" style={{ minHeight: 130 }}>
                       <div className={'absolute inset-0 bg-gradient-to-r ' + (card.gradient || 'from-blue-600 to-blue-400')} />
-                      {card.image_url && <img src={card.image_url} alt={card.title} className="absolute inset-0 w-full h-full object-cover opacity-60" />}
+                      {card.image_url && <OptimizedImage src={card.image_url} alt={card.title} containerClassName="absolute inset-0" className="w-full h-full object-cover opacity-60" lazy />}
                       <div className="relative z-10 p-3 h-full flex flex-col justify-between" style={{ minHeight: 130 }}>
                         <div>
                           <p className="text-white font-black text-sm leading-tight drop-shadow">{card.title}</p>
@@ -258,7 +259,7 @@ export default function Home() {
                 <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
-                      {product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}
+                      {product.image_url ? <OptimizedImage src={product.image_url} alt={product.name} containerClassName="w-full h-full" className="w-full h-full object-cover" lazy /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}
                     </div>
                     {product.original_price > product.price && (
                       <span className="absolute top-1 left-1 bg-red-500 text-white text-[9px] font-bold px-1 py-0.5 rounded">-{Math.round((1 - product.price / product.original_price) * 100)}%</span>
@@ -292,7 +293,7 @@ export default function Home() {
                 <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
-                      {product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}
+                      {product.image_url ? <OptimizedImage src={product.image_url} alt={product.name} containerClassName="w-full h-full" className="w-full h-full object-cover" lazy /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}
                     </div>
                   </div>
                   <div className="p-2">
@@ -348,7 +349,7 @@ export default function Home() {
                 <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
-                      {product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}
+                      {product.image_url ? <OptimizedImage src={product.image_url} alt={product.name} containerClassName="w-full h-full" className="w-full h-full object-cover" lazy /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}
                     </div>
                   </div>
                   <div className="p-2">
@@ -378,7 +379,7 @@ export default function Home() {
                 <Link key={product.id} to={createPageUrl('ProductDetail?id=' + product.id)} className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative">
                     <div className="w-full aspect-square bg-gray-200">
-                      {product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}
+                      {product.image_url ? <OptimizedImage src={product.image_url} alt={product.name} containerClassName="w-full h-full" className="w-full h-full object-cover" lazy /> : <div className="w-full h-full bg-gray-200 animate-pulse" />}
                     </div>
                   </div>
                   <div className="p-2">

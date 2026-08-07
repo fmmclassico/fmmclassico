@@ -12,6 +12,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import InlineNotice from '@/components/ui/InlineNotice';
+import {
+  detectLocalServiceArea,
+  getAllowedDeliveryZoneIds,
+  isTwoStagePaymentEligibleForZone,
+  validateGhanaLocationPair,
+} from '@/lib/ghanaLocations';
 import { getHubtelCallbackUrl } from '@/lib/runtime-config';
 import { createPageUrl } from '../utils';
 
@@ -22,22 +28,7 @@ const DELIVERY_ZONES = [
   { id: 'outside', label: 'Other Regions Delivery', fee: 50 },
 ];
 
-const TWO_STAGE_ZONE_IDS = ['accra', 'tarkwa'];
-
-const REGION_CITY_MAP = {
-  accra: {
-    groups: ['accra', 'greater accra'],
-    cities: ['accra', 'tema', 'madina', 'east legon', 'spintex', 'adenta', 'osu', 'cantonments', 'airport', 'dansoman', 'achimota', 'teshie', 'nungua', 'kasoa'],
-  },
-  kumasi: {
-    groups: ['ashanti', 'kumasi'],
-    cities: ['kumasi', 'asokwa', 'suame', 'tafo', 'ejisu', 'ahodwo', 'kwadaso'],
-  },
-  tarkwa: {
-    groups: ['western', 'western north', 'tarkwa'],
-    cities: ['tarkwa', 'tamso', 'aboso', 'bogoso', 'prestea'],
-  },
-};
+const DEFAULT_ZONE_IDS = DELIVERY_ZONES.map((zone) => zone.id);
 
 function ensureArray(value) {
   if (Array.isArray(value)) return value;
@@ -57,22 +48,6 @@ function formatVariantSummary(item) {
   if (item?.selected_wattage) parts.push(`Wattage: ${item.selected_wattage}`);
   if (item?.selected_type) parts.push(`Type: ${item.selected_type}`);
   return parts.join(' • ');
-}
-
-function normalizeValue(value = '') {
-  return String(value || '').trim().toLowerCase();
-}
-
-function inferRegionKey(region = '') {
-  const normalized = normalizeValue(region);
-  return Object.entries(REGION_CITY_MAP).find(([, config]) => config.groups.some((group) => normalized.includes(group)))?.[0] || null;
-}
-
-function cityMatchesRegion(regionKey, city = '') {
-  if (!regionKey || !REGION_CITY_MAP[regionKey]) return false;
-  const normalizedCity = normalizeValue(city);
-  if (!normalizedCity) return false;
-  return REGION_CITY_MAP[regionKey].cities.some((entry) => normalizedCity.includes(entry) || entry.includes(normalizedCity));
 }
 
 function getInitialAmount(subtotal, paymentMethod) {
@@ -132,13 +107,44 @@ export default function Checkout() {
     () => safeCartItems.reduce((sum, item) => sum + (toNumber(item.product_price) * toNumber(item.quantity, 1)), 0),
     [safeCartItems],
   );
+
+  const locationContext = useMemo(() => ({
+    regionInput: formData.region,
+    cityInput: formData.city,
+    addressInput: formData.specific_location,
+  }), [formData.region, formData.city, formData.specific_location]);
+
+  const locationValidation = useMemo(
+    () => validateGhanaLocationPair({ regionInput: formData.region, cityInput: formData.city }),
+    [formData.region, formData.city],
+  );
+
+  const detectedLocation = useMemo(
+    () => detectLocalServiceArea(locationContext),
+    [locationContext],
+  );
+
+  const allowedZoneIds = useMemo(() => {
+    if (!locationValidation.isValid) return DEFAULT_ZONE_IDS;
+
+    const resolved = getAllowedDeliveryZoneIds(locationContext).filter((zoneId) => DEFAULT_ZONE_IDS.includes(zoneId));
+    return resolved.length > 0 ? resolved : ['outside'];
+  }, [locationContext, locationValidation.isValid]);
+
+  const availableZones = useMemo(
+    () => DELIVERY_ZONES.filter((zone) => allowedZoneIds.includes(zone.id)),
+    [allowedZoneIds],
+  );
+
   const selectedZone = DELIVERY_ZONES.find((zone) => zone.id === selectedZoneId) || null;
   const deliveryFee = selectedZone?.fee || 0;
-  const regionKey = inferRegionKey(formData.region);
-  const cityMatches = cityMatchesRegion(regionKey, formData.city);
-  const zoneMatchesRegion = !selectedZoneId || selectedZoneId === 'outside' || regionKey === selectedZoneId;
-  const locationMismatch = Boolean(selectedZoneId && selectedZoneId !== 'outside' && formData.region && formData.city && (!zoneMatchesRegion || !cityMatches));
-  const isTwoStageZoneEligible = TWO_STAGE_ZONE_IDS.includes(selectedZoneId);
+  const locationMismatch = Boolean(selectedZoneId && locationValidation.isValid && !allowedZoneIds.includes(selectedZoneId));
+
+  const isTwoStageZoneEligible = useMemo(() => (
+    selectedZoneId
+      ? isTwoStagePaymentEligibleForZone(selectedZoneId, locationContext)
+      : false
+  ), [selectedZoneId, locationContext]);
 
   const requiresTermsAcceptance = paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery';
   const termsAccepted = paymentMethod === 'deposit_balance'
@@ -147,11 +153,11 @@ export default function Checkout() {
       ? deliveryStageWarningAccepted
       : true;
 
-  const strictTwoStageLocationMatch = useMemo(() => {
-    if (!isTwoStageZoneEligible) return false;
-    if (!formData.region || !formData.city || !formData.specific_location) return false;
-    return zoneMatchesRegion && cityMatches;
-  }, [isTwoStageZoneEligible, formData, zoneMatchesRegion, cityMatches]);
+  const strictTwoStageLocationMatch = Boolean(
+    isTwoStageZoneEligible
+    && locationValidation.isValid
+    && formData.specific_location.trim()
+  );
 
   const orderSummary = useMemo(() => {
     const initialProductAmount = getInitialAmount(subtotal, paymentMethod);
@@ -184,6 +190,15 @@ export default function Checkout() {
     setDepositWarningAccepted(false);
     setDeliveryStageWarningAccepted(false);
   };
+
+  useEffect(() => {
+    if (!selectedZoneId || allowedZoneIds.includes(selectedZoneId)) return;
+
+    setSelectedZoneId('');
+    setPaymentMethod('');
+    setDepositWarningAccepted(false);
+    setDeliveryStageWarningAccepted(false);
+  }, [allowedZoneIds, selectedZoneId]);
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -223,6 +238,11 @@ export default function Checkout() {
       return;
     }
 
+    if (locationValidation.isReady && !locationValidation.isValid) {
+      showFeedback('error', locationValidation.message || 'Please enter a valid Ghana region and city before continuing.', 'Invalid location');
+      return;
+    }
+
     if (!selectedZoneId) {
       showFeedback('error', 'Please choose a delivery option before continuing.', 'Delivery option required');
       return;
@@ -239,7 +259,7 @@ export default function Checkout() {
     }
 
     if ((paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery') && !strictTwoStageLocationMatch) {
-      showFeedback('warning', 'This payment plan is only available for approved Greater Accra and Tarkwa / Western Region deliveries.', 'Payment plan restricted');
+      showFeedback('warning', 'This payment plan is only available for approved Accra, Kumasi, and Tarkwa delivery areas.', 'Payment plan restricted');
       return;
     }
 
@@ -458,9 +478,14 @@ export default function Checkout() {
                 <Label className="text-sm font-medium">Specific Location *</Label>
                 <Input name="specific_location" value={formData.specific_location} onChange={handleInputChange} placeholder="Apartment, estate, office, or delivery point" required className="mt-1" />
               </div>
+              {locationValidation.isReady && !locationValidation.isValid && (
+                <p className="text-xs text-amber-700 font-medium">
+                  {locationValidation.message}
+                </p>
+              )}
               {locationMismatch && (
                 <p className="text-xs text-red-600 font-medium">
-                  The delivery option selected does not match the region and city you entered.
+                  The selected delivery option does not match this validated location.
                 </p>
               )}
               <div>
@@ -486,7 +511,7 @@ export default function Checkout() {
                 <SelectValue placeholder="Select delivery option" />
               </SelectTrigger>
               <SelectContent>
-                {DELIVERY_ZONES.map((zone) => (
+                {availableZones.map((zone) => (
                   <SelectItem key={zone.id} value={zone.id}>
                     {zone.label} — ₵{zone.fee}
                   </SelectItem>
@@ -494,6 +519,11 @@ export default function Checkout() {
               </SelectContent>
             </Select>
             {selectedZone && <p className="text-xs text-blue-600 mt-2 font-medium">Delivery fee: ₵{deliveryFee.toFixed(2)}</p>}
+            {locationValidation.isValid && detectedLocation.serviceAreaLabel && (
+              <p className="text-xs text-slate-600 mt-2">
+                Location validated for {detectedLocation.serviceAreaLabel}. Available delivery options were filtered automatically.
+              </p>
+            )}
           </Card>
 
           {selectedZoneId && (
@@ -512,15 +542,15 @@ export default function Checkout() {
                 </SelectContent>
               </Select>
 
-              {!isTwoStageZoneEligible && (
+              {!isTwoStageZoneEligible && (selectedZoneId === 'accra' || selectedZoneId === 'kumasi' || selectedZoneId === 'tarkwa') && (
                 <p className="text-xs text-gray-500 mt-2">
-                  The second and third payment plans are only available for approved Greater Accra and Tarkwa / Western Region deliveries.
+                  The second and third payment plans are only available for approved Accra, Kumasi, and Tarkwa delivery areas.
                 </p>
               )}
 
-              {isTwoStageZoneEligible && paymentMethod !== 'full_payment' && !strictTwoStageLocationMatch && (
+              {paymentMethod !== 'full_payment' && !strictTwoStageLocationMatch && (
                 <p className="text-xs text-amber-700 mt-2 flex items-center gap-1">
-                  <Info className="h-3 w-3" /> Please provide a matching region and city before using the second or third payment plan.
+                  <Info className="h-3 w-3" /> Enter a valid Ghana region/city and an eligible delivery area before using the second or third payment plan.
                 </p>
               )}
 
@@ -591,7 +621,7 @@ export default function Checkout() {
             <div className="space-y-3">
               <Button
                 type="submit"
-                disabled={isSubmitting || locationMismatch || ((paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery') && !strictTwoStageLocationMatch) || (requiresTermsAcceptance && !termsAccepted)}
+                disabled={isSubmitting || (locationValidation.isReady && !locationValidation.isValid) || locationMismatch || ((paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery') && !strictTwoStageLocationMatch) || (requiresTermsAcceptance && !termsAccepted)}
                 className="w-full rounded-xl bg-blue-800 px-4 py-4 text-white font-bold text-base hover:bg-blue-900 disabled:opacity-50 h-14"
               >
                 {isSubmitting ? (

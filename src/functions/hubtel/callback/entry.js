@@ -27,10 +27,7 @@ function jsonResponse(body, status = 200) {
 }
 
 function createSupabaseAdminClient() {
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    return null;
-  }
-
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return null;
   return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -42,8 +39,7 @@ function getBaseOrderReference(reference = '') {
 
 function getPaymentStage(reference = '') {
   const normalized = String(reference || '').toUpperCase();
-  if (normalized.endsWith('-BAL')) return 'balance';
-  return 'initial';
+  return normalized.endsWith('-BAL') ? 'balance' : 'initial';
 }
 
 function normalizeHubtelStatus({ responseCode = '', callbackStatus = '', transactionStatus = '' } = {}) {
@@ -52,10 +48,9 @@ function normalizeHubtelStatus({ responseCode = '', callbackStatus = '', transac
   const normalizedTransactionStatus = String(transactionStatus || '').toLowerCase().trim();
   const statusValue = normalizedTransactionStatus || normalizedCallbackStatus;
 
-  if (normalizedResponseCode === '0000' || ['success', 'successful', 'paid'].includes(statusValue)) return 'paid';
+  if (normalizedResponseCode === '0000' && ['paid', 'success', 'successful'].includes(statusValue)) return 'paid';
   if (['failed', 'unpaid'].includes(statusValue)) return 'failed';
   if (['cancelled', 'canceled'].includes(statusValue)) return 'cancelled';
-  if (normalizedResponseCode === '0005') return 'pending_payment';
   return 'pending_payment';
 }
 
@@ -71,8 +66,22 @@ function getHubtelEnvelope(body = {}) {
     salesInvoiceId: data?.SalesInvoiceId ?? data?.salesInvoiceId ?? null,
     customerPhoneNumber: data?.CustomerPhoneNumber ?? data?.customerPhoneNumber ?? null,
     paymentDetails: data?.PaymentDetails ?? data?.paymentDetails ?? {},
-    description: data?.Description ?? data?.description ?? '',
   };
+}
+
+function getExpectedAmount(order, paymentStage) {
+  const value = paymentStage === 'balance'
+    ? Number(order?.balance_due ?? order?.balance_payment_amount ?? 0)
+    : Number(order?.initial_payment_amount ?? order?.amount_paid_now ?? 0);
+
+  return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
+}
+
+function isAmountSatisfied(actualAmount, expectedAmount, tolerance = 0.01) {
+  const actual = Number(actualAmount);
+  const expected = Number(expectedAmount);
+  if (!Number.isFinite(actual) || !Number.isFinite(expected) || expected <= 0) return false;
+  return actual + tolerance >= expected;
 }
 
 async function parseJsonBody(req) {
@@ -130,29 +139,12 @@ Deno.serve(async (req) => {
 
   try {
     const body = await parseJsonBody(req);
-
     if (!body || typeof body !== 'object') {
       return jsonResponse({ error: 'Invalid JSON' }, 400);
     }
 
-    console.log('[Hubtel Callback] Raw payload:', JSON.stringify(body));
-
     const envelope = getHubtelEnvelope(body);
     const normalizedStatus = normalizeHubtelStatus(envelope);
-
-    console.log('[Hubtel Callback] Normalized event:', {
-      responseCode: envelope.responseCode || null,
-      callbackStatus: envelope.callbackStatus || null,
-      transactionStatus: envelope.transactionStatus || null,
-      normalizedStatus,
-      clientReference: envelope.clientReference || null,
-      checkoutId: envelope.checkoutId || null,
-      salesInvoiceId: envelope.salesInvoiceId || null,
-      amount: envelope.amount,
-      paymentType: envelope.paymentDetails?.PaymentType || null,
-      channel: envelope.paymentDetails?.Channel || null,
-      customerPhoneNumber: envelope.customerPhoneNumber || null,
-    });
 
     if (!envelope.clientReference || (!envelope.transactionStatus && !envelope.callbackStatus && !envelope.responseCode)) {
       console.warn('[Hubtel Callback] Missing clientReference or status information. Acknowledging without update.');
@@ -179,15 +171,16 @@ Deno.serve(async (req) => {
     }
 
     const now = new Date().toISOString();
+    const expectedAmount = getExpectedAmount(order, paymentStage);
+    const amountVerified = normalizedStatus === 'paid' && isAmountSatisfied(envelope.amount, expectedAmount);
     const stageLabel = paymentStage === 'balance' ? 'Balance Payment' : 'Initial Payment';
     const trackingUpdates = Array.isArray(order.tracking_updates) ? order.tracking_updates : [];
     const paymentType = envelope.paymentDetails?.PaymentType || 'N/A';
     const paymentChannel = envelope.paymentDetails?.Channel || 'N/A';
-    const networkReference = envelope.paymentDetails?.MobileMoneyNumber || envelope.customerPhoneNumber || 'N/A';
 
     const trackingUpdate = {
       status: `${stageLabel} ${normalizedStatus}`,
-      message: `Hubtel ${stageLabel.toLowerCase()} callback: ${normalizedStatus}. ResponseCode ${envelope.responseCode || 'N/A'}. Amount GHS ${envelope.amount.toFixed(2)}. Type ${paymentType}. Channel ${paymentChannel}. Ref ${networkReference}.`,
+      message: `Hubtel ${stageLabel.toLowerCase()} callback: ${normalizedStatus}. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${envelope.amount.toFixed(2)}. Type ${paymentType}. Channel ${paymentChannel}.`,
       timestamp: now,
       checkoutId: envelope.checkoutId,
       clientReference: envelope.clientReference,
@@ -197,12 +190,11 @@ Deno.serve(async (req) => {
       salesInvoiceId: envelope.salesInvoiceId || null,
     };
 
-    /** @type {Record<string, any>} */
     const updates = {
       tracking_updates: [...trackingUpdates, trackingUpdate],
       payment_reference: envelope.clientReference,
       hubtel_transaction_id: envelope.checkoutId || order.hubtel_transaction_id || null,
-      hubtel_status: normalizedStatus === 'paid'
+      hubtel_status: amountVerified
         ? 'successful'
         : normalizedStatus === 'cancelled'
           ? 'cancelled'
@@ -224,11 +216,13 @@ Deno.serve(async (req) => {
       updates.balance_checkout_id = envelope.checkoutId || order.balance_checkout_id || null;
       updates.balance_payment_reference = envelope.clientReference;
 
-      if (normalizedStatus === 'paid') {
+      if (amountVerified) {
         const firstTimeSuccess = order.balance_payment_status !== 'paid';
         updates.balance_payment_status = 'paid';
         updates.remaining_balance_paid = true;
         updates.remaining_balance_paid_at = now;
+        updates.balance_payment_verified_amount = envelope.amount;
+        updates.balance_paid_at = now;
         updates.is_fully_paid = true;
         updates.payment_stage = 'fully_paid';
         updates.payment_status = 'paid';
@@ -244,13 +238,16 @@ Deno.serve(async (req) => {
           adminMessage = `Order #${order.order_number} by ${order.customer_name} is now fully paid.`;
           adminEmailSubject = `Remaining Balance Paid - #${order.order_number}`;
         }
+      } else if (normalizedStatus === 'paid' && !amountVerified) {
+        updates.balance_payment_status = 'failed';
+        updates.payment_stage = 'balance_payment_failed';
+        adminTitle = 'Balance Payment Amount Mismatch';
+        adminMessage = `Order #${order.order_number} reported a balance payment of GHS ${envelope.amount.toFixed(2)} but expected GHS ${expectedAmount.toFixed(2)}.`;
+        adminEmailSubject = `Balance Payment Amount Mismatch - #${order.order_number}`;
+        notifyAdmins = true;
       } else if (normalizedStatus === 'failed') {
         updates.balance_payment_status = 'failed';
         updates.payment_stage = 'balance_payment_failed';
-        notifyCustomer = order.balance_payment_status !== 'failed';
-        customerTitle = 'Remaining Balance Payment Failed';
-        customerMessage = `Remaining balance payment failed for order #${order.order_number}.`;
-        customerEmailSubject = `Remaining Balance Payment Failed - #${order.order_number}`;
       } else if (normalizedStatus === 'cancelled') {
         updates.balance_payment_status = 'cancelled';
         updates.payment_stage = 'balance_payment_failed';
@@ -258,12 +255,14 @@ Deno.serve(async (req) => {
     } else {
       updates.initial_checkout_id = envelope.checkoutId || order.initial_checkout_id || null;
       updates.initial_payment_reference = envelope.clientReference;
-      updates.payment_status = normalizedStatus;
 
-      if (normalizedStatus === 'paid') {
+      if (amountVerified) {
         const balanceDue = Number(order.balance_due || 0);
         const firstTimeSuccess = order.initial_payment_status !== 'paid';
+        updates.payment_status = 'paid';
         updates.initial_payment_status = 'paid';
+        updates.initial_payment_verified_amount = envelope.amount;
+        updates.initial_paid_at = now;
         updates.payment_stage = balanceDue > 0 ? 'initial_payment_paid' : 'fully_paid';
         updates.balance_payment_status = balanceDue > 0 ? order.balance_payment_status || 'pending' : 'not_required';
         updates.is_fully_paid = balanceDue <= 0;
@@ -286,29 +285,28 @@ Deno.serve(async (req) => {
           adminMessage = `Verified successful Hubtel payment for order #${order.order_number} by ${order.customer_name}.`;
           adminEmailSubject = `Payment Received - #${order.order_number}`;
         }
-      } else if (normalizedStatus === 'failed') {
+      } else if (normalizedStatus === 'paid' && !amountVerified) {
+        updates.payment_status = 'failed';
         updates.initial_payment_status = 'failed';
         updates.payment_stage = 'awaiting_initial_payment';
-        notifyCustomer = order.initial_payment_status !== 'failed';
-        customerTitle = 'Payment Failed';
-        customerMessage = `Payment failed for order #${order.order_number}. The order was not placed and the cart remains available.`;
-        customerEmailSubject = `Payment Failed - #${order.order_number}`;
+        customerTitle = 'Payment Verification Required';
+        customerMessage = `We received a payment update for order #${order.order_number}, but the amount did not match the expected total. Please contact support.`;
+        customerEmailSubject = `Payment Verification Required - #${order.order_number}`;
+        adminTitle = 'Initial Payment Amount Mismatch';
+        adminMessage = `Order #${order.order_number} reported an initial payment of GHS ${envelope.amount.toFixed(2)} but expected GHS ${expectedAmount.toFixed(2)}.`;
+        adminEmailSubject = `Initial Payment Amount Mismatch - #${order.order_number}`;
+        notifyCustomer = true;
+        notifyAdmins = true;
+      } else if (normalizedStatus === 'failed') {
+        updates.payment_status = 'failed';
+        updates.initial_payment_status = 'failed';
+        updates.payment_stage = 'awaiting_initial_payment';
       } else if (normalizedStatus === 'cancelled') {
+        updates.payment_status = 'cancelled';
         updates.initial_payment_status = 'cancelled';
         updates.payment_stage = 'awaiting_initial_payment';
       }
     }
-
-    console.log('[Hubtel Callback] Applying order updates:', {
-      orderNumber: order.order_number,
-      paymentStage,
-      normalizedStatus,
-      paymentStatus: updates.payment_status || null,
-      initialPaymentStatus: updates.initial_payment_status || null,
-      balancePaymentStatus: updates.balance_payment_status || null,
-      paymentStageValue: updates.payment_stage || null,
-      isFullyPaid: updates.is_fully_paid ?? null,
-    });
 
     const { error: updateError } = await supabase.from('orders').update(updates).eq('id', order.id);
     if (updateError) {
@@ -321,19 +319,15 @@ Deno.serve(async (req) => {
         user_email: order.customer_email,
         title: customerTitle,
         message: customerMessage,
-        type: normalizedStatus === 'paid' ? 'payment_confirmed' : 'general',
+        type: normalizedStatus === 'paid' && amountVerified ? 'payment_confirmed' : 'general',
         order_id: order.id,
         order_number: order.order_number,
       });
-      await sendEmail(
-        order.customer_email,
-        customerEmailSubject || customerTitle,
-        `Hi ${order.customer_name},
+      await sendEmail(order.customer_email, customerEmailSubject || customerTitle, `Hi ${order.customer_name},
 
 ${customerMessage}
 
-FMM CLASSICO`
-      );
+FMM CLASSICO`);
     }
 
     if (notifyAdmins) {
@@ -342,7 +336,7 @@ FMM CLASSICO`
           user_email: email,
           title: adminTitle,
           message: adminMessage,
-          type: 'payment_confirmed',
+          type: amountVerified ? 'payment_confirmed' : 'general',
           order_id: order.id,
           order_number: order.order_number,
         });
@@ -352,14 +346,15 @@ FMM CLASSICO`
 
     return jsonResponse({
       success: true,
-      paymentStatus: normalizedStatus,
       paymentStage,
+      normalizedStatus,
+      expectedAmount,
+      receivedAmount: envelope.amount,
+      amountVerified,
       baseReference,
-    }, 200);
+    });
   } catch (error) {
     console.error('[Hubtel Callback] fatal error:', error);
-    return jsonResponse({
-      error: error instanceof Error ? error.message : 'Server error',
-    }, 500);
+    return jsonResponse({ error: error instanceof Error ? error.message : 'Server error' }, 500);
   }
 });

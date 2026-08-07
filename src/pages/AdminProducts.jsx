@@ -216,8 +216,7 @@ const handleGenerateDescription = async () => {
       `Features: ${Array.isArray(form.available_types) ? form.available_types.join(', ') : ''}`,
       `Colours: ${Array.isArray(form.available_colors) ? form.available_colors.join(', ') : ''}`,
       `Specs: storage=${form.storage || ''}, ram=${form.ram || ''}, capacity=${form.capacity || ''}, power=${form.power || ''}, voltage=${form.voltage || ''}, warranty=${form.warranty || ''}`,
-    ].join('
-');
+    ].join('\n');
 
     const aiDescription = await askGemini(prompt, systemContext);
     setForm((current) => ({ ...current, description: aiDescription || fallbackDescription }));

@@ -11,6 +11,7 @@ function authHeaders() {
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${anonKey}`,
+    apikey: anonKey,
   };
 }
 
@@ -95,6 +96,7 @@ export async function initiatePayment({
     const response = await fetch(getHubtelInitiateUrl(), {
       method: 'POST',
       headers: authHeaders(),
+      cache: 'no-store',
       body: JSON.stringify({
         totalAmount,
         description: sanitizeDescription(description),
@@ -132,6 +134,7 @@ export async function checkPaymentStatus(clientReference, extraQuery = {}) {
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: authHeaders(),
+      cache: 'no-store',
     });
 
     const result = await readJsonResponse(response, 'Unable to parse Hubtel status response.');

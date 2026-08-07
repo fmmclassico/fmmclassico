@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { Loader2, Package, Trash2, Wallet } from 'lucide-react';
 
 import { appClient } from '@/api/appClient.js';
-import { checkPaymentStatus, createBalancePaymentReference, getBaseOrderReference, getHubtelPaidAmount, initiateBalancePayment, isHubtelPaymentVerified } from '@/api/hubtelClient';
+import { checkPaymentStatus, createBalancePaymentReference, getBaseOrderReference, getHubtelCheckoutUrl, getHubtelErrorMessage, getHubtelPaidAmount, initiateBalancePayment, isHubtelPaymentVerified } from '@/api/hubtelClient';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -266,13 +266,14 @@ export default function Orders() {
       const cancellationUrl = `${window.location.origin}${createPageUrl('Orders')}?order=${encodeURIComponent(reference)}&paymentStage=balance&status=cancelled&orderId=${order.id}`;
       const result = await initiateBalancePayment({ order, callbackUrl, returnUrl, cancellationUrl });
 
-      if (result?.data?.checkoutUrl) {
+      const checkoutUrl = getHubtelCheckoutUrl(result);
+      if (checkoutUrl) {
         showFeedback('info', 'Redirecting you to Hubtel for secure balance payment...', 'Opening secure checkout');
-        window.location.href = result.data.checkoutUrl;
+        window.location.href = checkoutUrl;
         return;
       }
 
-      showFeedback('error', result?.error || 'Unable to start the remaining balance payment.', 'Unable to continue');
+      showFeedback('error', getHubtelErrorMessage(result, 'Unable to start the remaining balance payment.'), 'Unable to continue');
     } catch (error) {
       showFeedback('error', error.message || 'Unable to start the remaining balance payment.', 'Unable to continue');
     } finally {

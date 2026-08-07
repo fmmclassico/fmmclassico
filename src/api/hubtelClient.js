@@ -70,17 +70,44 @@ function isNetworkBoundaryError(error) {
     || message.includes('cors');
 }
 
-function createReachabilityError(endpoint, error, fallback) {
+function createReachabilityError(error, fallback) {
   const likelyCorsOrDeploymentIssue = isNetworkBoundaryError(error);
 
   return {
     error: likelyCorsOrDeploymentIssue
-      ? 'The Hubtel Supabase function could not be reached.'
+      ? 'The Hubtel payment gateway could not be reached.'
       : fallback,
     technicalError: error?.message || 'Unknown network error.',
     likelyCorsOrDeploymentIssue,
-    endpoint,
   };
+}
+
+function resolveRequestUrl(url) {
+  if (/^https?:\/\//i.test(String(url || ''))) {
+    return String(url);
+  }
+
+  if (typeof window === 'undefined') {
+    throw new Error('A browser origin is required to resolve the Hubtel request URL.');
+  }
+
+  return new URL(String(url || ''), window.location.origin).toString();
+}
+
+function hasAuthorizationProxyError(result) {
+  const values = [
+    result?.data?.error,
+    result?.data?.message,
+    result?.message,
+    result?.details,
+    result?.technicalError,
+    result?.raw,
+    result?.error,
+  ]
+    .map((value) => String(value || '').toLowerCase())
+    .filter(Boolean);
+
+  return values.some((value) => value.includes('missing authorization header') || value.includes('unauthorized'));
 }
 
 export function createInitialPaymentReference(orderNumber, paymentMethod) {
@@ -146,7 +173,11 @@ export function getHubtelPaidAmount(result) {
 
 export function getHubtelErrorMessage(result, fallback = 'Unable to continue with Hubtel right now.') {
   if (result?.likelyCorsOrDeploymentIssue) {
-    return 'The live Supabase payment function could not be reached. This is usually a CORS, deployment, or missing-environment problem on Supabase.';
+    return 'The payment gateway could not be reached. Check the site proxy or Supabase function deployment.';
+  }
+
+  if (hasAuthorizationProxyError(result)) {
+    return 'The payment proxy reached the backend, but the Hubtel authorization credentials were rejected or missing. Redeploy the updated hubtel-initiate function and confirm the Hubtel secrets are set in Supabase.';
   }
 
   const genericErrors = new Set([
@@ -245,18 +276,15 @@ export async function initiatePayment({
     });
 
     const result = await readJsonResponse(response, 'Unable to parse Hubtel initiation response.');
-    return {
-      ...withMeta(result, response),
-      endpoint,
-    };
+    return withMeta(result, response);
   } catch (error) {
     console.error('[HubtelClient] Error initiating payment:', error);
-    return createReachabilityError(endpoint, error, 'Unable to start payment.');
+    return createReachabilityError(error, 'Unable to start payment.');
   }
 }
 
 export async function checkPaymentStatus(clientReference, extraQuery = {}) {
-  const url = new URL(getHubtelStatusUrl());
+  const url = new URL(resolveRequestUrl(getHubtelStatusUrl()));
 
   if (clientReference) {
     url.searchParams.set('clientReference', clientReference);
@@ -276,13 +304,10 @@ export async function checkPaymentStatus(clientReference, extraQuery = {}) {
     });
 
     const result = await readJsonResponse(response, 'Unable to parse Hubtel status response.');
-    return {
-      ...withMeta(result, response),
-      endpoint: url.toString(),
-    };
+    return withMeta(result, response);
   } catch (error) {
     console.error('[HubtelClient] Status check error:', error);
-    return createReachabilityError(url.toString(), error, 'Unable to verify payment status.');
+    return createReachabilityError(error, 'Unable to verify payment status.');
   }
 }
 

@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Info, Loader2, MapPin, ShieldCheck, Truck } from 'lucide-react';
 
 import { appClient } from '@/api/appClient.js';
-import { createBalancePaymentReference, createInitialPaymentReference, initiatePayment } from '@/api/hubtelClient';
+import { createBalancePaymentReference, createInitialPaymentReference, getHubtelCheckoutUrl, getHubtelErrorMessage, initiatePayment } from '@/api/hubtelClient';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -344,11 +344,14 @@ export default function Checkout() {
         payeeEmail: user.email,
       });
 
-      if (initiateResponse?.data?.checkoutUrl) {
+      const checkoutUrl = getHubtelCheckoutUrl(initiateResponse);
+      if (checkoutUrl) {
         showFeedback('info', 'Redirecting you to Hubtel for secure payment.', 'Opening secure checkout');
-        window.location.href = initiateResponse.data.checkoutUrl;
+        window.location.href = checkoutUrl;
         return;
       }
+
+      const hubtelFailureMessage = getHubtelErrorMessage(initiateResponse, 'Hubtel checkout could not be started.');
 
       await appClient.entities.Order.update(createdOrder.id, {
         payment_status: 'failed',
@@ -356,13 +359,13 @@ export default function Checkout() {
         hubtel_status: 'failed',
         tracking_updates: (createdOrder.tracking_updates || []).concat([{
           status: 'Checkout Initiation Failed',
-          message: 'Hubtel checkout could not be started. The cart remains available and the hidden order will stay unpaid.',
+          message: `Hubtel checkout could not be started. ${hubtelFailureMessage}`.trim(),
           timestamp: new Date().toISOString(),
         }]),
       });
 
       setOrderError('Hubtel checkout could not be started. Your cart is still available.');
-      showFeedback('error', 'Hubtel checkout could not be started. Your cart is still available.', 'Payment could not start');
+      showFeedback('error', `Hubtel checkout could not be started. ${hubtelFailureMessage}`, 'Payment could not start');
     } catch (error) {
       console.error('Checkout error:', error);
       setOrderError('Checkout is temporarily unavailable. Your cart was not cleared.');

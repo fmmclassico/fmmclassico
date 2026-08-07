@@ -10,17 +10,21 @@ const ADMIN_EMAILS = [...new Set(
     .filter(Boolean)
 )];
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+function createCorsHeaders(req) {
+  return {
+    'Access-Control-Allow-Origin': req.headers.get('origin') || '*',
+    'Access-Control-Allow-Headers': req.headers.get('access-control-request-headers') || 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin, Access-Control-Request-Headers',
+  };
+}
 
-function jsonResponse(body, status = 200) {
+function jsonResponse(req, body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...createCorsHeaders(req),
       'Content-Type': 'application/json',
     },
   });
@@ -48,7 +52,7 @@ function normalizeHubtelStatus({ responseCode = '', callbackStatus = '', transac
   const normalizedTransactionStatus = String(transactionStatus || '').toLowerCase().trim();
   const statusValue = normalizedTransactionStatus || normalizedCallbackStatus;
 
-  if (normalizedResponseCode === '0000' && ['paid', 'success', 'successful'].includes(statusValue)) return 'paid';
+  if (normalizedResponseCode === '0000' && ['paid', 'success', 'successful', 'completed', 'complete'].includes(statusValue)) return 'paid';
   if (['failed', 'unpaid'].includes(statusValue)) return 'failed';
   if (['cancelled', 'canceled'].includes(statusValue)) return 'cancelled';
   return 'pending_payment';
@@ -124,23 +128,26 @@ async function createNotification(supabase, payload) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: createCorsHeaders(req),
+    });
   }
 
   if (req.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed' }, 405);
+    return jsonResponse(req, { error: 'Method not allowed' }, 405);
   }
 
   const supabase = createSupabaseAdminClient();
   if (!supabase) {
     console.error('[Hubtel Callback] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-    return jsonResponse({ error: 'Server configuration is incomplete.' }, 500);
+    return jsonResponse(req, { error: 'Server configuration is incomplete.' }, 500);
   }
 
   try {
     const body = await parseJsonBody(req);
     if (!body || typeof body !== 'object') {
-      return jsonResponse({ error: 'Invalid JSON' }, 400);
+      return jsonResponse(req, { error: 'Invalid JSON' }, 400);
     }
 
     const envelope = getHubtelEnvelope(body);
@@ -148,7 +155,7 @@ Deno.serve(async (req) => {
 
     if (!envelope.clientReference || (!envelope.transactionStatus && !envelope.callbackStatus && !envelope.responseCode)) {
       console.warn('[Hubtel Callback] Missing clientReference or status information. Acknowledging without update.');
-      return jsonResponse({ message: 'Partial data received' }, 200);
+      return jsonResponse(req, { message: 'Partial data received' }, 200);
     }
 
     const baseReference = getBaseOrderReference(envelope.clientReference);
@@ -167,7 +174,7 @@ Deno.serve(async (req) => {
 
     if (!order) {
       console.warn(`[Hubtel Callback] No order found for ${baseReference}`);
-      return jsonResponse({ message: 'No order found' }, 200);
+      return jsonResponse(req, { message: 'No order found' }, 200);
     }
 
     const now = new Date().toISOString();
@@ -344,7 +351,7 @@ FMM CLASSICO`);
       }
     }
 
-    return jsonResponse({
+    return jsonResponse(req, {
       success: true,
       paymentStage,
       normalizedStatus,
@@ -355,6 +362,6 @@ FMM CLASSICO`);
     });
   } catch (error) {
     console.error('[Hubtel Callback] fatal error:', error);
-    return jsonResponse({ error: error instanceof Error ? error.message : 'Server error' }, 500);
+    return jsonResponse(req, { error: error instanceof Error ? error.message : 'Server error' }, 500);
   }
 });

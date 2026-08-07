@@ -1,21 +1,32 @@
-const HUBTEL_CLIENT_ID = Deno.env.get('HUBTEL_CLIENT_ID')?.trim() || '';
-const HUBTEL_CLIENT_SECRET = Deno.env.get('HUBTEL_CLIENT_SECRET')?.trim() || '';
-const MERCHANT_ACCOUNT_NUMBER = Deno.env.get('HUBTEL_MERCHANT_ACCOUNT_NUMBER')?.trim() || '';
+const HUBTEL_CLIENT_ID = Deno.env.get('HUBTEL_CLIENT_ID')?.trim()
+  || Deno.env.get('HUBTEL_API_ID')?.trim()
+  || Deno.env.get('HUBTEL_AP_ID')?.trim()
+  || '';
+const HUBTEL_CLIENT_SECRET = Deno.env.get('HUBTEL_CLIENT_SECRET')?.trim()
+  || Deno.env.get('HUBTEL_API_KEY')?.trim()
+  || '';
+const MERCHANT_ACCOUNT_NUMBER = Deno.env.get('HUBTEL_MERCHANT_ACCOUNT_NUMBER')?.trim()
+  || Deno.env.get('VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER')?.trim()
+  || '';
 
 const UAT_STATUS_SAMPLES = [];
 const MAX_SAMPLES = 50;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-};
+function createCorsHeaders(req) {
+  return {
+    'Access-Control-Allow-Origin': req.headers.get('origin') || '*',
+    'Access-Control-Allow-Headers': req.headers.get('access-control-request-headers') || 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin, Access-Control-Request-Headers',
+  };
+}
 
-function jsonResponse(body, status = 200) {
+function jsonResponse(req, body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...createCorsHeaders(req),
       'Content-Type': 'application/json',
     },
   });
@@ -60,16 +71,26 @@ function buildStatusEndpoint(query) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: createCorsHeaders(req),
+    });
   }
 
   if (req.method !== 'GET') {
-    return jsonResponse({ error: 'Method not allowed' }, 405);
+    return jsonResponse(req, { error: 'Method not allowed' }, 405);
   }
 
   if (!isConfigured()) {
-    console.error('[Hubtel Status] Missing HUBTEL_CLIENT_ID, HUBTEL_CLIENT_SECRET, or HUBTEL_MERCHANT_ACCOUNT_NUMBER');
-    return jsonResponse({ error: 'Hubtel gateway is not configured.' }, 500);
+    console.error('[Hubtel Status] Missing HUBTEL_CLIENT_ID/HUBTEL_API_ID, HUBTEL_CLIENT_SECRET/HUBTEL_API_KEY, or HUBTEL_MERCHANT_ACCOUNT_NUMBER');
+    return jsonResponse(req, {
+      error: 'Hubtel gateway is not configured.',
+      missingConfiguration: [
+        !HUBTEL_CLIENT_ID ? 'HUBTEL_CLIENT_ID or HUBTEL_API_ID' : null,
+        !HUBTEL_CLIENT_SECRET ? 'HUBTEL_CLIENT_SECRET or HUBTEL_API_KEY' : null,
+        !MERCHANT_ACCOUNT_NUMBER ? 'HUBTEL_MERCHANT_ACCOUNT_NUMBER' : null,
+      ].filter(Boolean),
+    }, 500);
   }
 
   const url = new URL(req.url);
@@ -80,7 +101,7 @@ Deno.serve(async (req) => {
   };
 
   if (!query.clientReference && !query.hubtelTransactionId && !query.networkTransactionId) {
-    return jsonResponse({ error: 'Missing clientReference, hubtelTransactionId, or networkTransactionId.' }, 400);
+    return jsonResponse(req, { error: 'Missing clientReference, hubtelTransactionId, or networkTransactionId.' }, 400);
   }
 
   const endpoint = buildStatusEndpoint(query);
@@ -123,10 +144,10 @@ Deno.serve(async (req) => {
       UAT_STATUS_SAMPLES.shift();
     }
 
-    return jsonResponse(parsed.body, parsed.httpStatus);
+    return jsonResponse(req, parsed.body, parsed.httpStatus);
   } catch (error) {
     console.error('[Hubtel Status] Network or fetch error:', error);
-    return jsonResponse({
+    return jsonResponse(req, {
       error: 'Failed to reach Hubtel status API.',
       details: error instanceof Error ? error.message : String(error),
     }, 502);

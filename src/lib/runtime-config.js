@@ -45,6 +45,17 @@ export function getSupabaseConfig() {
   return { url, anonKey };
 }
 
+export function getSupabaseFunctionUrl(functionName = '') {
+  const normalizedName = trimLeadingSlash(String(functionName || '').trim());
+
+  if (!normalizedName) {
+    throw new Error('A Supabase function name is required to build the Supabase function URL.');
+  }
+
+  const { url } = getSupabaseConfig();
+  return joinUrl(url, `functions/v1/${normalizedName}`);
+}
+
 export function getHubtelFunctionsBaseUrl() {
   const configuredBase = trimTrailingSlash(readEnv('VITE_HUBTEL_FUNCTIONS_BASE_URL'));
   if (configuredBase) {

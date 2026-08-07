@@ -56,6 +56,16 @@ function ensureArray(value) {
   return [];
 }
 
+function mergeImageUrls(currentUrls = [], nextUrls = []) {
+  return [...new Set([...(Array.isArray(currentUrls) ? currentUrls : []), ...(Array.isArray(nextUrls) ? nextUrls : [])]
+    .map((item) => String(item || '').trim())
+    .filter(Boolean))];
+}
+
+function getProductPreviewImage(form = {}) {
+  return form.image_url || form.image_urls?.[0] || '';
+}
+
 async function askGemini(prompt, systemContext) {
   const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
     method: 'POST',
@@ -206,7 +216,8 @@ const handleGenerateDescription = async () => {
       `Features: ${Array.isArray(form.available_types) ? form.available_types.join(', ') : ''}`,
       `Colours: ${Array.isArray(form.available_colors) ? form.available_colors.join(', ') : ''}`,
       `Specs: storage=${form.storage || ''}, ram=${form.ram || ''}, capacity=${form.capacity || ''}, power=${form.power || ''}, voltage=${form.voltage || ''}, warranty=${form.warranty || ''}`,
-    ].join('\n');
+    ].join('
+');
 
     const aiDescription = await askGemini(prompt, systemContext);
     setForm((current) => ({ ...current, description: aiDescription || fallbackDescription }));
@@ -355,7 +366,7 @@ const handleGenerateDescription = async () => {
       const urls = await Promise.all(files.map((file) => appClient.integrations.Core.UploadFile({ file }).then((result) => result.file_url)));
       setForm((current) => ({
         ...current,
-        ...normalizeProductMedia(current.image_url, [...current.image_urls, ...urls]),
+        image_urls: mergeImageUrls(current.image_urls, urls),
       }));
       toast.success(`${urls.length} image(s) uploaded!`);
     } catch (error) {
@@ -391,7 +402,7 @@ const handleGenerateDescription = async () => {
 
     setForm((current) => ({
       ...current,
-      ...normalizeProductMedia(current.image_url, [...current.image_urls, ...urls]),
+      image_urls: mergeImageUrls(current.image_urls, urls),
     }));
     setExtraImageUrlInput('');
     toast.success(`${urls.length} image URL${urls.length > 1 ? 's' : ''} added.`);
@@ -484,8 +495,8 @@ onProductMapped={handleImportedProduct}
               <Label className="font-semibold mb-2 block">Main Product Image</Label>
               <div className="flex items-start gap-4">
                 <div className="w-28 h-28 rounded-xl border-2 border-dashed border-gray-300 overflow-hidden bg-gray-50 flex items-center justify-center flex-shrink-0">
-                  {form.image_url
-                    ? <img src={form.image_url} alt="" className="w-full h-full object-cover" />
+                  {getProductPreviewImage(form)
+                    ? <img src={getProductPreviewImage(form)} alt="" className="w-full h-full object-cover" />
                     : <ImagePlus className="h-8 w-8 text-gray-300" />}
                 </div>
                 <div className="flex-1 space-y-3">
@@ -516,7 +527,7 @@ onProductMapped={handleImportedProduct}
                     </div>
                   </div>
 
-                  {form.image_url && <p className="text-xs text-green-600 font-medium">âœ“ Main image ready</p>}
+                  {getProductPreviewImage(form) && <p className="text-xs text-green-600 font-medium">✓ Product image ready</p>}
                 </div>
               </div>
             </div>
@@ -594,7 +605,7 @@ onProductMapped={handleImportedProduct}
               </div>
 
               {form.video_url && (
-                <p className="text-xs text-green-600 mt-2 font-medium">âœ“ Video ready: {form.video_url.length > 80 ? `${form.video_url.slice(0, 80)}...` : form.video_url}</p>
+                <p className="text-xs text-green-600 mt-2 font-medium">✓ Video ready: {form.video_url.length > 80 ? `${form.video_url.slice(0, 80)}...` : form.video_url}</p>
               )}
             </div>
 
@@ -612,7 +623,7 @@ onProductMapped={handleImportedProduct}
             <div>
               <Label>
                 Main Group *
-                {importMode && <span className="ml-2 text-xs text-green-600">âœ“ Auto-filled from the spreadsheet</span>}
+                {importMode && <span className="ml-2 text-xs text-green-600">✓ Auto-filled from the spreadsheet</span>}
               </Label>
               <Select
                 value={form.main_group || ""}
@@ -642,7 +653,7 @@ onProductMapped={handleImportedProduct}
             <div>
               <Label>
                 Category *
-                {importMode && <span className="ml-2 text-xs text-green-600">âœ“ Auto-filled when possible</span>}
+                {importMode && <span className="ml-2 text-xs text-green-600">✓ Auto-filled when possible</span>}
               </Label>
               <Select
                 value={form.category || ""}
@@ -672,7 +683,7 @@ onProductMapped={handleImportedProduct}
             <div>
               <Label>
                 Brand *
-                {importMode && <span className="ml-2 text-xs text-green-600">âœ“ Auto-filled when possible</span>}
+                {importMode && <span className="ml-2 text-xs text-green-600">✓ Auto-filled when possible</span>}
               </Label>
               <Select
                 value={form.brand || ""}
@@ -706,7 +717,7 @@ onProductMapped={handleImportedProduct}
             <div>
               <Label>
                 Product Type / Subcategory *
-                {importMode && <span className="ml-2 text-xs text-green-600">âœ“ Auto-filled when possible</span>}
+                {importMode && <span className="ml-2 text-xs text-green-600">✓ Auto-filled when possible</span>}
               </Label>
               <Select
                 value={form.subcategory || ""}
@@ -793,8 +804,8 @@ onProductMapped={handleImportedProduct}
               </div>
               <div className="grid gap-4 md:grid-cols-[140px_minmax(0,1fr)]">
                 <div className="overflow-hidden rounded-xl border bg-white aspect-square">
-                  {form.image_url ? (
-                    <img src={form.image_url} alt={form.name || 'Product preview'} className="h-full w-full object-cover" />
+                  {getProductPreviewImage(form) ? (
+                    <img src={getProductPreviewImage(form)} alt={form.name || 'Product preview'} className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full items-center justify-center text-xs text-gray-400">No image selected</div>
                   )}
@@ -805,7 +816,7 @@ onProductMapped={handleImportedProduct}
                     {!form.is_visible && <Badge className="bg-red-100 text-red-700">Hidden</Badge>}
                   </div>
                   <p className="text-sm text-slate-600">
-                    {[form.main_group, form.category, form.subcategory === '__custom__' ? form.custom_subcategory : form.subcategory].filter(Boolean).join(' â€¢ ') || 'Category details will appear here'}
+                    {[form.main_group, form.category, form.subcategory === '__custom__' ? form.custom_subcategory : form.subcategory].filter(Boolean).join(' • ') || 'Category details will appear here'}
                   </p>
                   <p className="text-sm text-slate-600">
                     Brand: {form.brand === 'Other (type below)' ? (form.custom_brand || 'Custom brand') : (form.brand || 'Not selected')}
@@ -1059,17 +1070,11 @@ onProductMapped={handleImportedProduct}
                       <Pencil className="h-3 w-3" /> Edit
                     </Button>
                     <Button
-
 size="sm"
-
 variant="outline"
-
 className="h-7 w-7 p-0 text-red-600 border-red-300 hover:bg-red-50"
-
 title="Delete product"
-
 onClick={() => {
-
 const confirmed =
 window.confirm(
 `Are you sure you want to permanently delete "${product.name}"?`
@@ -1083,11 +1088,8 @@ deleteMutation.mutate(product.id);
 }
 
 }}
-
 >
-
 <Trash2 className="h-3 w-3" />
-
 </Button>
                   </div>
                 </div>

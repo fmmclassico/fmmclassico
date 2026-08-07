@@ -8,17 +8,36 @@ const HUBTEL_CLIENT_SECRET = Deno.env.get('HUBTEL_CLIENT_SECRET')?.trim()
 const MERCHANT_ACCOUNT_NUMBER = Deno.env.get('HUBTEL_MERCHANT_ACCOUNT_NUMBER')?.trim()
   || Deno.env.get('VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER')?.trim()
   || '';
+const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_WEB_ORIGINS') || Deno.env.get('SITE_URL') || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
 
 const UAT_INIT_SAMPLES = [];
 const MAX_SAMPLES = 50;
+const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type';
+
+function resolveAllowedOrigin(requestOrigin = '') {
+  if (!requestOrigin) {
+    return ALLOWED_ORIGINS[0] || '*';
+  }
+
+  if (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(requestOrigin)) {
+    return requestOrigin;
+  }
+
+  return ALLOWED_ORIGINS[0];
+}
 
 function createCorsHeaders(req) {
   return {
-    'Access-Control-Allow-Origin': req.headers.get('origin') || '*',
-    'Access-Control-Allow-Headers': req.headers.get('access-control-request-headers') || 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Origin': resolveAllowedOrigin(req.headers.get('origin') || ''),
+    'Access-Control-Allow-Headers': ALLOW_HEADERS,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Credentials': 'false',
+    'Access-Control-Expose-Headers': 'content-type',
     'Access-Control-Max-Age': '86400',
-    Vary: 'Origin, Access-Control-Request-Headers',
+    Vary: 'Origin',
   };
 }
 
@@ -50,6 +69,15 @@ function sanitizeDescription(value = '') {
 
 function safeString(value = '') {
   return String(value || '').trim();
+}
+
+function isHttpUrl(value = '') {
+  try {
+    const parsed = new URL(String(value || '').trim());
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch (_) {
+    return false;
+  }
 }
 
 function toAmount(value) {
@@ -103,7 +131,7 @@ function getCheckoutUrl(body = {}) {
 
 function buildPayload(body = {}) {
   const totalAmount = toAmount(body.totalAmount);
-  const description = sanitizeDescription(body.description);
+  const description = sanitizeDescription(body.description || `FMM CLASSICO Order ${body.clientReference || ''}`);
   const callbackUrl = safeString(body.callbackUrl);
   const returnUrl = safeString(body.returnUrl);
   const cancellationUrl = safeString(body.cancellationUrl);
@@ -115,9 +143,9 @@ function buildPayload(body = {}) {
   const missingFields = [];
   if (totalAmount === null) missingFields.push('totalAmount');
   if (!description) missingFields.push('description');
-  if (!callbackUrl) missingFields.push('callbackUrl');
-  if (!returnUrl) missingFields.push('returnUrl');
-  if (!cancellationUrl) missingFields.push('cancellationUrl');
+  if (!callbackUrl || !isHttpUrl(callbackUrl)) missingFields.push('callbackUrl');
+  if (!returnUrl || !isHttpUrl(returnUrl)) missingFields.push('returnUrl');
+  if (!cancellationUrl || !isHttpUrl(cancellationUrl)) missingFields.push('cancellationUrl');
   if (!clientReference) missingFields.push('clientReference');
 
   return {
@@ -140,7 +168,7 @@ function buildPayload(body = {}) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
-      status: 204,
+      status: 200,
       headers: createCorsHeaders(req),
     });
   }
@@ -179,9 +207,6 @@ Deno.serve(async (req) => {
     clientReference: payload.clientReference,
     totalAmount: payload.totalAmount,
     merchantAccountNumber: MERCHANT_ACCOUNT_NUMBER,
-    hasPayeeName: Boolean(payload.payeeName),
-    hasPayeeMobileNumber: Boolean(payload.payeeMobileNumber),
-    hasPayeeEmail: Boolean(payload.payeeEmail),
     callbackUrl: payload.callbackUrl,
     returnUrl: payload.returnUrl,
     cancellationUrl: payload.cancellationUrl,
@@ -211,7 +236,7 @@ Deno.serve(async (req) => {
       hasCheckoutUrl: Boolean(checkoutUrl),
     });
 
-    const accepted = parsed.body?.responseCode === '0000' && checkoutUrl;
+    const accepted = parsed.ok && parsed.body?.responseCode === '0000' && checkoutUrl;
     if (accepted) {
       UAT_INIT_SAMPLES.push({
         timestamp: new Date().toISOString(),

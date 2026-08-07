@@ -1,44 +1,53 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '../utils';
-import { appClient } from '@/api/appClient.js';
-import { createInitialPaymentReference, createBalancePaymentReference, initiatePayment } from '@/api/hubtelClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { CreditCard, Info, Loader2, MapPin, ShieldCheck, Truck } from 'lucide-react';
+
+import { appClient } from '@/api/appClient.js';
+import { createBalancePaymentReference, createInitialPaymentReference, initiatePayment } from '@/api/hubtelClient';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Truck, CreditCard, Loader2, Info, MapPin, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import InlineNotice from '@/components/ui/InlineNotice';
+import { getHubtelCallbackUrl } from '@/lib/runtime-config';
+import { createPageUrl } from '../utils';
 
 const DELIVERY_ZONES = [
-  { id: 'accra', label: 'Within Accra Delivery', fee: 30 },
-  { id: 'kumasi', label: 'Within Kumasi Delivery', fee: 30 },
-  { id: 'umat_doorstep', label: 'UMaT Main Campus – Doorstep Delivery', fee: 10 },
-  { id: 'tarkwa', label: 'Approved Tarkwa In-Town Delivery', fee: 25 },
-  { id: 'outside', label: 'Outside Accra, Tarkwa & Kumasi', fee: 50 },
-  { id: 'bus_station', label: 'Delivery to Bus Stations', fee: 25 },
+  { id: 'accra', label: 'Greater Accra Delivery', fee: 30 },
+  { id: 'kumasi', label: 'Kumasi Delivery', fee: 30 },
+  { id: 'tarkwa', label: 'Tarkwa / Western Region Delivery', fee: 25 },
+  { id: 'outside', label: 'Other Regions Delivery', fee: 50 },
 ];
 
-const TWO_STAGE_ZONE_IDS = ['accra', 'umat_doorstep', 'tarkwa'];
-const REGION_AREAS = {
-  accra: ['accra', 'tema', 'madina', 'east legon', 'spintex', 'adenta', 'ashongman', 'kasoa', 'osu', 'labone', 'cantonments', 'airport', 'circle', 'makola', 'dansoman', 'kaneshie', 'achimota', 'legon', 'teshie', 'nungua', 'labadi', 'korle bu', 'weija', 'gbawe', 'mallam', 'lapaz', 'tesano', 'north kaneshie', 'abeka'],
-  tarkwa: ['tarkwa', 'umat', 'tarkwa new site', 'tarkwa old station', 'tamso', 'aboso'],
+const TWO_STAGE_ZONE_IDS = ['accra', 'tarkwa'];
+
+const REGION_CITY_MAP = {
+  accra: {
+    groups: ['accra', 'greater accra'],
+    cities: ['accra', 'tema', 'madina', 'east legon', 'spintex', 'adenta', 'osu', 'cantonments', 'airport', 'dansoman', 'achimota', 'teshie', 'nungua', 'kasoa'],
+  },
+  kumasi: {
+    groups: ['ashanti', 'kumasi'],
+    cities: ['kumasi', 'asokwa', 'suame', 'tafo', 'ejisu', 'ahodwo', 'kwadaso'],
+  },
+  tarkwa: {
+    groups: ['western', 'western north', 'tarkwa'],
+    cities: ['tarkwa', 'tamso', 'aboso', 'bogoso', 'prestea'],
+  },
 };
-
-const HUBTEL_CALLBACK_URL = 'https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback';
-
-function toNumber(value, fallback = 0) {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
 
 function ensureArray(value) {
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.data)) return value.data;
   return [];
+}
+
+function toNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
 }
 
 function formatVariantSummary(item) {
@@ -50,43 +59,63 @@ function formatVariantSummary(item) {
   return parts.join(' • ');
 }
 
-function inferRegionGroup(region) {
-  const normalized = String(region || '').toLowerCase().trim();
-  if (normalized.includes('accra')) return 'accra';
-  if (normalized.includes('tarkwa') || normalized.includes('western')) return 'tarkwa';
-  if (normalized.includes('kumasi') || normalized.includes('ashanti')) return 'kumasi';
-  return null;
+function normalizeValue(value = '') {
+  return String(value || '').trim().toLowerCase();
+}
+
+function inferRegionKey(region = '') {
+  const normalized = normalizeValue(region);
+  return Object.entries(REGION_CITY_MAP).find(([, config]) => config.groups.some((group) => normalized.includes(group)))?.[0] || null;
+}
+
+function cityMatchesRegion(regionKey, city = '') {
+  if (!regionKey || !REGION_CITY_MAP[regionKey]) return false;
+  const normalizedCity = normalizeValue(city);
+  if (!normalizedCity) return false;
+  return REGION_CITY_MAP[regionKey].cities.some((entry) => normalizedCity.includes(entry) || entry.includes(normalizedCity));
+}
+
+function getInitialAmount(subtotal, paymentMethod) {
+  if (paymentMethod === 'deposit_balance') {
+    return Math.ceil((subtotal / 2) * 100) / 100;
+  }
+
+  if (paymentMethod === 'pay_on_delivery') {
+    return 0;
+  }
+
+  return subtotal;
 }
 
 export default function Checkout() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderError, setOrderError] = useState('');
   const [locationError, setLocationError] = useState('');
   const [feedback, setFeedback] = useState(null);
   const [depositWarningAccepted, setDepositWarningAccepted] = useState(false);
-  const [podWarningAccepted, setPodWarningAccepted] = useState(false);
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
+  const [deliveryStageWarningAccepted, setDeliveryStageWarningAccepted] = useState(false);
   const [selectedZoneId, setSelectedZoneId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [formData, setFormData] = useState({
     customer_name: '',
     customer_phone: '',
-    delivery_address: '',
-    delivery_landmark: '',
     region: '',
     city: '',
+    specific_location: '',
     map_location: '',
   });
 
   useEffect(() => {
-    setIsSubmitting(false);
     appClient.auth.me()
       .then((userData) => {
         setUser(userData);
-        setFormData((prev) => ({ ...prev, customer_name: userData.full_name || '' }));
+        setFormData((current) => ({
+          ...current,
+          customer_name: userData?.full_name || current.customer_name,
+        }));
       })
       .catch(() => appClient.auth.redirectToLogin(createPageUrl('Home')));
   }, []);
@@ -99,66 +128,66 @@ export default function Checkout() {
   });
 
   const safeCartItems = ensureArray(cartItems);
-  const subtotal = useMemo(() => safeCartItems.reduce((sum, item) => sum + (toNumber(item.product_price) * toNumber(item.quantity, 1)), 0), [safeCartItems]);
-  const selectedZone = DELIVERY_ZONES.find((zone) => zone.id === selectedZoneId);
-  const deliveryFee = selectedZone ? selectedZone.fee : 0;
+  const subtotal = useMemo(
+    () => safeCartItems.reduce((sum, item) => sum + (toNumber(item.product_price) * toNumber(item.quantity, 1)), 0),
+    [safeCartItems],
+  );
+  const selectedZone = DELIVERY_ZONES.find((zone) => zone.id === selectedZoneId) || null;
+  const deliveryFee = selectedZone?.fee || 0;
+  const regionKey = inferRegionKey(formData.region);
+  const cityMatches = cityMatchesRegion(regionKey, formData.city);
+  const zoneMatchesRegion = !selectedZoneId || selectedZoneId === 'outside' || regionKey === selectedZoneId;
+  const locationMismatch = Boolean(selectedZoneId && selectedZoneId !== 'outside' && formData.region && formData.city && (!zoneMatchesRegion || !cityMatches));
   const isTwoStageZoneEligible = TWO_STAGE_ZONE_IDS.includes(selectedZoneId);
-
-  const locationMismatch = false;
-
-  const strictTwoStageLocationMatch = useMemo(() => {
-    if (!isTwoStageZoneEligible) return false;
-    const regionGroup = inferRegionGroup(formData.region);
-    const city = String(formData.city || '').toLowerCase().trim();
-    const landmark = String(formData.delivery_landmark || '').trim();
-    const address = String(formData.delivery_address || '').trim();
-    if (!regionGroup || !city || !landmark || !address) return false;
-    if (selectedZoneId === 'accra') {
-      return regionGroup === 'accra' && REGION_AREAS.accra.some((town) => city.includes(town) || town.includes(city));
-    }
-    if (selectedZoneId === 'umat_doorstep') {
-      return regionGroup === 'tarkwa' && (city.includes('umat') || city.includes('tarkwa'));
-    }
-    if (selectedZoneId === 'tarkwa') {
-      return regionGroup === 'tarkwa' && REGION_AREAS.tarkwa.some((town) => city.includes(town) || town.includes(city));
-    }
-    return false;
-  }, [selectedZoneId, isTwoStageZoneEligible, formData]);
 
   const requiresTermsAcceptance = paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery';
   const termsAccepted = paymentMethod === 'deposit_balance'
     ? depositWarningAccepted
     : paymentMethod === 'pay_on_delivery'
-      ? podWarningAccepted
+      ? deliveryStageWarningAccepted
       : true;
-  const canRevealOrderSummary = selectedZoneId && paymentMethod && (!requiresTermsAcceptance || termsAccepted);
+
+  const strictTwoStageLocationMatch = useMemo(() => {
+    if (!isTwoStageZoneEligible) return false;
+    if (!formData.region || !formData.city || !formData.specific_location) return false;
+    return zoneMatchesRegion && cityMatches;
+  }, [isTwoStageZoneEligible, formData, zoneMatchesRegion, cityMatches]);
 
   const orderSummary = useMemo(() => {
-    if (!paymentMethod || !selectedZoneId) {
-      return { displaySubtotal: subtotal, deliveryFee, grandTotal: subtotal + deliveryFee, totalToPayNow: subtotal + deliveryFee, balanceDue: 0 };
-    }
-    if (paymentMethod === 'full_payment') {
-      return { displaySubtotal: subtotal, deliveryFee, grandTotal: subtotal + deliveryFee, totalToPayNow: subtotal + deliveryFee, balanceDue: 0 };
-    }
-    if (paymentMethod === 'deposit_balance') {
-      const halfSubtotal = Math.ceil((subtotal / 2) * 100) / 100;
-      return { displaySubtotal: halfSubtotal, deliveryFee, grandTotal: subtotal + deliveryFee, totalToPayNow: halfSubtotal + deliveryFee, balanceDue: subtotal - halfSubtotal };
-    }
-    return { displaySubtotal: 0, deliveryFee, grandTotal: subtotal + deliveryFee, totalToPayNow: deliveryFee, balanceDue: subtotal };
-  }, [paymentMethod, subtotal, deliveryFee, selectedZoneId]);
+    const initialProductAmount = getInitialAmount(subtotal, paymentMethod);
+    const totalToPayNow = initialProductAmount + deliveryFee;
+    const grandTotal = subtotal + deliveryFee;
+    const balanceDue = Math.max(0, grandTotal - totalToPayNow);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+    return {
+      initialProductAmount,
+      deliveryFee,
+      totalToPayNow,
+      grandTotal,
+      balanceDue,
+    };
+  }, [subtotal, deliveryFee, paymentMethod]);
+
+  const canRevealOrderSummary = Boolean(selectedZoneId && paymentMethod && (!requiresTermsAcceptance || termsAccepted));
 
   const showFeedback = (variant, message, title) => {
     setFeedback({ variant, message, title });
   };
 
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+  };
+
+  const handlePaymentMethodChange = (value) => {
+    setPaymentMethod(value);
+    setDepositWarningAccepted(false);
+    setDeliveryStageWarningAccepted(false);
+  };
+
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setLocationError('Geolocation not supported');
+      setLocationError('Google location capture is not supported on this device.');
       return;
     }
 
@@ -166,75 +195,73 @@ export default function Checkout() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        setFormData((prev) => ({
-          ...prev,
-          map_location: `https://www.google.com/maps?q=${latitude.toFixed(6)},${longitude.toFixed(6)}&z=15`,
+        setFormData((current) => ({
+          ...current,
+          map_location: `https://www.google.com/maps?q=${latitude.toFixed(6)},${longitude.toFixed(6)}&z=16`,
         }));
-        showFeedback('success', 'Your location link was added successfully.', 'Location detected');
+        showFeedback('success', 'Your Google location link was added successfully.', 'Location added');
       },
       (error) => {
-        const msg = error.code === 1 ? 'Location access denied' : error.code === 2 ? 'Location unavailable' : 'Location timed out';
-        setLocationError(msg);
-        showFeedback('error', msg, 'Location unavailable');
+        const message = error.code === 1
+          ? 'Location access was denied.'
+          : error.code === 2
+            ? 'Your location could not be detected.'
+            : 'Location detection timed out.';
+        setLocationError(message);
+        showFeedback('error', message, 'Location unavailable');
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
   };
 
-  const handlePaymentMethodChange = (value) => {
-    setPaymentMethod(value);
-    setDepositWarningAccepted(false);
-    setPodWarningAccepted(false);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     if (isSubmitting) return;
-    if (!formData.customer_name || !formData.customer_phone || !formData.delivery_address || !formData.delivery_landmark || !formData.region || !formData.city) {
-      showFeedback('error', 'Please fill in all required delivery fields, including a landmark.', 'Complete the form');
+
+    if (!formData.customer_name || !formData.customer_phone || !formData.region || !formData.city || !formData.specific_location) {
+      showFeedback('error', 'Please complete the delivery details: region, city, and specific location.', 'Complete the form');
       return;
     }
-    if (locationMismatch) {
-      showFeedback('error', 'Your region and city or town do not match. Please correct them before continuing.', 'Address check');
-      return;
-    }
+
     if (!selectedZoneId) {
-      showFeedback('error', 'Please select a delivery method before proceeding.', 'Delivery method required');
+      showFeedback('error', 'Please choose a delivery option before continuing.', 'Delivery option required');
       return;
     }
+
     if (!paymentMethod) {
-      showFeedback('error', 'Please select a payment method before proceeding.', 'Payment method required');
+      showFeedback('error', 'Please choose a payment plan before continuing.', 'Payment plan required');
       return;
     }
+
+    if (locationMismatch) {
+      showFeedback('error', 'The selected delivery option does not match the region and city provided.', 'Location mismatch');
+      return;
+    }
+
     if ((paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery') && !strictTwoStageLocationMatch) {
-      showFeedback('warning', 'Deposit and pay-on-delivery are only available for approved Accra and Tarkwa addresses. Use the full online payment option if your address does not qualify.', 'Delivery restriction');
+      showFeedback('warning', 'This payment plan is only available for approved Greater Accra and Tarkwa / Western Region deliveries.', 'Payment plan restricted');
       return;
     }
-    if (paymentMethod === 'deposit_balance' && !depositWarningAccepted) {
-      showFeedback('warning', 'Please accept the deposit payment terms before continuing.', 'Action needed');
+
+    if (requiresTermsAcceptance && !termsAccepted) {
+      showFeedback('warning', 'Please review and accept the payment instructions before continuing.', 'Action required');
       return;
     }
-    if (paymentMethod === 'pay_on_delivery' && !podWarningAccepted) {
-      showFeedback('warning', 'Please accept the pay on delivery terms before continuing.', 'Action needed');
-      return;
-    }
+
     if (orderSummary.totalToPayNow <= 0 || Number.isNaN(orderSummary.totalToPayNow)) {
-      showFeedback('error', 'The order total is invalid. Please review your cart and try again.', 'Unable to continue');
+      showFeedback('error', 'The amount due now is invalid. Please review your cart and try again.', 'Unable to continue');
       return;
     }
 
     setIsSubmitting(true);
     setOrderError('');
+
     const orderNumber = `FMM${Date.now().toString(36).toUpperCase()}`;
+    const initialPaymentReference = createInitialPaymentReference(orderNumber, paymentMethod);
+    const balancePaymentReference = paymentMethod === 'full_payment' ? '' : createBalancePaymentReference(orderNumber);
+    const callbackUrl = getHubtelCallbackUrl();
 
     try {
-      const fullAddress = [formData.delivery_address, formData.delivery_landmark, formData.city, formData.region].filter(Boolean).join(', ');
-      const payMethodLabel = paymentMethod === 'full_payment'
-        ? 'Full Payment'
-        : paymentMethod === 'deposit_balance'
-          ? 'Deposit Now, Balance on Delivery'
-          : 'Delivery Fee Now, Balance on Delivery';
-
       const orderItems = safeCartItems.map((item) => ({
         product_id: item.product_id,
         product_name: item.product_name,
@@ -248,9 +275,8 @@ export default function Checkout() {
         options_signature: item.options_signature || '',
       }));
 
+      const deliverySummary = [formData.specific_location, formData.city, formData.region].filter(Boolean).join(', ');
       const nowIso = new Date().toISOString();
-      const initialPaymentReference = createInitialPaymentReference(orderNumber, paymentMethod);
-      const balancePaymentReference = paymentMethod === 'full_payment' ? '' : createBalancePaymentReference(orderNumber);
       const createdOrder = await appClient.entities.Order.create({
         order_number: orderNumber,
         items: orderItems,
@@ -260,10 +286,12 @@ export default function Checkout() {
         amount_paid_now: orderSummary.totalToPayNow,
         initial_payment_amount: orderSummary.totalToPayNow,
         balance_payment_amount: orderSummary.balanceDue,
+        initial_payment_verified_amount: 0,
+        balance_payment_verified_amount: 0,
         total_amount: orderSummary.grandTotal,
         balance_due: orderSummary.balanceDue,
-        remaining_balance_paid: paymentMethod === 'full_payment',
-        remaining_balance_paid_at: paymentMethod === 'full_payment' ? nowIso : null,
+        remaining_balance_paid: paymentMethod === 'full_payment' && orderSummary.balanceDue <= 0,
+        remaining_balance_paid_at: paymentMethod === 'full_payment' && orderSummary.balanceDue <= 0 ? nowIso : null,
         payment_method: paymentMethod,
         delivery_zone: selectedZoneId,
         payment_status: 'pending_payment',
@@ -271,7 +299,7 @@ export default function Checkout() {
         balance_payment_status: paymentMethod === 'full_payment' ? 'not_required' : 'pending',
         payment_stage: 'awaiting_initial_payment',
         is_fully_paid: false,
-        balance_payment_enabled: paymentMethod === 'full_payment',
+        balance_payment_enabled: false,
         initial_payment_reference: initialPaymentReference,
         balance_payment_reference: balancePaymentReference,
         payment_reference: initialPaymentReference,
@@ -280,14 +308,16 @@ export default function Checkout() {
         customer_name: formData.customer_name,
         customer_email: user.email,
         customer_phone: formData.customer_phone,
-        delivery_address: fullAddress,
-        delivery_landmark: formData.delivery_landmark,
+        region: formData.region,
         city: formData.city,
+        specific_location: formData.specific_location,
+        delivery_address: deliverySummary,
+        delivery_landmark: '',
         map_location: formData.map_location || '',
-        notes: 'Pending Hubtel verification. Keep hidden until the initial payment is confirmed.',
+        notes: 'Pending Hubtel verification. Keep hidden until the first payment is confirmed and the paid amount matches the expected amount.',
         tracking_updates: [{
           status: 'Awaiting Payment Confirmation',
-          message: `Hubtel checkout started for ${payMethodLabel}. Amount to verify now: GHS ${orderSummary.totalToPayNow.toFixed(2)}. This order must stay hidden until payment is confirmed.`,
+          message: `Hubtel checkout started. Expected first payment: GHS ${orderSummary.totalToPayNow.toFixed(2)}. The order remains hidden until payment status and amount are verified.`,
           timestamp: nowIso,
         }],
       });
@@ -296,48 +326,47 @@ export default function Checkout() {
 
       const returnUrl = `${window.location.origin}${createPageUrl('PaymentVerification')}?hubtelRef=${encodeURIComponent(initialPaymentReference)}&paymentStage=initial&orderId=${createdOrder.id}`;
       const cancellationUrl = `${window.location.origin}${createPageUrl('PaymentVerification')}?hubtelRef=${encodeURIComponent(initialPaymentReference)}&paymentStage=initial&status=cancelled&orderId=${createdOrder.id}`;
-      const payDescription = paymentMethod === 'deposit_balance'
-        ? `Deposit and delivery for order ${orderNumber}`
+      const description = paymentMethod === 'deposit_balance'
+        ? `Deposit payment for order ${orderNumber}`
         : paymentMethod === 'pay_on_delivery'
-          ? `Delivery fee for order ${orderNumber}`
+          ? `Delivery payment for order ${orderNumber}`
           : `Full payment for order ${orderNumber}`;
 
-      const initRes = await initiatePayment({
+      const initiateResponse = await initiatePayment({
         totalAmount: orderSummary.totalToPayNow,
-        description: payDescription,
-        callbackUrl: HUBTEL_CALLBACK_URL,
+        description,
+        callbackUrl,
         returnUrl,
         cancellationUrl,
         clientReference: initialPaymentReference,
+        payeeName: formData.customer_name,
+        payeeMobileNumber: formData.customer_phone,
+        payeeEmail: user.email,
       });
 
-      if (initRes?.data?.checkoutUrl) {
-        showFeedback('info', 'Redirecting you to Hubtel for secure payment...', 'Opening payment');
-        window.location.href = initRes.data.checkoutUrl;
+      if (initiateResponse?.data?.checkoutUrl) {
+        showFeedback('info', 'Redirecting you to Hubtel for secure payment.', 'Opening secure checkout');
+        window.location.href = initiateResponse.data.checkoutUrl;
         return;
       }
 
-      try {
-        await appClient.entities.Order.update(createdOrder.id, {
-          payment_status: 'failed',
-          initial_payment_status: 'failed',
-          hubtel_status: 'failed',
-          tracking_updates: (createdOrder.tracking_updates || []).concat([{
-            status: 'Checkout Initiation Failed',
-            message: 'Hubtel checkout could not be started. The cart remains intact and the order stays hidden.',
-            timestamp: new Date().toISOString(),
-          }]),
-        });
-      } catch (updateError) {
-        console.warn('Unable to mark pending checkout as failed after initiate error:', updateError);
-      }
+      await appClient.entities.Order.update(createdOrder.id, {
+        payment_status: 'failed',
+        initial_payment_status: 'failed',
+        hubtel_status: 'failed',
+        tracking_updates: (createdOrder.tracking_updates || []).concat([{
+          status: 'Checkout Initiation Failed',
+          message: 'Hubtel checkout could not be started. The cart remains available and the hidden order will stay unpaid.',
+          timestamp: new Date().toISOString(),
+        }]),
+      });
 
-      setOrderError('Unable to start Hubtel payment. Your cart is still available and no visible order was placed.');
-      showFeedback('error', 'Hubtel payment could not be started. Your cart is still available and no visible order was placed.', 'Payment initiation failed');
+      setOrderError('Hubtel checkout could not be started. Your cart is still available.');
+      showFeedback('error', 'Hubtel checkout could not be started. Your cart is still available.', 'Payment could not start');
     } catch (error) {
       console.error('Checkout error:', error);
-      setOrderError('Unable to start checkout right now. Your cart was not cleared.');
-      showFeedback('error', 'Unable to start checkout right now. Your cart was not cleared.', 'Checkout unavailable');
+      setOrderError('Checkout is temporarily unavailable. Your cart was not cleared.');
+      showFeedback('error', 'Checkout is temporarily unavailable. Your cart was not cleared.', 'Checkout unavailable');
     } finally {
       setIsSubmitting(false);
     }
@@ -354,7 +383,7 @@ export default function Checkout() {
   if (safeCartItems.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <p className="text-gray-500 mb-4">Your cart is empty</p>
+        <p className="text-gray-500 mb-4">Your cart is empty.</p>
         <Button onClick={() => navigate(createPageUrl('Cart'))} variant="link" className="text-blue-600">
           Back to Cart
         </Button>
@@ -412,37 +441,34 @@ export default function Checkout() {
                 <Label className="text-sm font-medium">Phone Number *</Label>
                 <Input name="customer_phone" value={formData.customer_phone} onChange={handleInputChange} required className="mt-1" />
               </div>
-              <div>
-                <Label className="text-sm font-medium">Delivery Address *</Label>
-                <Input name="delivery_address" value={formData.delivery_address} onChange={handleInputChange} placeholder="House number, street name, area" required className="mt-1" />
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Nearest Landmark *</Label>
-                <Input name="delivery_landmark" value={formData.delivery_landmark} onChange={handleInputChange} placeholder="Nearest landmark or reference point" required className="mt-1" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <Label className="text-sm font-medium">Region *</Label>
-                  <Input name="region" value={formData.region} onChange={handleInputChange} required className={`mt-1 ${locationMismatch ? 'border-red-500 ring-1 ring-red-500' : ''}`} />
+                  <Input name="region" value={formData.region} onChange={handleInputChange} placeholder="e.g. Greater Accra" required className={`mt-1 ${locationMismatch ? 'border-red-500 ring-1 ring-red-500' : ''}`} />
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">City/Town *</Label>
-                  <Input name="city" value={formData.city} onChange={handleInputChange} required className={`mt-1 ${locationMismatch ? 'border-red-500 ring-1 ring-red-500' : ''}`} />
+                  <Label className="text-sm font-medium">City *</Label>
+                  <Input name="city" value={formData.city} onChange={handleInputChange} placeholder="e.g. East Legon" required className={`mt-1 ${locationMismatch ? 'border-red-500 ring-1 ring-red-500' : ''}`} />
                 </div>
               </div>
+              <div>
+                <Label className="text-sm font-medium">Specific Location *</Label>
+                <Input name="specific_location" value={formData.specific_location} onChange={handleInputChange} placeholder="Apartment, estate, office, or delivery point" required className="mt-1" />
+              </div>
               {locationMismatch && (
-                <p className="text-xs text-red-600 flex items-center gap-1 font-medium">
-                  <AlertTriangle className="h-3 w-3" /> Region and City/Town do not match. Please correct.
+                <p className="text-xs text-red-600 font-medium">
+                  The delivery option selected does not match the region and city you entered.
                 </p>
               )}
               <div>
-                <Label className="text-sm font-medium">Map Location</Label>
+                <Label className="text-sm font-medium">Google Auto-Detect Location</Label>
                 <div className="mt-1 flex items-center gap-2">
                   <Input name="map_location" value={formData.map_location} onChange={handleInputChange} className="flex-1" readOnly />
                   <Button type="button" onClick={getCurrentLocation} variant="outline" className="shrink-0 border-blue-300 text-blue-700">
-                    Get Location
+                    Detect Location
                   </Button>
                 </div>
+                <p className="text-xs text-gray-500 mt-2">Use the button above to attach a Google Maps location link for accurate delivery confirmation.</p>
                 {locationError && <p className="text-xs text-red-600 mt-1">{locationError}</p>}
               </div>
             </div>
@@ -450,11 +476,11 @@ export default function Checkout() {
 
           <Card className="p-5 bg-white">
             <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Truck className="h-5 w-5 text-blue-600" /> Delivery Method
+              <Truck className="h-5 w-5 text-blue-600" /> Delivery Option
             </h2>
-            <Select value={selectedZoneId} onValueChange={(value) => { setSelectedZoneId(value); setPaymentMethod(''); setDepositWarningAccepted(false); setPodWarningAccepted(false); }}>
+            <Select value={selectedZoneId} onValueChange={(value) => { setSelectedZoneId(value); setPaymentMethod(''); setDepositWarningAccepted(false); setDeliveryStageWarningAccepted(false); }}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select delivery method" />
+                <SelectValue placeholder="Select delivery option" />
               </SelectTrigger>
               <SelectContent>
                 {DELIVERY_ZONES.map((zone) => (
@@ -470,38 +496,38 @@ export default function Checkout() {
           {selectedZoneId && (
             <Card className="p-5 bg-white">
               <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-blue-600" /> Payment Method
+                <CreditCard className="h-5 w-5 text-blue-600" /> Payment Plan
               </h2>
               <Select value={paymentMethod} onValueChange={handlePaymentMethodChange}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select payment method" />
+                  <SelectValue placeholder="Select payment plan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="full_payment">Pay Full Amount Online — ₵{(subtotal + deliveryFee).toFixed(2)}</SelectItem>
-                  <SelectItem value="deposit_balance" disabled={!isTwoStageZoneEligible}>Pay Deposit Now, Balance on Delivery — ₵{(Math.ceil((subtotal / 2) * 100) / 100 + deliveryFee).toFixed(2)}</SelectItem>
-                  <SelectItem value="pay_on_delivery" disabled={!isTwoStageZoneEligible}>Pay Delivery Fee Now, Balance on Delivery — ₵{deliveryFee.toFixed(2)}</SelectItem>
+                  <SelectItem value="full_payment">1. Pay Full Amount Online — ₵{(subtotal + deliveryFee).toFixed(2)}</SelectItem>
+                  <SelectItem value="deposit_balance" disabled={!isTwoStageZoneEligible}>2. Pay Deposit Now, Balance Later — ₵{(getInitialAmount(subtotal, 'deposit_balance') + deliveryFee).toFixed(2)}</SelectItem>
+                  <SelectItem value="pay_on_delivery" disabled={!isTwoStageZoneEligible}>3. Pay Delivery Fee Now, Balance Later — ₵{deliveryFee.toFixed(2)}</SelectItem>
                 </SelectContent>
               </Select>
 
               {!isTwoStageZoneEligible && (
                 <p className="text-xs text-gray-500 mt-2">
-                  Deposit and Pay on Delivery are only available in Accra and Tarkwa. Please use the first option.
+                  The second and third payment plans are only available for approved Greater Accra and Tarkwa / Western Region deliveries.
                 </p>
               )}
 
-              {isTwoStageZoneEligible && !strictTwoStageLocationMatch && paymentMethod !== 'full_payment' && (
+              {isTwoStageZoneEligible && paymentMethod !== 'full_payment' && !strictTwoStageLocationMatch && (
                 <p className="text-xs text-amber-700 mt-2 flex items-center gap-1">
-                  <Info className="h-3 w-3" /> Deposit and Pay on Delivery are only available in Accra and Tarkwa. Please use the first option if your address does not qualify.
+                  <Info className="h-3 w-3" /> Please provide a matching region and city before using the second or third payment plan.
                 </p>
               )}
 
               {paymentMethod === 'deposit_balance' && (
                 <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                  <p className="text-sm font-semibold text-amber-800 mb-2">Deposit Payment Terms</p><ul className="text-xs text-amber-700 leading-relaxed list-disc pl-4 space-y-2">
-                    <li><strong>Pay the remaining balance in full before the product is handed over</strong> at the time of delivery.</li>
-                    <li><strong>Once the product arrives, customers must complete payment of the remaining balance through their Order page before the product is handed over.</strong></li>
-                    <li><strong>If full payment is not made, the product will be returned.</strong> Customers may receive a <strong>50% refund of their deposit</strong> after verification or arrange pickup/redelivery at their own expense after paying the outstanding balance.</li>
-                    <li><strong>Delivery fees are non-refundable</strong> under all circumstances.</li>
+                  <p className="text-sm font-semibold text-amber-900 mb-2">Payment Plan 2: Deposit Now, Balance Later</p><ul className="text-xs text-amber-800 leading-relaxed list-disc pl-4 space-y-2">
+                    <li>The deposit and delivery fee are paid online through Hubtel during checkout.</li>
+                    <li>The remaining balance becomes payable from your Order page after the order is shipped and the balance payment option is enabled.</li>
+                    <li>The product is handed over only after the remaining balance is verified successfully.</li>
+                    <li>Delivery fees are non-refundable once the shipping process has started.</li>
                   </ul>
                   <Button type="button" onClick={() => setDepositWarningAccepted(true)} className="mt-3 text-xs px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white" disabled={depositWarningAccepted}>
                     {depositWarningAccepted ? 'Agreed' : 'I agree'}
@@ -511,21 +537,15 @@ export default function Checkout() {
 
               {paymentMethod === 'pay_on_delivery' && (
                 <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-xl">
-                  <p className="text-sm font-semibold text-purple-800 mb-2">Pay on Delivery Terms</p><ul className="text-xs text-purple-700 leading-relaxed list-disc pl-4 space-y-2">
-                    <li><strong>The delivery fee is paid first online.</strong></li>
-                    <li><strong>Once the product arrives, customers must complete payment of the remaining balance through their Order page before the product is handed over.</strong></li>
-                    <li><strong>If full payment is not made, the product will be returned.</strong></li>
-                    <li><strong>Delivery fees are non-refundable</strong> under all circumstances.</li>
+                  <p className="text-sm font-semibold text-purple-900 mb-2">Payment Plan 3: Delivery Fee Now, Balance Later</p><ul className="text-xs text-purple-800 leading-relaxed list-disc pl-4 space-y-2">
+                    <li>The delivery fee is paid online through Hubtel during checkout.</li>
+                    <li>The product balance becomes payable from your Order page after the order is shipped and the balance payment option is enabled.</li>
+                    <li>The product is handed over only after the remaining balance is verified successfully.</li>
+                    <li>Delivery fees are non-refundable once the shipping process has started.</li>
                   </ul>
-                  <Button type="button" onClick={() => setPodWarningAccepted(true)} className="mt-3 text-xs px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white" disabled={podWarningAccepted}>
-                    {podWarningAccepted ? 'Agreed' : 'I agree'}
+                  <Button type="button" onClick={() => setDeliveryStageWarningAccepted(true)} className="mt-3 text-xs px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white" disabled={deliveryStageWarningAccepted}>
+                    {deliveryStageWarningAccepted ? 'Agreed' : 'I agree'}
                   </Button>
-                </div>
-              )}
-
-              {requiresTermsAcceptance && !termsAccepted && (
-                <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-3 text-xs text-green-800">
-                  Review the payment policy above and click <strong>I agree</strong> before the order summary appears.
                 </div>
               )}
             </Card>
@@ -538,16 +558,8 @@ export default function Checkout() {
               </h2>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">
-                    {paymentMethod === 'pay_on_delivery'
-                      ? 'Product Amount'
-                      : paymentMethod === 'deposit_balance'
-                        ? `Initial Product Portion (₵${(Math.ceil((subtotal / 2) * 100) / 100).toFixed(2)})`
-                        : 'Product Amount'}
-                  </span>
-                  <span className="text-sm font-semibold">
-                    {paymentMethod === 'pay_on_delivery' ? 'Pay later' : `₵${orderSummary.displaySubtotal.toFixed(2)}`}
-                  </span>
+                  <span className="text-sm text-gray-600">Product Amount</span>
+                  <span className="text-sm font-semibold">{paymentMethod === 'pay_on_delivery' ? 'Pay later' : `₵${orderSummary.initialProductAmount.toFixed(2)}`}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Delivery Fee</span>
@@ -564,7 +576,7 @@ export default function Checkout() {
                 </div>
                 {orderSummary.balanceDue > 0 && (
                   <div className="flex justify-between bg-amber-50 p-3 rounded-lg">
-                    <span className="text-sm font-medium text-amber-800">Remaining Balance (paid later through Order page)</span>
+                    <span className="text-sm font-medium text-amber-800">Remaining Balance</span>
                     <span className="text-sm font-bold text-amber-800">₵{orderSummary.balanceDue.toFixed(2)}</span>
                   </div>
                 )}
@@ -576,7 +588,7 @@ export default function Checkout() {
             <div className="space-y-3">
               <Button
                 type="submit"
-                disabled={isSubmitting || locationMismatch || ((paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery') && !strictTwoStageLocationMatch) || (paymentMethod === 'deposit_balance' && !depositWarningAccepted) || (paymentMethod === 'pay_on_delivery' && !podWarningAccepted)}
+                disabled={isSubmitting || locationMismatch || ((paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery') && !strictTwoStageLocationMatch) || (requiresTermsAcceptance && !termsAccepted)}
                 className="w-full rounded-xl bg-blue-800 px-4 py-4 text-white font-bold text-base hover:bg-blue-900 disabled:opacity-50 h-14"
               >
                 {isSubmitting ? (

@@ -77,6 +77,61 @@ export function getHubtelStatusValue(result) {
   ).toLowerCase();
 }
 
+export function getHubtelPaidAmount(result) {
+  const candidates = [
+    result?.data?.amount,
+    result?.data?.Amount,
+    result?.data?.paidAmount,
+    result?.data?.PaidAmount,
+    result?.data?.transactionAmount,
+    result?.data?.TransactionAmount,
+    result?.amount,
+    result?.Amount,
+    result?.paidAmount,
+    result?.PaidAmount,
+    result?.transactionAmount,
+    result?.TransactionAmount,
+  ];
+
+  for (const value of candidates) {
+    const amount = Number(value);
+
+    if (Number.isFinite(amount) && amount >= 0) {
+      return amount;
+    }
+  }
+
+  return null;
+}
+
+export function isHubtelPaymentVerified(result, expectedAmount = 0) {
+  if (!result || result.ok === false) {
+    return false;
+  }
+
+  const status = getHubtelStatusValue(result);
+
+  const successfulStatus =
+    status === 'paid' ||
+    status === 'success' ||
+    status === 'successful' ||
+    status === 'completed' ||
+    status === 'complete';
+
+  if (!successfulStatus) {
+    return false;
+  }
+
+  const expected = Number(expectedAmount || 0);
+  const paid = getHubtelPaidAmount(result);
+
+  if (expected <= 0 || paid == null) {
+    return successfulStatus;
+  }
+
+  return Math.abs(paid - expected) < 0.01;
+}
+
 export function getHubtelCallbackTarget() {
   return getHubtelCallbackUrl();
 }

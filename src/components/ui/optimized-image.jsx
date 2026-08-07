@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { buildSrcSet, getOptimizedMediaUrl, uniqueMediaCandidates } from '@/lib/media';
+import { buildSrcSet, getOptimizedMediaUrl, normalizeMediaUrl, uniqueMediaCandidates } from '@/lib/media';
 
 function OptimizedImage({
   src,
@@ -28,6 +28,7 @@ function OptimizedImage({
   const [error, setError] = useState(false);
   const imgRef = useRef(null);
   const activeSrc = candidates[sourceIndex] || '';
+  const normalizedActiveSrc = useMemo(() => normalizeMediaUrl(activeSrc), [activeSrc]);
 
   useEffect(() => {
     if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
@@ -41,10 +42,10 @@ function OptimizedImage({
     setError(false);
   }, [candidates.join('||')]);
 
-  const srcSet = useMemo(() => buildSrcSet(activeSrc, widths, { quality }), [activeSrc, widths, quality]);
+  const srcSet = useMemo(() => buildSrcSet(normalizedActiveSrc, widths, { quality }), [normalizedActiveSrc, widths, quality]);
   const resolvedSrc = useMemo(
-    () => getOptimizedMediaUrl(activeSrc, { width: priority ? 1200 : 960, quality }),
-    [activeSrc, priority, quality],
+    () => getOptimizedMediaUrl(normalizedActiveSrc, { width: priority ? 1200 : 960, quality }),
+    [normalizedActiveSrc, priority, quality],
   );
 
   const handleLoad = () => {
@@ -85,9 +86,10 @@ function OptimizedImage({
         alt={alt}
         width={width}
         height={height}
-        loading={priority ? 'eager' : lazy ? 'lazy' : undefined}
-        fetchPriority={priority ? 'high' : undefined}
-        decoding="async"
+        loading={priority ? 'eager' : lazy ? 'lazy' : 'eager'}
+        fetchPriority={priority ? 'high' : lazy ? 'low' : 'auto'}
+        decoding={priority ? 'sync' : 'async'}
+        referrerPolicy="no-referrer"
         onLoad={handleLoad}
         onError={handleError}
         className={`transition-opacity duration-300 ease-in-out ${loaded ? 'opacity-100' : 'opacity-0'} ${className} ${imgClassName}`.trim()}

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { appClient } from '@/api/appClient.js';
 import './hero-banner-overrides.css';
-import { normalizeMediaUrl } from '@/lib/media';
+import { getOptimizedMediaUrl, normalizeMediaUrl } from '@/lib/media';
 
 function normalizeQueryResult(result) {
   if (Array.isArray(result)) return result;
@@ -38,6 +38,41 @@ function pickHeroImage(slide, isMobile) {
 const BLUE_GRADIENT = 'from-[#03143f] via-[#06286d] to-[#0b3ea9]';
 const BLUE_TITLE = 'text-[#8dc3ff]';
 const BLUE_ACCENT = '#2E86C1';
+
+const heroImageCache = new Set();
+
+function buildHeroSlideImage(slide, isMobile) {
+  if (!slide || slide.type === 'review') return '';
+  const source = slide.type === 'built_in'
+    ? slide.imageUrl
+    : pickHeroImage(slide, isMobile);
+  if (!source) return '';
+  return getOptimizedMediaUrl(source, {
+    width: isMobile ? 960 : 1680,
+    quality: 'auto',
+  });
+}
+
+function getSlideReadyKey(slide, isMobile) {
+  return `${slide?.id || 'unknown'}-${isMobile ? 'mobile' : 'desktop'}`;
+}
+
+function preloadHeroImage(src) {
+  if (!src || heroImageCache.has(src) || typeof window === 'undefined') {
+    return Promise.resolve(src);
+  }
+
+  return new Promise((resolve) => {
+    const image = new window.Image();
+    image.decoding = 'async';
+    image.onload = () => {
+      heroImageCache.add(src);
+      resolve(src);
+    };
+    image.onerror = () => resolve(src);
+    image.src = src;
+  });
+}
 
 const REVIEW_SLIDE = {
   id: 'fmm-welcome-slide',
@@ -243,7 +278,9 @@ function ReviewBannerSlide({ slide }) {
   );
 }
 
-function BuiltInBannerSlide({ slide }) {
+function BuiltInBannerSlide({ slide, isMobile }) {
+  const imageSrc = buildHeroSlideImage(slide, isMobile);
+
   return (
     <div className={`relative h-full w-full overflow-hidden bg-gradient-to-r ${slide.gradient}`}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_20%,rgba(255,255,255,0.10),transparent_35%)]" />
@@ -259,7 +296,7 @@ function BuiltInBannerSlide({ slide }) {
 
         <div className="flex h-full items-center justify-center md:justify-end">
           <img
-            src={slide.imageUrl}
+            src={imageSrc || slide.imageUrl}
             alt={slide.title}
             className="max-h-[120px] sm:max-h-[170px] md:max-h-[255px] w-auto object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.26)]"
             loading="eager"
@@ -275,7 +312,7 @@ function BuiltInBannerSlide({ slide }) {
 }
 
 function UploadedBannerSlide({ slide, isMobile }) {
-  const imageSrc = pickHeroImage(slide, isMobile);
+  const imageSrc = buildHeroSlideImage(slide, isMobile);
   if (!imageSrc) return null;
   return (
     <div className="fmm-flyer-hero-slide">
@@ -306,6 +343,7 @@ export default function HeroBanner() {
   const [current, setCurrent] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [readySlides, setReadySlides] = useState({});
 
   const { data: promoBanners = [] } = useQuery({
     queryKey: ['promoBanners'],
@@ -348,16 +386,62 @@ export default function HeroBanner() {
   const slides = useMemo(() => [REVIEW_SLIDE, ...BUILT_IN_BANNERS, ...uploadedSlides], [uploadedSlides]);
 
   useEffect(() => {
+    let active = true;
+
+    const markReady = (slide) => {
+      const key = getSlideReadyKey(slide, isMobile);
+      if (!key) return;
+      setReadySlides((currentReady) => currentReady[key] ? currentReady : { ...currentReady, [key]: true });
+    };
+
+    slides.forEach((slide) => {
+      if (!slide || slide.type === 'review') {
+        markReady(slide);
+        return;
+      }
+
+      const imageSrc = buildHeroSlideImage(slide, isMobile);
+      if (!imageSrc) {
+        markReady(slide);
+        return;
+      }
+
+      if (heroImageCache.has(imageSrc)) {
+        markReady(slide);
+        return;
+      }
+
+      preloadHeroImage(imageSrc).then(() => {
+        if (!active) return;
+        markReady(slide);
+      });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [slides, isMobile]);
+
+  useEffect(() => {
     if (current >= slides.length) setCurrent(0);
   }, [current, slides.length]);
 
+  const isSlideReady = (index) => {
+    const slide = slides[index];
+    if (!slide || slide.type === 'review') return true;
+    return Boolean(readySlides[getSlideReadyKey(slide, isMobile)]);
+  };
+
   useEffect(() => {
     if (slides.length <= 1) return undefined;
+    const nextIndex = (current + 1) % slides.length;
     const timer = window.setTimeout(() => {
-      setCurrent((prev) => (prev + 1) % slides.length);
+      if (isSlideReady(nextIndex)) {
+        setCurrent(nextIndex);
+      }
     }, current === 0 ? 10000 : 6000);
     return () => window.clearTimeout(timer);
-  }, [current, slides.length]);
+  }, [current, isMobile, readySlides, slides]);
 
   const prev = () => {
     if (slides.length <= 1) return;
@@ -399,7 +483,7 @@ export default function HeroBanner() {
         {slide.type === 'review'
           ? <ReviewBannerSlide slide={slide} />
           : slide.type === 'built_in'
-            ? <BuiltInBannerSlide slide={slide} />
+            ? <BuiltInBannerSlide slide={slide} isMobile={isMobile} />
             : <UploadedBannerSlide slide={slide} isMobile={isMobile} />}
       </motion.div>
     </AnimatePresence>

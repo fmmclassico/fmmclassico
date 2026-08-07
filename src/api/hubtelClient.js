@@ -9,6 +9,7 @@ function authHeaders() {
   const { anonKey } = getSupabaseConfig();
 
   return {
+    Accept: 'application/json',
     'Content-Type': 'application/json',
     Authorization: `Bearer ${anonKey}`,
     apikey: anonKey,
@@ -53,6 +54,13 @@ function sanitizeDescription(value = '') {
     .slice(0, 120);
 }
 
+function compactMessage(value = '', maxLength = 240) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+}
+
 export function createInitialPaymentReference(orderNumber, paymentMethod) {
   if (paymentMethod === 'deposit_balance') return `${orderNumber}-INIT`;
   if (paymentMethod === 'pay_on_delivery') return `${orderNumber}-DEL`;
@@ -67,13 +75,23 @@ export function getBaseOrderReference(reference = '') {
   return String(reference || '').replace(/-(INIT|DEL|FULL|BAL)$/i, '');
 }
 
+export function getHubtelCheckoutUrl(result) {
+  return String(
+    result?.data?.checkoutUrl
+      || result?.data?.checkoutDirectUrl
+      || result?.checkoutUrl
+      || result?.checkoutDirectUrl
+      || ''
+  ).trim();
+}
+
 export function getHubtelStatusValue(result) {
   return String(
     result?.data?.status
-    || result?.data?.Status
-    || result?.status
-    || result?.Status
-    || ''
+      || result?.data?.Status
+      || result?.status
+      || result?.Status
+      || ''
   ).toLowerCase();
 }
 
@@ -102,6 +120,39 @@ export function getHubtelPaidAmount(result) {
   }
 
   return null;
+}
+
+export function getHubtelErrorMessage(result, fallback = 'Unable to continue with Hubtel right now.') {
+  const genericErrors = new Set([
+    'Unable to start payment.',
+    'Unable to verify payment status.',
+  ]);
+
+  const candidates = [
+    result?.data?.error,
+    result?.data?.message,
+    result?.message,
+    result?.details,
+    result?.technicalError,
+    genericErrors.has(String(result?.error || '').trim()) ? '' : result?.error,
+    result?.raw,
+    result?.error,
+  ].map((value) => compactMessage(value));
+
+  const firstMessage = candidates.find(Boolean);
+  if (firstMessage) {
+    return firstMessage;
+  }
+
+  if (Array.isArray(result?.missingFields) && result.missingFields.length > 0) {
+    return `Missing required fields: ${result.missingFields.join(', ')}`;
+  }
+
+  if (result?.httpStatus) {
+    return `Hubtel request failed with HTTP ${result.httpStatus}.`;
+  }
+
+  return fallback;
 }
 
 export function isHubtelPaymentVerified(result, expectedAmount = 0) {
@@ -147,8 +198,10 @@ export async function initiatePayment({
   payeeMobileNumber,
   payeeEmail,
 }) {
+  const endpoint = getHubtelInitiateUrl();
+
   try {
-    const response = await fetch(getHubtelInitiateUrl(), {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: authHeaders(),
       cache: 'no-store',
@@ -166,10 +219,17 @@ export async function initiatePayment({
     });
 
     const result = await readJsonResponse(response, 'Unable to parse Hubtel initiation response.');
-    return withMeta(result, response);
+    return {
+      ...withMeta(result, response),
+      endpoint,
+    };
   } catch (error) {
     console.error('[HubtelClient] Error initiating payment:', error);
-    return { error: error?.message || 'Unable to start payment.' };
+    return {
+      error: 'Unable to start payment.',
+      technicalError: error?.message || 'Unknown network error.',
+      endpoint,
+    };
   }
 }
 
@@ -193,10 +253,16 @@ export async function checkPaymentStatus(clientReference, extraQuery = {}) {
     });
 
     const result = await readJsonResponse(response, 'Unable to parse Hubtel status response.');
-    return withMeta(result, response);
+    return {
+      ...withMeta(result, response),
+      endpoint: url.toString(),
+    };
   } catch (error) {
     console.error('[HubtelClient] Status check error:', error);
-    return { error: error?.message || 'Unable to verify payment status.' };
+    return {
+      error: 'Unable to verify payment status.',
+      technicalError: error?.message || 'Unknown network error.',
+    };
   }
 }
 

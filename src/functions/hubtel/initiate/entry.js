@@ -1,14 +1,12 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
-
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')?.trim() || Deno.env.get('VITE_SUPABASE_URL')?.trim() || '';
-const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim() || '';
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')?.trim() || Deno.env.get('VITE_SUPABASE_ANON_KEY')?.trim() || '';
-const ADMIN_EMAILS = [...new Set(
-  (Deno.env.get('ADMIN_EMAILS')?.trim() || Deno.env.get('VITE_ADMIN_EMAILS')?.trim() || Deno.env.get('VITE_ALLOWED_ADMIN_EMAILS')?.trim() || '')
-    .split(',')
-    .map((value) => value.trim().toLowerCase())
-    .filter(Boolean)
-)];
+const HUBTEL_CLIENT_ID = Deno.env.get('HUBTEL_CLIENT_ID')?.trim()
+  || Deno.env.get('HUBTEL_API_ID')?.trim()
+  || Deno.env.get('HUBTEL_AP_ID')?.trim()
+  || '';
+const HUBTEL_CLIENT_SECRET = Deno.env.get('HUBTEL_CLIENT_SECRET')?.trim()
+  || Deno.env.get('HUBTEL_API_KEY')?.trim()
+  || '';
+const HUBTEL_INITIATE_URL = Deno.env.get('HUBTEL_INITIATE_URL')?.trim()
+  || 'https://payproxyapi.hubtel.com/items/initiate';
 
 function createCorsHeaders(req) {
   return {
@@ -30,62 +28,18 @@ function jsonResponse(req, body, status = 200) {
   });
 }
 
-function createSupabaseAdminClient() {
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return null;
-  return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+function isConfigured() {
+  return Boolean(HUBTEL_CLIENT_SECRET || (HUBTEL_CLIENT_ID && HUBTEL_CLIENT_SECRET));
 }
 
-function getBaseOrderReference(reference = '') {
-  return String(reference || '').replace(/-(INIT|DEL|FULL|BAL)$/i, '');
-}
+function createAuthHeader() {
+  if (!HUBTEL_CLIENT_SECRET) {
+    return '';
+  }
 
-function getPaymentStage(reference = '') {
-  const normalized = String(reference || '').toUpperCase();
-  return normalized.endsWith('-BAL') ? 'balance' : 'initial';
-}
-
-function normalizeHubtelStatus({ responseCode = '', callbackStatus = '', transactionStatus = '' } = {}) {
-  const normalizedResponseCode = String(responseCode || '').trim();
-  const normalizedCallbackStatus = String(callbackStatus || '').toLowerCase().trim();
-  const normalizedTransactionStatus = String(transactionStatus || '').toLowerCase().trim();
-  const statusValue = normalizedTransactionStatus || normalizedCallbackStatus;
-
-  if (normalizedResponseCode === '0000' && ['paid', 'success', 'successful', 'completed', 'complete'].includes(statusValue)) return 'paid';
-  if (['failed', 'unpaid'].includes(statusValue)) return 'failed';
-  if (['cancelled', 'canceled'].includes(statusValue)) return 'cancelled';
-  return 'pending_payment';
-}
-
-function getHubtelEnvelope(body = {}) {
-  const data = body?.Data || body?.data || {};
-  return {
-    responseCode: body?.ResponseCode ?? body?.responseCode ?? '',
-    callbackStatus: body?.Status ?? body?.status ?? '',
-    transactionStatus: data?.Status ?? data?.status ?? '',
-    clientReference: data?.ClientReference ?? data?.clientReference ?? body?.clientReference ?? '',
-    amount: Number(data?.Amount ?? data?.amount ?? body?.amount ?? 0) || 0,
-    checkoutId: data?.CheckoutId ?? data?.checkoutId ?? body?.checkoutId ?? null,
-    salesInvoiceId: data?.SalesInvoiceId ?? data?.salesInvoiceId ?? null,
-    customerPhoneNumber: data?.CustomerPhoneNumber ?? data?.customerPhoneNumber ?? null,
-    paymentDetails: data?.PaymentDetails ?? data?.paymentDetails ?? {},
-  };
-}
-
-function getExpectedAmount(order, paymentStage) {
-  const value = paymentStage === 'balance'
-    ? Number(order?.balance_due ?? order?.balance_payment_amount ?? 0)
-    : Number(order?.initial_payment_amount ?? order?.amount_paid_now ?? 0);
-
-  return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
-}
-
-function isAmountSatisfied(actualAmount, expectedAmount, tolerance = 0.01) {
-  const actual = Number(actualAmount);
-  const expected = Number(expectedAmount);
-  if (!Number.isFinite(actual) || !Number.isFinite(expected) || expected <= 0) return false;
-  return actual + tolerance >= expected;
+  const username = HUBTEL_CLIENT_ID || HUBTEL_CLIENT_SECRET;
+  const password = HUBTEL_CLIENT_ID ? HUBTEL_CLIENT_SECRET : '';
+  return `Basic ${btoa(`${username}:${password}`)}`;
 }
 
 async function parseJsonBody(req) {
@@ -98,32 +52,114 @@ async function parseJsonBody(req) {
   }
 }
 
-async function sendEmail(to, subject, body) {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !to) return;
+function sanitizeDescription(value = '') {
+  return String(value || '')
+    .replace(/[^a-zA-Z0-9 .,_-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+}
+
+function sanitizePhone(value = '') {
+  return String(value || '').replace(/[^0-9+]/g, '').slice(0, 20);
+}
+
+function sanitizeEmail(value = '') {
+  return String(value || '').trim().slice(0, 120);
+}
+
+function sanitizeName(value = '') {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+}
+
+function normalizeAmount(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return null;
+  return Number(amount.toFixed(2));
+}
+
+function validatePayload(body = {}) {
+  const totalAmount = normalizeAmount(body.totalAmount);
+  const callbackUrl = String(body.callbackUrl || '').trim();
+  const returnUrl = String(body.returnUrl || '').trim();
+  const cancellationUrl = String(body.cancellationUrl || '').trim();
+  const clientReference = String(body.clientReference || '').trim();
+  const description = sanitizeDescription(body.description || `Payment for ${clientReference || 'order'}`);
+
+  const missingFields = [
+    totalAmount == null || totalAmount <= 0 ? 'totalAmount' : null,
+    !callbackUrl ? 'callbackUrl' : null,
+    !returnUrl ? 'returnUrl' : null,
+    !cancellationUrl ? 'cancellationUrl' : null,
+    !clientReference ? 'clientReference' : null,
+  ].filter(Boolean);
+
+  return {
+    missingFields,
+    payload: {
+      totalAmount,
+      callbackUrl,
+      returnUrl,
+      cancellationUrl,
+      clientReference,
+      description,
+      payeeName: sanitizeName(body.payeeName || ''),
+      payeeMobileNumber: sanitizePhone(body.payeeMobileNumber || ''),
+      payeeEmail: sanitizeEmail(body.payeeEmail || ''),
+    },
+  };
+}
+
+function buildHubtelPayload(payload) {
+  return {
+    totalAmount: payload.totalAmount,
+    description: payload.description,
+    callbackUrl: payload.callbackUrl,
+    returnUrl: payload.returnUrl,
+    cancellationUrl: payload.cancellationUrl,
+    clientReference: payload.clientReference,
+    ...(payload.payeeName ? { payeeName: payload.payeeName } : {}),
+    ...(payload.payeeMobileNumber ? { payeeMobileNumber: payload.payeeMobileNumber } : {}),
+    ...(payload.payeeEmail ? { payeeEmail: payload.payeeEmail } : {}),
+  };
+}
+
+async function parseHubtelResponse(response) {
+  const text = await response.text();
+  if (!text) {
+    return {
+      httpStatus: response.status,
+      ok: response.ok,
+      body: {},
+    };
+  }
+
   try {
-    await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    return {
+      httpStatus: response.status,
+      ok: response.ok,
+      body: JSON.parse(text),
+    };
+  } catch (_) {
+    return {
+      httpStatus: response.status,
+      ok: response.ok,
+      body: {
+        error: 'Invalid JSON response from Hubtel initiate API',
+        raw: text,
       },
-      body: JSON.stringify({ to, from_name: 'FMM CLASSICO', subject, body }),
-    });
-  } catch (error) {
-    console.error('[Hubtel Callback] send-email failed:', error);
+    };
   }
 }
 
-async function createNotification(supabase, payload) {
-  const { error } = await supabase.from('notifications').insert({
-    ...payload,
-    is_read: false,
-    created_date: new Date().toISOString(),
-  });
-
-  if (error) {
-    console.error('[Hubtel Callback] notification insert error:', error);
-  }
+function extractCheckoutData(body = {}) {
+  const data = body?.data || body?.Data || body;
+  return {
+    checkoutUrl: data?.checkoutUrl || data?.CheckoutUrl || null,
+    checkoutDirectUrl: data?.checkoutDirectUrl || data?.CheckoutDirectUrl || null,
+    checkoutId: data?.checkoutId || data?.CheckoutId || null,
+    clientReference: data?.clientReference || data?.ClientReference || body?.clientReference || null,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -138,10 +174,14 @@ Deno.serve(async (req) => {
     return jsonResponse(req, { error: 'Method not allowed' }, 405);
   }
 
-  const supabase = createSupabaseAdminClient();
-  if (!supabase) {
-    console.error('[Hubtel Callback] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-    return jsonResponse(req, { error: 'Server configuration is incomplete.' }, 500);
+  if (!isConfigured()) {
+    console.error('[Hubtel Initiate] Missing HUBTEL_CLIENT_SECRET/HUBTEL_API_KEY or HUBTEL_CLIENT_ID');
+    return jsonResponse(req, {
+      error: 'Hubtel gateway is not configured.',
+      missingConfiguration: [
+        !HUBTEL_CLIENT_SECRET ? 'HUBTEL_CLIENT_SECRET or HUBTEL_API_KEY' : null,
+      ].filter(Boolean),
+    }, 500);
   }
 
   try {
@@ -150,218 +190,53 @@ Deno.serve(async (req) => {
       return jsonResponse(req, { error: 'Invalid JSON' }, 400);
     }
 
-    const envelope = getHubtelEnvelope(body);
-    const normalizedStatus = normalizeHubtelStatus(envelope);
-
-    if (!envelope.clientReference || (!envelope.transactionStatus && !envelope.callbackStatus && !envelope.responseCode)) {
-      console.warn('[Hubtel Callback] Missing clientReference or status information. Acknowledging without update.');
-      return jsonResponse(req, { message: 'Partial data received' }, 200);
+    const { missingFields, payload } = validatePayload(body);
+    if (missingFields.length > 0) {
+      return jsonResponse(req, {
+        error: 'Missing required fields.',
+        missingFields,
+      }, 400);
     }
 
-    const baseReference = getBaseOrderReference(envelope.clientReference);
-    const paymentStage = getPaymentStage(envelope.clientReference);
+    const hubtelPayload = buildHubtelPayload(payload);
 
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('order_number', baseReference)
-      .maybeSingle();
-
-    if (orderError) {
-      console.error('[Hubtel Callback] order lookup error:', orderError);
-      throw orderError;
-    }
-
-    if (!order) {
-      console.warn(`[Hubtel Callback] No order found for ${baseReference}`);
-      return jsonResponse(req, { message: 'No order found' }, 200);
-    }
-
-    const now = new Date().toISOString();
-    const expectedAmount = getExpectedAmount(order, paymentStage);
-    const amountVerified = normalizedStatus === 'paid' && isAmountSatisfied(envelope.amount, expectedAmount);
-    const stageLabel = paymentStage === 'balance' ? 'Balance Payment' : 'Initial Payment';
-    const trackingUpdates = Array.isArray(order.tracking_updates) ? order.tracking_updates : [];
-    const paymentType = envelope.paymentDetails?.PaymentType || 'N/A';
-    const paymentChannel = envelope.paymentDetails?.Channel || 'N/A';
-
-    const trackingUpdate = {
-      status: `${stageLabel} ${normalizedStatus}`,
-      message: `Hubtel ${stageLabel.toLowerCase()} callback: ${normalizedStatus}. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${envelope.amount.toFixed(2)}. Type ${paymentType}. Channel ${paymentChannel}.`,
-      timestamp: now,
-      checkoutId: envelope.checkoutId,
-      clientReference: envelope.clientReference,
-      responseCode: envelope.responseCode || null,
-      callbackStatus: envelope.callbackStatus || null,
-      transactionStatus: envelope.transactionStatus || null,
-      salesInvoiceId: envelope.salesInvoiceId || null,
-    };
-
-    const updates = {
-      tracking_updates: [...trackingUpdates, trackingUpdate],
-      payment_reference: envelope.clientReference,
-      hubtel_transaction_id: envelope.checkoutId || order.hubtel_transaction_id || null,
-      hubtel_status: amountVerified
-        ? 'successful'
-        : normalizedStatus === 'cancelled'
-          ? 'cancelled'
-          : normalizedStatus === 'failed'
-            ? 'failed'
-            : 'pending',
-    };
-
-    let notifyCustomer = false;
-    let notifyAdmins = false;
-    let customerTitle = '';
-    let customerMessage = '';
-    let customerEmailSubject = '';
-    let adminTitle = '';
-    let adminMessage = '';
-    let adminEmailSubject = '';
-
-    if (paymentStage === 'balance') {
-      updates.balance_checkout_id = envelope.checkoutId || order.balance_checkout_id || null;
-      updates.balance_payment_reference = envelope.clientReference;
-
-      if (amountVerified) {
-        const firstTimeSuccess = order.balance_payment_status !== 'paid';
-        updates.balance_payment_status = 'paid';
-        updates.remaining_balance_paid = true;
-        updates.remaining_balance_paid_at = now;
-        updates.balance_payment_verified_amount = envelope.amount;
-        updates.balance_paid_at = now;
-        updates.is_fully_paid = true;
-        updates.payment_stage = 'fully_paid';
-        updates.payment_status = 'paid';
-        updates.status = order.status === 'cancelled' ? order.status : 'confirmed';
-
-        if (firstTimeSuccess) {
-          notifyCustomer = true;
-          notifyAdmins = true;
-          customerTitle = 'Remaining Balance Paid';
-          customerMessage = `Order #${order.order_number} is now fully paid.`;
-          customerEmailSubject = `Remaining Balance Paid - #${order.order_number}`;
-          adminTitle = 'Remaining Balance Paid';
-          adminMessage = `Order #${order.order_number} by ${order.customer_name} is now fully paid.`;
-          adminEmailSubject = `Remaining Balance Paid - #${order.order_number}`;
-        }
-      } else if (normalizedStatus === 'paid' && !amountVerified) {
-        updates.balance_payment_status = 'failed';
-        updates.payment_stage = 'balance_payment_failed';
-        adminTitle = 'Balance Payment Amount Mismatch';
-        adminMessage = `Order #${order.order_number} reported a balance payment of GHS ${envelope.amount.toFixed(2)} but expected GHS ${expectedAmount.toFixed(2)}.`;
-        adminEmailSubject = `Balance Payment Amount Mismatch - #${order.order_number}`;
-        notifyAdmins = true;
-      } else if (normalizedStatus === 'failed') {
-        updates.balance_payment_status = 'failed';
-        updates.payment_stage = 'balance_payment_failed';
-      } else if (normalizedStatus === 'cancelled') {
-        updates.balance_payment_status = 'cancelled';
-        updates.payment_stage = 'balance_payment_failed';
-      }
-    } else {
-      updates.initial_checkout_id = envelope.checkoutId || order.initial_checkout_id || null;
-      updates.initial_payment_reference = envelope.clientReference;
-
-      if (amountVerified) {
-        const balanceDue = Number(order.balance_due || 0);
-        const firstTimeSuccess = order.initial_payment_status !== 'paid';
-        updates.payment_status = 'paid';
-        updates.initial_payment_status = 'paid';
-        updates.initial_payment_verified_amount = envelope.amount;
-        updates.initial_paid_at = now;
-        updates.payment_stage = balanceDue > 0 ? 'initial_payment_paid' : 'fully_paid';
-        updates.balance_payment_status = balanceDue > 0 ? order.balance_payment_status || 'pending' : 'not_required';
-        updates.is_fully_paid = balanceDue <= 0;
-        updates.status = order.status === 'cancelled' ? order.status : 'confirmed';
-
-        if (balanceDue <= 0) {
-          updates.remaining_balance_paid = true;
-          updates.remaining_balance_paid_at = now;
-        }
-
-        if (firstTimeSuccess) {
-          notifyCustomer = true;
-          notifyAdmins = true;
-          customerTitle = balanceDue > 0 ? 'Initial Payment Confirmed' : 'Payment Confirmed';
-          customerMessage = balanceDue > 0
-            ? `Initial payment for order #${order.order_number} has been confirmed.`
-            : `Payment for order #${order.order_number} has been confirmed.`;
-          customerEmailSubject = `${customerTitle} - #${order.order_number}`;
-          adminTitle = 'Payment Received';
-          adminMessage = `Verified successful Hubtel payment for order #${order.order_number} by ${order.customer_name}.`;
-          adminEmailSubject = `Payment Received - #${order.order_number}`;
-        }
-      } else if (normalizedStatus === 'paid' && !amountVerified) {
-        updates.payment_status = 'failed';
-        updates.initial_payment_status = 'failed';
-        updates.payment_stage = 'awaiting_initial_payment';
-        customerTitle = 'Payment Verification Required';
-        customerMessage = `We received a payment update for order #${order.order_number}, but the amount did not match the expected total. Please contact support.`;
-        customerEmailSubject = `Payment Verification Required - #${order.order_number}`;
-        adminTitle = 'Initial Payment Amount Mismatch';
-        adminMessage = `Order #${order.order_number} reported an initial payment of GHS ${envelope.amount.toFixed(2)} but expected GHS ${expectedAmount.toFixed(2)}.`;
-        adminEmailSubject = `Initial Payment Amount Mismatch - #${order.order_number}`;
-        notifyCustomer = true;
-        notifyAdmins = true;
-      } else if (normalizedStatus === 'failed') {
-        updates.payment_status = 'failed';
-        updates.initial_payment_status = 'failed';
-        updates.payment_stage = 'awaiting_initial_payment';
-      } else if (normalizedStatus === 'cancelled') {
-        updates.payment_status = 'cancelled';
-        updates.initial_payment_status = 'cancelled';
-        updates.payment_stage = 'awaiting_initial_payment';
-      }
-    }
-
-    const { error: updateError } = await supabase.from('orders').update(updates).eq('id', order.id);
-    if (updateError) {
-      console.error('[Hubtel Callback] order update error:', updateError);
-      throw updateError;
-    }
-
-    if (notifyCustomer) {
-      await createNotification(supabase, {
-        user_email: order.customer_email,
-        title: customerTitle,
-        message: customerMessage,
-        type: normalizedStatus === 'paid' && amountVerified ? 'payment_confirmed' : 'general',
-        order_id: order.id,
-        order_number: order.order_number,
-      });
-      await sendEmail(order.customer_email, customerEmailSubject || customerTitle, `Hi ${order.customer_name},
-
-${customerMessage}
-
-FMM CLASSICO`);
-    }
-
-    if (notifyAdmins) {
-      for (const email of ADMIN_EMAILS) {
-        await createNotification(supabase, {
-          user_email: email,
-          title: adminTitle,
-          message: adminMessage,
-          type: amountVerified ? 'payment_confirmed' : 'general',
-          order_id: order.id,
-          order_number: order.order_number,
-        });
-        await sendEmail(email, adminEmailSubject || adminTitle, adminMessage);
-      }
-    }
-
-    return jsonResponse(req, {
-      success: true,
-      paymentStage,
-      normalizedStatus,
-      expectedAmount,
-      receivedAmount: envelope.amount,
-      amountVerified,
-      baseReference,
+    console.log('[Hubtel Initiate] Starting checkout request:', {
+      clientReference: payload.clientReference,
+      totalAmount: payload.totalAmount,
+      hasCallbackUrl: Boolean(payload.callbackUrl),
+      hasReturnUrl: Boolean(payload.returnUrl),
+      hasCancellationUrl: Boolean(payload.cancellationUrl),
     });
+
+    const response = await fetch(HUBTEL_INITIATE_URL, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: createAuthHeader(),
+      },
+      body: JSON.stringify(hubtelPayload),
+    });
+
+    const parsed = await parseHubtelResponse(response);
+    const checkout = extractCheckoutData(parsed.body);
+
+    console.log('[Hubtel Initiate] Hubtel response summary:', {
+      httpStatus: parsed.httpStatus,
+      ok: parsed.ok,
+      responseCode: parsed.body?.responseCode || parsed.body?.ResponseCode || null,
+      status: parsed.body?.status || parsed.body?.Status || null,
+      checkoutId: checkout.checkoutId,
+      hasCheckoutUrl: Boolean(checkout.checkoutUrl),
+      clientReference: checkout.clientReference || payload.clientReference,
+    });
+
+    return jsonResponse(req, parsed.body, parsed.httpStatus);
   } catch (error) {
-    console.error('[Hubtel Callback] fatal error:', error);
-    return jsonResponse(req, { error: error instanceof Error ? error.message : 'Server error' }, 500);
+    console.error('[Hubtel Initiate] Network or fetch error:', error);
+    return jsonResponse(req, {
+      error: 'Failed to reach Hubtel initiate API.',
+      details: error instanceof Error ? error.message : String(error),
+    }, 502);
   }
 });

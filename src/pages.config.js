@@ -1,11 +1,13 @@
 import AllBrands from './pages/AllBrands';
 import About from './pages/About';
+
 import AdminBanners from './pages/AdminBanners';
 import AdminBroadcast from './pages/AdminBroadcast';
 import AdminInvoice from './pages/AdminInvoice';
 import AdminMessages from './pages/AdminMessages';
 import AdminOrders from './pages/AdminOrders';
 import AdminSMSBroadcast from './pages/AdminSMSBroadcast';
+
 import Cart from './pages/Cart';
 import Categories from './pages/Categories';
 import Chat from './pages/Chat';
@@ -21,37 +23,37 @@ import PaymentVerification from './pages/PaymentVerification';
 import ProductDetail from './pages/ProductDetail';
 import Settings from './pages/Settings';
 import Shop from './pages/Shop';
+
 import __Layout from './Layout.jsx';
 
 export const PAGES = {
-  "About": About,
-  "AdminBanners": AdminBanners,
-  "AdminBroadcast": AdminBroadcast,
-  "AdminInvoice": AdminInvoice,
-  "AdminMessages": AdminMessages,
-  "AdminOrders": AdminOrders,
-  "AdminSMSBroadcast": AdminSMSBroadcast,
-  "Cart": Cart,
-  "AllBrands": AllBrands,
-  "Categories": Categories,
-  "Chat": Chat,
-  "Checkout": Checkout,
-  "Feedback": Feedback,
-  "Home": Home,
-  "HowToUse": HowToUse,
-  "Invoices": Invoices,
-  "Notifications": Notifications,
-  "OrderTracking": OrderTracking,
-  "Orders": Orders,
-  "PaymentVerification": PaymentVerification,
-  "ProductDetail": ProductDetail,
-  "Settings": Settings,
-  "Shop": Shop,
-}
+  About,
+  AdminBanners,
+  AdminBroadcast,
+  AdminInvoice,
+  AdminMessages,
+  AdminOrders,
+  AdminSMSBroadcast,
+  Cart,
+  AllBrands,
+  Categories,
+  Chat,
+  Checkout,
+  Feedback,
+  Home,
+  HowToUse,
+  Invoices,
+  Notifications,
+  OrderTracking,
+  Orders,
+  PaymentVerification,
+  ProductDetail,
+  Settings,
+  Shop,
+};
 
 export const pagesConfig = {
-  mainPage: "Home",
+  mainPage: 'Home',
   Pages: PAGES,
   Layout: __Layout,
 };
-

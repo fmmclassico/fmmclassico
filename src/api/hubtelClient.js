@@ -13,12 +13,20 @@ async function getAuthorizationHeaders() {
   } = await supabase.auth.getSession();
 
   if (error) {
-    console.error('[HubtelClient] Failed to get Supabase session:', error);
-    throw new Error('Unable to verify your login session.');
+    console.error(
+      '[HubtelClient] Failed to get Supabase session:',
+      error
+    );
+
+    throw new Error(
+      'Unable to verify your login session.'
+    );
   }
 
   if (!session?.access_token) {
-    throw new Error('Your login session has expired. Please sign in again.');
+    throw new Error(
+      'Your login session has expired. Please sign in again.'
+    );
   }
 
   return {
@@ -39,15 +47,21 @@ async function buildRequestHeaders({
   }
 
   if (includeAuthorization) {
-    const authHeaders = await getAuthorizationHeaders();
-    Object.assign(headers, authHeaders);
+    const authorizationHeaders =
+      await getAuthorizationHeaders();
+
+    Object.assign(headers, authorizationHeaders);
   }
 
   return headers;
 }
 
 function withMeta(result, response) {
-  if (result && typeof result === 'object' && !Array.isArray(result)) {
+  if (
+    result &&
+    typeof result === 'object' &&
+    !Array.isArray(result)
+  ) {
     return {
       ...result,
       ok: response.ok,
@@ -62,7 +76,10 @@ function withMeta(result, response) {
   };
 }
 
-async function readJsonResponse(response, fallbackErrorMessage) {
+async function readJsonResponse(
+  response,
+  fallbackErrorMessage
+) {
   const text = await response.text();
 
   if (!text) {
@@ -87,7 +104,10 @@ function sanitizeDescription(value = '') {
     .slice(0, 120);
 }
 
-function compactMessage(value = '', maxLength = 240) {
+function compactMessage(
+  value = '',
+  maxLength = 240
+) {
   return String(value || '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -95,7 +115,9 @@ function compactMessage(value = '', maxLength = 240) {
 }
 
 function isNetworkBoundaryError(error) {
-  const message = String(error?.message || '').toLowerCase();
+  const message = String(
+    error?.message || ''
+  ).toLowerCase();
 
   return (
     error instanceof TypeError ||
@@ -106,14 +128,21 @@ function isNetworkBoundaryError(error) {
   );
 }
 
-function createReachabilityError(error, fallback) {
-  const likelyCorsOrDeploymentIssue = isNetworkBoundaryError(error);
+function createReachabilityError(
+  error,
+  fallback
+) {
+  const likelyCorsOrDeploymentIssue =
+    isNetworkBoundaryError(error);
 
   return {
     error: likelyCorsOrDeploymentIssue
       ? 'The Hubtel payment gateway could not be reached.'
       : fallback,
-    technicalError: error?.message || 'Unknown network error.',
+
+    technicalError:
+      error?.message || 'Unknown network error.',
+
     likelyCorsOrDeploymentIssue,
   };
 }
@@ -129,11 +158,17 @@ function resolveRequestUrl(url) {
     );
   }
 
-  return new URL(String(url || ''), window.location.origin).toString();
+  return new URL(
+    String(url || ''),
+    window.location.origin
+  ).toString();
 }
 
 function getHubtelDataNode(result = {}) {
-  if (!result || typeof result !== 'object') {
+  if (
+    !result ||
+    typeof result !== 'object'
+  ) {
     return {};
   }
 
@@ -185,7 +220,8 @@ function getHubtelResponseCode(result = {}) {
 }
 
 function extractDiagnosticCandidates(result) {
-  const payload = getHubtelDataNode(result);
+  const payload =
+    getHubtelDataNode(result);
 
   return [
     payload?.error,
@@ -199,29 +235,43 @@ function extractDiagnosticCandidates(result) {
     result?.raw,
     result?.error,
   ]
-    .map((value) => String(value || '').toLowerCase())
+    .map((value) =>
+      String(value || '').toLowerCase()
+    )
     .filter(Boolean);
 }
 
 function hasAuthorizationProxyError(result) {
-  const values = extractDiagnosticCandidates(result);
+  const values =
+    extractDiagnosticCandidates(result);
 
   return (
     result?.httpStatus === 401 ||
     values.some(
       (value) =>
-        value.includes('missing authorization header') ||
-        value.includes('authorization credentials') ||
+        value.includes(
+          'missing authorization header'
+        ) ||
+        value.includes(
+          'authorization credentials'
+        ) ||
         value.includes('unauthorized') ||
-        value.includes('invalid authorization') ||
+        value.includes(
+          'invalid authorization'
+        ) ||
         value.includes('invalid api key') ||
-        value.includes('invalid credentials')
+        value.includes(
+          'invalid credentials'
+        )
     )
   );
 }
 
-function hasWhitelistingOrForbiddenStatusError(result) {
-  const values = extractDiagnosticCandidates(result);
+function hasWhitelistingOrForbiddenStatusError(
+  result
+) {
+  const values =
+    extractDiagnosticCandidates(result);
 
   return (
     result?.httpStatus === 403 ||
@@ -229,7 +279,9 @@ function hasWhitelistingOrForbiddenStatusError(result) {
       (value) =>
         value.includes('forbidden') ||
         value.includes('whitelist') ||
-        value.includes('not been whitelisted') ||
+        value.includes(
+          'not been whitelisted'
+        ) ||
         value.includes('ip address')
     )
   );
@@ -239,30 +291,41 @@ export function createInitialPaymentReference(
   orderNumber,
   paymentMethod
 ) {
-  if (paymentMethod === 'deposit_balance') {
+  if (
+    paymentMethod === 'deposit_balance'
+  ) {
     return `${orderNumber}-INIT`;
   }
 
-  if (paymentMethod === 'pay_on_delivery') {
+  if (
+    paymentMethod === 'pay_on_delivery'
+  ) {
     return `${orderNumber}-DEL`;
   }
 
   return `${orderNumber}-FULL`;
 }
 
-export function createBalancePaymentReference(orderNumber) {
+export function createBalancePaymentReference(
+  orderNumber
+) {
   return `${orderNumber}-BAL`;
 }
 
-export function getBaseOrderReference(reference = '') {
+export function getBaseOrderReference(
+  reference = ''
+) {
   return String(reference || '').replace(
     /-(INIT|DEL|FULL|BAL)$/i,
     ''
   );
 }
 
-export function getHubtelCheckoutUrl(result) {
-  const payload = getHubtelDataNode(result);
+export function getHubtelCheckoutUrl(
+  result
+) {
+  const payload =
+    getHubtelDataNode(result);
 
   return String(
     payload?.checkoutUrl ||
@@ -277,8 +340,11 @@ export function getHubtelCheckoutUrl(result) {
   ).trim();
 }
 
-export function getHubtelStatusValue(result) {
-  const payload = getHubtelDataNode(result);
+export function getHubtelStatusValue(
+  result
+) {
+  const payload =
+    getHubtelDataNode(result);
 
   return String(
     payload?.status ||
@@ -295,8 +361,11 @@ export function getHubtelStatusValue(result) {
     .trim();
 }
 
-export function getHubtelPaidAmount(result) {
-  const payload = getHubtelDataNode(result);
+export function getHubtelPaidAmount(
+  result
+) {
+  const payload =
+    getHubtelDataNode(result);
 
   const candidates = [
     payload?.amount,
@@ -318,7 +387,10 @@ export function getHubtelPaidAmount(result) {
   for (const value of candidates) {
     const amount = Number(value);
 
-    if (Number.isFinite(amount) && amount >= 0) {
+    if (
+      Number.isFinite(amount) &&
+      amount >= 0
+    ) {
       return amount;
     }
   }
@@ -328,9 +400,11 @@ export function getHubtelPaidAmount(result) {
 
 export function getHubtelDiagnosticMessage(
   result,
-  fallback = 'Unable to continue with Hubtel right now.'
+  fallback =
+    'Unable to continue with Hubtel right now.'
 ) {
-  const payload = getHubtelDataNode(result);
+  const payload =
+    getHubtelDataNode(result);
 
   const genericErrors = new Set([
     'Unable to start payment.',
@@ -346,26 +420,36 @@ export function getHubtelDiagnosticMessage(
     result?.message,
     result?.details,
     result?.technicalError,
-    genericErrors.has(String(result?.error || '').trim())
+
+    genericErrors.has(
+      String(result?.error || '').trim()
+    )
       ? ''
       : result?.error,
-    result?.raw,
-  ].map((value) => compactMessage(value));
 
-  const firstMessage = candidates.find(Boolean);
+    result?.raw,
+  ].map((value) =>
+    compactMessage(value)
+  );
+
+  const firstMessage =
+    candidates.find(Boolean);
 
   if (firstMessage) {
     return firstMessage;
   }
 
   if (
-    Array.isArray(result?.missingFields) &&
+    Array.isArray(
+      result?.missingFields
+    ) &&
     result.missingFields.length > 0
   ) {
     return `Missing required fields: ${result.missingFields.join(', ')}`;
   }
 
-  const responseCode = getHubtelResponseCode(result);
+  const responseCode =
+    getHubtelResponseCode(result);
 
   if (responseCode) {
     return `Hubtel returned response code ${responseCode}.`;
@@ -380,21 +464,31 @@ export function getHubtelDiagnosticMessage(
 
 export function getHubtelCustomerErrorMessage(
   result,
-  fallback = 'We could not start your payment right now. Please try again.'
+  fallback =
+    'We could not start your payment right now. Please try again.'
 ) {
-  if (result?.likelyCorsOrDeploymentIssue) {
+  if (
+    result?.likelyCorsOrDeploymentIssue
+  ) {
     return 'We could not reach the secure payment service right now. Please try again in a moment.';
   }
 
-  if (hasAuthorizationProxyError(result)) {
+  if (
+    hasAuthorizationProxyError(result)
+  ) {
     return 'We could not start your secure payment right now. Please try again shortly or contact support if the issue continues.';
   }
 
-  if (hasWhitelistingOrForbiddenStatusError(result)) {
+  if (
+    hasWhitelistingOrForbiddenStatusError(
+      result
+    )
+  ) {
     return 'We could not verify the payment service right now. Please try again later.';
   }
 
-  const responseCode = getHubtelResponseCode(result);
+  const responseCode =
+    getHubtelResponseCode(result);
 
   if (responseCode === '4070') {
     return 'This payment could not be completed right now. Please try again later or contact support.';
@@ -402,8 +496,12 @@ export function getHubtelCustomerErrorMessage(
 
   if (
     responseCode === '4000' ||
-    (Array.isArray(result?.missingFields) &&
-      result.missingFields.length > 0)
+    (
+      Array.isArray(
+        result?.missingFields
+      ) &&
+      result.missingFields.length > 0
+    )
   ) {
     return 'Some checkout details were incomplete. Please review your information and try again.';
   }
@@ -423,12 +521,18 @@ export function isHubtelPaymentVerified(
   result,
   expectedAmount = 0
 ) {
-  if (!result || result.ok === false) {
+  if (
+    !result ||
+    result.ok === false
+  ) {
     return false;
   }
 
-  const status = getHubtelStatusValue(result);
-  const responseCode = getHubtelResponseCode(result);
+  const status =
+    getHubtelStatusValue(result);
+
+  const responseCode =
+    getHubtelResponseCode(result);
 
   const successfulStatus =
     status === 'paid' ||
@@ -436,20 +540,30 @@ export function isHubtelPaymentVerified(
     status === 'successful' ||
     status === 'completed' ||
     status === 'complete' ||
-    (!status && responseCode === '0000');
+    (!status &&
+      responseCode === '0000');
 
   if (!successfulStatus) {
     return false;
   }
 
-  const expected = Number(expectedAmount || 0);
-  const paid = getHubtelPaidAmount(result);
+  const expected =
+    Number(expectedAmount || 0);
 
-  if (expected <= 0 || paid == null) {
+  const paid =
+    getHubtelPaidAmount(result);
+
+  if (
+    expected <= 0 ||
+    paid == null
+  ) {
     return successfulStatus;
   }
 
-  return Math.abs(paid - expected) < 0.01;
+  return (
+    Math.abs(paid - expected) <
+    0.01
+  );
 }
 
 export function getHubtelCallbackTarget() {
@@ -467,37 +581,49 @@ export async function initiatePayment({
   payeeMobileNumber,
   payeeEmail,
 }) {
-  const endpoint = getHubtelInitiateUrl();
+  const endpoint =
+    getHubtelInitiateUrl();
 
   try {
-    const headers = await buildRequestHeaders({
-      includeJsonContentType: true,
-      includeAuthorization: true,
-    });
+    const headers =
+      await buildRequestHeaders({
+        includeJsonContentType: true,
+        includeAuthorization: true,
+      });
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      cache: 'no-store',
-      body: JSON.stringify({
-        totalAmount,
-        description: sanitizeDescription(description),
-        callbackUrl,
-        returnUrl,
-        cancellationUrl,
-        clientReference,
-        payeeName,
-        payeeMobileNumber,
-        payeeEmail,
-      }),
-    });
-
-    const result = await readJsonResponse(
-      response,
-      'Unable to parse Hubtel initiation response.'
+    const response = await fetch(
+      endpoint,
+      {
+        method: 'POST',
+        headers,
+        cache: 'no-store',
+        body: JSON.stringify({
+          totalAmount,
+          description:
+            sanitizeDescription(
+              description
+            ),
+          callbackUrl,
+          returnUrl,
+          cancellationUrl,
+          clientReference,
+          payeeName,
+          payeeMobileNumber,
+          payeeEmail,
+        }),
+      }
     );
 
-    return withMeta(result, response);
+    const result =
+      await readJsonResponse(
+        response,
+        'Unable to parse Hubtel initiation response.'
+      );
+
+    return withMeta(
+      result,
+      response
+    );
   } catch (error) {
     console.error(
       '[HubtelClient] Error initiating payment:',
@@ -516,7 +642,9 @@ export async function checkPaymentStatus(
   extraQuery = {}
 ) {
   const url = new URL(
-    resolveRequestUrl(getHubtelStatusUrl())
+    resolveRequestUrl(
+      getHubtelStatusUrl()
+    )
   );
 
   if (clientReference) {
@@ -526,38 +654,46 @@ export async function checkPaymentStatus(
     );
   }
 
-  Object.entries(extraQuery || {}).forEach(
-    ([key, value]) => {
-      if (
-        value !== null &&
-        value !== undefined &&
+  Object.entries(
+    extraQuery || {}
+  ).forEach(([key, value]) => {
+    if (
+      value !== null &&
+      value !== undefined &&
+      String(value).trim()
+    ) {
+      url.searchParams.set(
+        key,
         String(value).trim()
-      ) {
-        url.searchParams.set(
-          key,
-          String(value).trim()
-        );
-      }
+      );
     }
-  );
+  });
 
   try {
-    const headers = await buildRequestHeaders({
-      includeAuthorization: true,
-    });
+    const headers =
+      await buildRequestHeaders({
+        includeAuthorization: true,
+      });
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers,
-      cache: 'no-store',
-    });
-
-    const result = await readJsonResponse(
-      response,
-      'Unable to parse Hubtel status response.'
+    const response = await fetch(
+      url.toString(),
+      {
+        method: 'GET',
+        headers,
+        cache: 'no-store',
+      }
     );
 
-    return withMeta(result, response);
+    const result =
+      await readJsonResponse(
+        response,
+        'Unable to parse Hubtel status response.'
+      );
+
+    return withMeta(
+      result,
+      response
+    );
   } catch (error) {
     console.error(
       '[HubtelClient] Status check error:',
@@ -581,11 +717,13 @@ export async function verifyPaymentWithRetries(
     attempt < maxRetries;
     attempt += 1
   ) {
-    const result = await checkPaymentStatus(
-      clientReference
-    );
+    const result =
+      await checkPaymentStatus(
+        clientReference
+      );
 
-    const status = getHubtelStatusValue(result);
+    const status =
+      getHubtelStatusValue(result);
 
     if (
       status === 'paid' ||
@@ -622,9 +760,16 @@ export async function verifyPaymentWithRetries(
       };
     }
 
-    if (attempt < maxRetries - 1) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, delayMs)
+    if (
+      attempt <
+      maxRetries - 1
+    ) {
+      await new Promise(
+        (resolve) =>
+          setTimeout(
+            resolve,
+            delayMs
+          )
       );
     }
   }
@@ -655,7 +800,8 @@ export async function initiateBalancePayment({
     );
 
   const description =
-    order?.payment_method === 'deposit_balance'
+    order?.payment_method ===
+    'deposit_balance'
       ? `Remaining balance for Order ${order.order_number}`
       : `Product balance for Order ${order.order_number}`;
 
@@ -663,12 +809,16 @@ export async function initiateBalancePayment({
     totalAmount: amount,
     description,
     callbackUrl:
-      callbackUrl || getHubtelCallbackUrl(),
+      callbackUrl ||
+      getHubtelCallbackUrl(),
     returnUrl,
     cancellationUrl,
     clientReference,
-    payeeName: order?.customer_name,
-    payeeMobileNumber: order?.customer_phone,
-    payeeEmail: order?.customer_email,
+    payeeName:
+      order?.customer_name,
+    payeeMobileNumber:
+      order?.customer_phone,
+    payeeEmail:
+      order?.customer_email,
   });
 }

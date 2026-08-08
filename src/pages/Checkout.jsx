@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Info, Loader2, MapPin, ShieldCheck, Truck } from 'lucide-react';
 
 import { appClient } from '@/api/appClient.js';
-import { createBalancePaymentReference, createInitialPaymentReference, getHubtelCheckoutUrl, getHubtelErrorMessage, initiatePayment } from '@/api/hubtelClient';
+import { createBalancePaymentReference, createInitialPaymentReference, getHubtelCheckoutUrl, getHubtelCustomerErrorMessage, initiatePayment } from '@/api/hubtelClient';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -337,7 +337,7 @@ export default function Checkout() {
         notes: 'Pending Hubtel verification. Keep hidden until the first payment is confirmed and the paid amount matches the expected amount.',
         tracking_updates: [{
           status: 'Awaiting Payment Confirmation',
-          message: `Hubtel checkout started. Expected first payment: GHS ${orderSummary.totalToPayNow.toFixed(2)}. The order remains hidden until payment status and amount are verified.`,
+          message: `Secure checkout opened for the first payment stage. Expected first payment: GHS ${orderSummary.totalToPayNow.toFixed(2)}.`,
           timestamp: nowIso,
         }],
       });
@@ -371,7 +371,10 @@ export default function Checkout() {
         return;
       }
 
-      const hubtelFailureMessage = getHubtelErrorMessage(initiateResponse, 'Hubtel checkout could not be started.');
+      const customerMessage = getHubtelCustomerErrorMessage(
+        initiateResponse,
+        'We could not start your secure payment right now. Please try again.'
+      );
 
       await appClient.entities.Order.update(createdOrder.id, {
         payment_status: 'failed',
@@ -379,17 +382,18 @@ export default function Checkout() {
         hubtel_status: 'failed',
         tracking_updates: (createdOrder.tracking_updates || []).concat([{
           status: 'Checkout Initiation Failed',
-          message: `Hubtel checkout could not be started. ${hubtelFailureMessage}`.trim(),
+          message: 'Secure payment could not be opened. The customer can retry from checkout.',
           timestamp: new Date().toISOString(),
         }]),
       });
 
-      setOrderError('Hubtel checkout could not be started. Your cart is still available.');
-      showFeedback('error', `Hubtel checkout could not be started. ${hubtelFailureMessage}`, 'Payment could not start');
+      queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+      setOrderError('We could not start your secure payment right now. Your items are still in your cart so you can try again.');
+      showFeedback('error', `${customerMessage} Your items are still in your cart so you can try again.`, 'Payment could not start');
     } catch (error) {
       console.error('Checkout error:', error);
-      setOrderError('Checkout is temporarily unavailable. Your cart was not cleared.');
-      showFeedback('error', 'Checkout is temporarily unavailable. Your cart was not cleared.', 'Checkout unavailable');
+      setOrderError('Checkout is temporarily unavailable. Your items are still in your cart.');
+      showFeedback('error', 'Checkout is temporarily unavailable. Your items are still in your cart.', 'Checkout unavailable');
     } finally {
       setIsSubmitting(false);
     }
@@ -462,43 +466,36 @@ export default function Checkout() {
               </div>
               <div>
                 <Label className="text-sm font-medium">Phone Number *</Label>
-                <Input name="customer_phone" value={formData.customer_phone} onChange={handleInputChange} required className="mt-1" />
+                <Input name="customer_phone" value={formData.customer_phone} onChange={handleInputChange} required className="mt-1" placeholder="e.g. 0200000000" />
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium">Region *</Label>
-                  <Input name="region" value={formData.region} onChange={handleInputChange} placeholder="e.g. Greater Accra" required className={`mt-1 ${locationMismatch ? 'border-red-500 ring-1 ring-red-500' : ''}`} />
+                  <Input name="region" value={formData.region} onChange={handleInputChange} required className="mt-1" placeholder="e.g. Greater Accra" />
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">City *</Label>
-                  <Input name="city" value={formData.city} onChange={handleInputChange} placeholder="e.g. East Legon" required className={`mt-1 ${locationMismatch ? 'border-red-500 ring-1 ring-red-500' : ''}`} />
+                  <Label className="text-sm font-medium">City / Town *</Label>
+                  <Input name="city" value={formData.city} onChange={handleInputChange} required className="mt-1" placeholder="e.g. Accra" />
                 </div>
               </div>
               <div>
                 <Label className="text-sm font-medium">Specific Location *</Label>
-                <Input name="specific_location" value={formData.specific_location} onChange={handleInputChange} placeholder="Apartment, estate, office, or delivery point" required className="mt-1" />
+                <Input name="specific_location" value={formData.specific_location} onChange={handleInputChange} required className="mt-1" placeholder="Street, landmark, or house details" />
               </div>
-              {locationValidation.isReady && !locationValidation.isValid && (
-                <p className="text-xs text-amber-700 font-medium">
-                  {locationValidation.message}
-                </p>
-              )}
-              {locationMismatch && (
-                <p className="text-xs text-red-600 font-medium">
-                  The selected delivery option does not match this validated location.
-                </p>
-              )}
               <div>
-                <Label className="text-sm font-medium">Google Auto-Detect Location</Label>
-                <div className="mt-1 flex items-center gap-2">
-                  <Input name="map_location" value={formData.map_location} onChange={handleInputChange} className="flex-1" readOnly />
-                  <Button type="button" onClick={getCurrentLocation} variant="outline" className="shrink-0 border-blue-300 text-blue-700">
-                    Detect Location
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">Use the button above to attach a Google Maps location link for accurate delivery confirmation.</p>
-                {locationError && <p className="text-xs text-red-600 mt-1">{locationError}</p>}
+                <Button type="button" variant="outline" onClick={getCurrentLocation} className="w-full md:w-auto">
+                  <MapPin className="h-4 w-4 mr-2" /> Add Google Location
+                </Button>
+                {formData.map_location && <p className="text-xs text-green-700 mt-2 break-all">Location saved: {formData.map_location}</p>}
+                {locationError && <p className="text-xs text-red-600 mt-2">{locationError}</p>}
               </div>
+              {locationValidation.isReady && (
+                <InlineNotice
+                  variant={locationValidation.isValid ? 'success' : 'warning'}
+                  title={locationValidation.isValid ? 'Location confirmed' : 'Check delivery location'}
+                  message={locationValidation.message}
+                />
+              )}
             </div>
           </Card>
 
@@ -506,138 +503,121 @@ export default function Checkout() {
             <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Truck className="h-5 w-5 text-blue-600" /> Delivery Option
             </h2>
-            <Select value={selectedZoneId} onValueChange={(value) => { setSelectedZoneId(value); setPaymentMethod(''); setDepositWarningAccepted(false); setDeliveryStageWarningAccepted(false); }}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select delivery option" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableZones.map((zone) => (
-                  <SelectItem key={zone.id} value={zone.id}>
-                    {zone.label} — ₵{zone.fee}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedZone && <p className="text-xs text-blue-600 mt-2 font-medium">Delivery fee: ₵{deliveryFee.toFixed(2)}</p>}
-            {locationValidation.isValid && detectedLocation.serviceAreaLabel && (
-              <p className="text-xs text-slate-600 mt-2">
-                Location validated for {detectedLocation.serviceAreaLabel}. Available delivery options were filtered automatically.
-              </p>
-            )}
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Delivery Zone *</Label>
+                <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select your delivery area" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableZones.map((zone) => (
+                      <SelectItem key={zone.id} value={zone.id}>
+                        {zone.label} — ₵{zone.fee.toFixed(2)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {detectedLocation?.area && (
+                <p className="text-xs text-blue-700">
+                  Suggested service area: <span className="font-semibold">{detectedLocation.area}</span>
+                </p>
+              )}
+            </div>
           </Card>
 
-          {selectedZoneId && (
-            <Card className="p-5 bg-white">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-blue-600" /> Payment Plan
-              </h2>
-              <Select value={paymentMethod} onValueChange={handlePaymentMethodChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select payment plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="full_payment">1. Pay Full Amount Online — ₵{(subtotal + deliveryFee).toFixed(2)}</SelectItem>
-                  <SelectItem value="deposit_balance" disabled={!isTwoStageZoneEligible}>2. Pay Deposit Now, Balance Later — ₵{(getInitialAmount(subtotal, 'deposit_balance') + deliveryFee).toFixed(2)}</SelectItem>
-                  <SelectItem value="pay_on_delivery" disabled={!isTwoStageZoneEligible}>3. Pay Delivery Fee Now, Balance Later — ₵{deliveryFee.toFixed(2)}</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {!isTwoStageZoneEligible && (selectedZoneId === 'accra' || selectedZoneId === 'kumasi' || selectedZoneId === 'tarkwa') && (
-                <p className="text-xs text-gray-500 mt-2">
-                  The second and third payment plans are only available for approved Accra, Kumasi, and Tarkwa delivery areas.
-                </p>
-              )}
-
-              {paymentMethod !== 'full_payment' && !strictTwoStageLocationMatch && (
-                <p className="text-xs text-amber-700 mt-2 flex items-center gap-1">
-                  <Info className="h-3 w-3" /> Enter a valid Ghana region/city and an eligible delivery area before using the second or third payment plan.
-                </p>
-              )}
+          <Card className="p-5 bg-white">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-blue-600" /> Payment Plan
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Payment Method *</Label>
+                <Select value={paymentMethod} onValueChange={handlePaymentMethodChange}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Choose how you want to pay" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="full_payment">Pay full amount now</SelectItem>
+                    <SelectItem value="deposit_balance" disabled={!isTwoStageZoneEligible}>Pay deposit now, balance later</SelectItem>
+                    <SelectItem value="pay_on_delivery" disabled={!isTwoStageZoneEligible}>Pay delivery fee now, balance later</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               {paymentMethod === 'deposit_balance' && (
-                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                  <p className="text-sm font-semibold text-amber-900 mb-2">Payment Plan 2: Deposit Now, Balance Later</p><ul className="text-xs text-amber-800 leading-relaxed list-disc pl-4 space-y-2">
-                    <li>The deposit and delivery fee are paid online through Hubtel during checkout.</li>
-                    <li>The remaining balance becomes payable from your Order page after the order is shipped and the balance payment option is enabled.</li>
-                    <li>The product is handed over only after the remaining balance is verified successfully.</li>
-                    <li>Delivery fees are non-refundable once the shipping process has started.</li>
-                  </ul>
-                  <Button type="button" onClick={() => setDepositWarningAccepted(true)} className="mt-3 text-xs px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white" disabled={depositWarningAccepted}>
-                    {depositWarningAccepted ? 'Agreed' : 'I agree'}
-                  </Button>
-                </div>
+                <InlineNotice
+                  variant="warning"
+                  title="Deposit + balance"
+                  message="The deposit and delivery fee are paid now. The remaining balance is paid later from your Orders page after the order is shipped and balance payment is enabled."
+                />
               )}
 
               {paymentMethod === 'pay_on_delivery' && (
-                <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-xl">
-                  <p className="text-sm font-semibold text-purple-900 mb-2">Payment Plan 3: Delivery Fee Now, Balance Later</p><ul className="text-xs text-purple-800 leading-relaxed list-disc pl-4 space-y-2">
-                    <li>The delivery fee is paid online through Hubtel during checkout.</li>
-                    <li>The product balance becomes payable from your Order page after the order is shipped and the balance payment option is enabled.</li>
-                    <li>The product is handed over only after the remaining balance is verified successfully.</li>
-                    <li>Delivery fees are non-refundable once the shipping process has started.</li>
-                  </ul>
-                  <Button type="button" onClick={() => setDeliveryStageWarningAccepted(true)} className="mt-3 text-xs px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white" disabled={deliveryStageWarningAccepted}>
-                    {deliveryStageWarningAccepted ? 'Agreed' : 'I agree'}
-                  </Button>
-                </div>
+                <InlineNotice
+                  variant="warning"
+                  title="Delivery fee first"
+                  message="The delivery fee is paid now. The product balance is paid later from your Orders page after the order is shipped and balance payment is enabled."
+                />
               )}
-            </Card>
-          )}
+
+              {requiresTermsAcceptance && (
+                <label className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={paymentMethod === 'deposit_balance' ? depositWarningAccepted : deliveryStageWarningAccepted}
+                    onChange={(event) => {
+                      if (paymentMethod === 'deposit_balance') {
+                        setDepositWarningAccepted(event.target.checked);
+                      } else {
+                        setDeliveryStageWarningAccepted(event.target.checked);
+                      }
+                    }}
+                  />
+                  <span>
+                    I understand that any remaining balance will only become payable from my Orders page after shipment, and the order is only treated as paid after Hubtel confirms the required amount.
+                  </span>
+                </label>
+              )}
+            </div>
+          </Card>
 
           {canRevealOrderSummary && (
-            <Card className="p-5 bg-white border-2 border-blue-100">
+            <Card className="p-5 bg-white">
               <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-blue-600" /> Order Summary
               </h2>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Product Amount</span>
-                  <span className="text-sm font-semibold">{paymentMethod === 'pay_on_delivery' ? 'Pay later' : `₵${orderSummary.initialProductAmount.toFixed(2)}`}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Delivery Fee</span>
-                  <span className="text-sm font-semibold">₵{deliveryFee.toFixed(2)}</span>
-                </div>
+              <div className="space-y-3 text-sm text-gray-700">
+                <div className="flex justify-between"><span>Products subtotal</span><span>₵{subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Delivery fee</span><span>₵{deliveryFee.toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between">
-                  <span className="text-base font-bold">Total Order Value</span>
-                  <span className="text-base font-bold text-gray-900">₵{orderSummary.grandTotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-base font-bold">Total to Pay Now</span>
-                  <span className="text-xl font-bold text-blue-700">₵{orderSummary.totalToPayNow.toFixed(2)}</span>
-                </div>
+                <div className="flex justify-between font-semibold text-gray-900"><span>Total order value</span><span>₵{orderSummary.grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-blue-700 font-semibold"><span>Pay now with Hubtel</span><span>₵{orderSummary.totalToPayNow.toFixed(2)}</span></div>
                 {orderSummary.balanceDue > 0 && (
-                  <div className="flex justify-between bg-amber-50 p-3 rounded-lg">
-                    <span className="text-sm font-medium text-amber-800">Remaining Balance</span>
-                    <span className="text-sm font-bold text-amber-800">₵{orderSummary.balanceDue.toFixed(2)}</span>
-                  </div>
+                  <div className="flex justify-between text-orange-700"><span>Balance later</span><span>₵{orderSummary.balanceDue.toFixed(2)}</span></div>
                 )}
               </div>
             </Card>
           )}
 
-          {canRevealOrderSummary && (
-            <div className="space-y-3">
-              <Button
-                type="submit"
-                disabled={isSubmitting || (locationValidation.isReady && !locationValidation.isValid) || locationMismatch || ((paymentMethod === 'deposit_balance' || paymentMethod === 'pay_on_delivery') && !strictTwoStageLocationMatch) || (requiresTermsAcceptance && !termsAccepted)}
-                className="w-full rounded-xl bg-blue-800 px-4 py-4 text-white font-bold text-base hover:bg-blue-900 disabled:opacity-50 h-14"
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" /> Redirecting to secure payment...
-                  </span>
-                ) : (
-                  `Pay ₵${orderSummary.totalToPayNow.toFixed(2)} with Hubtel`
-                )}
-              </Button>
-              <p className="text-xs text-gray-500 text-center">
-                <ShieldCheck className="h-3 w-3 inline" /> Secured by Hubtel
-              </p>
-              {orderError && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg text-center">{orderError}</p>}
-            </div>
+          {orderError && (
+            <InlineNotice variant="error" title="Payment could not start" message={orderError} />
           )}
+
+          <div className="pb-8">
+            <Button type="submit" disabled={isSubmitting} className="w-full bg-blue-800 hover:bg-blue-900 text-white h-12 text-base font-semibold">
+              {isSubmitting ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Preparing secure payment...</>
+              ) : (
+                `Pay ₵${orderSummary.totalToPayNow.toFixed(2)} with Hubtel`
+              )}
+            </Button>
+            <p className="text-xs text-center text-gray-500 mt-3">
+              <ShieldCheck className="h-3 w-3 inline" /> Secured by Hubtel
+            </p>
+          </div>
         </form>
       </div>
     </div>

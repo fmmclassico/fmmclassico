@@ -34,7 +34,7 @@ export default function PaymentVerification() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [message, setMessage] = useState('Checking payment status with Hubtel and verifying the paid amount...');
+  const [message, setMessage] = useState('Checking your payment and confirming the amount received...');
   const [statusTone, setStatusTone] = useState('pending');
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function PaymentVerification() {
 
           if (!currentOrder) {
             setStatusTone('error');
-            setMessage('The pending order could not be found. Redirecting you to checkout...');
+            setMessage('We could not find this pending order. Redirecting you back to checkout...');
             setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1400);
             return;
           }
@@ -72,7 +72,7 @@ export default function PaymentVerification() {
           if (currentOrder.initial_payment_status === 'paid' || currentOrder.payment_stage === 'fully_paid' || currentOrder.payment_stage === 'initial_payment_paid') {
             await clearLoggedInCart(user.email, queryClient);
             setStatusTone('success');
-            setMessage('Payment already verified. Redirecting you to your orders...');
+            setMessage('Your payment is already confirmed. Redirecting you to your orders...');
             setTimeout(() => navigate(createPageUrl('Orders'), { replace: true }), 1200);
             return;
           }
@@ -113,7 +113,7 @@ export default function PaymentVerification() {
           const paidAmount = getHubtelPaidAmount(result);
           if (paidAmount != null && paidAmount > 0 && paidAmount < expectedAmount) {
             setStatusTone('error');
-            setMessage('The payment amount received did not match the expected amount. Please contact support for assistance. Redirecting you to checkout...');
+            setMessage('The amount received did not match the expected payment. Please contact support for help. Redirecting you back to checkout...');
             setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1800);
             return;
           }
@@ -132,7 +132,7 @@ export default function PaymentVerification() {
             });
             queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
             setStatusTone('error');
-            setMessage('Payment failed. Your cart is still available. Redirecting you back to checkout...');
+            setMessage('Payment was not completed. Your items are still in your cart so you can try again. Redirecting you back to checkout...');
             setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1400);
             return;
           }
@@ -150,7 +150,7 @@ export default function PaymentVerification() {
             });
             queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
             setStatusTone('warning');
-            setMessage('Payment was cancelled. Your cart is still available. Redirecting you back to checkout...');
+            setMessage('Payment was cancelled. Your items are still in your cart so you can try again. Redirecting you back to checkout...');
             setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1400);
             return;
           }
@@ -162,10 +162,10 @@ export default function PaymentVerification() {
 
         if (hintedStatus === 'cancelled' || hintedStatus === 'canceled') {
           setStatusTone('warning');
-          setMessage('Payment was cancelled. Your cart is still available. Redirecting you back to checkout...');
+          setMessage('Payment was cancelled. Your items are still in your cart so you can try again. Redirecting you back to checkout...');
         } else {
           setStatusTone('error');
-          setMessage('We could not confirm a successful payment yet. Your cart is still available. Redirecting you back to checkout...');
+          setMessage('We could not confirm the payment yet. Your items are still in your cart so you can try again. Redirecting you back to checkout...');
         }
         setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1600);
       } catch (error) {

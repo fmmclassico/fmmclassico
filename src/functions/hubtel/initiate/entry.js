@@ -5,6 +5,9 @@ const HUBTEL_CLIENT_ID = Deno.env.get('HUBTEL_CLIENT_ID')?.trim()
 const HUBTEL_CLIENT_SECRET = Deno.env.get('HUBTEL_CLIENT_SECRET')?.trim()
   || Deno.env.get('HUBTEL_API_KEY')?.trim()
   || '';
+const MERCHANT_ACCOUNT_NUMBER = Deno.env.get('HUBTEL_MERCHANT_ACCOUNT_NUMBER')?.trim()
+  || Deno.env.get('VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER')?.trim()
+  || '';
 const HUBTEL_INITIATE_URL = Deno.env.get('HUBTEL_INITIATE_URL')?.trim()
   || 'https://payproxyapi.hubtel.com/items/initiate';
 
@@ -29,17 +32,11 @@ function jsonResponse(req, body, status = 200) {
 }
 
 function isConfigured() {
-  return Boolean(HUBTEL_CLIENT_SECRET || (HUBTEL_CLIENT_ID && HUBTEL_CLIENT_SECRET));
+  return Boolean(HUBTEL_CLIENT_ID && HUBTEL_CLIENT_SECRET && MERCHANT_ACCOUNT_NUMBER);
 }
 
 function createAuthHeader() {
-  if (!HUBTEL_CLIENT_SECRET) {
-    return '';
-  }
-
-  const username = HUBTEL_CLIENT_ID || HUBTEL_CLIENT_SECRET;
-  const password = HUBTEL_CLIENT_ID ? HUBTEL_CLIENT_SECRET : '';
-  return `Basic ${btoa(`${username}:${password}`)}`;
+  return `Basic ${btoa(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`)}`;
 }
 
 async function parseJsonBody(req) {
@@ -53,11 +50,13 @@ async function parseJsonBody(req) {
 }
 
 function sanitizeDescription(value = '') {
-  return String(value || '')
+  const cleaned = String(value || '')
     .replace(/[^a-zA-Z0-9 .,_-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 120);
+
+  return cleaned || 'FMM CLASSICO checkout';
 }
 
 function sanitizePhone(value = '') {
@@ -72,6 +71,13 @@ function sanitizeName(value = '') {
   return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 120);
 }
 
+function sanitizeClientReference(value = '') {
+  return String(value || '')
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .trim()
+    .slice(0, 32);
+}
+
 function normalizeAmount(value) {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return null;
@@ -83,7 +89,7 @@ function validatePayload(body = {}) {
   const callbackUrl = String(body.callbackUrl || '').trim();
   const returnUrl = String(body.returnUrl || '').trim();
   const cancellationUrl = String(body.cancellationUrl || '').trim();
-  const clientReference = String(body.clientReference || '').trim();
+  const clientReference = sanitizeClientReference(body.clientReference || '');
   const description = sanitizeDescription(body.description || `Payment for ${clientReference || 'order'}`);
 
   const missingFields = [
@@ -116,6 +122,7 @@ function buildHubtelPayload(payload) {
     description: payload.description,
     callbackUrl: payload.callbackUrl,
     returnUrl: payload.returnUrl,
+    merchantAccountNumber: MERCHANT_ACCOUNT_NUMBER,
     cancellationUrl: payload.cancellationUrl,
     clientReference: payload.clientReference,
     ...(payload.payeeName ? { payeeName: payload.payeeName } : {}),
@@ -155,6 +162,8 @@ async function parseHubtelResponse(response) {
 function extractCheckoutData(body = {}) {
   const data = body?.data || body?.Data || body;
   return {
+    responseCode: body?.responseCode || body?.ResponseCode || '',
+    status: body?.status || body?.Status || data?.status || data?.Status || '',
     checkoutUrl: data?.checkoutUrl || data?.CheckoutUrl || null,
     checkoutDirectUrl: data?.checkoutDirectUrl || data?.CheckoutDirectUrl || null,
     checkoutId: data?.checkoutId || data?.CheckoutId || null,
@@ -175,11 +184,13 @@ Deno.serve(async (req) => {
   }
 
   if (!isConfigured()) {
-    console.error('[Hubtel Initiate] Missing HUBTEL_CLIENT_SECRET/HUBTEL_API_KEY or HUBTEL_CLIENT_ID');
+    console.error('[Hubtel Initiate] Missing required Hubtel configuration');
     return jsonResponse(req, {
       error: 'Hubtel gateway is not configured.',
       missingConfiguration: [
+        !HUBTEL_CLIENT_ID ? 'HUBTEL_CLIENT_ID or HUBTEL_API_ID' : null,
         !HUBTEL_CLIENT_SECRET ? 'HUBTEL_CLIENT_SECRET or HUBTEL_API_KEY' : null,
+        !MERCHANT_ACCOUNT_NUMBER ? 'HUBTEL_MERCHANT_ACCOUNT_NUMBER' : null,
       ].filter(Boolean),
     }, 500);
   }
@@ -203,6 +214,7 @@ Deno.serve(async (req) => {
     console.log('[Hubtel Initiate] Starting checkout request:', {
       clientReference: payload.clientReference,
       totalAmount: payload.totalAmount,
+      merchantAccountNumber: MERCHANT_ACCOUNT_NUMBER,
       hasCallbackUrl: Boolean(payload.callbackUrl),
       hasReturnUrl: Boolean(payload.returnUrl),
       hasCancellationUrl: Boolean(payload.cancellationUrl),
@@ -224,10 +236,10 @@ Deno.serve(async (req) => {
     console.log('[Hubtel Initiate] Hubtel response summary:', {
       httpStatus: parsed.httpStatus,
       ok: parsed.ok,
-      responseCode: parsed.body?.responseCode || parsed.body?.ResponseCode || null,
-      status: parsed.body?.status || parsed.body?.Status || null,
+      responseCode: checkout.responseCode || null,
+      status: checkout.status || null,
       checkoutId: checkout.checkoutId,
-      hasCheckoutUrl: Boolean(checkout.checkoutUrl),
+      hasCheckoutUrl: Boolean(checkout.checkoutUrl || checkout.checkoutDirectUrl),
       clientReference: checkout.clientReference || payload.clientReference,
     });
 

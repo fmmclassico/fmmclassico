@@ -1,14 +1,28 @@
-const HUBTEL_CLIENT_ID = Deno.env.get('HUBTEL_CLIENT_ID')?.trim()
-  || Deno.env.get('HUBTEL_API_ID')?.trim()
-  || Deno.env.get('HUBTEL_AP_ID')?.trim()
-  || '';
-const HUBTEL_CLIENT_SECRET = Deno.env.get('HUBTEL_CLIENT_SECRET')?.trim()
-  || Deno.env.get('HUBTEL_API_KEY')?.trim()
-  || '';
-const MERCHANT_ACCOUNT_NUMBER = Deno.env.get('HUBTEL_MERCHANT_ACCOUNT_NUMBER')?.trim()
-  || Deno.env.get('VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER')?.trim()
-  || '';
-const HUBTEL_INITIATE_URL = Deno.env.get('HUBTEL_INITIATE_URL')?.trim()
+function readEnv(...names) {
+  for (const name of names) {
+    const value = Deno.env.get(name)?.trim();
+    if (value) return value;
+  }
+
+  return '';
+}
+
+const HUBTEL_CLIENT_ID = readEnv(
+  'HUBTEL_CLIENT_ID',
+  'HUBTEL_API_ID',
+  'HUBTEL_AP_ID',
+  'VITE_HUBTEL_API_ID'
+);
+const HUBTEL_CLIENT_SECRET = readEnv(
+  'HUBTEL_CLIENT_SECRET',
+  'HUBTEL_API_KEY',
+  'VITE_HUBTEL_API_KEY'
+);
+const MERCHANT_ACCOUNT_NUMBER = readEnv(
+  'HUBTEL_MERCHANT_ACCOUNT_NUMBER',
+  'VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER'
+);
+const HUBTEL_INITIATE_URL = readEnv('HUBTEL_INITIATE_URL')
   || 'https://payproxyapi.hubtel.com/items/initiate';
 
 function createCorsHeaders(req) {
@@ -31,8 +45,16 @@ function jsonResponse(req, body, status = 200) {
   });
 }
 
+function getMissingConfiguration() {
+  return [
+    !HUBTEL_CLIENT_ID ? 'HUBTEL_CLIENT_ID / HUBTEL_API_ID / HUBTEL_AP_ID' : null,
+    !HUBTEL_CLIENT_SECRET ? 'HUBTEL_CLIENT_SECRET / HUBTEL_API_KEY' : null,
+    !MERCHANT_ACCOUNT_NUMBER ? 'HUBTEL_MERCHANT_ACCOUNT_NUMBER' : null,
+  ].filter(Boolean);
+}
+
 function isConfigured() {
-  return Boolean(HUBTEL_CLIENT_ID && HUBTEL_CLIENT_SECRET && MERCHANT_ACCOUNT_NUMBER);
+  return getMissingConfiguration().length === 0;
 }
 
 function createAuthHeader() {
@@ -171,6 +193,31 @@ function extractCheckoutData(body = {}) {
   };
 }
 
+function extractHubtelMessage(body = {}) {
+  return String(
+    body?.message
+      || body?.Message
+      || body?.error
+      || body?.Error
+      || body?.ResponseMessage
+      || body?.raw
+      || ''
+  ).trim();
+}
+
+function createClientPayload(body = {}, checkout = {}, fallbackReference = '') {
+  return {
+    ...body,
+    responseCode: checkout.responseCode || body?.responseCode || body?.ResponseCode || '',
+    status: checkout.status || body?.status || body?.Status || '',
+    checkoutUrl: checkout.checkoutUrl,
+    checkoutDirectUrl: checkout.checkoutDirectUrl,
+    checkoutId: checkout.checkoutId,
+    clientReference: checkout.clientReference || fallbackReference || body?.clientReference || body?.ClientReference || null,
+    message: extractHubtelMessage(body),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -184,14 +231,11 @@ Deno.serve(async (req) => {
   }
 
   if (!isConfigured()) {
-    console.error('[Hubtel Initiate] Missing required Hubtel configuration');
+    const missingConfiguration = getMissingConfiguration();
+    console.error('[Hubtel Initiate] Missing required Hubtel configuration:', missingConfiguration);
     return jsonResponse(req, {
       error: 'Hubtel gateway is not configured.',
-      missingConfiguration: [
-        !HUBTEL_CLIENT_ID ? 'HUBTEL_CLIENT_ID or HUBTEL_API_ID' : null,
-        !HUBTEL_CLIENT_SECRET ? 'HUBTEL_CLIENT_SECRET or HUBTEL_API_KEY' : null,
-        !MERCHANT_ACCOUNT_NUMBER ? 'HUBTEL_MERCHANT_ACCOUNT_NUMBER' : null,
-      ].filter(Boolean),
+      missingConfiguration,
     }, 500);
   }
 
@@ -243,7 +287,16 @@ Deno.serve(async (req) => {
       clientReference: checkout.clientReference || payload.clientReference,
     });
 
-    return jsonResponse(req, parsed.body, parsed.httpStatus);
+    const clientPayload = createClientPayload(parsed.body, checkout, payload.clientReference);
+
+    if (!parsed.ok) {
+      return jsonResponse(req, {
+        ...clientPayload,
+        error: clientPayload.message || 'Hubtel initiate request failed.',
+      }, parsed.httpStatus);
+    }
+
+    return jsonResponse(req, clientPayload, parsed.httpStatus);
   } catch (error) {
     console.error('[Hubtel Initiate] Network or fetch error:', error);
     return jsonResponse(req, {

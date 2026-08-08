@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { Loader2, Package, Trash2, Wallet } from 'lucide-react';
 
 import { appClient } from '@/api/appClient.js';
-import { checkPaymentStatus, createBalancePaymentReference, getBaseOrderReference, getHubtelCheckoutUrl, getHubtelErrorMessage, getHubtelPaidAmount, initiateBalancePayment, isHubtelPaymentVerified } from '@/api/hubtelClient';
+import { checkPaymentStatus, createBalancePaymentReference, getBaseOrderReference, getHubtelCheckoutUrl, getHubtelCustomerErrorMessage, getHubtelPaidAmount, initiateBalancePayment, isHubtelPaymentVerified } from '@/api/hubtelClient';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -148,7 +148,7 @@ export default function Orders() {
           const currentOrder = safeOrderList.find((item) => item.id === orderId || item.order_number === baseOrderNumber);
 
           if (!currentOrder) {
-            showFeedback('error', 'The balance-payment order could not be found.', 'Unable to verify');
+            showFeedback('error', 'We could not find this balance-payment order.', 'Unable to verify');
             return;
           }
 
@@ -187,7 +187,7 @@ export default function Orders() {
                 timestamp: new Date().toISOString(),
               }]),
             });
-            showFeedback('warning', 'The balance payment amount did not match the expected amount. Please contact support.', 'Amount mismatch');
+            showFeedback('warning', 'The amount received did not match the expected balance. Please contact support.', 'Amount mismatch');
             queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
             return;
           }
@@ -273,9 +273,13 @@ export default function Orders() {
         return;
       }
 
-      showFeedback('error', getHubtelErrorMessage(result, 'Unable to start the remaining balance payment.'), 'Unable to continue');
+      showFeedback(
+        'error',
+        getHubtelCustomerErrorMessage(result, 'We could not start the remaining balance payment right now. Please try again.'),
+        'Unable to continue'
+      );
     } catch (error) {
-      showFeedback('error', error.message || 'Unable to start the remaining balance payment.', 'Unable to continue');
+      showFeedback('error', error.message || 'We could not start the remaining balance payment right now. Please try again.', 'Unable to continue');
     } finally {
       setPayingBalanceFor(null);
     }

@@ -94,7 +94,32 @@ function resolveRequestUrl(url) {
   return new URL(String(url || ''), window.location.origin).toString();
 }
 
-function getResponseCode(result) {
+function getHubtelDataNode(result = {}) {
+  if (!result || typeof result !== 'object') {
+    return {};
+  }
+
+  const directData = result?.data;
+  if (directData && typeof directData === 'object' && !Array.isArray(directData)) {
+    if (directData?.data && typeof directData.data === 'object' && !Array.isArray(directData.data)) {
+      return directData.data;
+    }
+
+    if (directData?.Data && typeof directData.Data === 'object' && !Array.isArray(directData.Data)) {
+      return directData.Data;
+    }
+
+    return directData;
+  }
+
+  if (result?.Data && typeof result.Data === 'object' && !Array.isArray(result.Data)) {
+    return result.Data;
+  }
+
+  return result;
+}
+
+function getHubtelResponseCode(result = {}) {
   return String(
     result?.responseCode
       || result?.ResponseCode
@@ -105,10 +130,14 @@ function getResponseCode(result) {
 }
 
 function extractDiagnosticCandidates(result) {
+  const payload = getHubtelDataNode(result);
+
   return [
+    payload?.error,
+    payload?.message,
+    payload?.Message,
     result?.data?.error,
     result?.data?.message,
-    result?.data?.details,
     result?.message,
     result?.details,
     result?.technicalError,
@@ -160,33 +189,48 @@ export function getBaseOrderReference(reference = '') {
 }
 
 export function getHubtelCheckoutUrl(result) {
+  const payload = getHubtelDataNode(result);
+
   return String(
-    result?.data?.checkoutUrl
-      || result?.data?.checkoutDirectUrl
+    payload?.checkoutUrl
+      || payload?.CheckoutUrl
+      || payload?.checkoutDirectUrl
+      || payload?.CheckoutDirectUrl
       || result?.checkoutUrl
+      || result?.CheckoutUrl
       || result?.checkoutDirectUrl
+      || result?.CheckoutDirectUrl
       || ''
   ).trim();
 }
 
 export function getHubtelStatusValue(result) {
+  const payload = getHubtelDataNode(result);
+
   return String(
-    result?.data?.status
-      || result?.data?.Status
+    payload?.status
+      || payload?.Status
+      || payload?.transactionStatus
+      || payload?.TransactionStatus
       || result?.status
       || result?.Status
+      || result?.transactionStatus
+      || result?.TransactionStatus
       || ''
-  ).toLowerCase();
+  ).toLowerCase().trim();
 }
 
 export function getHubtelPaidAmount(result) {
+  const payload = getHubtelDataNode(result);
   const candidates = [
-    result?.data?.amount,
-    result?.data?.Amount,
-    result?.data?.paidAmount,
-    result?.data?.PaidAmount,
-    result?.data?.transactionAmount,
-    result?.data?.TransactionAmount,
+    payload?.amount,
+    payload?.Amount,
+    payload?.paidAmount,
+    payload?.PaidAmount,
+    payload?.transactionAmount,
+    payload?.TransactionAmount,
+    payload?.customerChargeAmount,
+    payload?.CustomerChargeAmount,
     result?.amount,
     result?.Amount,
     result?.paidAmount,
@@ -207,12 +251,16 @@ export function getHubtelPaidAmount(result) {
 }
 
 export function getHubtelDiagnosticMessage(result, fallback = 'Unable to continue with Hubtel right now.') {
+  const payload = getHubtelDataNode(result);
   const genericErrors = new Set([
     'Unable to start payment.',
     'Unable to verify payment status.',
   ]);
 
   const candidates = [
+    payload?.error,
+    payload?.message,
+    payload?.Message,
     result?.data?.error,
     result?.data?.message,
     result?.message,
@@ -220,7 +268,6 @@ export function getHubtelDiagnosticMessage(result, fallback = 'Unable to continu
     result?.technicalError,
     genericErrors.has(String(result?.error || '').trim()) ? '' : result?.error,
     result?.raw,
-    result?.error,
   ].map((value) => compactMessage(value));
 
   const firstMessage = candidates.find(Boolean);
@@ -230,6 +277,11 @@ export function getHubtelDiagnosticMessage(result, fallback = 'Unable to continu
 
   if (Array.isArray(result?.missingFields) && result.missingFields.length > 0) {
     return `Missing required fields: ${result.missingFields.join(', ')}`;
+  }
+
+  const responseCode = getHubtelResponseCode(result);
+  if (responseCode) {
+    return `Hubtel returned response code ${responseCode}.`;
   }
 
   if (result?.httpStatus) {
@@ -252,7 +304,7 @@ export function getHubtelCustomerErrorMessage(result, fallback = 'We could not s
     return 'We could not verify the payment service right now. Please try again later.';
   }
 
-  const responseCode = getResponseCode(result);
+  const responseCode = getHubtelResponseCode(result);
   if (responseCode === '4070') {
     return 'This payment could not be completed right now. Please try again later or contact support.';
   }
@@ -278,13 +330,15 @@ export function isHubtelPaymentVerified(result, expectedAmount = 0) {
   }
 
   const status = getHubtelStatusValue(result);
+  const responseCode = getHubtelResponseCode(result);
 
   const successfulStatus =
     status === 'paid' ||
     status === 'success' ||
     status === 'successful' ||
     status === 'completed' ||
-    status === 'complete';
+    status === 'complete' ||
+    (!status && responseCode === '0000');
 
   if (!successfulStatus) {
     return false;
@@ -377,7 +431,7 @@ export async function verifyPaymentWithRetries(clientReference, maxRetries = 4, 
       const result = await checkPaymentStatus(clientReference);
       const status = getHubtelStatusValue(result);
 
-      if (status === 'paid' || status === 'success' || status === 'successful') {
+      if (status === 'paid' || status === 'success' || status === 'successful' || isHubtelPaymentVerified(result)) {
         return { verified: true, status: 'paid', data: result };
       }
       if (status === 'failed' || status === 'unpaid') {

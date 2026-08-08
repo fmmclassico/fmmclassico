@@ -1,95 +1,170 @@
-function readEnv(...names) {
-  for (const name of names) {
-    const value = Deno.env.get(name)?.trim();
-    if (value) return value;
+function readEnv(name) {
+  const value = Deno.env.get(name);
+
+  if (typeof value !== 'string') {
+    return '';
   }
 
-  return '';
+  return value.trim();
 }
 
-const HUBTEL_CLIENT_ID = readEnv(
-  'HUBTEL_CLIENT_ID',
-  'HUBTEL_API_ID',
-  'HUBTEL_AP_ID',
-  'VITE_HUBTEL_API_ID'
-);
-const HUBTEL_CLIENT_SECRET = readEnv(
-  'HUBTEL_CLIENT_SECRET',
-  'HUBTEL_API_KEY',
-  'VITE_HUBTEL_API_KEY'
-);
+/*
+ * ============================================================
+ * HUBTEL SERVER-SIDE CONFIGURATION
+ * ============================================================
+ *
+ * IMPORTANT:
+ * These variables MUST exist only as Supabase Edge Function
+ * secrets.
+ *
+ * NEVER use:
+ *
+ * VITE_HUBTEL_CLIENT_ID
+ * VITE_HUBTEL_CLIENT_SECRET
+ * VITE_HUBTEL_API_ID
+ * VITE_HUBTEL_API_KEY
+ * VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER
+ *
+ * VITE_* variables can be exposed to the browser.
+ */
+
+const HUBTEL_CLIENT_ID = readEnv('HUBTEL_CLIENT_ID');
+
+const HUBTEL_CLIENT_SECRET = readEnv('HUBTEL_CLIENT_SECRET');
+
 const MERCHANT_ACCOUNT_NUMBER = readEnv(
-  'HUBTEL_MERCHANT_ACCOUNT_NUMBER',
-  'VITE_HUBTEL_MERCHANT_ACCOUNT_NUMBER'
+  'HUBTEL_MERCHANT_ACCOUNT_NUMBER'
 );
-const HUBTEL_INITIATE_URL = readEnv('HUBTEL_INITIATE_URL')
-  || 'https://payproxyapi.hubtel.com/items/initiate';
+
+const HUBTEL_INITIATE_URL =
+  readEnv('HUBTEL_INITIATE_URL') ||
+  'https://payproxyapi.hubtel.com/items/initiate';
+
+
+/*
+ * ============================================================
+ * CORS
+ * ============================================================
+ */
 
 function createCorsHeaders(req) {
+  const origin = req.headers.get('origin');
+
   return {
-    'Access-Control-Allow-Origin': req.headers.get('origin') || '*',
-    'Access-Control-Allow-Headers': req.headers.get('access-control-request-headers') || 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Max-Age': '86400',
-    Vary: 'Origin, Access-Control-Request-Headers',
+    'Access-Control-Allow-Origin': origin || '*',
+
+    'Access-Control-Allow-Headers':
+      'authorization, x-client-info, apikey, content-type',
+
+    'Access-Control-Allow-Methods':
+      'POST, OPTIONS',
+
+    'Access-Control-Max-Age':
+      '86400',
+
+    Vary:
+      'Origin, Access-Control-Request-Headers',
   };
 }
 
+
+/*
+ * ============================================================
+ * JSON RESPONSE
+ * ============================================================
+ */
+
 function jsonResponse(req, body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      ...createCorsHeaders(req),
-      'Content-Type': 'application/json',
-    },
-  });
+  return new Response(
+    JSON.stringify(body),
+    {
+      status,
+
+      headers: {
+        ...createCorsHeaders(req),
+        'Content-Type': 'application/json',
+      },
+    }
+  );
 }
+
+
+/*
+ * ============================================================
+ * CONFIGURATION VALIDATION
+ * ============================================================
+ */
 
 function getMissingConfiguration() {
   return [
-    !HUBTEL_CLIENT_SECRET ? 'HUBTEL_CLIENT_SECRET / HUBTEL_API_KEY' : null,
-    !MERCHANT_ACCOUNT_NUMBER ? 'HUBTEL_MERCHANT_ACCOUNT_NUMBER' : null,
+    !HUBTEL_CLIENT_ID
+      ? 'HUBTEL_CLIENT_ID'
+      : null,
+
+    !HUBTEL_CLIENT_SECRET
+      ? 'HUBTEL_CLIENT_SECRET'
+      : null,
+
+    !MERCHANT_ACCOUNT_NUMBER
+      ? 'HUBTEL_MERCHANT_ACCOUNT_NUMBER'
+      : null,
   ].filter(Boolean);
 }
+
 
 function isConfigured() {
   return getMissingConfiguration().length === 0;
 }
 
-function createBasicAuthHeader(username = '', password = '') {
-  return `Basic ${btoa(`${username}:${password}`)}`;
+
+/*
+ * ============================================================
+ * HUBTEL AUTHENTICATION
+ * ============================================================
+ *
+ * Hubtel credentials remain entirely server-side.
+ */
+
+function getHubtelAuthorizationHeader() {
+  if (!HUBTEL_CLIENT_ID || !HUBTEL_CLIENT_SECRET) {
+    throw new Error(
+      'Hubtel client credentials are not configured.'
+    );
+  }
+
+  const credentials =
+    `${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`;
+
+  return `Basic ${btoa(credentials)}`;
 }
 
-function getAuthCandidates() {
-  const seen = new Set();
-  const candidates = [];
 
-  const push = (label, username = '', password = '') => {
-    if (!username) return;
-
-    const header = createBasicAuthHeader(username, password);
-    if (seen.has(header)) return;
-
-    seen.add(header);
-    candidates.push({ label, header });
-  };
-
-  push('client_id_and_client_secret', HUBTEL_CLIENT_ID, HUBTEL_CLIENT_SECRET);
-  push('client_secret_only', HUBTEL_CLIENT_SECRET, '');
-  push('client_id_only', HUBTEL_CLIENT_ID, '');
-
-  return candidates;
-}
+/*
+ * ============================================================
+ * REQUEST BODY PARSER
+ * ============================================================
+ */
 
 async function parseJsonBody(req) {
   try {
     const text = await req.text();
-    if (!text) return null;
+
+    if (!text) {
+      return null;
+    }
+
     return JSON.parse(text);
   } catch (_) {
     return null;
   }
 }
+
+
+/*
+ * ============================================================
+ * SANITIZATION
+ * ============================================================
+ */
 
 function sanitizeDescription(value = '') {
   const cleaned = String(value || '')
@@ -101,17 +176,28 @@ function sanitizeDescription(value = '') {
   return cleaned || 'FMM CLASSICO checkout';
 }
 
+
 function sanitizePhone(value = '') {
-  return String(value || '').replace(/[^0-9+]/g, '').slice(0, 20);
+  return String(value || '')
+    .replace(/[^0-9+]/g, '')
+    .slice(0, 20);
 }
+
 
 function sanitizeEmail(value = '') {
-  return String(value || '').trim().slice(0, 120);
+  return String(value || '')
+    .trim()
+    .slice(0, 120);
 }
 
+
 function sanitizeName(value = '') {
-  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
 }
+
 
 function sanitizeClientReference(value = '') {
   return String(value || '')
@@ -120,30 +206,79 @@ function sanitizeClientReference(value = '') {
     .slice(0, 32);
 }
 
+
+/*
+ * ============================================================
+ * AMOUNT NORMALIZATION
+ * ============================================================
+ */
+
 function normalizeAmount(value) {
   const amount = Number(value);
-  if (!Number.isFinite(amount)) return null;
+
+  if (!Number.isFinite(amount)) {
+    return null;
+  }
+
   return Number(amount.toFixed(2));
 }
 
+
+/*
+ * ============================================================
+ * REQUEST VALIDATION
+ * ============================================================
+ */
+
 function validatePayload(body = {}) {
-  const totalAmount = normalizeAmount(body.totalAmount);
-  const callbackUrl = String(body.callbackUrl || '').trim();
-  const returnUrl = String(body.returnUrl || '').trim();
-  const cancellationUrl = String(body.cancellationUrl || '').trim();
-  const clientReference = sanitizeClientReference(body.clientReference || '');
-  const description = sanitizeDescription(body.description || `Payment for ${clientReference || 'order'}`);
+  const totalAmount =
+    normalizeAmount(body.totalAmount);
+
+  const callbackUrl =
+    String(body.callbackUrl || '').trim();
+
+  const returnUrl =
+    String(body.returnUrl || '').trim();
+
+  const cancellationUrl =
+    String(body.cancellationUrl || '').trim();
+
+  const clientReference =
+    sanitizeClientReference(
+      body.clientReference || ''
+    );
+
+  const description =
+    sanitizeDescription(
+      body.description ||
+      `Payment for ${clientReference || 'order'}`
+    );
 
   const missingFields = [
-    totalAmount == null || totalAmount <= 0 ? 'totalAmount' : null,
-    !callbackUrl ? 'callbackUrl' : null,
-    !returnUrl ? 'returnUrl' : null,
-    !cancellationUrl ? 'cancellationUrl' : null,
-    !clientReference ? 'clientReference' : null,
+    totalAmount == null || totalAmount <= 0
+      ? 'totalAmount'
+      : null,
+
+    !callbackUrl
+      ? 'callbackUrl'
+      : null,
+
+    !returnUrl
+      ? 'returnUrl'
+      : null,
+
+    !cancellationUrl
+      ? 'cancellationUrl'
+      : null,
+
+    !clientReference
+      ? 'clientReference'
+      : null,
   ].filter(Boolean);
 
   return {
     missingFields,
+
     payload: {
       totalAmount,
       callbackUrl,
@@ -151,211 +286,614 @@ function validatePayload(body = {}) {
       cancellationUrl,
       clientReference,
       description,
-      payeeName: sanitizeName(body.payeeName || ''),
-      payeeMobileNumber: sanitizePhone(body.payeeMobileNumber || ''),
-      payeeEmail: sanitizeEmail(body.payeeEmail || ''),
+
+      payeeName:
+        sanitizeName(body.payeeName || ''),
+
+      payeeMobileNumber:
+        sanitizePhone(
+          body.payeeMobileNumber || ''
+        ),
+
+      payeeEmail:
+        sanitizeEmail(
+          body.payeeEmail || ''
+        ),
     },
   };
 }
 
+
+/*
+ * ============================================================
+ * HUBTEL REQUEST PAYLOAD
+ * ============================================================
+ */
+
 function buildHubtelPayload(payload) {
   return {
-    totalAmount: payload.totalAmount,
-    description: payload.description,
-    callbackUrl: payload.callbackUrl,
-    returnUrl: payload.returnUrl,
-    merchantAccountNumber: MERCHANT_ACCOUNT_NUMBER,
-    cancellationUrl: payload.cancellationUrl,
-    clientReference: payload.clientReference,
-    ...(payload.payeeName ? { payeeName: payload.payeeName } : {}),
-    ...(payload.payeeMobileNumber ? { payeeMobileNumber: payload.payeeMobileNumber } : {}),
-    ...(payload.payeeEmail ? { payeeEmail: payload.payeeEmail } : {}),
+    totalAmount:
+      payload.totalAmount,
+
+    description:
+      payload.description,
+
+    callbackUrl:
+      payload.callbackUrl,
+
+    returnUrl:
+      payload.returnUrl,
+
+    merchantAccountNumber:
+      MERCHANT_ACCOUNT_NUMBER,
+
+    cancellationUrl:
+      payload.cancellationUrl,
+
+    clientReference:
+      payload.clientReference,
+
+    ...(payload.payeeName
+      ? {
+          payeeName:
+            payload.payeeName,
+        }
+      : {}),
+
+    ...(payload.payeeMobileNumber
+      ? {
+          payeeMobileNumber:
+            payload.payeeMobileNumber,
+        }
+      : {}),
+
+    ...(payload.payeeEmail
+      ? {
+          payeeEmail:
+            payload.payeeEmail,
+        }
+      : {}),
   };
 }
+
+
+/*
+ * ============================================================
+ * HUBTEL RESPONSE PARSER
+ * ============================================================
+ */
 
 async function parseHubtelResponse(response) {
   const text = await response.text();
+
   if (!text) {
     return {
-      httpStatus: response.status,
-      ok: response.ok,
-      body: {},
+      httpStatus:
+        response.status,
+
+      ok:
+        response.ok,
+
+      body:
+        {},
     };
   }
 
   try {
     return {
-      httpStatus: response.status,
-      ok: response.ok,
-      body: JSON.parse(text),
+      httpStatus:
+        response.status,
+
+      ok:
+        response.ok,
+
+      body:
+        JSON.parse(text),
     };
   } catch (_) {
     return {
-      httpStatus: response.status,
-      ok: response.ok,
+      httpStatus:
+        response.status,
+
+      ok:
+        response.ok,
+
       body: {
-        error: 'Invalid JSON response from Hubtel initiate API',
-        raw: text,
+        error:
+          'Invalid JSON response from Hubtel initiate API',
+
+        raw:
+          text,
       },
     };
   }
 }
 
+
+/*
+ * ============================================================
+ * HUBTEL RESPONSE EXTRACTION
+ * ============================================================
+ */
+
 function extractCheckoutData(body = {}) {
-  const data = body?.data || body?.Data || body;
+  const data =
+    body?.data ||
+    body?.Data ||
+    body;
+
   return {
-    responseCode: body?.responseCode || body?.ResponseCode || '',
-    status: body?.status || body?.Status || data?.status || data?.Status || '',
-    checkoutUrl: data?.checkoutUrl || data?.CheckoutUrl || null,
-    checkoutDirectUrl: data?.checkoutDirectUrl || data?.CheckoutDirectUrl || null,
-    checkoutId: data?.checkoutId || data?.CheckoutId || null,
-    clientReference: data?.clientReference || data?.ClientReference || body?.clientReference || null,
+    responseCode:
+      body?.responseCode ||
+      body?.ResponseCode ||
+      data?.responseCode ||
+      data?.ResponseCode ||
+      '',
+
+    status:
+      body?.status ||
+      body?.Status ||
+      data?.status ||
+      data?.Status ||
+      '',
+
+    checkoutUrl:
+      data?.checkoutUrl ||
+      data?.CheckoutUrl ||
+      null,
+
+    checkoutDirectUrl:
+      data?.checkoutDirectUrl ||
+      data?.CheckoutDirectUrl ||
+      null,
+
+    checkoutId:
+      data?.checkoutId ||
+      data?.CheckoutId ||
+      null,
+
+    clientReference:
+      data?.clientReference ||
+      data?.ClientReference ||
+      body?.clientReference ||
+      body?.ClientReference ||
+      null,
   };
 }
+
+
+/*
+ * ============================================================
+ * HUBTEL ERROR MESSAGE
+ * ============================================================
+ */
 
 function extractHubtelMessage(body = {}) {
   return String(
-    body?.message
-      || body?.Message
-      || body?.error
-      || body?.Error
-      || body?.ResponseMessage
-      || body?.raw
-      || ''
+    body?.message ||
+    body?.Message ||
+    body?.error ||
+    body?.Error ||
+    body?.ResponseMessage ||
+    ''
   ).trim();
 }
 
-function createClientPayload(body = {}, checkout = {}, fallbackReference = '', authMetadata = {}) {
+
+/*
+ * ============================================================
+ * CLIENT RESPONSE
+ * ============================================================
+ *
+ * Do NOT expose Hubtel credentials or authentication metadata.
+ */
+
+function createClientPayload(
+  body = {},
+  checkout = {},
+  fallbackReference = ''
+) {
   return {
-    ...body,
-    responseCode: checkout.responseCode || body?.responseCode || body?.ResponseCode || '',
-    status: checkout.status || body?.status || body?.Status || '',
-    checkoutUrl: checkout.checkoutUrl,
-    checkoutDirectUrl: checkout.checkoutDirectUrl,
-    checkoutId: checkout.checkoutId,
-    clientReference: checkout.clientReference || fallbackReference || body?.clientReference || body?.ClientReference || null,
-    message: extractHubtelMessage(body),
-    authModeUsed: authMetadata.authModeUsed || null,
-    authAttempts: authMetadata.authAttempts || [],
+    responseCode:
+      checkout.responseCode ||
+      body?.responseCode ||
+      body?.ResponseCode ||
+      '',
+
+    status:
+      checkout.status ||
+      body?.status ||
+      body?.Status ||
+      '',
+
+    checkoutUrl:
+      checkout.checkoutUrl,
+
+    checkoutDirectUrl:
+      checkout.checkoutDirectUrl,
+
+    checkoutId:
+      checkout.checkoutId,
+
+    clientReference:
+      checkout.clientReference ||
+      fallbackReference ||
+      body?.clientReference ||
+      body?.ClientReference ||
+      null,
+
+    message:
+      extractHubtelMessage(body),
   };
 }
 
-async function callHubtelInitiate(hubtelPayload) {
-  const authCandidates = getAuthCandidates();
-  const authAttempts = [];
-  let lastParsed = null;
-  let authModeUsed = null;
 
-  for (const candidate of authCandidates) {
-    console.log('[Hubtel Initiate] Trying auth mode:', candidate.label);
+/*
+ * ============================================================
+ * HUBTEL INITIATE REQUEST
+ * ============================================================
+ *
+ * ONE authentication method only.
+ */
 
-    const response = await fetch(HUBTEL_INITIATE_URL, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: candidate.header,
-      },
-      body: JSON.stringify(hubtelPayload),
-    });
+async function callHubtelInitiate(
+  hubtelPayload
+) {
+  const authorization =
+    getHubtelAuthorizationHeader();
 
-    const parsed = await parseHubtelResponse(response);
-    authAttempts.push({ authMode: candidate.label, httpStatus: parsed.httpStatus, ok: parsed.ok });
-    lastParsed = parsed;
+  const response =
+    await fetch(
+      HUBTEL_INITIATE_URL,
+      {
+        method:
+          'POST',
 
-    if (parsed.httpStatus !== 401) {
-      authModeUsed = candidate.label;
-      break;
-    }
-  }
+        headers: {
+          Accept:
+            'application/json',
 
-  return {
-    parsed: lastParsed,
-    authModeUsed,
-    authAttempts,
-  };
+          'Content-Type':
+            'application/json',
+
+          Authorization:
+            authorization,
+        },
+
+        body:
+          JSON.stringify(
+            hubtelPayload
+          ),
+      }
+    );
+
+  const parsed =
+    await parseHubtelResponse(
+      response
+    );
+
+  return parsed;
 }
+
+
+/*
+ * ============================================================
+ * EDGE FUNCTION
+ * ============================================================
+ */
 
 Deno.serve(async (req) => {
+
+  /*
+   * ----------------------------------------------------------
+   * CORS PREFLIGHT
+   * ----------------------------------------------------------
+   */
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: createCorsHeaders(req),
-    });
+    return new Response(
+      null,
+      {
+        status:
+          204,
+
+        headers:
+          createCorsHeaders(req),
+      }
+    );
   }
+
+
+  /*
+   * ----------------------------------------------------------
+   * METHOD VALIDATION
+   * ----------------------------------------------------------
+   */
 
   if (req.method !== 'POST') {
-    return jsonResponse(req, { error: 'Method not allowed' }, 405);
+    return jsonResponse(
+      req,
+      {
+        error:
+          'Method not allowed',
+      },
+      405
+    );
   }
+
+
+  /*
+   * ----------------------------------------------------------
+   * CONFIGURATION VALIDATION
+   * ----------------------------------------------------------
+   */
 
   if (!isConfigured()) {
-    const missingConfiguration = getMissingConfiguration();
-    console.error('[Hubtel Initiate] Missing required Hubtel configuration:', missingConfiguration);
-    return jsonResponse(req, {
-      error: 'Hubtel gateway is not configured.',
-      missingConfiguration,
-    }, 500);
+    const missingConfiguration =
+      getMissingConfiguration();
+
+    console.error(
+      '[Hubtel Initiate] Missing required server configuration:',
+      missingConfiguration
+    );
+
+    return jsonResponse(
+      req,
+      {
+        error:
+          'Hubtel gateway is not configured.',
+      },
+      500
+    );
   }
 
+
   try {
-    const body = await parseJsonBody(req);
-    if (!body || typeof body !== 'object') {
-      return jsonResponse(req, { error: 'Invalid JSON' }, 400);
+
+    /*
+     * --------------------------------------------------------
+     * PARSE REQUEST
+     * --------------------------------------------------------
+     */
+
+    const body =
+      await parseJsonBody(req);
+
+    if (
+      !body ||
+      typeof body !== 'object'
+    ) {
+      return jsonResponse(
+        req,
+        {
+          error:
+            'Invalid JSON.',
+        },
+        400
+      );
     }
 
-    const { missingFields, payload } = validatePayload(body);
-    if (missingFields.length > 0) {
-      return jsonResponse(req, {
-        error: 'Missing required fields.',
-        missingFields,
-      }, 400);
+
+    /*
+     * --------------------------------------------------------
+     * VALIDATE PAYMENT REQUEST
+     * --------------------------------------------------------
+     */
+
+    const {
+      missingFields,
+      payload,
+    } =
+      validatePayload(body);
+
+    if (
+      missingFields.length > 0
+    ) {
+      return jsonResponse(
+        req,
+        {
+          error:
+            'Missing required fields.',
+
+          missingFields,
+        },
+        400
+      );
     }
 
-    const hubtelPayload = buildHubtelPayload(payload);
 
-    console.log('[Hubtel Initiate] Starting checkout request:', {
-      clientReference: payload.clientReference,
-      totalAmount: payload.totalAmount,
-      merchantAccountNumber: MERCHANT_ACCOUNT_NUMBER,
-      hasCallbackUrl: Boolean(payload.callbackUrl),
-      hasReturnUrl: Boolean(payload.returnUrl),
-      hasCancellationUrl: Boolean(payload.cancellationUrl),
-      authCandidates: getAuthCandidates().map((candidate) => candidate.label),
-    });
+    /*
+     * --------------------------------------------------------
+     * BUILD HUBTEL PAYLOAD
+     * --------------------------------------------------------
+     */
 
-    const { parsed, authModeUsed, authAttempts } = await callHubtelInitiate(hubtelPayload);
-    const checkout = extractCheckoutData(parsed?.body || {});
+    const hubtelPayload =
+      buildHubtelPayload(
+        payload
+      );
 
-    console.log('[Hubtel Initiate] Hubtel response summary:', {
-      httpStatus: parsed?.httpStatus || null,
-      ok: parsed?.ok || false,
-      responseCode: checkout.responseCode || null,
-      status: checkout.status || null,
-      checkoutId: checkout.checkoutId,
-      hasCheckoutUrl: Boolean(checkout.checkoutUrl || checkout.checkoutDirectUrl),
-      clientReference: checkout.clientReference || payload.clientReference,
-      authModeUsed,
-      authAttempts,
-    });
 
-    const clientPayload = createClientPayload(parsed?.body || {}, checkout, payload.clientReference, {
-      authModeUsed,
-      authAttempts,
-    });
+    /*
+     * --------------------------------------------------------
+     * SERVER LOG
+     * --------------------------------------------------------
+     *
+     * Never log credentials.
+     */
+
+    console.log(
+      '[Hubtel Initiate] Starting payment request:',
+      {
+        clientReference:
+          payload.clientReference,
+
+        totalAmount:
+          payload.totalAmount,
+
+        hasCallbackUrl:
+          Boolean(
+            payload.callbackUrl
+          ),
+
+        hasReturnUrl:
+          Boolean(
+            payload.returnUrl
+          ),
+
+        hasCancellationUrl:
+          Boolean(
+            payload.cancellationUrl
+          ),
+      }
+    );
+
+
+    /*
+     * --------------------------------------------------------
+     * CALL HUBTEL
+     * --------------------------------------------------------
+     */
+
+    const parsed =
+      await callHubtelInitiate(
+        hubtelPayload
+      );
+
+
+    /*
+     * --------------------------------------------------------
+     * EXTRACT CHECKOUT DATA
+     * --------------------------------------------------------
+     */
+
+    const checkout =
+      extractCheckoutData(
+        parsed?.body || {}
+      );
+
+
+    /*
+     * --------------------------------------------------------
+     * LOG SAFE RESPONSE INFORMATION
+     * --------------------------------------------------------
+     */
+
+    console.log(
+      '[Hubtel Initiate] Hubtel response:',
+      {
+        httpStatus:
+          parsed?.httpStatus ||
+          null,
+
+        ok:
+          parsed?.ok ||
+          false,
+
+        responseCode:
+          checkout.responseCode ||
+          null,
+
+        status:
+          checkout.status ||
+          null,
+
+        checkoutId:
+          checkout.checkoutId ||
+          null,
+
+        hasCheckoutUrl:
+          Boolean(
+            checkout.checkoutUrl ||
+            checkout.checkoutDirectUrl
+          ),
+
+        clientReference:
+          checkout.clientReference ||
+          payload.clientReference,
+      }
+    );
+
+
+    /*
+     * --------------------------------------------------------
+     * HUBTEL FAILURE
+     * --------------------------------------------------------
+     */
 
     if (!parsed?.ok) {
-      return jsonResponse(req, {
-        ...clientPayload,
-        error: clientPayload.message || 'Hubtel initiate request failed.',
-      }, parsed?.httpStatus || 502);
+      const message =
+        extractHubtelMessage(
+          parsed?.body || {}
+        );
+
+      return jsonResponse(
+        req,
+        {
+          error:
+            message ||
+            'Hubtel initiate request failed.',
+
+          responseCode:
+            checkout.responseCode ||
+            '',
+
+          status:
+            checkout.status ||
+            '',
+
+          clientReference:
+            payload.clientReference,
+        },
+        parsed?.httpStatus || 502
+      );
     }
 
-    return jsonResponse(req, clientPayload, parsed.httpStatus);
+
+    /*
+     * --------------------------------------------------------
+     * SUCCESS
+     * --------------------------------------------------------
+     */
+
+    const clientPayload =
+      createClientPayload(
+        parsed?.body || {},
+        checkout,
+        payload.clientReference
+      );
+
+    return jsonResponse(
+      req,
+      clientPayload,
+      parsed.httpStatus
+    );
+
   } catch (error) {
-    console.error('[Hubtel Initiate] Network or fetch error:', error);
-    return jsonResponse(req, {
-      error: 'Failed to reach Hubtel initiate API.',
-      details: error instanceof Error ? error.message : String(error),
-    }, 502);
+
+    /*
+     * --------------------------------------------------------
+     * SERVER ERROR
+     * --------------------------------------------------------
+     */
+
+    console.error(
+      '[Hubtel Initiate] Server error:',
+      error
+    );
+
+    return jsonResponse(
+      req,
+      {
+        error:
+          'Failed to reach Hubtel initiate API.',
+
+        details:
+          error instanceof Error
+            ? error.message
+            : String(error),
+      },
+      502
+    );
   }
 });

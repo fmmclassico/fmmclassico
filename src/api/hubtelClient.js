@@ -4,13 +4,13 @@ import {
   getHubtelStatusUrl,
 } from '@/lib/runtime-config';
 
-import { supabaseClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 async function getAuthorizationHeaders() {
   const {
     data: { session },
     error,
-  } = await supabaseClient.auth.getSession();
+  } = await supabase.auth.getSession();
 
   if (error) {
     console.error('[HubtelClient] Failed to get Supabase session:', error);

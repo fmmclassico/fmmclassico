@@ -94,10 +94,21 @@ function resolveRequestUrl(url) {
   return new URL(String(url || ''), window.location.origin).toString();
 }
 
-function hasAuthorizationProxyError(result) {
-  const values = [
+function getResponseCode(result) {
+  return String(
+    result?.responseCode
+      || result?.ResponseCode
+      || result?.data?.responseCode
+      || result?.data?.ResponseCode
+      || ''
+  ).trim();
+}
+
+function extractDiagnosticCandidates(result) {
+  return [
     result?.data?.error,
     result?.data?.message,
+    result?.data?.details,
     result?.message,
     result?.details,
     result?.technicalError,
@@ -106,8 +117,32 @@ function hasAuthorizationProxyError(result) {
   ]
     .map((value) => String(value || '').toLowerCase())
     .filter(Boolean);
+}
 
-  return values.some((value) => value.includes('missing authorization header') || value.includes('unauthorized'));
+function hasAuthorizationProxyError(result) {
+  const values = extractDiagnosticCandidates(result);
+
+  return result?.httpStatus === 401
+    || values.some((value) => (
+      value.includes('missing authorization header')
+      || value.includes('authorization credentials')
+      || value.includes('unauthorized')
+      || value.includes('invalid authorization')
+      || value.includes('invalid api key')
+      || value.includes('invalid credentials')
+    ));
+}
+
+function hasWhitelistingOrForbiddenStatusError(result) {
+  const values = extractDiagnosticCandidates(result);
+
+  return result?.httpStatus === 403
+    || values.some((value) => (
+      value.includes('forbidden')
+      || value.includes('whitelist')
+      || value.includes('not been whitelisted')
+      || value.includes('ip address')
+    ));
 }
 
 export function createInitialPaymentReference(orderNumber, paymentMethod) {
@@ -171,15 +206,7 @@ export function getHubtelPaidAmount(result) {
   return null;
 }
 
-export function getHubtelErrorMessage(result, fallback = 'Unable to continue with Hubtel right now.') {
-  if (result?.likelyCorsOrDeploymentIssue) {
-    return 'The payment gateway could not be reached. Check the site proxy or Supabase function deployment.';
-  }
-
-  if (hasAuthorizationProxyError(result)) {
-    return 'The payment proxy reached the backend, but the Hubtel authorization credentials were rejected or missing. Redeploy the updated hubtel-initiate function and confirm the Hubtel secrets are set in Supabase.';
-  }
-
+export function getHubtelDiagnosticMessage(result, fallback = 'Unable to continue with Hubtel right now.') {
   const genericErrors = new Set([
     'Unable to start payment.',
     'Unable to verify payment status.',
@@ -207,6 +234,39 @@ export function getHubtelErrorMessage(result, fallback = 'Unable to continue wit
 
   if (result?.httpStatus) {
     return `Hubtel request failed with HTTP ${result.httpStatus}.`;
+  }
+
+  return fallback;
+}
+
+export function getHubtelCustomerErrorMessage(result, fallback = 'We could not start your payment right now. Please try again.') {
+  if (result?.likelyCorsOrDeploymentIssue) {
+    return 'We could not reach the secure payment service right now. Please try again in a moment.';
+  }
+
+  if (hasAuthorizationProxyError(result)) {
+    return 'We could not start your secure payment right now. Please try again shortly or contact support if the issue continues.';
+  }
+
+  if (hasWhitelistingOrForbiddenStatusError(result)) {
+    return 'We could not verify the payment service right now. Please try again later.';
+  }
+
+  const responseCode = getResponseCode(result);
+  if (responseCode === '4070') {
+    return 'This payment could not be completed right now. Please try again later or contact support.';
+  }
+
+  if (responseCode === '4000' || (Array.isArray(result?.missingFields) && result.missingFields.length > 0)) {
+    return 'Some checkout details were incomplete. Please review your information and try again.';
+  }
+
+  if (result?.httpStatus >= 500) {
+    return 'The secure payment service is temporarily unavailable. Please try again later.';
+  }
+
+  if (result?.httpStatus >= 400) {
+    return 'We could not start your secure payment right now. Please review your details and try again.';
   }
 
   return fallback;

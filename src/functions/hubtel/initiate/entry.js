@@ -47,7 +47,6 @@ function jsonResponse(req, body, status = 200) {
 
 function getMissingConfiguration() {
   return [
-    !HUBTEL_CLIENT_ID ? 'HUBTEL_CLIENT_ID / HUBTEL_API_ID / HUBTEL_AP_ID' : null,
     !HUBTEL_CLIENT_SECRET ? 'HUBTEL_CLIENT_SECRET / HUBTEL_API_KEY' : null,
     !MERCHANT_ACCOUNT_NUMBER ? 'HUBTEL_MERCHANT_ACCOUNT_NUMBER' : null,
   ].filter(Boolean);
@@ -57,8 +56,29 @@ function isConfigured() {
   return getMissingConfiguration().length === 0;
 }
 
-function createAuthHeader() {
-  return `Basic ${btoa(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`)}`;
+function createBasicAuthHeader(username = '', password = '') {
+  return `Basic ${btoa(`${username}:${password}`)}`;
+}
+
+function getAuthCandidates() {
+  const seen = new Set();
+  const candidates = [];
+
+  const push = (label, username = '', password = '') => {
+    if (!username) return;
+
+    const header = createBasicAuthHeader(username, password);
+    if (seen.has(header)) return;
+
+    seen.add(header);
+    candidates.push({ label, header });
+  };
+
+  push('client_id_and_client_secret', HUBTEL_CLIENT_ID, HUBTEL_CLIENT_SECRET);
+  push('client_secret_only', HUBTEL_CLIENT_SECRET, '');
+  push('client_id_only', HUBTEL_CLIENT_ID, '');
+
+  return candidates;
 }
 
 async function parseJsonBody(req) {
@@ -205,7 +225,7 @@ function extractHubtelMessage(body = {}) {
   ).trim();
 }
 
-function createClientPayload(body = {}, checkout = {}, fallbackReference = '') {
+function createClientPayload(body = {}, checkout = {}, fallbackReference = '', authMetadata = {}) {
   return {
     ...body,
     responseCode: checkout.responseCode || body?.responseCode || body?.ResponseCode || '',
@@ -215,6 +235,44 @@ function createClientPayload(body = {}, checkout = {}, fallbackReference = '') {
     checkoutId: checkout.checkoutId,
     clientReference: checkout.clientReference || fallbackReference || body?.clientReference || body?.ClientReference || null,
     message: extractHubtelMessage(body),
+    authModeUsed: authMetadata.authModeUsed || null,
+    authAttempts: authMetadata.authAttempts || [],
+  };
+}
+
+async function callHubtelInitiate(hubtelPayload) {
+  const authCandidates = getAuthCandidates();
+  const authAttempts = [];
+  let lastParsed = null;
+  let authModeUsed = null;
+
+  for (const candidate of authCandidates) {
+    console.log('[Hubtel Initiate] Trying auth mode:', candidate.label);
+
+    const response = await fetch(HUBTEL_INITIATE_URL, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: candidate.header,
+      },
+      body: JSON.stringify(hubtelPayload),
+    });
+
+    const parsed = await parseHubtelResponse(response);
+    authAttempts.push({ authMode: candidate.label, httpStatus: parsed.httpStatus, ok: parsed.ok });
+    lastParsed = parsed;
+
+    if (parsed.httpStatus !== 401) {
+      authModeUsed = candidate.label;
+      break;
+    }
+  }
+
+  return {
+    parsed: lastParsed,
+    authModeUsed,
+    authAttempts,
   };
 }
 
@@ -262,38 +320,34 @@ Deno.serve(async (req) => {
       hasCallbackUrl: Boolean(payload.callbackUrl),
       hasReturnUrl: Boolean(payload.returnUrl),
       hasCancellationUrl: Boolean(payload.cancellationUrl),
+      authCandidates: getAuthCandidates().map((candidate) => candidate.label),
     });
 
-    const response = await fetch(HUBTEL_INITIATE_URL, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: createAuthHeader(),
-      },
-      body: JSON.stringify(hubtelPayload),
-    });
-
-    const parsed = await parseHubtelResponse(response);
-    const checkout = extractCheckoutData(parsed.body);
+    const { parsed, authModeUsed, authAttempts } = await callHubtelInitiate(hubtelPayload);
+    const checkout = extractCheckoutData(parsed?.body || {});
 
     console.log('[Hubtel Initiate] Hubtel response summary:', {
-      httpStatus: parsed.httpStatus,
-      ok: parsed.ok,
+      httpStatus: parsed?.httpStatus || null,
+      ok: parsed?.ok || false,
       responseCode: checkout.responseCode || null,
       status: checkout.status || null,
       checkoutId: checkout.checkoutId,
       hasCheckoutUrl: Boolean(checkout.checkoutUrl || checkout.checkoutDirectUrl),
       clientReference: checkout.clientReference || payload.clientReference,
+      authModeUsed,
+      authAttempts,
     });
 
-    const clientPayload = createClientPayload(parsed.body, checkout, payload.clientReference);
+    const clientPayload = createClientPayload(parsed?.body || {}, checkout, payload.clientReference, {
+      authModeUsed,
+      authAttempts,
+    });
 
-    if (!parsed.ok) {
+    if (!parsed?.ok) {
       return jsonResponse(req, {
         ...clientPayload,
         error: clientPayload.message || 'Hubtel initiate request failed.',
-      }, parsed.httpStatus);
+      }, parsed?.httpStatus || 502);
     }
 
     return jsonResponse(req, clientPayload, parsed.httpStatus);

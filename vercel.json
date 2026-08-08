@@ -5,16 +5,12 @@
       "destination": "https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-initiate"
     },
     {
-      "source": "/api/hubtel/status",
-      "destination": "https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-status"
-    },
-    {
       "source": "/api/hubtel/callback",
       "destination": "https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-callback"
     },
     {
-      "source": "/(.*)",
-      "destination": "/"
+      "source": "/api/hubtel/status",
+      "destination": "https://kptlejtauwqvaapsrjfx.supabase.co/functions/v1/hubtel-status"
     }
   ]
 }

@@ -37,7 +37,7 @@ function CategoryCard({ catKey, label, desc, settings, saveMutation, queryClient
   const handleUpload = async (file) => {
     if (!file) return;
     setUploading(true);
-    const { file_url } = await appClient.integrations.Core.UploadFile({ file });
+    const { file_url } = await appClient.integrations.Core.UploadFile({ file, maxBytes: 50 * 1024, maxDimension: 900 });
     // save old image to history
     const newHistory = currentImg ? [currentImg, ...history.filter(h => h !== file_url)].slice(0, 10) : history;
     await Promise.all([

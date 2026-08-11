@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { getSupabaseConfig, getSupabaseFunctionUrl } from '@/lib/runtime-config';
 import { normalizeTextDeep } from '@/lib/text';
+import { prepareUploadFile } from '@/lib/uploadOptimizer';
 
 const PROMO_BANNER_RESPONSIVE_FIELDS = ['desktop_image_url', 'mobile_image_url'];
 const PRODUCT_ARRAY_FIELDS = ['image_urls', 'available_colors', 'available_wattage', 'available_types'];
@@ -634,12 +635,13 @@ const { anonKey: SUPABASE_ANON_KEY } = getSupabaseConfig();
 
 const integrations = {
   Core: {
-    async UploadFile({ file }) {
-      const safeName = (file?.name || 'upload')
+    async UploadFile({ file, maxBytes, maxDimension } = {}) {
+      const preparedFile = await prepareUploadFile(file, { maxBytes, maxDimension });
+      const safeName = (preparedFile?.name || file?.name || 'upload')
         .replace(/\s+/g, '-')
         .replace(/[^a-zA-Z0-9._-]/g, '');
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
-      const { error } = await supabase.storage.from('uploads').upload(fileName, file, {
+      const { error } = await supabase.storage.from('uploads').upload(fileName, preparedFile, {
         cacheControl: '3600',
         upsert: false,
       });

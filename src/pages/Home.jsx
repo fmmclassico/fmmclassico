@@ -167,14 +167,15 @@ export default function Home() {
           <Link to={createPageUrl('Categories')} className="text-[#2E86C1] text-xs font-semibold flex items-center hover:underline">All <ChevronRight className="h-3 w-3" /></Link>
         </div>
         <div className="grid grid-cols-4 gap-2.5 md:gap-3">
-          {HOME_CATEGORIES.map(cat => {
+          {HOME_CATEGORIES.map((cat, index) => {
   const adminImg = settings.find(s => s.key === `cat_img_${cat.id}`)?.value;
+  const categoryImage = adminImg || cat.image;
   const isExpanded = expandedCat === cat.id;
   return (
     <div key={cat.id} onClick={() => setExpandedCat(isExpanded ? null : cat.id)} className="flex flex-col items-center gap-1.5 group">
       <div className={`w-16 h-16 sm:w-[4.25rem] sm:h-[4.25rem] md:w-[4.5rem] md:h-[4.5rem] rounded-2xl ${cat.color} flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform`}>
-        {adminImg
-          ? <OptimizedImage src={adminImg} alt={cat.label} containerClassName="w-full h-full" className="w-full h-full object-cover" lazy />
+        {categoryImage
+          ? <OptimizedImage src={categoryImage} alt={cat.label} containerClassName="w-full h-full" className="w-full h-full object-cover" lazy={false} priority={index < 4} sizes="(max-width: 640px) 64px, 72px" widths={[96, 128, 160, 192, 256, 320]} quality={55} />
           : null}
       </div>
       <span className="text-[11px] md:text-xs leading-tight font-medium text-gray-700 text-center">{cat.label}</span>

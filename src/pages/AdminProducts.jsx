@@ -49,6 +49,8 @@ const QUILL_MODULES = {
 };
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+const PRESET_WATTAGES = ['5W', '10W', '18W', '20W', '25W', '33W', '45W', '65W', '100W', '120W', '150W'];
+const PRESET_TYPES = ['USB-C', 'Lightning', 'Micro USB', 'Type-A', 'Wireless', 'Original', 'Compatible', 'Standard', 'Pro', 'Plus', 'Max'];
 
 function ensureArray(value) {
   if (Array.isArray(value)) return value;
@@ -93,48 +95,102 @@ function firstDefined(...values) {
   return values.find((value) => value !== undefined && value !== null && value !== '');
 }
 
+function normalizeLooseKey(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getSourceValue(source = {}, candidates = []) {
+  const entries = Object.entries(source || {});
+  for (const candidate of candidates) {
+    if (candidate in source && source[candidate] !== '') return source[candidate];
+  }
+
+  const normalizedCandidates = candidates.map((candidate) => normalizeLooseKey(candidate)).filter(Boolean);
+  const matchedEntry = entries.find(([key, value]) => normalizedCandidates.includes(normalizeLooseKey(key)) && value !== '');
+  return matchedEntry?.[1];
+}
+
+function parsePresetOptions(rawValue, presets = []) {
+  if (Array.isArray(rawValue)) return rawValue.filter(Boolean);
+  const raw = String(rawValue || '').trim();
+  if (!raw) return [];
+
+  const delimited = normalizeStringArray(raw);
+  if (delimited.length > 1) return delimited;
+
+  const compact = raw.replace(/\s+/g, '').toLowerCase();
+  const matches = presets.filter((preset) => compact.includes(String(preset).replace(/\s+/g, '').toLowerCase()));
+  return matches.length > 0 ? matches : delimited;
+}
+
+function resolveImportedMainGroup(value, categoryValue = '') {
+  const raw = String(value || '').trim();
+  if (!raw) return deriveMainGroupFromCategory(categoryValue) || '';
+
+  const normalized = normalizeLooseKey(raw);
+  const matched = MAIN_CATEGORY_GROUPS.find((group) => normalizeLooseKey(group.id) === normalized || normalizeLooseKey(group.label) === normalized);
+  return matched?.id || deriveMainGroupFromCategory(categoryValue) || raw;
+}
+
+function resolveImportedCategory(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const normalized = normalizeLooseKey(raw);
+  const matched = Object.values(GROUP_CATEGORIES)
+    .flat()
+    .find((category) => normalizeLooseKey(category.value) === normalized || normalizeLooseKey(category.label) === normalized);
+  return matched?.value || raw;
+}
+
 function buildImportedEditorPayload(row = {}) {
   const source = row?.original ? { ...row.original, ...row } : row;
   const rawExtraImages = firstDefined(
     source.image_urls,
-    source['Extra Product Images URL'],
-    source['Extra Image URLs'],
+    getSourceValue(source, ['Extra Product Images URL', 'Extra Image URLs']),
     source['Extra Image 1'],
   );
   const inferredExtraImages = normalizeStringArray(rawExtraImages).length
     ? normalizeStringArray(rawExtraImages)
     : [source['Extra Image 1'], source['Extra Image 2'], source['Extra Image 3'], source['Extra Image 4']].filter(Boolean);
   const media = normalizeProductMedia(
-    firstDefined(source.image_url, source['Main Product Image URL'], source['Main Image'], source['Image URL']) || '',
+    firstDefined(source.image_url, getSourceValue(source, ['Main Product Image URL', 'Main Image', 'Image URL'])) || '',
     inferredExtraImages,
   );
   const home_sections = Array.isArray(source.home_sections)
     ? source.home_sections
-    : normalizeStringArray(firstDefined(source['Homepage Sections'], source.home_sections) || '');
+    : normalizeStringArray(firstDefined(getSourceValue(source, ['Homepage Sections']), source.home_sections) || '');
 
   const colorOptions = Array.isArray(source.available_colors)
     ? source.available_colors
-    : normalizeStringArray(firstDefined(source.colors, source.Colors, source['Show Color Options to Customers']));
+    : parsePresetOptions(firstDefined(source.colors, source.Colors, getSourceValue(source, ['Show Color Options to Customers'])), PRESET_COLORS);
   const wattageOptions = Array.isArray(source.available_wattage)
     ? source.available_wattage
-    : normalizeStringArray(firstDefined(source.power, source.Power, source['Show Wattage Options to Customers']));
+    : parsePresetOptions(firstDefined(source.available_wattage, getSourceValue(source, ['Show Wattage Options to Customers'])), PRESET_WATTAGES);
   const typeOptions = Array.isArray(source.available_types)
     ? source.available_types
-    : normalizeStringArray(firstDefined(source.variants, source.Variants, source['Show Type/Variant Options to Customers']));
+    : parsePresetOptions(firstDefined(source.variants, source.Variants, getSourceValue(source, ['Show Type/Variant Options to Customers'])), PRESET_TYPES);
+
+  const categoryValue = firstDefined(source.category, source.categoryLabel, getSourceValue(source, ['Category'])) || '';
+  const resolvedCategory = resolveImportedCategory(categoryValue);
 
   const details = {
-    name: firstDefined(source.name, source['Product Name'], source.product_name, source.product) || '',
+    name: firstDefined(source.name, getSourceValue(source, ['Product Name', 'Name', 'Product'])) || '',
     price: firstDefined(source.price, source.Price) ?? '',
-    original_price: firstDefined(source.original_price, source['Original Price']) ?? '',
-    main_group: firstDefined(source.main_group, source['Main Group']) || '',
-    category: firstDefined(source.category, source.Category) || '',
-    brand: firstDefined(source.brand, source.Brand) || '',
-    subcategory: firstDefined(source.subcategory, source['Product Type / Subcategory'], source['Product Type'], source.Subcategory) || '',
+    original_price: firstDefined(source.original_price, getSourceValue(source, ['Original Price'])) ?? '',
+    main_group: resolveImportedMainGroup(firstDefined(source.main_group, getSourceValue(source, ['Main Group'])), resolvedCategory),
+    category: resolvedCategory,
+    brand: firstDefined(source.brand, getSourceValue(source, ['Brand'])) || '',
+    subcategory: firstDefined(source.subcategory, getSourceValue(source, ['Product Type / Subcategory', 'Product Type', 'Subcategory'])) || '',
     stock: firstDefined(source.stock, source.Stock) ?? '',
-    description: firstDefined(source.description, source['Description (Rich Text)'], source.Description) || '',
+    description: firstDefined(source.description, getSourceValue(source, ['Description (Rich Text)', 'Description'])) || '',
     image_url: media.image_url,
     image_urls: media.image_urls,
-    video_url: firstDefined(source.video_url, source['Product Video URL (optional)'], source['Video URL']) || '',
+    video_url: firstDefined(source.video_url, getSourceValue(source, ['Product Video URL (optional)', 'Video URL'])) || '',
     sku: firstDefined(source.sku, source.SKU) || '',
     barcode: firstDefined(source.barcode, source.Barcode) || '',
     warranty: firstDefined(source.warranty, source.Warranty) || '',
@@ -143,9 +199,9 @@ function buildImportedEditorPayload(row = {}) {
     capacity: firstDefined(source.capacity, source.Capacity) || '',
     ram: firstDefined(source.ram, source.RAM) || '',
     storage: firstDefined(source.storage, source.Storage) || '',
-    screen_size: firstDefined(source.screen_size, source['Screen Size']) || '',
+    screen_size: firstDefined(source.screen_size, getSourceValue(source, ['Screen Size'])) || '',
     features: firstDefined(source.features, source.Features) || '',
-    flash_sale_end: firstDefined(source.flash_sale_end, source['Flash Sale End Date']) || '',
+    flash_sale_end: firstDefined(source.flash_sale_end, getSourceValue(source, ['Flash Sale End Date'])) || '',
     is_visible: source.is_visible !== false,
     review_enabled: source.review_enabled !== false,
     show_colors: source.show_colors || colorOptions.length > 0,
@@ -170,7 +226,7 @@ function buildImportedEditorPayload(row = {}) {
   return {
     ...hydrated,
     ...details,
-    main_group: details.main_group || hydrated.main_group,
+    main_group: details.main_group || hydrated.main_group || deriveMainGroupFromCategory(details.category),
     description: details.description || generateDescription(details),
   };
 }
@@ -932,7 +988,7 @@ onProductMapped={handleImportedProduct}
                 {form.show_wattage && (
                   <div className="pt-1 space-y-2">
                     <div className="flex flex-wrap gap-1.5">
-                      {['5W', '10W', '18W', '20W', '25W', '33W', '45W', '65W', '100W', '120W', '150W'].map((wattage) => (
+                      {PRESET_WATTAGES.map((wattage) => (
                         <button key={wattage} type="button"
                           onClick={() => setForm((current) => ({
                             ...current,
@@ -970,7 +1026,7 @@ onProductMapped={handleImportedProduct}
                 {form.show_type && (
                   <div className="pt-1 space-y-2">
                     <div className="flex flex-wrap gap-1.5">
-                      {['USB-C', 'Lightning', 'Micro USB', 'Type-A', 'Wireless', 'Original', 'Compatible', 'Standard', 'Pro', 'Plus', 'Max'].map((type) => (
+                      {PRESET_TYPES.map((type) => (
                         <button key={type} type="button"
                           onClick={() => setForm((current) => ({
                             ...current,

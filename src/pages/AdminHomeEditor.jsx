@@ -367,7 +367,7 @@ export default function AdminHomeEditor() {
                     if (!e.target.files?.[0]) return;
                     setUploading(u => ({ ...u, banner_upload: true }));
                     try {
-                      const { file_url } = await appClient.integrations.Core.UploadFile({ file: e.target.files[0] });
+                      const { file_url } = await appClient.integrations.Core.UploadFile({ file: e.target.files[0], maxBytes: 50 * 1024, maxDimension: 900 });
                       await appClient.entities.PromoBanner.create({
                         title: 'New Banner',
                         subtitle: '',
@@ -411,7 +411,7 @@ export default function AdminHomeEditor() {
                           if (!e.target.files?.[0]) return;
                           setUploading(u => ({ ...u, [`banner_${b.id}`]: true }));
                           try {
-                            const { file_url } = await appClient.integrations.Core.UploadFile({ file: e.target.files[0] });
+                            const { file_url } = await appClient.integrations.Core.UploadFile({ file: e.target.files[0], maxBytes: 50 * 1024, maxDimension: 900 });
                             await appClient.entities.PromoBanner.update(b.id, { image_url: file_url });
                             queryClient.invalidateQueries({ queryKey: ['promoBanners'] });
                             toast.success('Image updated!');
@@ -538,7 +538,7 @@ export default function AdminHomeEditor() {
                             if (!e.target.files?.[0]) return;
                             setUploading(u => ({ ...u, [`custom_${cat.id}`]: true }));
                             try {
-                              const { file_url } = await appClient.integrations.Core.UploadFile({ file: e.target.files[0] });
+                              const { file_url } = await appClient.integrations.Core.UploadFile({ file: e.target.files[0], maxBytes: 50 * 1024, maxDimension: 900 });
                               await updateCustomCategory(cat, 'image', file_url);
                             } catch {
                               toast.error('Upload failed');

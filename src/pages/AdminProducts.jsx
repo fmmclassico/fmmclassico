@@ -89,52 +89,73 @@ async function askGemini(prompt, systemContext) {
   throw new Error(data?.error?.message || 'No response from AI service.');
 }
 
+function firstDefined(...values) {
+  return values.find((value) => value !== undefined && value !== null && value !== '');
+}
+
 function buildImportedEditorPayload(row = {}) {
   const source = row?.original ? { ...row.original, ...row } : row;
-  const inferredExtraImages = normalizeStringArray(source.image_urls).length
-    ? normalizeStringArray(source.image_urls)
+  const rawExtraImages = firstDefined(
+    source.image_urls,
+    source['Extra Product Images URL'],
+    source['Extra Image URLs'],
+    source['Extra Image 1'],
+  );
+  const inferredExtraImages = normalizeStringArray(rawExtraImages).length
+    ? normalizeStringArray(rawExtraImages)
     : [source['Extra Image 1'], source['Extra Image 2'], source['Extra Image 3'], source['Extra Image 4']].filter(Boolean);
   const media = normalizeProductMedia(
-    source.image_url || source['Main Image'] || source['Image URL'] || '',
+    firstDefined(source.image_url, source['Main Product Image URL'], source['Main Image'], source['Image URL']) || '',
     inferredExtraImages,
   );
   const home_sections = Array.isArray(source.home_sections)
     ? source.home_sections
-    : normalizeStringArray(source['Homepage Sections'] || source.home_sections || '');
+    : normalizeStringArray(firstDefined(source['Homepage Sections'], source.home_sections) || '');
+
+  const colorOptions = Array.isArray(source.available_colors)
+    ? source.available_colors
+    : normalizeStringArray(firstDefined(source.colors, source.Colors, source['Show Color Options to Customers']));
+  const wattageOptions = Array.isArray(source.available_wattage)
+    ? source.available_wattage
+    : normalizeStringArray(firstDefined(source.power, source.Power, source['Show Wattage Options to Customers']));
+  const typeOptions = Array.isArray(source.available_types)
+    ? source.available_types
+    : normalizeStringArray(firstDefined(source.variants, source.Variants, source['Show Type/Variant Options to Customers']));
+
   const details = {
-    name: source.name || source['Product Name'] || source.product_name || source.product || '',
-    price: source.price ?? source.Price ?? source.price ?? '',
-    original_price: source.original_price ?? source['Original Price'] ?? source.original_price ?? '',
-    main_group: source.main_group || '',
-    category: source.category || source.Category || '',
-    brand: source.brand || source.Brand || '',
-    subcategory: source.subcategory || source['Product Type'] || source.Subcategory || '',
-    stock: source.stock ?? source.Stock ?? source.stock ?? '',
-    description: source.description || source.Description || '',
+    name: firstDefined(source.name, source['Product Name'], source.product_name, source.product) || '',
+    price: firstDefined(source.price, source.Price) ?? '',
+    original_price: firstDefined(source.original_price, source['Original Price']) ?? '',
+    main_group: firstDefined(source.main_group, source['Main Group']) || '',
+    category: firstDefined(source.category, source.Category) || '',
+    brand: firstDefined(source.brand, source.Brand) || '',
+    subcategory: firstDefined(source.subcategory, source['Product Type / Subcategory'], source['Product Type'], source.Subcategory) || '',
+    stock: firstDefined(source.stock, source.Stock) ?? '',
+    description: firstDefined(source.description, source['Description (Rich Text)'], source.Description) || '',
     image_url: media.image_url,
     image_urls: media.image_urls,
-    video_url: source.video_url || source['Video URL'] || '',
-    sku: source.sku || source.SKU || '',
-    barcode: source.barcode || source.Barcode || '',
-    warranty: source.warranty || source.Warranty || '',
-    voltage: source.voltage || source.Voltage || '',
-    power: source.power || source.Power || '',
-    capacity: source.capacity || source.Capacity || '',
-    ram: source.ram || source.RAM || '',
-    storage: source.storage || source.Storage || '',
-    screen_size: source.screen_size || source['Screen Size'] || '',
-    features: source.features || source.Features || '',
-    flash_sale_end: source.flash_sale_end || source['Flash Sale End Date'] || '',
+    video_url: firstDefined(source.video_url, source['Product Video URL (optional)'], source['Video URL']) || '',
+    sku: firstDefined(source.sku, source.SKU) || '',
+    barcode: firstDefined(source.barcode, source.Barcode) || '',
+    warranty: firstDefined(source.warranty, source.Warranty) || '',
+    voltage: firstDefined(source.voltage, source.Voltage) || '',
+    power: firstDefined(source.power, source.Power) || '',
+    capacity: firstDefined(source.capacity, source.Capacity) || '',
+    ram: firstDefined(source.ram, source.RAM) || '',
+    storage: firstDefined(source.storage, source.Storage) || '',
+    screen_size: firstDefined(source.screen_size, source['Screen Size']) || '',
+    features: firstDefined(source.features, source.Features) || '',
+    flash_sale_end: firstDefined(source.flash_sale_end, source['Flash Sale End Date']) || '',
     is_visible: source.is_visible !== false,
     review_enabled: source.review_enabled !== false,
-    show_colors: source.show_colors || normalizeStringArray(source.colors || source.Colors).length > 0,
-    available_colors: source.available_colors || normalizeStringArray(source.colors || source.Colors),
-    show_wattage: source.show_wattage || Boolean(source.power || source.Power),
-    available_wattage: source.available_wattage || normalizeStringArray(source.power || source.Power),
-    show_type: source.show_type || normalizeStringArray(source.variants || source.Variants).length > 0,
-    available_types: source.available_types || normalizeStringArray(source.variants || source.Variants),
-    tags: Array.isArray(source.tags) ? source.tags : normalizeStringArray(source.tags || source.Tags),
-    keywords: Array.isArray(source.keywords) ? source.keywords : normalizeStringArray(source.keywords || source.Keywords),
+    show_colors: source.show_colors || colorOptions.length > 0,
+    available_colors: colorOptions,
+    show_wattage: source.show_wattage || wattageOptions.length > 0,
+    available_wattage: wattageOptions,
+    show_type: source.show_type || typeOptions.length > 0,
+    available_types: typeOptions,
+    tags: Array.isArray(source.tags) ? source.tags : normalizeStringArray(firstDefined(source.tags, source.Tags) || ''),
+    keywords: Array.isArray(source.keywords) ? source.keywords : normalizeStringArray(firstDefined(source.keywords, source.Keywords) || ''),
     seo_title: source.seo_title || '',
     seo_description: source.seo_description || '',
     slug: source.slug || '',

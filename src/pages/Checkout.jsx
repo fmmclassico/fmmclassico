@@ -22,7 +22,7 @@ import { getHubtelCallbackUrl } from '@/lib/runtime-config';
 import { createPageUrl } from '../utils';
 
 const DELIVERY_ZONES = [
-  { id: 'accra', label: 'Greater Accra Delivery', fee: 30 },
+  { id: 'accra', label: 'Greater Accra Delivery', fee: 0.5 },
   { id: 'kumasi', label: 'Kumasi Delivery', fee: 30 },
   { id: 'tarkwa', label: 'Tarkwa / Western Region Delivery', fee: 25 },
   { id: 'outside', label: 'Other Regions Delivery', fee: 50 },

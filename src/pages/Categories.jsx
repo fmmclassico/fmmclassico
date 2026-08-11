@@ -6,6 +6,7 @@ import { ChevronDown, Settings, Upload, X, Loader2 } from 'lucide-react';
 import { appClient } from '@/api/appClient.js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import OptimizedImage from '@/components/ui/optimized-image';
 
 const CATEGORIES = [
   {
@@ -157,7 +158,7 @@ export default function Categories() {
   const handleImageUpload = async (catId, file) => {
     setUploading(u => ({ ...u, [catId]: true }));
     try {
-      const { file_url } = await appClient.integrations.Core.UploadFile({ file });
+      const { file_url } = await appClient.integrations.Core.UploadFile({ file, maxBytes: 50 * 1024, maxDimension: 900 });
       await saveSetting(`cat_bg_${catId}`, file_url);
       toast.success('Background image updated!');
     } catch {
@@ -232,12 +233,19 @@ export default function Categories() {
               <div
                 className="group relative overflow-hidden rounded-2xl h-48 shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                <img
-                  src={getCatImage(cat.id) || cat.image}
-                  alt={cat.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 cursor-pointer"
-                  onClick={() => !editMode && navigate(allLink)}
-                />
+                <div onClick={() => !editMode && navigate(allLink)} className="h-full w-full cursor-pointer">
+                  <OptimizedImage
+                    src={getCatImage(cat.id) || cat.image}
+                    alt={cat.name}
+                    containerClassName="h-full w-full"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    lazy={false}
+                    priority={i < 2}
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    widths={[480, 640, 768, 960, 1200]}
+                    quality={58}
+                  />
+                </div>
                 <div className={`absolute inset-0 bg-gradient-to-r ${cat.color} opacity-70 group-hover:opacity-80 transition-opacity`} />
                 <div className="absolute inset-0 flex flex-col justify-end p-6">
                   <h3 className="text-2xl font-bold text-white mb-1">

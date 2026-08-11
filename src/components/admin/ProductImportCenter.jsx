@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -209,7 +209,7 @@ export default function ProductImportCenter({ open, onOpenChange, onProductMappe
                       </div>
                     </div>
                   ) : (
-                    <ScrollArea className="h-full w-full">
+                    <ScrollArea className="h-full w-full whitespace-nowrap">
                       <div className="min-w-[720px] p-3 sm:min-w-[980px] sm:p-4">
                         {summary?.failedRows > 0 && (
                           <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
@@ -288,6 +288,7 @@ export default function ProductImportCenter({ open, onOpenChange, onProductMappe
                           </TableBody>
                         </Table>
                       </div>
+                      <ScrollBar orientation="horizontal" />
                     </ScrollArea>
                   )}
                 </Card>

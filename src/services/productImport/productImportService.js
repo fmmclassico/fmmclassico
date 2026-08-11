@@ -52,7 +52,8 @@ const COLUMN_ALIASES = {
   tags: ['tags', 'labels'],
   warranty: ['warranty'],
   voltage: ['voltage'],
-  power: ['power', 'wattage', 'show wattage options to customers', 'wattage options'],
+  power: ['power', 'wattage'],
+  wattageOptions: ['show wattage options to customers', 'wattage options', 'available wattage', 'wattage choices'],
   capacity: ['capacity'],
   ram: ['ram', 'memory'],
   storage: ['storage', 'rom'],
@@ -112,6 +113,8 @@ const BRAND_SYNONYMS = {
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.svg', '.avif'];
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.m4v'];
+const PRESET_WATTAGES = ['5W', '10W', '18W', '20W', '25W', '33W', '45W', '65W', '100W', '120W', '150W'];
+const PRESET_TYPES = ['USB-C', 'Lightning', 'Micro USB', 'Type-A', 'Wireless', 'Original', 'Compatible', 'Standard', 'Pro', 'Plus', 'Max'];
 
 function createImportId() {
   return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -174,6 +177,17 @@ function splitMultiValue(value) {
       .map((item) => item.trim())
       .filter(Boolean)
   );
+}
+
+function parsePresetOptions(rawValue, presets = []) {
+  const delimited = splitMultiValue(rawValue);
+  if (delimited.length > 1) return delimited;
+
+  const raw = trimOrEmpty(rawValue);
+  if (!raw) return delimited;
+  const compact = raw.replace(/\s+/g, '').toLowerCase();
+  const matches = presets.filter((preset) => compact.includes(String(preset).replace(/\s+/g, '').toLowerCase()));
+  return matches.length > 0 ? matches : delimited;
 }
 
 function parseBooleanish(value, defaultValue = false) {
@@ -664,8 +678,9 @@ function buildPreparedRow(row, index, headerMap, context) {
   const price = parseNumberish(getCellValue(row, headerMap, 'price'));
   const original_price = parseNumberish(getCellValue(row, headerMap, 'originalPrice'));
   const stock = parseNumberish(getCellValue(row, headerMap, 'stock'));
-  const colors = splitMultiValue(getCellValue(row, headerMap, 'colors'));
-  const variants = splitMultiValue(getCellValue(row, headerMap, 'variants'));
+  const colors = parsePresetOptions(getCellValue(row, headerMap, 'colors'), PRESET_COLORS);
+  const variants = parsePresetOptions(getCellValue(row, headerMap, 'variants'), PRESET_TYPES);
+  const wattageOptions = parsePresetOptions(getCellValue(row, headerMap, 'wattageOptions'), PRESET_WATTAGES);
   const keywords = splitMultiValue(getCellValue(row, headerMap, 'keywords'));
   const tags = splitMultiValue(getCellValue(row, headerMap, 'tags'));
   const home_sections = buildHomepageSections(row, headerMap);
@@ -729,8 +744,8 @@ function buildPreparedRow(row, index, headerMap, context) {
     available_colors: colors,
     show_type: variants.length > 0 || parseBooleanish(getCellValue(row, headerMap, 'variants'), false),
     available_types: variants,
-    show_wattage: !!trimOrEmpty(getCellValue(row, headerMap, 'power')) || parseBooleanish(getCellValue(row, headerMap, 'power'), false),
-    available_wattage: trimOrEmpty(getCellValue(row, headerMap, 'power')) ? [trimOrEmpty(getCellValue(row, headerMap, 'power'))] : [],
+    show_wattage: wattageOptions.length > 0 || parseBooleanish(getCellValue(row, headerMap, 'wattageOptions'), false),
+    available_wattage: wattageOptions,
     warnings,
     errors: [],
     brandWasCreated: brandResolution.created,
@@ -916,8 +931,8 @@ function buildImportForm(row, mode, existingProduct) {
   applyImportedValue(next, 'available_colors', row.available_colors, row.presence.colors || mode === 'replace');
   applyImportedValue(next, 'show_type', row.show_type, row.presence.variants || mode === 'replace');
   applyImportedValue(next, 'available_types', row.available_types, row.presence.variants || mode === 'replace');
-  applyImportedValue(next, 'show_wattage', row.show_wattage, row.presence.power || mode === 'replace');
-  applyImportedValue(next, 'available_wattage', row.available_wattage, row.presence.power || mode === 'replace');
+  applyImportedValue(next, 'show_wattage', row.show_wattage, row.presence.wattageOptions || mode === 'replace');
+  applyImportedValue(next, 'available_wattage', row.available_wattage, row.presence.wattageOptions || mode === 'replace');
 
   if (row.presence.sku || mode === 'replace') next.sku = row.sku;
   if (row.presence.barcode || mode === 'replace') next.barcode = row.barcode;

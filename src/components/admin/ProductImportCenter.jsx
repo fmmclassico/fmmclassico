@@ -48,8 +48,8 @@ export default function ProductImportCenter({ open, onOpenChange, onProductMappe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-w-6xl h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0">
-        <DialogHeader className="border-b px-6 py-4">
+      <DialogContent className="flex h-[92vh] max-h-[92vh] w-[calc(100vw-0.75rem)] max-w-[calc(100vw-0.75rem)] flex-col overflow-hidden rounded-2xl p-0 sm:h-[90vh] sm:max-h-[90vh] sm:max-w-6xl">
+        <DialogHeader className="border-b px-4 py-4 sm:px-6">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <FileSpreadsheet className="h-5 w-5 text-blue-600" />
             Product Import Center
@@ -60,15 +60,15 @@ export default function ProductImportCenter({ open, onOpenChange, onProductMappe
         </DialogHeader>
 
         <Tabs defaultValue="import" className="flex h-full min-h-0 flex-col">
-          <div className="border-b px-6 py-3">
-            <TabsList>
+          <div className="border-b px-4 py-3 sm:px-6">
+            <TabsList className="grid w-full grid-cols-2 sm:w-auto">
               <TabsTrigger value="import">Import</TabsTrigger>
               <TabsTrigger value="history">Import History</TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="import" className="m-0 flex-1 min-h-0 overflow-hidden">
-            <div className="grid h-full min-h-0 grid-cols-1 gap-6 overflow-hidden px-6 py-5 lg:grid-cols-[380px_minmax(0,1fr)]">
+            <div className="grid h-full min-h-0 grid-cols-1 gap-4 overflow-hidden px-4 py-4 sm:px-6 sm:py-5 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
               <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
                 <Card className="p-4">
                   <div className="mb-3 flex items-center justify-between">
@@ -210,7 +210,7 @@ export default function ProductImportCenter({ open, onOpenChange, onProductMappe
                     </div>
                   ) : (
                     <ScrollArea className="h-full w-full">
-                      <div className="min-w-[980px] p-4">
+                      <div className="min-w-[720px] p-3 sm:min-w-[980px] sm:p-4">
                         {summary?.failedRows > 0 && (
                           <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
                             <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />

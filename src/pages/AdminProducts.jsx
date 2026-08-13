@@ -182,8 +182,13 @@ function buildImportedEditorPayload(row = {}) {
     name: firstDefined(source.name, getSourceValue(source, ['Product Name', 'Name', 'Product'])) || '',
     price: firstDefined(source.price, source.Price) ?? '',
     original_price: firstDefined(source.original_price, getSourceValue(source, ['Original Price'])) ?? '',
-    main_group: resolveImportedMainGroup(firstDefined(source.main_group, getSourceValue(source, ['Main Group'])), resolvedCategory),
-    category: resolvedCategory,
+    main_group: resolveImportedMainGroup(
+  firstDefined(
+    source.main_group,
+    getSourceValue(source, ['Main Group', 'Main Category'])
+  ),
+  resolvedCategory
+),
     brand: firstDefined(source.brand, getSourceValue(source, ['Brand'])) || '',
     subcategory: firstDefined(source.subcategory, getSourceValue(source, ['Product Type / Subcategory', 'Product Type', 'Subcategory'])) || '',
     stock: firstDefined(source.stock, source.Stock) ?? '',

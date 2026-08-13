@@ -4,20 +4,13 @@ import { Loader2, ShieldCheck } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { appClient } from '@/api/appClient.js';
-import { checkPaymentStatus, getBaseOrderReference, getHubtelPaidAmount, isHubtelPaymentVerified } from '@/api/hubtelClient';
+import { getBaseOrderReference, reconcileReturnedPayment } from '@/api/hubtelClient';
 import { createPageUrl } from '../utils';
-
-const VERIFICATION_ATTEMPTS = 5;
-const VERIFICATION_INTERVAL_MS = 1000;
 
 function ensureArray(value) {
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.data)) return value.data;
   return [];
-}
-
-function getExpectedInitialAmount(order) {
-  return Number(order?.initial_payment_amount ?? order?.amount_paid_now ?? 0) || 0;
 }
 
 function sleep(ms) {
@@ -34,15 +27,14 @@ export default function PaymentVerification() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [message, setMessage] = useState('Checking your payment and confirming the amount received...');
+  const [message, setMessage] = useState('Waiting for Hubtel payment confirmation...');
   const [statusTone, setStatusTone] = useState('pending');
 
   useEffect(() => {
     let active = true;
 
-    const runVerification = async () => {
+    const run = async () => {
       const ref = searchParams.get('hubtelRef') || '';
-      const orderId = searchParams.get('orderId') || '';
       const paymentStage = searchParams.get('paymentStage') || 'initial';
       const hintedStatus = String(searchParams.get('status') || '').toLowerCase();
 
@@ -51,57 +43,25 @@ export default function PaymentVerification() {
         return;
       }
 
+      if (hintedStatus === 'cancelled' || hintedStatus === 'canceled') {
+        setStatusTone('warning');
+        setMessage('Payment was cancelled. Redirecting you back to checkout...');
+        setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1500);
+        return;
+      }
+
       try {
         const user = await appClient.auth.me();
         const baseReference = getBaseOrderReference(ref);
 
-        for (let attempt = 1; attempt <= VERIFICATION_ATTEMPTS; attempt += 1) {
+        for (let attempt = 0; attempt < 90; attempt += 1) {
           if (!active) return;
-          setMessage(`Verifying your payment... (${attempt}/${VERIFICATION_ATTEMPTS})`);
 
-          const orders = ensureArray(await appClient.entities.Order.filter({ customer_email: user.email }, '-created_date', 200));
-          const currentOrder = orders.find((item) => item.id === orderId || item.order_number === baseReference);
+          setMessage('Waiting for Hubtel payment confirmation...');
+          const result = await reconcileReturnedPayment({ clientReference: ref }).catch(() => null);
+          const state = String(result?.state || '').toLowerCase();
 
-          if (!currentOrder) {
-            setStatusTone('error');
-            setMessage('We could not find this pending order. Redirecting you back to checkout...');
-            setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1400);
-            return;
-          }
-
-          if (currentOrder.initial_payment_status === 'paid' || currentOrder.payment_stage === 'fully_paid' || currentOrder.payment_stage === 'initial_payment_paid') {
-            await clearLoggedInCart(user.email, queryClient);
-            setStatusTone('success');
-            setMessage('Your payment is already confirmed. Redirecting you to your orders...');
-            setTimeout(() => navigate(createPageUrl('Orders'), { replace: true }), 1200);
-            return;
-          }
-
-          const expectedAmount = getExpectedInitialAmount(currentOrder);
-          const result = await checkPaymentStatus(ref).catch(() => null);
-
-          if (isHubtelPaymentVerified(result, expectedAmount)) {
-            const paidAmount = getHubtelPaidAmount(result) || expectedAmount;
-            const now = new Date().toISOString();
-
-            await appClient.entities.Order.update(currentOrder.id, {
-              payment_status: 'paid',
-              initial_payment_status: 'paid',
-              payment_stage: Number(currentOrder.balance_due || 0) > 0 ? 'initial_payment_paid' : 'fully_paid',
-              balance_payment_status: Number(currentOrder.balance_due || 0) > 0 ? (currentOrder.balance_payment_status || 'pending') : 'not_required',
-              is_fully_paid: Number(currentOrder.balance_due || 0) <= 0,
-              remaining_balance_paid: Number(currentOrder.balance_due || 0) <= 0,
-              remaining_balance_paid_at: Number(currentOrder.balance_due || 0) <= 0 ? now : currentOrder.remaining_balance_paid_at,
-              initial_payment_verified_amount: paidAmount,
-              initial_paid_at: now,
-              status: 'confirmed',
-              tracking_updates: (currentOrder.tracking_updates || []).concat([{
-                status: 'Initial Payment Confirmed',
-                message: `Hubtel payment verified successfully. Expected GHS ${expectedAmount.toFixed(2)} and confirmed GHS ${paidAmount.toFixed(2)}.`,
-                timestamp: now,
-              }]),
-            });
-
+          if (state === 'paid') {
             await clearLoggedInCart(user.email, queryClient);
             queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
             setStatusTone('success');
@@ -110,77 +70,40 @@ export default function PaymentVerification() {
             return;
           }
 
-          const paidAmount = getHubtelPaidAmount(result);
-          if (paidAmount != null && paidAmount > 0 && paidAmount < expectedAmount) {
+          if (state === 'failed') {
             setStatusTone('error');
-            setMessage('The amount received did not match the expected payment. Please contact support for help. Redirecting you back to checkout...');
-            setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1800);
+            setMessage('Payment was not completed. Redirecting you back to checkout...');
+            setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1600);
             return;
           }
 
-          const statusValue = String(result?.data?.status || result?.data?.Status || result?.status || '').toLowerCase();
-          if (statusValue === 'failed' || statusValue === 'unpaid') {
-            await appClient.entities.Order.update(currentOrder.id, {
-              payment_status: 'failed',
-              initial_payment_status: 'failed',
-              payment_stage: 'awaiting_initial_payment',
-              tracking_updates: (currentOrder.tracking_updates || []).concat([{
-                status: 'Initial Payment Failed',
-                message: `Hubtel status check returned ${statusValue || 'failed'} for order #${currentOrder.order_number}.`,
-                timestamp: new Date().toISOString(),
-              }]),
-            });
-            queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
-            setStatusTone('error');
-            setMessage('Payment was not completed. Your items are still in your cart so you can try again. Redirecting you back to checkout...');
-            setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1400);
-            return;
-          }
-
-          if (statusValue === 'cancelled' || statusValue === 'canceled') {
-            await appClient.entities.Order.update(currentOrder.id, {
-              payment_status: 'cancelled',
-              initial_payment_status: 'cancelled',
-              payment_stage: 'awaiting_initial_payment',
-              tracking_updates: (currentOrder.tracking_updates || []).concat([{
-                status: 'Initial Payment Cancelled',
-                message: `Payment was cancelled for order #${currentOrder.order_number}.`,
-                timestamp: new Date().toISOString(),
-              }]),
-            });
-            queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+          if (state === 'review_required') {
             setStatusTone('warning');
-            setMessage('Payment was cancelled. Your items are still in your cart so you can try again. Redirecting you back to checkout...');
-            setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1400);
+            setMessage('Payment needs manual review because the received amount did not match the expected amount. Please contact support.');
             return;
           }
 
-          if (attempt < VERIFICATION_ATTEMPTS) {
-            await sleep(VERIFICATION_INTERVAL_MS);
+          if (state === 'not_found') {
+            setStatusTone('error');
+            setMessage(`We could not find order ${baseReference}. Redirecting you back to checkout...`);
+            setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1600);
+            return;
           }
+
+          await sleep(5000);
         }
 
-        if (hintedStatus === 'cancelled' || hintedStatus === 'canceled') {
-          setStatusTone('warning');
-          setMessage('Payment was cancelled. Your items are still in your cart so you can try again. Redirecting you back to checkout...');
-        } else {
-          setStatusTone('error');
-          setMessage('We could not confirm the payment yet. Your items are still in your cart so you can try again. Redirecting you back to checkout...');
-        }
-        setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1600);
+        setStatusTone('warning');
+        setMessage('We are still waiting for confirmation. Please check your orders shortly.');
       } catch (error) {
         console.error('Payment verification page error:', error);
         setStatusTone('error');
-        setMessage('We could not verify the payment right now. Redirecting you back to checkout...');
-        setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1600);
+        setMessage('We could not verify the payment right now. Please check your orders shortly.');
       }
     };
 
-    runVerification();
-
-    return () => {
-      active = false;
-    };
+    run();
+    return () => { active = false; };
   }, [navigate, queryClient, searchParams]);
 
   const cardTone = statusTone === 'success'

@@ -68,7 +68,7 @@ export default function ProductImportCenter({ open, onOpenChange, onProductMappe
           </div>
 
           <TabsContent value="import" className="m-0 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-            <<div className="grid min-h-0 grid-cols-1 gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
+            <div className="grid min-h-0 grid-cols-1 gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
               <div className="space-y-4 pr-1 lg:max-h-[calc(90vh-11rem)] lg:overflow-y-auto">
                 <Card className="p-4">
                   <div className="mb-3 flex items-center justify-between">

@@ -76,8 +76,19 @@ function paymentSummaryLabel(order) {
   return 'Pending Initial Payment';
 }
 
-function isVisibleOrder(order) {
-  return order?.initial_payment_status === 'paid' || order?.payment_stage === 'initial_payment_paid' || order?.payment_stage === 'fully_paid';
+function isVisibleOrder() {
+  return true;
+}
+
+function formatHubtelStatus(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return 'Not checked yet';
+  return normalized.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getLatestTracking(order) {
+  const updates = Array.isArray(order?.tracking_updates) ? order.tracking_updates : [];
+  return updates.length ? updates[updates.length - 1] : null;
 }
 
 
@@ -319,7 +330,7 @@ export default function Orders() {
   }
 
   if (!isLoading && visibleOrders.length === 0) {
-    return <div className="min-h-screen flex flex-col items-center justify-center p-6"><Package className="h-16 w-16 text-gray-300 mb-4" /><p className="text-gray-500 font-medium mb-2">No verified orders yet</p><Link to={createPageUrl('Shop')} className="text-blue-600 font-semibold">Go to Shop</Link></div>;
+    return <div className="min-h-screen flex flex-col items-center justify-center p-6"><Package className="h-16 w-16 text-gray-300 mb-4" /><p className="text-gray-500 font-medium mb-2">No orders yet</p><Link to={createPageUrl('Shop')} className="text-blue-600 font-semibold">Go to Shop</Link></div>;
   }
 
   return (
@@ -341,12 +352,14 @@ export default function Orders() {
             const amountPaidNow = getAmountPaidNow(order);
             const balanceDue = getBalanceDue(order);
             const hasEstDelivery = !!order.estimated_delivery;
+            const latestTracking = getLatestTracking(order);
             const canPayBalance = isTwoStageOrder(order) && order.initial_payment_status === 'paid' && order.balance_payment_enabled === true && !isRemainingBalancePaid(order) && order.status === 'shipped';
             return (
               <Card key={order.id} className={`p-4 bg-white ${isSelected ? 'ring-2 ring-blue-400' : ''}`}>
                 <div className="flex items-start justify-between mb-2"><div className="flex items-start gap-2"><input type="checkbox" checked={isSelected} onChange={() => handleToggleSelect(order.id)} className="w-4 h-4 cursor-pointer mt-1" /><div><p className="text-sm font-bold text-gray-900">{order.order_number}</p><p className="text-[10px] text-gray-500">{order.created_date ? format(new Date(order.created_date), 'MMM d, yyyy h:mm a') : '-'}</p></div></div><div className="text-right"><p className="text-sm font-bold text-gray-900">₵{grandTotal.toFixed(2)}</p><span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusConfig[order.status]?.color || 'bg-gray-100'}`}>{statusConfig[order.status]?.label || order.status}</span></div></div>
-                <div className="mb-3"><span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isFullyPaid(order) ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>{paymentSummaryLabel(order)}</span></div>
-                <div className="mb-3 rounded-lg bg-slate-50 p-3 text-xs text-gray-700 space-y-1"><div className="flex justify-between"><span>Total order value</span><span className="font-semibold">₵{grandTotal.toFixed(2)}</span></div><div className="flex justify-between"><span>Amount already verified</span><span className="font-semibold">₵{amountPaidNow.toFixed(2)}</span></div>{balanceDue > 0 && !isRemainingBalancePaid(order) && <div className="flex justify-between text-orange-700"><span>Balance left</span><span className="font-bold">₵{balanceDue.toFixed(2)}</span></div>}</div>
+                <div className="mb-3 flex flex-wrap gap-2"><span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isFullyPaid(order) ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>{paymentSummaryLabel(order)}</span><span className="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-700">Hubtel: {formatHubtelStatus(order.hubtel_status)}</span></div>
+                <div className="mb-3 rounded-lg bg-slate-50 p-3 text-xs text-gray-700 space-y-1"><div className="flex justify-between"><span>Total order value</span><span className="font-semibold">₵{grandTotal.toFixed(2)}</span></div><div className="flex justify-between"><span>Amount already verified</span><span className="font-semibold">₵{amountPaidNow.toFixed(2)}</span></div><div className="flex justify-between"><span>Initial payment status</span><span className="font-semibold capitalize">{String(order.initial_payment_status || 'pending').replace(/_/g, ' ')}</span></div>{isTwoStageOrder(order) && <div className="flex justify-between"><span>Balance payment status</span><span className="font-semibold capitalize">{String(order.balance_payment_status || 'pending').replace(/_/g, ' ')}</span></div>}{balanceDue > 0 && !isRemainingBalancePaid(order) && <div className="flex justify-between text-orange-700"><span>Balance left</span><span className="font-bold">₵{balanceDue.toFixed(2)}</span></div>}</div>
+                {latestTracking && <div className="mb-3 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-700"><p className="font-semibold text-slate-900">Latest payment / order log</p><p className="mt-1 text-slate-800">{latestTracking.status || 'Update'}</p><p className="mt-1 leading-5 text-slate-600">{latestTracking.message || 'No details provided.'}</p>{latestTracking.timestamp && <p className="mt-2 text-[10px] text-slate-400">{format(new Date(latestTracking.timestamp), 'MMM d, yyyy h:mm a')}</p>}</div>}
                 {isTwoStageOrder(order) && !isRemainingBalancePaid(order) && <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900"><p className="font-semibold">Remaining Balance</p><p className="mt-1">The remaining balance becomes payable here after your order is shipped. The product is handed over only after Hubtel verifies the exact amount.</p>{order.balance_payment_enabled !== true && <p className="mt-2 text-blue-700">You will see the payment button here once the order has been shipped and the remaining balance payment is enabled.</p>}{canPayBalance && <Button onClick={() => handleBalancePayment(order)} disabled={payingBalanceFor === order.id} className="mt-3 bg-blue-800 hover:bg-blue-900 text-white"><Wallet className="h-4 w-4 mr-2" />{payingBalanceFor === order.id ? 'Opening Hubtel...' : 'Pay Remaining Balance'}</Button>}</div>}
                 <div className="mb-3 border-t border-gray-100 pt-2">{(order.items || []).map((item, index) => { const variantSummary = formatVariantSummary(item); return <div key={index} className="flex items-center gap-2 py-1">{item.product_image && <img src={item.product_image} alt="" className="w-10 h-10 rounded-lg object-cover" />}<div className="flex-1 min-w-0"><p className="text-xs font-medium text-gray-700 truncate">{item.product_name}</p><p className="text-[10px] text-gray-500">x{item.quantity} · ₵{(toNumber(item.price) * toNumber(item.quantity, 1)).toFixed(2)}</p>{variantSummary && <p className="text-[10px] text-blue-700 mt-0.5">{variantSummary}</p>}</div></div>;})}</div>
                 <div className="border-t border-gray-100 pt-2"><p className="text-xs text-gray-600">{order.delivery_address ? `📍 ${order.delivery_address}` : ''}</p>{hasEstDelivery && <p className="text-xs text-gray-500 mt-1">📅 Estimated delivery: {format(new Date(order.estimated_delivery), 'MMM d, yyyy')}</p>}<div className="flex gap-3 mt-3"><Link to={createPageUrl('OrderTracking') + '?id=' + order.id} className="text-xs text-blue-600 font-semibold">Track Order</Link>{CANCELLABLE_STATUSES.includes(order.status) && <button onClick={() => { setCancellingOrder(order); setCancelReason(''); }} className="text-xs text-red-600 font-semibold">Cancel Order</button>}</div></div>

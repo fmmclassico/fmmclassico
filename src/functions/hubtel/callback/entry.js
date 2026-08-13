@@ -52,8 +52,9 @@ function normalizeHubtelStatus({ responseCode = '', callbackStatus = '', transac
   const normalizedTransactionStatus = String(transactionStatus || '').toLowerCase().trim();
   const statusValue = normalizedTransactionStatus || normalizedCallbackStatus;
 
-  if (normalizedResponseCode === '0000' && ['paid', 'success', 'successful', 'completed', 'complete'].includes(statusValue)) return 'paid';
-  if (['failed', 'unpaid'].includes(statusValue)) return 'failed';
+  if (['paid', 'success', 'successful', 'completed', 'complete', 'approved'].includes(statusValue)) return 'paid';
+  if (!statusValue && normalizedResponseCode === '0000') return 'paid';
+  if (['failed', 'unpaid', 'declined', 'reversed'].includes(statusValue)) return 'failed';
   if (['cancelled', 'canceled'].includes(statusValue)) return 'cancelled';
   return 'pending_payment';
 }

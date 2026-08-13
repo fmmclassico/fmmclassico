@@ -48,7 +48,8 @@ export default function ProductImportCenter({ open, onOpenChange, onProductMappe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[92vh] max-h-[92vh] w-[calc(100vw-0.75rem)] max-w-[calc(100vw-0.75rem)] flex-col overflow-hidden rounded-2xl p-0 sm:h-[90vh] sm:max-h-[90vh] sm:max-w-6xl">
+      <DialogContent className="left-0 top-0 h-[100dvh] w-screen max-w-none 
+        
         <DialogHeader className="border-b px-4 py-4 sm:px-6">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <FileSpreadsheet className="h-5 w-5 text-blue-600" />
@@ -67,9 +68,9 @@ export default function ProductImportCenter({ open, onOpenChange, onProductMappe
             </TabsList>
           </div>
 
-          <TabsContent value="import" className="m-0 flex-1 min-h-0 overflow-hidden">
-            <div className="grid h-full min-h-0 grid-cols-1 gap-4 overflow-hidden px-4 py-4 sm:px-6 sm:py-5 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
-              <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
+          <div className="grid min-h-0 grid-cols-1 gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
+            <div className="grid min-h-0 grid-cols-1 gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
+              <div className="space-y-4 pr-1 lg:max-h-[calc(90vh-11rem)] lg:overflow-y-auto">
                 <Card className="p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <div>

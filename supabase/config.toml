@@ -1,10 +1,13 @@
 project_id = "fmmclassico"
 
 [functions.hubtel-initiate]
-verify_jwt = false
+verify_jwt = true
 
 [functions.hubtel-status]
-verify_jwt = false
+verify_jwt = true
 
 [functions.hubtel-callback]
 verify_jwt = false
+
+[functions.hubtel-reconcile-return]
+verify_jwt = true

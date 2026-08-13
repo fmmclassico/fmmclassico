@@ -182,6 +182,22 @@ function resolveRequestUrl(url) {
   ).toString();
 }
 
+function getHubtelEnvelope(result = {}) {
+  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    return {};
+  }
+
+  if (result?.hubtel && typeof result.hubtel === 'object' && !Array.isArray(result.hubtel)) {
+    return result.hubtel;
+  }
+
+  if (result?.data?.hubtel && typeof result.data.hubtel === 'object' && !Array.isArray(result.data.hubtel)) {
+    return result.data.hubtel;
+  }
+
+  return {};
+}
+
 function getHubtelDataNode(result = {}) {
   if (
     !result ||
@@ -190,6 +206,7 @@ function getHubtelDataNode(result = {}) {
     return {};
   }
 
+  const envelope = getHubtelEnvelope(result);
   const directData = result?.data;
 
   if (
@@ -224,6 +241,10 @@ function getHubtelDataNode(result = {}) {
     return result.Data;
   }
 
+  if (Object.keys(envelope).length > 0) {
+    return envelope;
+  }
+
   return result;
 }
 
@@ -233,6 +254,10 @@ function getHubtelResponseCode(result = {}) {
       result?.ResponseCode ||
       result?.data?.responseCode ||
       result?.data?.ResponseCode ||
+      result?.hubtel?.responseCode ||
+      result?.hubtel?.ResponseCode ||
+      result?.data?.hubtel?.responseCode ||
+      result?.data?.hubtel?.ResponseCode ||
       ''
   ).trim();
 }
@@ -365,10 +390,13 @@ export function getHubtelStatusValue(
     getHubtelDataNode(result);
 
   return String(
-    payload?.status ||
+    payload?.normalizedStatus ||
+      payload?.status ||
       payload?.Status ||
       payload?.transactionStatus ||
       payload?.TransactionStatus ||
+      result?.hubtel?.normalizedStatus ||
+      result?.hubtel?.rawStatus ||
       result?.status ||
       result?.Status ||
       result?.transactionStatus ||
@@ -394,6 +422,8 @@ export function getHubtelPaidAmount(
     payload?.TransactionAmount,
     payload?.customerChargeAmount,
     payload?.CustomerChargeAmount,
+    result?.hubtel?.amount,
+    result?.data?.hubtel?.amount,
     result?.amount,
     result?.Amount,
     result?.paidAmount,

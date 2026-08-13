@@ -4,7 +4,7 @@ import { Loader2, ShieldCheck } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { appClient } from '@/api/appClient.js';
-import { getBaseOrderReference, reconcileReturnedPayment } from '@/api/hubtelClient';
+import { reconcileReturnedPayment } from '@/api/hubtelClient';
 import { createPageUrl } from '../utils';
 
 function ensureArray(value) {
@@ -22,6 +22,9 @@ async function clearLoggedInCart(userEmail, queryClient) {
   await Promise.allSettled(cartRows.map((item) => appClient.entities.CartItem.delete(item.id)));
   queryClient.invalidateQueries({ queryKey: ['cartItems', userEmail] });
 }
+
+const VERIFICATION_ATTEMPTS = 5;
+const VERIFICATION_INTERVAL_MS = 1000;
 
 export default function PaymentVerification() {
   const navigate = useNavigate();
@@ -52,49 +55,47 @@ export default function PaymentVerification() {
 
       try {
         const user = await appClient.auth.me();
-        const baseReference = getBaseOrderReference(ref);
 
-        for (let attempt = 0; attempt < 90; attempt += 1) {
+        for (let attempt = 1; attempt <= VERIFICATION_ATTEMPTS; attempt += 1) {
           if (!active) return;
 
-          setMessage('Waiting for Hubtel payment confirmation...');
+          setMessage(`Verifying your payment... (${attempt}/${VERIFICATION_ATTEMPTS})`);
+
           const result = await reconcileReturnedPayment({ clientReference: ref }).catch(() => null);
           const state = String(result?.state || '').toLowerCase();
+          const latestTrackingMessage = result?.latestTracking?.message || '';
 
-          if (state === 'paid') {
+          if (state === 'paid' || state === 'paid_from_status_fallback') {
             await clearLoggedInCart(user.email, queryClient);
             queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
             setStatusTone('success');
-            setMessage('Payment confirmed successfully. Redirecting you to your orders...');
+            setMessage(latestTrackingMessage || 'Payment confirmed successfully. Redirecting you to your orders...');
             setTimeout(() => navigate(createPageUrl('Orders'), { replace: true }), 1200);
             return;
           }
 
           if (state === 'failed') {
             setStatusTone('error');
-            setMessage('Payment was not completed. Redirecting you back to checkout...');
+            setMessage(latestTrackingMessage || 'Payment was not completed. Redirecting you back to checkout...');
             setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1600);
-            return;
-          }
-
-          if (state === 'review_required') {
-            setStatusTone('warning');
-            setMessage('Payment needs manual review because the received amount did not match the expected amount. Please contact support.');
             return;
           }
 
           if (state === 'not_found') {
             setStatusTone('error');
-            setMessage(`We could not find order ${baseReference}. Redirecting you back to checkout...`);
+            setMessage('We could not find this order. Redirecting you back to checkout...');
             setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1600);
             return;
           }
 
-          await sleep(5000);
+          if (attempt < VERIFICATION_ATTEMPTS) {
+            await sleep(VERIFICATION_INTERVAL_MS);
+          }
         }
 
         setStatusTone('warning');
-        setMessage('We are still waiting for confirmation. Please check your orders shortly.');
+        setMessage('Payment is still processing. Callback has not updated the order within 5 seconds yet. Please check your orders shortly.');
+        setTimeout(() => navigate(createPageUrl('Orders'), { replace: true }), 1800);
       } catch (error) {
         console.error('Payment verification page error:', error);
         setStatusTone('error');

@@ -186,16 +186,20 @@ Deno.serve(async (req) => {
     const paymentChannel = envelope.paymentDetails?.Channel || 'N/A';
 
     const trackingUpdate = {
-      status: `${stageLabel} ${normalizedStatus}`,
-      message: `Hubtel ${stageLabel.toLowerCase()} callback: ${normalizedStatus}. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${envelope.amount.toFixed(2)}. Type ${paymentType}. Channel ${paymentChannel}.`,
-      timestamp: now,
-      checkoutId: envelope.checkoutId,
-      clientReference: envelope.clientReference,
-      responseCode: envelope.responseCode || null,
-      callbackStatus: envelope.callbackStatus || null,
-      transactionStatus: envelope.transactionStatus || null,
-      salesInvoiceId: envelope.salesInvoiceId || null,
-    };
+  status: `${stageLabel} ${normalizedStatus}`,
+  message: `Hubtel ${stageLabel.toLowerCase()} callback: ${normalizedStatus}. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${envelope.amount.toFixed(2)}. Type ${paymentType}. Channel ${paymentChannel}.`,
+  timestamp: now,
+  checkoutId: envelope.checkoutId,
+  clientReference: envelope.clientReference,
+  responseCode: envelope.responseCode || null,
+  callbackStatus: envelope.callbackStatus || null,
+  transactionStatus: envelope.transactionStatus || null,
+  salesInvoiceId: envelope.salesInvoiceId || null,
+  amount: envelope.amount,
+  expectedAmount,
+  paymentType,
+  paymentChannel,
+};
 
     const updates = {
       tracking_updates: [...trackingUpdates, trackingUpdate],

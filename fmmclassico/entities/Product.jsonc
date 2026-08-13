@@ -159,6 +159,36 @@
     "delete": {
       "user_condition": {
         "role": "admin"
+ }
+    },
+"sku": { "type": "string", "description": "Stock keeping unit" },
+"barcode": { "type": "string", "description": "Barcode / EAN / UPC" },
+"warranty": { "type": "string", "description": "Warranty text" },
+"voltage": { "type": "string", "description": "Voltage specification" },
+"power": { "type": "string", "description": "Power specification" },
+"capacity": { "type": "string", "description": "Capacity specification" },
+"ram": { "type": "string", "description": "RAM specification" },
+"storage": { "type": "string", "description": "Storage specification" },
+"screen_size": { "type": "string", "description": "Screen size" },
+"features": { "type": "string", "description": "Feature summary" },
+"tags": {
+  "type": "array",
+  "items": { "type": "string" },
+  "description": "Product tags"
+},
+"keywords": {
+  "type": "array",
+  "items": { "type": "string" },
+  "description": "SEO keywords"
+},
+"slug": { "type": "string", "description": "SEO slug" },
+"seo_title": { "type": "string", "description": "SEO title" },
+"seo_description": { "type": "string", "description": "SEO description" },
+"main_category": { "type": "string", "description": "Category label used during import" },
+"product_type": { "type": "string", "description": "Product type label used during import" },
+"import_batch_id": { "type": "string", "description": "Bulk import batch id" },
+"import_source": { "type": "string", "description": "Bulk import source" },
+"import_filename": { "type": "string", "description": "Bulk import filename" 
       }
     }
   }

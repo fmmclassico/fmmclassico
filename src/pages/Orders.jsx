@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { Loader2, Package, Trash2, Wallet } from 'lucide-react';
 
 import { appClient } from '@/api/appClient.js';
-import { checkPaymentStatus, createBalancePaymentReference, getBaseOrderReference, getHubtelCheckoutUrl, getHubtelCustomerErrorMessage, getHubtelPaidAmount, initiateBalancePayment, isHubtelPaymentVerified } from '@/api/hubtelClient';
+import { createBalancePaymentReference, getHubtelCheckoutUrl, getHubtelCustomerErrorMessage, initiateBalancePayment, reconcileReturnedPayment } from '@/api/hubtelClient';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -80,9 +80,6 @@ function isVisibleOrder(order) {
   return order?.initial_payment_status === 'paid' || order?.payment_stage === 'initial_payment_paid' || order?.payment_stage === 'fully_paid';
 }
 
-function getExpectedBalanceAmount(order) {
-  return Number(order?.balance_due ?? order?.balance_payment_amount ?? 0) || 0;
-}
 
 export default function Orders() {
   const { user, isAuthenticated, navigateToLogin } = useAuth();
@@ -130,84 +127,99 @@ export default function Orders() {
     const reference = searchParams.get('order');
     const status = String(searchParams.get('status') || '').toLowerCase();
     const paymentStage = searchParams.get('paymentStage') || 'initial';
-    const orderId = searchParams.get('orderId');
 
     if (!reference || paymentStage !== 'balance') {
       setVerificationDone(true);
       return;
     }
 
+    if (status === 'cancelled' || status === 'canceled') {
+      showFeedback('warning', 'The remaining balance payment was cancelled.', 'Payment cancelled');
+      setVerificationDone(true);
+      return;
+    }
+
     setIsVerifying(true);
 
-    setTimeout(() => {
-      checkPaymentStatus(reference)
-        .then(async (result) => {
-          const baseOrderNumber = getBaseOrderReference(reference);
-          const orderList = await appClient.entities.Order.filter({ customer_email: user.email }, '-created_date', 200);
-          const safeOrderList = Array.isArray(orderList) ? orderList : Array.isArray(orderList?.data) ? orderList.data : [];
-          const currentOrder = safeOrderList.find((item) => item.id === orderId || item.order_number === baseOrderNumber);
+    let active = true;
 
-          if (!currentOrder) {
+    const runBalanceVerification = async () => {
+      try {
+        for (let attempt = 1; attempt <= 5; attempt += 1) {
+          if (!active) return;
+
+          const result = await reconcileReturnedPayment({ clientReference: reference }).catch(() => null);
+          const state = String(result?.state || '').toLowerCase();
+          const latestTrackingMessage = result?.latestTracking?.message || '';
+
+          if (state === 'paid' || state === 'paid_from_status_fallback') {
+            queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+            showFeedback(
+              'success',
+              latestTrackingMessage || 'Your remaining balance payment was confirmed successfully.',
+              'Payment confirmed'
+            );
+            setIsVerifying(false);
+            setVerificationDone(true);
+            return;
+          }
+
+          if (state === 'failed') {
+            queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+            showFeedback(
+              'error',
+              latestTrackingMessage || 'The remaining balance payment was not completed.',
+              'Verification failed'
+            );
+            setIsVerifying(false);
+            setVerificationDone(true);
+            return;
+          }
+
+          if (state === 'not_found') {
             showFeedback('error', 'We could not find this balance-payment order.', 'Unable to verify');
+            setIsVerifying(false);
+            setVerificationDone(true);
             return;
           }
 
-          const expectedAmount = getExpectedBalanceAmount(currentOrder);
-          if (isHubtelPaymentVerified(result, expectedAmount)) {
-            const paidAmount = getHubtelPaidAmount(result) || expectedAmount;
-            const now = new Date().toISOString();
-            await appClient.entities.Order.update(currentOrder.id, {
-              balance_payment_status: 'paid',
-              remaining_balance_paid: true,
-              remaining_balance_paid_at: now,
-              balance_payment_verified_amount: paidAmount,
-              balance_paid_at: now,
-              is_fully_paid: true,
-              payment_stage: 'fully_paid',
-              payment_status: 'paid',
-              tracking_updates: (currentOrder.tracking_updates || []).concat([{
-                status: 'Balance Payment Confirmed',
-                message: `Hubtel verified the remaining balance payment. Expected GHS ${expectedAmount.toFixed(2)} and confirmed GHS ${paidAmount.toFixed(2)}.`,
-                timestamp: now,
-              }]),
-            });
+          if (state === 'pending_callback' || state === 'pending_or_unknown') {
+            if (attempt < 5) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+              continue;
+            }
+
             queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
-            showFeedback('success', 'Your remaining balance payment was confirmed successfully.', 'Payment confirmed');
+            showFeedback(
+              'warning',
+              latestTrackingMessage || 'Payment is still processing. Please refresh or check again shortly.',
+              'Still processing'
+            );
+            setIsVerifying(false);
+            setVerificationDone(true);
             return;
           }
+        }
 
-          const paidAmount = getHubtelPaidAmount(result);
-          if (paidAmount != null && paidAmount > 0 && paidAmount < expectedAmount) {
-            await appClient.entities.Order.update(currentOrder.id, {
-              balance_payment_status: 'failed',
-              payment_stage: 'balance_payment_failed',
-              tracking_updates: (currentOrder.tracking_updates || []).concat([{
-                status: 'Balance Payment Amount Mismatch',
-                message: `Hubtel reported GHS ${paidAmount.toFixed(2)} but the expected remaining balance was GHS ${expectedAmount.toFixed(2)}.`,
-                timestamp: new Date().toISOString(),
-              }]),
-            });
-            showFeedback('warning', 'The amount received did not match the expected balance. Please contact support.', 'Amount mismatch');
-            queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
-            return;
-          }
-
-          if (status === 'cancelled') {
-            showFeedback('warning', 'The remaining balance payment was cancelled.', 'Payment cancelled');
-          } else {
-            showFeedback('error', 'The remaining balance payment could not be verified.', 'Verification failed');
-          }
-        })
-        .catch((error) => {
-          console.error('Balance verification error:', error);
-          showFeedback('error', 'The remaining balance payment could not be verified right now.', 'Verification failed');
-        })
-        .finally(() => {
+        queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
+        showFeedback('warning', 'Payment is still processing. Please check again shortly.', 'Still processing');
+      } catch (error) {
+        console.error('Balance verification error:', error);
+        showFeedback('error', 'The remaining balance payment could not be verified right now.', 'Verification failed');
+      } finally {
+        if (active) {
           setIsVerifying(false);
           setVerificationDone(true);
-        });
-    }, 1200);
-  }, [navigate, queryClient, searchParams, user, verificationDone]);
+        }
+      }
+    };
+
+    runBalanceVerification();
+
+    return () => {
+      active = false;
+    };
+  }, [queryClient, searchParams, user, verificationDone]);
 
   useEffect(() => {
     if (!user?.email) return undefined;

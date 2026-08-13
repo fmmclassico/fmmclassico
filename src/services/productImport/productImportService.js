@@ -113,8 +113,10 @@ const BRAND_SYNONYMS = {
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.svg', '.avif'];
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.m4v'];
+const PRESET_COLORS = ['Black', 'White', 'Blue', 'Red', 'Green', 'Silver', 'Gold', 'Gray', 'Grey', 'Pink', 'Purple', 'Yellow', 'Orange', 'Brown', 'Rose Gold', 'Midnight Black', 'Space Gray', 'Titanium'];
 const PRESET_WATTAGES = ['5W', '10W', '18W', '20W', '25W', '33W', '45W', '65W', '100W', '120W', '150W'];
 const PRESET_TYPES = ['USB-C', 'Lightning', 'Micro USB', 'Type-A', 'Wireless', 'Original', 'Compatible', 'Standard', 'Pro', 'Plus', 'Max'];
+
 
 function createImportId() {
   return typeof crypto !== 'undefined' && crypto.randomUUID

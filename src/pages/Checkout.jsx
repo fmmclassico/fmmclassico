@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Info, Loader2, MapPin, ShieldCheck, Truck } from 'lucide-react';
 
 import { appClient } from '@/api/appClient.js';
-import { createBalancePaymentReference, createInitialPaymentReference, getHubtelCheckoutUrl, getHubtelCustomerErrorMessage, initiatePayment } from '@/api/hubtelClient';
+import { createBalancePaymentReference, createInitialPaymentReference, getHubtelCheckoutId, getHubtelCheckoutUrl, getHubtelCustomerErrorMessage, initiatePayment } from '@/api/hubtelClient';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -363,6 +363,30 @@ export default function Checkout() {
         payeeMobileNumber: formData.customer_phone,
         payeeEmail: user.email,
       });
+
+      const checkoutId = getHubtelCheckoutId(initiateResponse);
+      try {
+        const initiatedAt = new Date().toISOString();
+        await appClient.entities.Order.update(createdOrder.id, {
+          initial_checkout_id: checkoutId || null,
+          hubtel_transaction_id: checkoutId || null,
+          hubtel_status: checkoutId ? 'initiated' : 'pending',
+          tracking_updates: (createdOrder.tracking_updates || []).concat([{
+            status: checkoutId ? 'Checkout Created' : 'Checkout Response Received',
+            message: checkoutId
+              ? `Secure checkout created for the first payment. Expected amount: GHS ${orderSummary.totalToPayNow.toFixed(2)}.`
+              : 'The secure checkout response did not include a checkout ID. The order remains open for review.',
+            timestamp: initiatedAt,
+            clientReference: initialPaymentReference,
+            checkoutId: checkoutId || null,
+          }]),
+        });
+      } catch (loggingError) {
+        // Payment initiation must still redirect even if the optional audit log
+        // cannot be written from the browser. The callback/reconciliation path
+        // remains authoritative for final payment state.
+        console.error('[Checkout] Could not save checkout initiation log:', loggingError);
+      }
 
       const checkoutUrl = getHubtelCheckoutUrl(initiateResponse);
       if (checkoutUrl) {

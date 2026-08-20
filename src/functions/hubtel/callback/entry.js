@@ -82,11 +82,17 @@ function getExpectedAmount(order, paymentStage) {
   return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
 }
 
+function toMinorUnits(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? Math.round(numeric * 100) : null;
+}
+
 function isAmountSatisfied(actualAmount, expectedAmount, tolerance = 0.01) {
-  const actual = Number(actualAmount);
-  const expected = Number(expectedAmount);
-  if (!Number.isFinite(actual) || !Number.isFinite(expected) || expected <= 0) return false;
-  return actual + tolerance >= expected;
+  const actualMinor = toMinorUnits(actualAmount);
+  const expectedMinor = toMinorUnits(expectedAmount);
+  const toleranceMinor = Math.max(1, Math.round(Number(tolerance || 0) * 100));
+  if (actualMinor === null || expectedMinor === null || expectedMinor <= 0) return false;
+  return Math.abs(actualMinor - expectedMinor) <= toleranceMinor;
 }
 
 async function parseJsonBody(req) {
@@ -188,7 +194,7 @@ Deno.serve(async (req) => {
 
     const trackingUpdate = {
   status: `${stageLabel} ${normalizedStatus}`,
-  message: `Hubtel ${stageLabel.toLowerCase()} callback: ${normalizedStatus}. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${envelope.amount.toFixed(2)}. Type ${paymentType}. Channel ${paymentChannel}.`,
+  message: `Payment confirmation received for ${stageLabel.toLowerCase()}. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${envelope.amount.toFixed(2)}. Type ${paymentType}. Channel ${paymentChannel}.`,
   timestamp: now,
   checkoutId: envelope.checkoutId,
   clientReference: envelope.clientReference,
@@ -290,11 +296,11 @@ Deno.serve(async (req) => {
           notifyAdmins = true;
           customerTitle = balanceDue > 0 ? 'Initial Payment Confirmed' : 'Payment Confirmed';
           customerMessage = balanceDue > 0
-            ? `Initial payment for order #${order.order_number} has been confirmed.`
+            ? `Your first payment for order #${order.order_number} has been confirmed. The remaining balance will appear on your Orders page when the order is ready for the next payment step.`
             : `Payment for order #${order.order_number} has been confirmed.`;
           customerEmailSubject = `${customerTitle} - #${order.order_number}`;
           adminTitle = 'Payment Received';
-          adminMessage = `Verified successful Hubtel payment for order #${order.order_number} by ${order.customer_name}.`;
+          adminMessage = `Verified successful payment for order #${order.order_number} by ${order.customer_name}.`;
           adminEmailSubject = `Payment Received - #${order.order_number}`;
         }
       } else if (normalizedStatus === 'paid' && !amountVerified) {
@@ -302,7 +308,7 @@ Deno.serve(async (req) => {
         updates.initial_payment_status = 'failed';
         updates.payment_stage = 'awaiting_initial_payment';
         customerTitle = 'Payment Verification Required';
-        customerMessage = `We received a payment update for order #${order.order_number}, but the amount did not match the expected total. Please contact support.`;
+        customerMessage = `We received a payment update for order #${order.order_number}, but the amount still needs manual review. Please contact support if this status does not clear shortly.`;
         customerEmailSubject = `Payment Verification Required - #${order.order_number}`;
         adminTitle = 'Initial Payment Amount Mismatch';
         adminMessage = `Order #${order.order_number} reported an initial payment of GHS ${envelope.amount.toFixed(2)} but expected GHS ${expectedAmount.toFixed(2)}.`;

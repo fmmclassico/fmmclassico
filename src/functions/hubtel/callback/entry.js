@@ -192,21 +192,33 @@ Deno.serve(async (req) => {
     const paymentType = envelope.paymentDetails?.PaymentType || 'N/A';
     const paymentChannel = envelope.paymentDetails?.Channel || 'N/A';
 
+    const trackingStatus = normalizedStatus === 'paid'
+      ? amountVerified
+        ? `${stageLabel} Confirmed`
+        : `${stageLabel} Amount Review`
+      : normalizedStatus === 'failed'
+        ? `${stageLabel} Failed`
+        : normalizedStatus === 'cancelled'
+          ? `${stageLabel} Cancelled`
+          : `${stageLabel} Pending`;
+
     const trackingUpdate = {
-  status: `${stageLabel} ${normalizedStatus}`,
-  message: `Payment confirmation received for ${stageLabel.toLowerCase()}. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${envelope.amount.toFixed(2)}. Type ${paymentType}. Channel ${paymentChannel}.`,
-  timestamp: now,
-  checkoutId: envelope.checkoutId,
-  clientReference: envelope.clientReference,
-  responseCode: envelope.responseCode || null,
-  callbackStatus: envelope.callbackStatus || null,
-  transactionStatus: envelope.transactionStatus || null,
-  salesInvoiceId: envelope.salesInvoiceId || null,
-  amount: envelope.amount,
-  expectedAmount,
-  paymentType,
-  paymentChannel,
-};
+      status: trackingStatus,
+      message: normalizedStatus === 'paid' && !amountVerified
+        ? `${stageLabel} reached the payment gateway, but the amount needs review. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${envelope.amount.toFixed(2)}. Type ${paymentType}. Channel ${paymentChannel}.`
+        : `Payment confirmation received for ${stageLabel.toLowerCase()}. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${envelope.amount.toFixed(2)}. Type ${paymentType}. Channel ${paymentChannel}.`,
+      timestamp: now,
+      checkoutId: envelope.checkoutId,
+      clientReference: envelope.clientReference,
+      responseCode: envelope.responseCode || null,
+      callbackStatus: envelope.callbackStatus || null,
+      transactionStatus: envelope.transactionStatus || null,
+      salesInvoiceId: envelope.salesInvoiceId || null,
+      amount: envelope.amount,
+      expectedAmount,
+      paymentType,
+      paymentChannel,
+    };
 
     const updates = {
       tracking_updates: [...trackingUpdates, trackingUpdate],
@@ -257,9 +269,11 @@ Deno.serve(async (req) => {
           adminEmailSubject = `Remaining Balance Paid - #${order.order_number}`;
         }
       } else if (normalizedStatus === 'paid' && !amountVerified) {
-        updates.balance_payment_status = 'failed';
-        updates.payment_stage = 'balance_payment_failed';
-        adminTitle = 'Balance Payment Amount Mismatch';
+        // A paid callback with an amount mismatch is not a failed payment. Keep it
+        // pending for review so a real payment is not incorrectly blocked.
+        updates.balance_payment_status = 'pending';
+        updates.payment_stage = 'awaiting_balance_payment';
+        adminTitle = 'Balance Payment Amount Review';
         adminMessage = `Order #${order.order_number} reported a balance payment of GHS ${envelope.amount.toFixed(2)} but expected GHS ${expectedAmount.toFixed(2)}.`;
         adminEmailSubject = `Balance Payment Amount Mismatch - #${order.order_number}`;
         notifyAdmins = true;
@@ -304,13 +318,15 @@ Deno.serve(async (req) => {
           adminEmailSubject = `Payment Received - #${order.order_number}`;
         }
       } else if (normalizedStatus === 'paid' && !amountVerified) {
-        updates.payment_status = 'failed';
-        updates.initial_payment_status = 'failed';
+        // Do not turn a real gateway payment into a failed order merely because
+        // the callback amount needs review. The order remains visible and retryable.
+        updates.payment_status = 'pending_payment';
+        updates.initial_payment_status = 'pending';
         updates.payment_stage = 'awaiting_initial_payment';
         customerTitle = 'Payment Verification Required';
-        customerMessage = `We received a payment update for order #${order.order_number}, but the amount still needs manual review. Please contact support if this status does not clear shortly.`;
+        customerMessage = `We received a payment update for order #${order.order_number}, but the amount still needs manual review. The order remains open while the payment is checked.`;
         customerEmailSubject = `Payment Verification Required - #${order.order_number}`;
-        adminTitle = 'Initial Payment Amount Mismatch';
+        adminTitle = 'Initial Payment Amount Review';
         adminMessage = `Order #${order.order_number} reported an initial payment of GHS ${envelope.amount.toFixed(2)} but expected GHS ${expectedAmount.toFixed(2)}.`;
         adminEmailSubject = `Initial Payment Amount Mismatch - #${order.order_number}`;
         notifyCustomer = true;

@@ -271,31 +271,7 @@ function ReviewBannerSlide({ slide }) {
         </div>
 
         <div className="fmm-review-slide__preview flex items-center justify-center md:justify-end">
-          <div className="mx-auto flex w-full max-w-[220px] flex-col gap-3 rounded-[1.75rem] border border-white/14 bg-white/8 p-4 text-white/92 backdrop-blur-sm md:max-w-[280px] md:p-5">
-            <div className="flex items-center justify-between">
-              <div className="text-left">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8dc3ff]">FMM CLASSICO</p>
-                <p className="mt-1 text-sm font-bold md:text-base">Fast checkout</p>
-              </div>
-              <div className="rounded-full bg-white/10 p-2">
-                <ShieldCheck className="h-4 w-4 text-[#8dc3ff] md:h-5 md:w-5" />
-              </div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-[#082a6f]/65 p-3">
-              <div className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-[11px] text-white/75">
-                <Search className="h-3.5 w-3.5 text-[#8dc3ff]" />
-                <span>Search products, brands and deals</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div className="rounded-2xl border border-white/10 bg-white/8 p-3"><p className="font-semibold">Accessories</p><p className="mt-1 text-white/70">Chargers, earbuds, cases and more</p></div>
-              <div className="rounded-2xl border border-white/10 bg-white/8 p-3"><p className="font-semibold">Appliances</p><p className="mt-1 text-white/70">Home and electronics essentials</p></div>
-            </div>
-            <div className="flex items-center gap-2 rounded-2xl border border-[#8dc3ff]/25 bg-[#0b3ea9]/30 px-3 py-3 text-[11px]">
-              <ShoppingBag className="h-4 w-4 text-[#8dc3ff]" />
-              <span>Cleaner welcome banner without the phone mockup</span>
-            </div>
-          </div>
+          <WelcomePhonePreview />
         </div>
       </div>
     </div>

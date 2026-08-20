@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Trash2, Send, Calendar, FileText, Wallet, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { getPaymentStatusLabel, isInitialPaymentConfirmed, isRemainingBalancePaid as isHubtelRemainingBalancePaid, isTwoStagePaymentOrder } from '@/api/hubtelClient';
 
 const NL = String.fromCharCode(10);
 const statusConfig = {
@@ -24,16 +25,46 @@ const statusConfig = {
 };
 function toNumber(value, fallback = 0) { const numeric = Number(value); return Number.isFinite(numeric) ? numeric : fallback; }
 function getGrandTotal(order) { return toNumber(order?.grand_total, toNumber(order?.total_amount)); }
-function getAmountPaidNow(order) { return toNumber(order?.initial_payment_amount ?? order?.amount_paid_now ?? order?.total_amount); }
+function getAmountPaidNow(order) {
+  const verifiedAmount = Number(order?.initial_payment_verified_amount);
+  if (Number.isFinite(verifiedAmount) && verifiedAmount > 0) return verifiedAmount;
+  return isInitialPaymentConfirmed(order)
+    ? toNumber(order?.initial_payment_amount ?? order?.amount_paid_now ?? order?.total_amount)
+    : 0;
+}
 function getBalanceDue(order) { return toNumber(order?.balance_due ?? order?.balance_payment_amount); }
-function isTwoStageOrder(order) { return ['deposit_balance', 'pay_on_delivery'].includes(order?.payment_method || ''); }
-function isRemainingBalancePaid(order) { return order?.remaining_balance_paid === true || order?.balance_payment_status === 'paid'; }
+function isTwoStageOrder(order) { return isTwoStagePaymentOrder(order); }
+function isRemainingBalancePaid(order) { return isHubtelRemainingBalancePaid(order); }
 function formatVariantSummary(item) { if (item?.variant_summary) return item.variant_summary; const parts = []; if (item?.selected_color) parts.push(`Color: ${item.selected_color}`); if (item?.selected_wattage) parts.push(`Wattage: ${item.selected_wattage}`); if (item?.selected_type) parts.push(`Type: ${item.selected_type}`); return parts.join(' • '); }
 function isVisibleOrder() { return true; }
-function formatPaymentGatewayStatus(value) { const normalized = String(value || '').trim().toLowerCase(); return normalized ? normalized.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) : 'Not checked yet'; }
-function getLatestTracking(order) { const updates = Array.isArray(order?.tracking_updates) ? order.tracking_updates : []; return updates.length ? updates[updates.length - 1] : null; }
+function getTrackingUpdates(order) { return Array.isArray(order?.tracking_updates) ? order.tracking_updates : []; }
 function getPaymentMethodLabel(method) { if (method === 'full_payment') return { text: 'Full Payment', color: 'bg-green-100 text-green-700' }; if (method === 'deposit_balance') return { text: 'Deposit + Balance', color: 'bg-orange-100 text-orange-700' }; if (method === 'pay_on_delivery') return { text: 'Delivery First', color: 'bg-red-100 text-red-700' }; return { text: 'Full Payment', color: 'bg-green-100 text-green-700' }; }
-function getNextStatus(order) { if (isTwoStageOrder(order) && isRemainingBalancePaid(order) && order.status !== 'delivered') return { newStatus: 'delivered', label: 'Product Successfully Delivered', message: 'Full payment has been confirmed and product delivered successfully.' }; if (order.status === 'confirmed') return { newStatus: 'processing', label: 'Mark Processing', message: 'Order is being processed.' }; if (order.status === 'processing') return { newStatus: 'packed', label: 'Mark Packed', message: 'Order packed.' }; if (order.status === 'packed') return { newStatus: 'shipped', label: isTwoStageOrder(order) ? 'Mark Shipped & Enable Balance Payment' : 'Mark Shipped', message: isTwoStageOrder(order) ? 'Order shipped. Customer can now clear the remaining balance from the Orders page.' : 'Order shipped.' }; if (order.status === 'shipped' && !isTwoStageOrder(order)) return { newStatus: 'delivered', label: 'Product Successfully Delivered', message: 'Order delivered successfully.' }; return null; }
+function getNextStatus(order) {
+  if (!isInitialPaymentConfirmed(order) && ['confirmed', 'processing', 'packed'].includes(order.status)) {
+    return null;
+  }
+
+  if (isTwoStageOrder(order) && isRemainingBalancePaid(order) && order.status !== 'delivered') {
+    return { newStatus: 'delivered', label: 'Product Successfully Delivered', message: 'Full payment has been confirmed and product delivered successfully.' };
+  }
+
+  if (order.status === 'confirmed') return { newStatus: 'processing', label: 'Mark Processing', message: 'Order is being processed.' };
+  if (order.status === 'processing') return { newStatus: 'packed', label: 'Mark Packed', message: 'Order packed.' };
+  if (order.status === 'packed') {
+    return {
+      newStatus: 'shipped',
+      label: isTwoStageOrder(order) ? 'Mark Shipped & Enable Balance Payment' : 'Mark Shipped',
+      message: isTwoStageOrder(order)
+        ? 'Order shipped. Customer can now clear the remaining balance from the Orders page.'
+        : 'Order shipped.',
+    };
+  }
+  if (order.status === 'shipped' && !isTwoStageOrder(order)) {
+    return { newStatus: 'delivered', label: 'Product Successfully Delivered', message: 'Order delivered successfully.' };
+  }
+
+  return null;
+}
 
 async function sendOrderSignals(order, { title, message, emailSubject, type = 'general' }) {
   const emailBody = `Hi ${order.customer_name},${NL}${NL}${message}${NL}${NL}FMM CLASSICO${NL}0208207543`;
@@ -60,6 +91,9 @@ export default function AdminOrders() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ order, newStatus, message }) => {
+      if (['processing', 'packed', 'shipped'].includes(newStatus) && !isInitialPaymentConfirmed(order)) {
+        throw new Error('Wait for the checkout payment to be verified before progressing this order.');
+      }
       if (newStatus === 'delivered' && isTwoStageOrder(order) && !isRemainingBalancePaid(order)) throw new Error('Confirm the balance payment before handing over the product.');
       const now = new Date().toISOString();
       const payload = { status: newStatus, tracking_updates: (order.tracking_updates || []).concat([{ status: statusConfig[newStatus]?.label || newStatus, message, timestamp: now }]) };
@@ -74,6 +108,7 @@ export default function AdminOrders() {
       await sendOrderSignals(order, { title: titleMap[newStatus] || 'Order Update', message, emailSubject: `${titleMap[newStatus] || 'Order Update'} - #${order.order_number}`, type: newStatus === 'delivered' ? 'order_processing' : 'general' });
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['adminOrders'] }); toast.success('Updated!'); },
+    onError: (error) => { toast.error(error?.message || 'The order could not be updated.'); },
   });
 
   const confirmRemainingBalanceMutation = useMutation({
@@ -133,16 +168,16 @@ export default function AdminOrders() {
     const awaitingBalance = twoStage && order.status === 'shipped' && !isRemainingBalancePaid(order);
     const showDecisionBar = awaitingBalance;
     const showDeliveredButton = next && next.newStatus === 'delivered';
-    const latestTracking = getLatestTracking(order);
+    const trackingUpdates = getTrackingUpdates(order);
     return (
       <Card key={order.id} className="p-4 bg-white mb-3">
         <div className="flex items-start gap-2">
           <input type="checkbox" checked={selectedOrders.includes(order.id)} onChange={() => handleToggleSelect(order.id)} className="w-4 h-4 mt-1 cursor-pointer" />
           <div className="flex-1">
             <div className="flex items-center justify-between"><div><p className="text-sm font-bold">{order.order_number}</p><p className="text-[10px] text-gray-400">{order.created_date ? format(new Date(order.created_date), 'MMM d, yyyy h:mm a') : ''}</p></div><div className="text-right"><p className="text-sm font-bold">₵{grandTotal.toFixed(2)}</p><span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusConfig[order.status]?.color || ''}`}>{statusConfig[order.status]?.label || order.status}</span></div></div>
-            <div className="flex flex-wrap gap-1.5 mt-2"><span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${methodLabel.color}`}>{methodLabel.text}</span><span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${order.initial_payment_status === 'paid' || order.payment_status === 'paid' ? 'bg-green-100 text-green-700' : order.initial_payment_status === 'failed' || order.initial_payment_status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{order.initial_payment_status === 'paid' || order.payment_status === 'paid' ? 'Initial Payment Received' : order.initial_payment_status === 'failed' || order.initial_payment_status === 'cancelled' ? 'Initial Payment Failed' : 'Awaiting Initial Payment'}</span>{twoStage && <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isRemainingBalancePaid(order) ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>{isRemainingBalancePaid(order) ? 'Balance Paid' : `Balance Pending: ₵${balanceDue.toFixed(2)}`}</span>}<span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-700">Payment status: {formatPaymentGatewayStatus(order.hubtel_status)}</span></div>
-            <div className="mt-2 grid gap-1 text-xs text-gray-700 bg-slate-50 rounded-lg p-2"><div className="flex justify-between"><span>Total order value</span><span className="font-semibold">₵{grandTotal.toFixed(2)}</span></div><div className="flex justify-between"><span>Initial payment</span><span className="font-semibold">₵{amountPaidNow.toFixed(2)}</span></div><div className="flex justify-between"><span>Initial status</span><span className="font-semibold capitalize">{String(order.initial_payment_status || 'pending').replace(/_/g, ' ')}</span></div>{twoStage && <div className="flex justify-between"><span>Balance status</span><span className="font-semibold capitalize">{String(order.balance_payment_status || 'pending').replace(/_/g, ' ')}</span></div>}{twoStage && <div className="flex justify-between text-orange-700"><span>Remaining balance</span><span className="font-bold">₵{balanceDue.toFixed(2)}</span></div>}</div>
-            {latestTracking && <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-700"><p className="font-semibold text-slate-900">Latest log</p><p className="mt-1 text-slate-800">{latestTracking.status || 'Update'}</p><p className="mt-1 leading-5 text-slate-600">{latestTracking.message || 'No details provided.'}</p>{latestTracking.timestamp && <p className="mt-2 text-[10px] text-slate-400">{format(new Date(latestTracking.timestamp), 'MMM d, yyyy h:mm a')}</p>}</div>}
+            <div className="flex flex-wrap gap-1.5 mt-2"><span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${methodLabel.color}`}>{methodLabel.text}</span><span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isInitialPaymentConfirmed(order) ? 'bg-green-100 text-green-700' : order.initial_payment_status === 'failed' || order.initial_payment_status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{isInitialPaymentConfirmed(order) ? 'Checkout Payment Received' : order.initial_payment_status === 'failed' || order.initial_payment_status === 'cancelled' ? 'Checkout Payment Failed' : 'Awaiting Checkout Payment'}</span>{twoStage && <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isRemainingBalancePaid(order) ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>{isRemainingBalancePaid(order) ? 'Balance Paid' : `Balance Pending: ₵${balanceDue.toFixed(2)}`}</span>}<span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-700">Checkout status: {getPaymentStatusLabel(order)}</span></div>
+            <div className="mt-2 grid gap-1 text-xs text-gray-700 bg-slate-50 rounded-lg p-2"><div className="flex justify-between"><span>Total order value</span><span className="font-semibold">₵{grandTotal.toFixed(2)}</span></div><div className="flex justify-between"><span>Amount confirmed</span><span className="font-semibold">₵{amountPaidNow.toFixed(2)}</span></div><div className="flex justify-between"><span>First checkout status</span><span className="font-semibold capitalize">{String(order.initial_payment_status || 'pending').replace(/_/g, ' ')}</span></div>{twoStage && <div className="flex justify-between"><span>Balance checkout status</span><span className="font-semibold capitalize">{String(order.balance_payment_status || 'pending').replace(/_/g, ' ')}</span></div>}{twoStage && <div className="flex justify-between text-orange-700"><span>Remaining balance</span><span className="font-bold">₵{balanceDue.toFixed(2)}</span></div>}</div>
+            {trackingUpdates.length > 0 && <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-700"><p className="font-semibold text-slate-900">Payment log ({trackingUpdates.length})</p><div className="mt-2 space-y-2">{trackingUpdates.slice().reverse().slice(0, 5).map((entry, index) => <div key={`${entry.timestamp || 't'}-${index}`} className="border-t border-slate-100 pt-2 first:border-0 first:pt-0"><div className="flex items-start justify-between gap-2"><p className="font-medium text-slate-800">{entry.status || 'Update'}</p>{entry.timestamp && <span className="shrink-0 text-[10px] text-slate-400">{format(new Date(entry.timestamp), 'MMM d, h:mm a')}</span>}</div><p className="mt-1 leading-5 text-slate-600">{entry.message || 'No details provided.'}</p>{entry.clientReference && <p className="mt-1 text-[10px] text-slate-400">Reference: {entry.clientReference}</p>}</div>)}</div></div>}
             <div className="mt-2 text-xs text-gray-600 space-y-0.5"><p className="font-medium text-gray-800">{order.customer_name}</p><p>{order.customer_email}{order.customer_phone ? ` | ${order.customer_phone}` : ''}</p><p>📍 {order.delivery_address}</p></div>
             <div className="mt-2 flex flex-col gap-1.5">{(order.items || []).map((item, index) => { const variantSummary = formatVariantSummary(item); return <div key={index} className="flex items-center gap-1.5 bg-gray-50 rounded-lg px-2 py-1">{item.product_image && <img src={item.product_image} className="w-8 h-8 rounded object-cover" />}<div className="min-w-0"><span className="text-[10px] text-gray-700 block">{item.product_name} x{item.quantity}</span>{variantSummary && <span className="text-[10px] text-blue-700 block">{variantSummary}</span>}</div></div>;})}</div>
             <div className="mt-3 pt-2 border-t border-gray-100"><div className="flex items-center gap-2 mb-1"><Calendar className="h-3.5 w-3.5 text-gray-500" /><span className="text-xs text-gray-600 font-medium">Est. Delivery:</span>{order.estimated_delivery ? <span className="text-xs font-bold text-gray-800">{format(new Date(order.estimated_delivery), 'MMM d, yyyy')}</span> : <span className="text-xs text-gray-400">Not set</span>}</div>{!isClosed && <div className="flex items-center gap-2"><Input type="date" className="text-xs h-8 w-40" value={deliveryDates[order.id] || ''} onChange={(e) => setDeliveryDates((prev) => ({ ...prev, [order.id]: e.target.value }))} /><Button size="sm" variant="outline" className="text-xs h-8" onClick={() => { const date = deliveryDates[order.id]; if (!date) return toast.error('Pick a date'); updateDeliveryDateMutation.mutate({ order, date }); }} disabled={updateDeliveryDateMutation.isPending}>Set</Button></div>}</div>

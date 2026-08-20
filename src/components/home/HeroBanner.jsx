@@ -177,45 +177,184 @@ const BUILT_IN_BANNERS = [
 ];
 
 function WelcomePhonePreview() {
+  const products = [
+    {
+      name: 'iPhone 15 Pro',
+      price: '₵12,999',
+      image:
+        'https://res.cloudinary.com/xz7s2qzt/image/upload/v1785830025/ChatGPT_Image_Jul_20_2026_03_19_56_PM_vje886_nkr8m6.jpg',
+    },
+    {
+      name: 'Wireless Earbuds',
+      price: '₵349',
+      image:
+        'https://res.cloudinary.com/xz7s2qzt/image/upload/v1785830025/ChatGPT_Image_Jul_17_2026_02_37_29_PM_qlihyw_x6uouz.jpg',
+    },
+    {
+      name: 'Smart Watch',
+      price: '₵599',
+      image:
+        'https://res.cloudinary.com/xz7s2qzt/image/upload/v1785830024/ChatGPT_Image_Jul_17_2026_03_27_00_PM_tv3lay_zbfoid.jpg',
+    },
+    {
+      name: 'Home Cooker',
+      price: '₵449',
+      image:
+        'https://res.cloudinary.com/xz7s2qzt/image/upload/v1785830329/Single-Burner-Electric-Infrared-Cooker-Ceramic-Stove-Hob-Cooktop-Electrical_ucsfgz_1_tcomde.jpg',
+    },
+  ];
+
   return (
-    <div className="relative mx-auto w-full max-w-[96px] sm:max-w-[118px] md:max-w-[178px] lg:max-w-[196px]">
-      <div className="absolute -bottom-1.5 left-1/2 h-4 w-[86%] -translate-x-1/2 rounded-full bg-[#02153f]/70 blur-md md:-bottom-2 md:h-5" />
-      <div className="absolute -bottom-0.5 left-1/2 h-2.5 w-[92%] -translate-x-1/2 rounded-[999px] border border-[#1e5bb8]/35 bg-[#072764] md:h-3" />
+    <div className="relative mx-auto w-full max-w-[150px] sm:max-w-[170px] md:max-w-[190px] lg:max-w-[205px]">
+      {/* Soft phone shadow */}
+      <div className="absolute -bottom-3 left-1/2 h-5 w-[72%] -translate-x-1/2 rounded-full bg-black/40 blur-xl" />
 
-      <div className="relative ml-auto w-[82px] rotate-[9deg] rounded-[1.35rem] border border-white/18 bg-[#0d1629] p-[4px] shadow-[0_14px_32px_rgba(0,0,0,0.28)] md:w-[164px] md:rounded-[2rem] md:p-[6px] lg:w-[182px]">
-        <div className="absolute left-1/2 top-[6px] z-20 h-[6px] w-[28px] -translate-x-1/2 rounded-full bg-[#101827] md:top-2.5 md:h-3 md:w-14" />
+      {/* iPhone body */}
+      <div className="relative mx-auto w-[112px] rounded-[1.9rem] border-[3px] border-[#222936] bg-[#11151d] p-[3px] shadow-[0_22px_45px_rgba(0,0,0,0.42)] sm:w-[126px] sm:rounded-[2.1rem] md:w-[140px] md:rounded-[2.3rem] md:p-[4px] lg:w-[148px]">
 
-        <div className="overflow-hidden rounded-[1rem] bg-white md:rounded-[1.5rem]">
-          <div className="px-2 pt-3 pb-2 md:px-3 md:pt-4 md:pb-2.5">
-            <div className="flex items-center justify-between text-[#0f224f]">
-              <Menu className="h-3 w-3 md:h-4 md:w-4" />
-              <div className="flex items-center gap-1 text-[7px] font-black tracking-tight md:text-[11px]">
+        {/* Side buttons */}
+        <div className="absolute -left-[4px] top-[42px] h-[22px] w-[2px] rounded-l-full bg-[#343b48]" />
+        <div className="absolute -left-[4px] top-[70px] h-[32px] w-[2px] rounded-l-full bg-[#343b48]" />
+        <div className="absolute -right-[4px] top-[58px] h-[38px] w-[2px] rounded-r-full bg-[#343b48]" />
+
+        {/* iPhone screen */}
+        <div className="relative overflow-hidden rounded-[1.55rem] bg-white sm:rounded-[1.7rem] md:rounded-[1.9rem]">
+
+          {/* Dynamic Island */}
+          <div className="absolute left-1/2 top-[5px] z-30 flex h-[10px] w-[43px] -translate-x-1/2 items-center justify-center rounded-full bg-black md:top-[6px] md:h-[11px] md:w-[48px]">
+            <div className="h-[3px] w-[3px] rounded-full bg-[#252b35]" />
+          </div>
+
+          {/* Website header */}
+          <div className="px-[7px] pb-[5px] pt-[20px] md:px-[8px] md:pb-[6px] md:pt-[21px]">
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-[2px] text-[6px] font-black md:text-[7px]">
                 <span style={{ color: BLUE_ACCENT }}>FMM</span>
-                <span>CLASSICO</span>
+                <span className="text-[#101828]">CLASSICO</span>
               </div>
-              <Bell className="h-3 w-3 md:h-4 md:w-4" />
+
+              <div className="flex items-center gap-[4px] text-[#172033]">
+                <Heart className="h-[8px] w-[8px] md:h-[9px] md:w-[9px]" />
+                <ShoppingBag className="h-[8px] w-[8px] md:h-[9px] md:w-[9px]" />
+              </div>
             </div>
 
-            <div className="mt-2 flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 md:gap-1.5 md:px-2.5 md:py-1.5">
-              <Search className="h-2.5 w-2.5 text-slate-400 md:h-3 md:w-3" />
-              <span className="text-[5.8px] text-slate-400 md:text-[8px]">Search products...</span>
+            {/* Search */}
+            <div className="mt-[6px] flex h-[16px] items-center gap-[3px] rounded-full border border-slate-200 bg-[#f7f8fa] px-[5px] md:h-[18px]">
+              <Search className="h-[7px] w-[7px] text-slate-400" />
+              <span className="text-[5px] text-slate-400 md:text-[5.5px]">
+                Search products...
+              </span>
             </div>
 
-            <div className="mt-2 rounded-[0.8rem] bg-gradient-to-r from-[#03143f] via-[#0b2a63] to-[#2E86C1] px-2 py-2 text-white md:mt-3 md:rounded-[1rem] md:px-3 md:py-3">
-              <p className="text-[7px] font-black leading-tight md:text-[12px]">iPhone 15 Pro</p>
-              <p className="mt-0.5 text-[5px] text-white/80 md:text-[7px]">Titanium. So strong.</p>
-              <div className="mt-1 inline-flex rounded-full bg-white px-1.5 py-0.5 text-[4.8px] font-bold text-[#0b3ea9] md:mt-2 md:text-[6px]">
+            {/* Website hero inside phone */}
+            <div className="mt-[6px] overflow-hidden rounded-[7px] bg-gradient-to-r from-[#03143f] via-[#0b2a63] to-[#2E86C1] px-[7px] py-[7px]">
+              <p className="text-[5px] font-black text-white md:text-[5.5px]">
+                FMM CLASSICO DEALS
+              </p>
+
+              <p className="mt-[2px] text-[7px] font-black leading-tight text-white md:text-[8px]">
+                Shop smarter.
+                <br />
+                Live better.
+              </p>
+
+              <div className="mt-[4px] inline-flex rounded-full bg-white px-[5px] py-[2px] text-[4.5px] font-bold text-[#0b3ea9]">
                 Shop Now
               </div>
             </div>
 
-            <div className="mt-2 grid grid-cols-5 gap-1 text-center text-[4.8px] font-medium text-slate-600 md:text-[6px]">
-              <div className="flex flex-col items-center gap-0.5"><Smartphone className="h-2 w-2 md:h-3 md:w-3" /><span>Phones</span></div>
-              <div className="flex flex-col items-center gap-0.5"><ShoppingBag className="h-2 w-2 md:h-3 md:w-3" /><span>Accessories</span></div>
-              <div className="flex flex-col items-center gap-0.5"><ShieldCheck className="h-2 w-2 md:h-3 md:w-3" /><span>Electronics</span></div>
-              <div className="flex flex-col items-center gap-0.5"><ReceiptText className="h-2 w-2 md:h-3 md:w-3" /><span>Appliances</span></div>
-              <div className="flex flex-col items-center gap-0.5"><Heart className="h-2 w-2 md:h-3 md:w-3" /><span>Lifestyle</span></div>
+            {/* Category row */}
+            <div className="mt-[7px] flex gap-[3px] overflow-hidden">
+              {['Phones', 'Accessories', 'Electronics', 'Home'].map(
+                (category, index) => (
+                  <div
+                    key={category}
+                    className={`whitespace-nowrap rounded-full px-[4px] py-[2px] text-[4px] font-semibold ${
+                      index === 0
+                        ? 'bg-[#0b3ea9] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {category}
+                  </div>
+                )
+              )}
             </div>
+
+            {/* Products heading */}
+            <div className="mt-[8px] flex items-center justify-between">
+              <span className="text-[6px] font-black text-[#111827] md:text-[7px]">
+                Popular Products
+              </span>
+
+              <span className="text-[4.5px] font-semibold text-[#2E86C1]">
+                View all
+              </span>
+            </div>
+
+            {/* Product rows */}
+            <div className="mt-[4px] space-y-[3px]">
+              {products.map((product) => (
+                <div
+                  key={product.name}
+                  className="flex items-center gap-[4px] rounded-[6px] border border-slate-100 bg-white px-[3px] py-[3px] shadow-[0_1px_4px_rgba(15,23,42,0.05)]"
+                >
+                  {/* Product image */}
+                  <div className="h-[25px] w-[25px] shrink-0 overflow-hidden rounded-[4px] bg-slate-50 md:h-[27px] md:w-[27px]">
+                    <img
+                      src={product.image}
+                      alt=""
+                      className="h-full w-full object-contain"
+                      loading="lazy"
+                    />
+                  </div>
+
+                  {/* Product information */}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[5px] font-bold leading-tight text-[#172033] md:text-[5.5px]">
+                      {product.name}
+                    </p>
+
+                    <p className="mt-[2px] text-[5px] font-black text-[#0b3ea9] md:text-[5.5px]">
+                      {product.price}
+                    </p>
+                  </div>
+
+                  {/* Add button */}
+                  <div className="flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-full bg-[#0b3ea9] text-[8px] font-bold text-white">
+                    +
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom navigation */}
+            <div className="mt-[7px] border-t border-slate-100 pt-[5px]">
+              <div className="flex items-center justify-around text-[4px] text-slate-400">
+                <div className="flex flex-col items-center gap-[2px] text-[#0b3ea9]">
+                  <ShoppingBag className="h-[8px] w-[8px]" />
+                  <span>Home</span>
+                </div>
+
+                <div className="flex flex-col items-center gap-[2px]">
+                  <Search className="h-[8px] w-[8px]" />
+                  <span>Explore</span>
+                </div>
+
+                <div className="flex flex-col items-center gap-[2px]">
+                  <Heart className="h-[8px] w-[8px]" />
+                  <span>Wishlist</span>
+                </div>
+
+                <div className="flex flex-col items-center gap-[2px]">
+                  <UserCircle2 className="h-[8px] w-[8px]" />
+                  <span>Account</span>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>

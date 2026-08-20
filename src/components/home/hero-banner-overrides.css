@@ -135,14 +135,11 @@
 
 
 .fmm-review-slide__grid {
-  position: relative;
-  z-index: 1;
-  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.75rem 0.65rem 1.8rem;
   height: 100%;
-  grid-template-columns: minmax(0, 1fr) 92px;
-  align-items: start;
-  gap: 0.5rem;
-  padding: 0.85rem 0.8rem 2rem;
 }
 
 .fmm-review-slide__content {
@@ -169,8 +166,15 @@
 }
 
 .fmm-review-slide__preview {
+  width: 96px;
+  min-width: 96px;
   height: 100%;
-  align-self: end;
+  align-self: center;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
 }
 
 @media (min-width: 640px) {
@@ -218,8 +222,9 @@
   }
 
   .fmm-review-slide__features {
-    gap: 0.5rem;
-  }
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.3rem;
+}
 
   .fmm-review-slide__trust {
     gap: 0.45rem 1rem;
@@ -234,15 +239,15 @@
   }
 
   .fmm-review-slide__title {
-    font-size: 2rem;
-    max-width: none;
-    white-space: nowrap;
-  }
-
+  font-size: clamp(1.35rem, 6.4vw, 1.85rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
   .fmm-review-slide__description {
-    max-width: 74ch;
-    font-size: 0.8125rem;
-  }
+  max-width: 100%;
+  font-size: clamp(0.62rem, 2.55vw, 0.78rem);
+  line-height: 1.38;
+}
 
   .fmm-review-slide__trust {
     font-size: 0.6875rem;
@@ -251,34 +256,46 @@
 
 @media (max-width: 767px) {
   .fmm-flyer-hero-frame.is-review-slide {
-    height: clamp(300px, 84vw, 340px);
-    min-height: clamp(300px, 84vw, 340px);
+    height: clamp(300px, 92vw, 360px);
+    min-height: clamp(300px, 92vw, 360px);
+    max-height: 360px;
   }
 
   .fmm-review-slide__grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.75rem;
-    padding: 1rem 1rem 2.25rem;
+    grid-template-columns: minmax(0, 1fr) 96px;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.75rem 0.65rem 1.8rem;
+    height: 100%;
   }
 
   .fmm-review-slide__title {
-    font-size: 2rem;
-    line-height: 1;
+    font-size: clamp(1.35rem, 6.4vw, 1.85rem);
+    line-height: 0.98;
+    letter-spacing: -0.04em;
   }
 
   .fmm-review-slide__description {
-    max-width: none;
-    font-size: 0.82rem;
-    line-height: 1.48;
+    max-width: 100%;
+    font-size: clamp(0.62rem, 2.55vw, 0.78rem);
+    line-height: 1.38;
   }
 
   .fmm-review-slide__features {
-    gap: 0.45rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.3rem;
   }
 
   .fmm-review-slide__preview {
+    width: 96px;
+    min-width: 96px;
+    height: 100%;
+    align-self: center;
     justify-self: end;
-    margin-right: 0.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
   }
 
   .fmm-review-slide__trust {

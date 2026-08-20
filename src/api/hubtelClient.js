@@ -15,6 +15,7 @@ export async function reconcileReturnedPayment({ clientReference }) {
   const response = await fetch(endpoint, {
     method: 'POST',
     headers,
+    cache: 'no-store',
     body: JSON.stringify({ clientReference }),
   });
 
@@ -364,6 +365,75 @@ export function getBaseOrderReference(
   );
 }
 
+export function isTwoStagePaymentOrder(order) {
+  return ['deposit_balance', 'pay_on_delivery'].includes(
+    String(order?.payment_method || '')
+  );
+}
+
+export function isRemainingBalancePaid(order) {
+  return order?.remaining_balance_paid === true
+    || String(order?.remaining_balance_paid || '').toLowerCase() === 'true'
+    || String(order?.balance_payment_status || '').toLowerCase() === 'paid';
+}
+
+export function isBalancePaymentEnabled(order) {
+  return order?.balance_payment_enabled === true
+    || String(order?.balance_payment_enabled || '').toLowerCase() === 'true'
+    || String(order?.balance_payment_status || '').toLowerCase() === 'enabled'
+    || String(order?.payment_stage || '').toLowerCase() === 'awaiting_balance_payment';
+}
+
+export function isInitialPaymentConfirmed(order) {
+  const initialStatus = String(order?.initial_payment_status || '').toLowerCase();
+  const paymentStage = String(order?.payment_stage || '').toLowerCase();
+
+  if (initialStatus === 'paid') return true;
+
+  if (['initial_payment_paid', 'awaiting_balance_payment', 'fully_paid'].includes(paymentStage)) {
+    return true;
+  }
+
+  if (String(order?.payment_status || '').toLowerCase() === 'paid'
+    && (!isTwoStagePaymentOrder(order) || !isRemainingBalancePaid(order))) {
+    return true;
+  }
+
+  // This fallback repairs display/action gating for older rows where the
+  // verified amount was stored but the stage field was not updated.
+  const expected = Number(order?.initial_payment_amount ?? order?.amount_paid_now ?? 0);
+  const verified = Number(order?.initial_payment_verified_amount ?? 0);
+  return Number.isFinite(expected)
+    && Number.isFinite(verified)
+    && expected > 0
+    && verified > 0
+    && Math.abs(expected - verified) <= 0.01;
+}
+
+export function isOrderFullyPaid(order) {
+  return order?.is_fully_paid === true
+    || isRemainingBalancePaid(order)
+    || (!isTwoStagePaymentOrder(order) && isInitialPaymentConfirmed(order));
+}
+
+export function getPaymentStatusLabel(order) {
+  if (isOrderFullyPaid(order)) return 'Paid';
+
+  if (isInitialPaymentConfirmed(order)) {
+    return isTwoStagePaymentOrder(order)
+      ? isBalancePaymentEnabled(order)
+        ? 'First payment paid • balance available'
+        : 'First payment paid'
+      : 'Paid';
+  }
+
+  const providerStatus = String(order?.hubtel_status || '').toLowerCase();
+  if (providerStatus === 'failed') return 'Payment failed';
+  if (providerStatus === 'cancelled') return 'Payment cancelled';
+  if (providerStatus === 'initiated') return 'Checkout opened';
+  return 'Payment pending';
+}
+
 export function getHubtelCheckoutUrl(
   result
 ) {
@@ -379,6 +449,18 @@ export function getHubtelCheckoutUrl(
       result?.CheckoutUrl ||
       result?.checkoutDirectUrl ||
       result?.CheckoutDirectUrl ||
+      ''
+  ).trim();
+}
+
+export function getHubtelCheckoutId(result) {
+  const payload = getHubtelDataNode(result);
+
+  return String(
+    payload?.checkoutId ||
+      payload?.CheckoutId ||
+      result?.checkoutId ||
+      result?.CheckoutId ||
       ''
   ).trim();
 }
@@ -601,15 +683,16 @@ export function isHubtelPaymentVerified(
   const paid =
     getHubtelPaidAmount(result);
 
-  if (
-    expected <= 0 ||
-    paid == null
-  ) {
+  if (expected <= 0) {
     return successfulStatus;
   }
 
+  if (paid == null) {
+    return false;
+  }
+
   return (
-    Math.abs(paid - expected) <
+    Math.abs(paid - expected) <=
     0.01
   );
 }

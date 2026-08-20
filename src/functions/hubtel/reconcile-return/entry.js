@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const MAX_STATUS_POLL_ATTEMPTS = 12;
 const STATUS_POLL_INTERVAL_MS = 2500;
+const CALLBACK_GRACE_PERIOD_MS = 5 * 60 * 1000;
 
 function createCorsHeaders(req) {
   return {
@@ -62,6 +63,24 @@ function getLatestTracking(order) {
     : [];
 
   return updates.length ? updates[updates.length - 1] : null;
+}
+
+function getPaymentInitiatedAt(order, paymentStage) {
+  const expectedLogStatus = paymentStage === 'balance'
+    ? 'Balance Checkout Created'
+    : 'Checkout Created';
+  const updates = Array.isArray(order?.tracking_updates)
+    ? order.tracking_updates
+    : [];
+  const initiationLog = updates
+    .slice()
+    .reverse()
+    .find((entry) => String(entry?.status || '') === expectedLogStatus);
+
+  const candidate = initiationLog?.timestamp
+    || (paymentStage === 'initial' ? order?.created_date || order?.created_at : '');
+  const timestamp = candidate ? new Date(candidate).getTime() : NaN;
+  return Number.isFinite(timestamp) ? timestamp : null;
 }
 
 function getExpectedAmount(order, paymentStage) {
@@ -265,9 +284,10 @@ async function callHubtelStatus(clientReference) {
     };
   }
 
-  const endpoint =
-    `https://rmsc.hubtel.com/v1/merchantaccount/merchants/${merchantAccountNumber}` +
-    `/transactions/status?clientReference=${encodeURIComponent(clientReference)}`;
+  const endpoint = new URL(
+    `https://api-txnstatus.hubtel.com/transactions/${encodeURIComponent(merchantAccountNumber)}/status`,
+  );
+  endpoint.searchParams.set('clientReference', clientReference);
 
   console.log('[hubtel-reconcile-return] Checking Hubtel status for:', clientReference);
 
@@ -370,9 +390,7 @@ async function applyStatusToOrder(supabase, order, paymentStage, clientReference
         ? 'cancelled'
         : normalized.normalizedStatus === 'failed'
           ? 'failed'
-          : normalized.normalizedStatus === 'paid'
-            ? 'failed'
-            : 'pending',
+          : 'pending',
   };
 
   if (paymentStage === 'balance') {
@@ -389,8 +407,10 @@ async function applyStatusToOrder(supabase, order, paymentStage, clientReference
       updates.payment_status = 'paid';
       updates.status = order.status === 'cancelled' ? order.status : 'confirmed';
     } else if (normalized.normalizedStatus === 'paid') {
-      updates.balance_payment_status = 'failed';
-      updates.payment_stage = 'balance_payment_failed';
+      // Hubtel says Paid, but the amount needs review. Keep the stage pending
+      // instead of turning a real payment into a failed payment.
+      updates.balance_payment_status = 'pending';
+      updates.payment_stage = 'awaiting_balance_payment';
     } else if (normalized.normalizedStatus === 'failed') {
       updates.balance_payment_status = 'failed';
       updates.payment_stage = 'balance_payment_failed';
@@ -417,8 +437,9 @@ async function applyStatusToOrder(supabase, order, paymentStage, clientReference
         updates.remaining_balance_paid_at = now;
       }
     } else if (normalized.normalizedStatus === 'paid') {
-      updates.payment_status = 'failed';
-      updates.initial_payment_status = 'failed';
+      // A status-check amount mismatch is a review state, not proof of failure.
+      updates.payment_status = 'pending_payment';
+      updates.initial_payment_status = 'pending';
       updates.payment_stage = 'awaiting_initial_payment';
     } else if (normalized.normalizedStatus === 'failed') {
       updates.payment_status = 'failed';
@@ -441,7 +462,7 @@ async function applyStatusToOrder(supabase, order, paymentStage, clientReference
   return {
     updatedState: amountVerified
       ? 'paid_from_status_fallback'
-      : ['failed', 'cancelled'].includes(normalized.normalizedStatus) || normalized.normalizedStatus === 'paid'
+      : ['failed', 'cancelled'].includes(normalized.normalizedStatus)
         ? 'failed'
         : 'pending_or_unknown',
     latestTracking: trackingUpdate,
@@ -532,6 +553,29 @@ Deno.serve(async (req) => {
           balancePaymentStatus: order.balance_payment_status || null,
           paymentStageState: order.payment_stage || null,
           hubtelStatus: order.hubtel_status || null,
+          latestTracking: getLatestTracking(order),
+        }, 200);
+      }
+
+      // Hubtel explicitly requires status checks after five minutes when the
+      // callback has not delivered a final result. Do not treat an early
+      // transient Unpaid response as a real failure.
+      const initiatedAt = getPaymentInitiatedAt(order, paymentStage);
+      if (initiatedAt !== null && Date.now() - initiatedAt < CALLBACK_GRACE_PERIOD_MS) {
+        return jsonResponse(req, {
+          state: 'pending_callback',
+          source: 'callback_grace_period',
+          paymentStage,
+          attempt,
+          orderId: order.id,
+          orderNumber: order.order_number,
+          paymentStatus: order.payment_status || null,
+          initialPaymentStatus: order.initial_payment_status || null,
+          balancePaymentStatus: order.balance_payment_status || null,
+          paymentStageState: order.payment_stage || null,
+          hubtelStatus: order.hubtel_status || null,
+          retryAfterSeconds: 5,
+          waitUntilStatusCheckSeconds: Math.ceil((CALLBACK_GRACE_PERIOD_MS - (Date.now() - initiatedAt)) / 1000),
           latestTracking: getLatestTracking(order),
         }, 200);
       }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2, ShieldCheck } from 'lucide-react';
+import { Loader2, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { appClient } from '@/api/appClient.js';
@@ -23,14 +23,32 @@ async function clearLoggedInCart(userEmail, queryClient) {
   queryClient.invalidateQueries({ queryKey: ['cartItems', userEmail] });
 }
 
-const VERIFICATION_ATTEMPTS = 5;
-const VERIFICATION_INTERVAL_MS = 1000;
+const VERIFICATION_ATTEMPTS = 12;
+const VERIFICATION_INTERVAL_MS = 2500;
+
+function getMessageFromState(state, latestTrackingMessage) {
+  const fallback = String(latestTrackingMessage || '').trim();
+
+  if (state === 'paid' || state === 'paid_from_status_fallback') {
+    return fallback || 'Payment confirmed successfully. Redirecting you to your orders...';
+  }
+
+  if (state === 'failed') {
+    return fallback || 'Payment was not completed. Redirecting you back to checkout...';
+  }
+
+  if (state === 'not_found') {
+    return 'We could not find this order. Redirecting you back to checkout...';
+  }
+
+  return fallback || 'We are still confirming your payment. Your Orders page will update automatically once verification completes.';
+}
 
 export default function PaymentVerification() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [message, setMessage] = useState('Waiting for Hubtel payment confirmation...');
+  const [message, setMessage] = useState('Waiting for payment confirmation...');
   const [statusTone, setStatusTone] = useState('pending');
 
   useEffect(() => {
@@ -59,7 +77,7 @@ export default function PaymentVerification() {
         for (let attempt = 1; attempt <= VERIFICATION_ATTEMPTS; attempt += 1) {
           if (!active) return;
 
-          setMessage(`Verifying your payment... (${attempt}/${VERIFICATION_ATTEMPTS})`);
+          setMessage(`Confirming your payment... (${attempt}/${VERIFICATION_ATTEMPTS})`);
 
           const result = await reconcileReturnedPayment({ clientReference: ref }).catch(() => null);
           const state = String(result?.state || '').toLowerCase();
@@ -69,22 +87,15 @@ export default function PaymentVerification() {
             await clearLoggedInCart(user.email, queryClient);
             queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
             setStatusTone('success');
-            setMessage(latestTrackingMessage || 'Payment confirmed successfully. Redirecting you to your orders...');
+            setMessage(getMessageFromState(state, latestTrackingMessage));
             setTimeout(() => navigate(createPageUrl('Orders'), { replace: true }), 1200);
             return;
           }
 
-          if (state === 'failed') {
+          if (state === 'failed' || state === 'not_found') {
             setStatusTone('error');
-            setMessage(latestTrackingMessage || 'Payment was not completed. Redirecting you back to checkout...');
-            setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1600);
-            return;
-          }
-
-          if (state === 'not_found') {
-            setStatusTone('error');
-            setMessage('We could not find this order. Redirecting you back to checkout...');
-            setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1600);
+            setMessage(getMessageFromState(state, latestTrackingMessage));
+            setTimeout(() => navigate(createPageUrl('Checkout'), { replace: true }), 1800);
             return;
           }
 
@@ -93,18 +104,22 @@ export default function PaymentVerification() {
           }
         }
 
+        if (!active) return;
+
         setStatusTone('warning');
-        setMessage('Payment is still processing. Callback has not updated the order within 5 seconds yet. Please check your orders shortly.');
+        setMessage('Your payment is still being confirmed. We have kept the order open and the payment history will continue updating on your Orders page.');
         setTimeout(() => navigate(createPageUrl('Orders'), { replace: true }), 1800);
       } catch (error) {
         console.error('Payment verification page error:', error);
         setStatusTone('error');
-        setMessage('We could not verify the payment right now. Please check your orders shortly.');
+        setMessage('We could not verify the payment right now. Please open your Orders page shortly to review the latest status.');
       }
     };
 
     run();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [navigate, queryClient, searchParams]);
 
   const cardTone = statusTone === 'success'
@@ -115,13 +130,19 @@ export default function PaymentVerification() {
         ? 'bg-red-50 border-red-200 text-red-900'
         : 'bg-white border-slate-200 text-slate-900';
 
+  const Icon = statusTone === 'success'
+    ? ShieldCheck
+    : statusTone === 'error'
+      ? AlertCircle
+      : Loader2;
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className={`w-full max-w-md rounded-2xl border p-6 shadow-sm ${cardTone}`}>
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm">
-          {statusTone === 'success' ? <ShieldCheck className="h-8 w-8 text-green-600" /> : <Loader2 className="h-8 w-8 animate-spin text-blue-600" />}
+          <Icon className={`h-8 w-8 ${statusTone === 'pending' ? 'animate-spin text-blue-600' : statusTone === 'warning' ? 'text-amber-600' : statusTone === 'error' ? 'text-red-600' : 'text-green-600'}`} />
         </div>
-        <h1 className="text-lg font-bold text-center mb-2">Verifying Payment</h1>
+        <h1 className="text-lg font-bold text-center mb-2">Confirming Payment</h1>
         <p className="text-sm text-center leading-6">{message}</p>
       </div>
     </div>

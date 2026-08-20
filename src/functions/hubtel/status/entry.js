@@ -202,7 +202,7 @@ Deno.serve(async (req) => {
   }
 
   const endpoint = new URL(
-    `https://rmsc.hubtel.com/v1/merchantaccount/merchants/${MERCHANT_ACCOUNT_NUMBER}/transactions/status`,
+    `https://api-txnstatus.hubtel.com/transactions/${encodeURIComponent(MERCHANT_ACCOUNT_NUMBER)}/status`,
   );
 
   if (clientReference) endpoint.searchParams.set('clientReference', clientReference);

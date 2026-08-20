@@ -1,7 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const MAX_STATUS_POLL_ATTEMPTS = 5;
-const STATUS_POLL_INTERVAL_MS = 1000;
+const MAX_STATUS_POLL_ATTEMPTS = 12;
+const STATUS_POLL_INTERVAL_MS = 2500;
 
 function createCorsHeaders(req) {
   return {
@@ -74,15 +74,21 @@ function getExpectedAmount(order, paymentStage) {
     : 0;
 }
 
-function isAmountSatisfied(actualAmount, expectedAmount, tolerance = 0.01) {
-  const actual = Number(actualAmount);
-  const expected = Number(expectedAmount);
+function toMinorUnits(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? Math.round(numeric * 100) : null;
+}
 
-  if (!Number.isFinite(actual) || !Number.isFinite(expected) || expected <= 0) {
+function isAmountSatisfied(actualAmount, expectedAmount, tolerance = 0.01) {
+  const actualMinor = toMinorUnits(actualAmount);
+  const expectedMinor = toMinorUnits(expectedAmount);
+  const toleranceMinor = Math.max(1, Math.round(Number(tolerance || 0) * 100));
+
+  if (actualMinor === null || expectedMinor === null || expectedMinor <= 0) {
     return false;
   }
 
-  return actual + tolerance >= expected;
+  return Math.abs(actualMinor - expectedMinor) <= toleranceMinor;
 }
 
 function isPaid(order, paymentStage) {
@@ -255,7 +261,7 @@ async function callHubtelStatus(clientReference) {
     return {
       ok: false,
       status: 500,
-      body: { error: 'Hubtel gateway is not configured.' },
+      body: { error: 'Payment gateway is not configured.' },
     };
   }
 
@@ -295,7 +301,7 @@ async function callHubtelStatus(clientReference) {
       ok: false,
       status: 502,
       body: {
-        error: 'Failed to reach Hubtel status endpoint.',
+        error: 'Failed to reach the payment status endpoint.',
         details: error instanceof Error ? error.message : String(error),
       },
     };
@@ -315,14 +321,14 @@ function buildTrackingUpdate({ paymentStage, normalizedStatus, amountVerified, e
           : 'Payment Still Pending';
 
   const message = normalizedStatus === 'paid' && amountVerified
-    ? `${stageLabel} verified from Hubtel status. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${receivedAmount.toFixed(2)}.`
+    ? `${stageLabel} verified from the payment gateway. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${receivedAmount.toFixed(2)}.`
     : normalizedStatus === 'paid'
-      ? `${stageLabel} reached Hubtel, but the amount did not match. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${receivedAmount.toFixed(2)}.`
+      ? `${stageLabel} reached the payment gateway, but the amount did not match. Expected GHS ${expectedAmount.toFixed(2)} and received GHS ${receivedAmount.toFixed(2)}.`
       : normalizedStatus === 'failed'
-        ? `${stageLabel} was marked failed by Hubtel.`
+        ? `${stageLabel} was marked failed by the payment gateway.`
         : normalizedStatus === 'cancelled'
-          ? `${stageLabel} was cancelled on Hubtel.`
-          : `${stageLabel} is still pending on Hubtel.`;
+          ? `${stageLabel} was cancelled on the payment gateway.`
+          : `${stageLabel} is still pending on the payment gateway.`;
 
   return {
     status: statusLabel,

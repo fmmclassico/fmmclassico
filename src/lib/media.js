@@ -1,6 +1,6 @@
 const MEDIA_PROTOCOL_RE = /^(?:https?:)?\/\//i;
 const CLOUDINARY_UPLOAD_SEGMENT = '/upload/';
-const DEFAULT_WIDTHS = [320, 480, 640, 768, 960, 1200];
+const DEFAULT_WIDTHS = [320, 480, 640, 768, 960, 1200, 1600];
 
 export function normalizeMediaUrl(value) {
   if (typeof value !== 'string') return '';
@@ -68,6 +68,14 @@ export function getOptimizedMediaUrl(value, options = {}) {
 
     if (hostname.includes('res.cloudinary.com')) {
       return optimizeCloudinaryUrl(url.toString(), width, quality === 'auto' ? 'auto' : Number(quality) || 70);
+    }
+
+    if (hostname.includes('images.pexels.com') || hostname.includes('images.pixabay.com')) {
+      url.searchParams.set('auto', 'compress');
+      url.searchParams.set('cs', 'tinysrgb');
+      url.searchParams.set('w', String(width));
+      url.searchParams.set('dpr', '1');
+      return url.toString();
     }
   } catch (_) {
     return normalized;

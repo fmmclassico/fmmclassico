@@ -209,7 +209,34 @@ export default function ProductImportCenter({ open, onOpenChange, onProductMappe
                       </div>
                     </div>
                   ) : (
-                    <ScrollArea className="h-full w-full whitespace-nowrap">
+                    <div className="h-full w-full overflow-y-auto">
+                      <div className="block p-3 md:hidden space-y-3">
+                        {(summary?.previewRows || []).map((row) => (
+                          <div key={row.rowNumber} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-xs font-semibold text-slate-500">Row {row.rowNumber}</p>
+                                <p className="text-sm font-semibold text-slate-900">{row.name || 'Untitled product'}</p>
+                                <p className="text-xs text-slate-500">{row.brand || 'No brand'} • {row.categoryLabel || row.category || 'No category'}</p>
+                              </div>
+                              <ResultBadge row={row} />
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                              <div className="rounded-lg bg-slate-50 p-2"><span className="block text-[10px] uppercase text-slate-400">Price</span><span className="font-semibold text-slate-900">{row.price ?? '—'}</span></div>
+                              <div className="rounded-lg bg-slate-50 p-2"><span className="block text-[10px] uppercase text-slate-400">Stock</span><span className="font-semibold text-slate-900">{row.stock ?? '—'}</span></div>
+                            </div>
+                            <div className="mt-3 space-y-1 text-xs">
+                              {row.duplicateMatch ? <p className="text-amber-700">Matches existing: {row.duplicateMatch.name}</p> : null}
+                              {row.warnings?.map((warning) => <p key={warning} className="text-amber-700">• {warning}</p>)}
+                              {row.errors?.map((error) => <p key={error} className="text-red-700">• {error}</p>)}
+                              {!row.warnings?.length && !row.errors?.length ? <span className="text-emerald-700">Ready</span> : null}
+                            </div>
+                            <Button type="button" size="sm" variant="outline" disabled={row.errors?.length > 0} onClick={() => handleOpenInEditor(row)} className="mt-3 w-full">Open in editor</Button>
+                          </div>
+                        ))}
+                      </div>
+
+                    <ScrollArea className="hidden h-full w-full whitespace-nowrap md:block">
                       <div className="min-w-[720px] p-3 sm:min-w-[980px] sm:p-4">
                         {summary?.failedRows > 0 && (
                           <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
@@ -290,6 +317,7 @@ export default function ProductImportCenter({ open, onOpenChange, onProductMappe
                       </div>
                       <ScrollBar orientation="horizontal" />
                     </ScrollArea>
+                    </div>
                   )}
                 </Card>
               </div>

@@ -80,10 +80,29 @@ function isVisibleOrder() {
   return true;
 }
 
-function formatHubtelStatus(value) {
+function formatPaymentGatewayStatus(value) {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return 'Not checked yet';
   return normalized.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function isBalancePaymentEnabled(order) {
+  return order?.balance_payment_enabled === true
+    || String(order?.balance_payment_enabled).toLowerCase() === 'true'
+    || String(order?.balance_payment_status || '').toLowerCase() === 'enabled'
+    || String(order?.payment_stage || '').toLowerCase() === 'awaiting_balance_payment';
+}
+
+function sanitizeCustomerTrackingMessage(order, entry) {
+  const raw = String(entry?.message || '').trim();
+  if (/amount mismatch/i.test(String(entry?.status || '')) || /amount mismatch/i.test(raw)) {
+    return `A payment update is being reviewed for order #${order.order_number}. If the payment already went through, the page will refresh automatically once verification completes.`;
+  }
+
+  return raw
+    .replace(/hubtel/gi, 'payment gateway')
+    .replace(/ghs/gi, '₵')
+    .replace(/payment gateway verifies the exact amount/gi, 'the payment is fully confirmed');
 }
 
 function getLatestTracking(order) {
@@ -156,7 +175,7 @@ export default function Orders() {
 
     const runBalanceVerification = async () => {
       try {
-        for (let attempt = 1; attempt <= 5; attempt += 1) {
+        for (let attempt = 1; attempt <= 12; attempt += 1) {
           if (!active) return;
 
           const result = await reconcileReturnedPayment({ clientReference: reference }).catch(() => null);
@@ -195,15 +214,15 @@ export default function Orders() {
           }
 
           if (state === 'pending_callback' || state === 'pending_or_unknown') {
-            if (attempt < 5) {
-              await new Promise((resolve) => setTimeout(resolve, 1000));
+            if (attempt < 12) {
+              await new Promise((resolve) => setTimeout(resolve, 2500));
               continue;
             }
 
             queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
             showFeedback(
               'warning',
-              latestTrackingMessage || 'Payment is still processing. Please refresh or check again shortly.',
+              latestTrackingMessage || 'Payment is still being confirmed. This order will keep updating automatically.',
               'Still processing'
             );
             setIsVerifying(false);
@@ -213,7 +232,7 @@ export default function Orders() {
         }
 
         queryClient.invalidateQueries({ queryKey: ['orders', user.email] });
-        showFeedback('warning', 'Payment is still processing. Please check again shortly.', 'Still processing');
+        showFeedback('warning', 'Payment is still being confirmed. The order remains open and this page will update shortly.', 'Still processing');
       } catch (error) {
         console.error('Balance verification error:', error);
         showFeedback('error', 'The remaining balance payment could not be verified right now.', 'Verification failed');
@@ -291,7 +310,7 @@ export default function Orders() {
 
       const checkoutUrl = getHubtelCheckoutUrl(result);
       if (checkoutUrl) {
-        showFeedback('info', 'Redirecting you to Hubtel for secure balance payment...', 'Opening secure checkout');
+        showFeedback('info', 'Redirecting you to the secure payment page...', 'Opening secure checkout');
         window.location.href = checkoutUrl;
         return;
       }
@@ -322,7 +341,7 @@ export default function Orders() {
   }
 
   if (isVerifying) {
-    return <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 p-6"><div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center"><div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center"><Loader2 className="h-8 w-8 text-green-600 animate-spin" /></div><h2 className="text-lg font-bold text-green-800 mb-2">Verifying Payment</h2><p className="text-sm text-green-600">Please wait while we confirm your payment with Hubtel.</p></div></div>;
+    return <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 p-6"><div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center"><div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center"><Loader2 className="h-8 w-8 text-green-600 animate-spin" /></div><h2 className="text-lg font-bold text-green-800 mb-2">Verifying Payment</h2><p className="text-sm text-green-600">Please wait while we confirm your payment.</p></div></div>;
   }
 
   if (!verificationDone) {
@@ -353,14 +372,14 @@ export default function Orders() {
             const balanceDue = getBalanceDue(order);
             const hasEstDelivery = !!order.estimated_delivery;
             const latestTracking = getLatestTracking(order);
-            const canPayBalance = isTwoStageOrder(order) && order.initial_payment_status === 'paid' && order.balance_payment_enabled === true && !isRemainingBalancePaid(order) && order.status === 'shipped';
+            const canPayBalance = isTwoStageOrder(order) && order.initial_payment_status === 'paid' && isBalancePaymentEnabled(order) && !isRemainingBalancePaid(order) && ['shipped', 'out_for_delivery'].includes(order.status);
             return (
               <Card key={order.id} className={`p-4 bg-white ${isSelected ? 'ring-2 ring-blue-400' : ''}`}>
                 <div className="flex items-start justify-between mb-2"><div className="flex items-start gap-2"><input type="checkbox" checked={isSelected} onChange={() => handleToggleSelect(order.id)} className="w-4 h-4 cursor-pointer mt-1" /><div><p className="text-sm font-bold text-gray-900">{order.order_number}</p><p className="text-[10px] text-gray-500">{order.created_date ? format(new Date(order.created_date), 'MMM d, yyyy h:mm a') : '-'}</p></div></div><div className="text-right"><p className="text-sm font-bold text-gray-900">₵{grandTotal.toFixed(2)}</p><span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusConfig[order.status]?.color || 'bg-gray-100'}`}>{statusConfig[order.status]?.label || order.status}</span></div></div>
-                <div className="mb-3 flex flex-wrap gap-2"><span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isFullyPaid(order) ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>{paymentSummaryLabel(order)}</span><span className="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-700">Hubtel: {formatHubtelStatus(order.hubtel_status)}</span></div>
-                <div className="mb-3 rounded-lg bg-slate-50 p-3 text-xs text-gray-700 space-y-1"><div className="flex justify-between"><span>Total order value</span><span className="font-semibold">₵{grandTotal.toFixed(2)}</span></div><div className="flex justify-between"><span>Amount already verified</span><span className="font-semibold">₵{amountPaidNow.toFixed(2)}</span></div><div className="flex justify-between"><span>Initial payment status</span><span className="font-semibold capitalize">{String(order.initial_payment_status || 'pending').replace(/_/g, ' ')}</span></div>{isTwoStageOrder(order) && <div className="flex justify-between"><span>Balance payment status</span><span className="font-semibold capitalize">{String(order.balance_payment_status || 'pending').replace(/_/g, ' ')}</span></div>}{balanceDue > 0 && !isRemainingBalancePaid(order) && <div className="flex justify-between text-orange-700"><span>Balance left</span><span className="font-bold">₵{balanceDue.toFixed(2)}</span></div>}</div>
-                {latestTracking && <div className="mb-3 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-700"><p className="font-semibold text-slate-900">Latest payment / order log</p><p className="mt-1 text-slate-800">{latestTracking.status || 'Update'}</p><p className="mt-1 leading-5 text-slate-600">{latestTracking.message || 'No details provided.'}</p>{latestTracking.timestamp && <p className="mt-2 text-[10px] text-slate-400">{format(new Date(latestTracking.timestamp), 'MMM d, yyyy h:mm a')}</p>}</div>}
-                {isTwoStageOrder(order) && !isRemainingBalancePaid(order) && <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900"><p className="font-semibold">Remaining Balance</p><p className="mt-1">The remaining balance becomes payable here after your order is shipped. The product is handed over only after Hubtel verifies the exact amount.</p>{order.balance_payment_enabled !== true && <p className="mt-2 text-blue-700">You will see the payment button here once the order has been shipped and the remaining balance payment is enabled.</p>}{canPayBalance && <Button onClick={() => handleBalancePayment(order)} disabled={payingBalanceFor === order.id} className="mt-3 bg-blue-800 hover:bg-blue-900 text-white"><Wallet className="h-4 w-4 mr-2" />{payingBalanceFor === order.id ? 'Opening Hubtel...' : 'Pay Remaining Balance'}</Button>}</div>}
+                <div className="mb-3 flex flex-wrap gap-2"><span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isFullyPaid(order) ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>{paymentSummaryLabel(order)}</span><span className="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-700">Payment status: {formatPaymentGatewayStatus(order.hubtel_status)}</span></div>
+                <div className="mb-3 rounded-lg bg-slate-50 p-3 text-xs text-gray-700 space-y-1"><div className="flex justify-between"><span>Total order value</span><span className="font-semibold">₵{grandTotal.toFixed(2)}</span></div><div className="flex justify-between"><span>Amount confirmed so far</span><span className="font-semibold">₵{amountPaidNow.toFixed(2)}</span></div><div className="flex justify-between"><span>Initial payment status</span><span className="font-semibold capitalize">{String(order.initial_payment_status || 'pending').replace(/_/g, ' ')}</span></div>{isTwoStageOrder(order) && <div className="flex justify-between"><span>Balance payment status</span><span className="font-semibold capitalize">{String(order.balance_payment_status || 'pending').replace(/_/g, ' ')}</span></div>}{balanceDue > 0 && !isRemainingBalancePaid(order) && <div className="flex justify-between text-orange-700"><span>Balance left to clear</span><span className="font-bold">₵{balanceDue.toFixed(2)}</span></div>}</div>
+                {latestTracking && <div className="mb-3 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-700"><p className="font-semibold text-slate-900">Latest payment / order update</p><p className="mt-1 text-slate-800">{latestTracking.status || 'Update'}</p><p className="mt-1 leading-5 text-slate-600">{sanitizeCustomerTrackingMessage(order, latestTracking) || 'No details provided.'}</p>{latestTracking.timestamp && <p className="mt-2 text-[10px] text-slate-400">{format(new Date(latestTracking.timestamp), 'MMM d, yyyy h:mm a')}</p>}</div>}
+                {isTwoStageOrder(order) && !isRemainingBalancePaid(order) && <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900"><p className="font-semibold">Remaining Balance</p><p className="mt-1">This page shows the amount already confirmed, what that payment covered, and what remains before handover. Return here to clear the outstanding balance once the next payment step is enabled.</p>{!isBalancePaymentEnabled(order) && <p className="mt-2 text-blue-700">The payment button will appear here as soon as the remaining balance is enabled for this order.</p>}{canPayBalance && <Button onClick={() => handleBalancePayment(order)} disabled={payingBalanceFor === order.id} className="mt-3 bg-blue-800 hover:bg-blue-900 text-white"><Wallet className="h-4 w-4 mr-2" />{payingBalanceFor === order.id ? 'Opening secure payment...' : 'Pay Remaining Balance'}</Button>}</div>}
                 <div className="mb-3 border-t border-gray-100 pt-2">{(order.items || []).map((item, index) => { const variantSummary = formatVariantSummary(item); return <div key={index} className="flex items-center gap-2 py-1">{item.product_image && <img src={item.product_image} alt="" className="w-10 h-10 rounded-lg object-cover" />}<div className="flex-1 min-w-0"><p className="text-xs font-medium text-gray-700 truncate">{item.product_name}</p><p className="text-[10px] text-gray-500">x{item.quantity} · ₵{(toNumber(item.price) * toNumber(item.quantity, 1)).toFixed(2)}</p>{variantSummary && <p className="text-[10px] text-blue-700 mt-0.5">{variantSummary}</p>}</div></div>;})}</div>
                 <div className="border-t border-gray-100 pt-2"><p className="text-xs text-gray-600">{order.delivery_address ? `📍 ${order.delivery_address}` : ''}</p>{hasEstDelivery && <p className="text-xs text-gray-500 mt-1">📅 Estimated delivery: {format(new Date(order.estimated_delivery), 'MMM d, yyyy')}</p>}<div className="flex gap-3 mt-3"><Link to={createPageUrl('OrderTracking') + '?id=' + order.id} className="text-xs text-blue-600 font-semibold">Track Order</Link>{CANCELLABLE_STATUSES.includes(order.status) && <button onClick={() => { setCancellingOrder(order); setCancelReason(''); }} className="text-xs text-red-600 font-semibold">Cancel Order</button>}</div></div>
               </Card>

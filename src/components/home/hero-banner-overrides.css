@@ -101,187 +101,260 @@
   background: #ffffff;
 }
 
+/* =========================================================
+   FIRST HERO ONLY — MOBILE HORIZONTAL LAYOUT
+   LEFT  = all welcome information
+   RIGHT = complete compact phone mockup
+   ========================================================= */
+
 @media (max-width: 767px) {
-  .fmm-flyer-hero-frame {
+
+  /* ---------------------------------------------
+     HERO FRAME
+     --------------------------------------------- */
+
+  .fmm-flyer-hero-frame.is-review-slide {
+    width: 100%;
     height: 198px;
     min-height: 198px;
-    background: linear-gradient(135deg, #03143f, #06286d, #0b3ea9);
+    max-height: 198px;
+
+    overflow: hidden;
+
+    background:
+      linear-gradient(
+        135deg,
+        #03143f 0%,
+        #06286d 55%,
+        #0b3ea9 100%
+      );
   }
 
-  .fmm-flyer-hero-backdrop {
-    opacity: 0.18;
-    filter: blur(18px);
+
+  /* ---------------------------------------------
+     HORIZONTAL HERO GRID
+     LEFT = INFORMATION
+     RIGHT = PHONE
+     --------------------------------------------- */
+
+  .fmm-review-slide__grid {
+    position: relative;
+    z-index: 1;
+
+    display: grid;
+
+    /*
+      1fr = information
+      76px = phone area
+    */
+    grid-template-columns: minmax(0, 1fr) 76px;
+
+    align-items: center;
+
+    width: 100%;
+    height: 100%;
+
+    gap: 0.35rem;
+
+    padding:
+      0.55rem
+      0.55rem
+      1.55rem;
   }
 
-  .fmm-flyer-hero-image {
-    padding: 4px;
-    background: transparent;
+
+  /* ---------------------------------------------
+     LEFT INFORMATION AREA
+     --------------------------------------------- */
+
+  .fmm-review-slide__content {
+    min-width: 0;
+
+    width: 100%;
+
+    align-self: center;
+
+    padding: 0;
   }
+
+
+  /* Welcome heading */
+
+  .fmm-review-slide__title {
+    margin: 0;
+
+    max-width: 15ch;
+
+    font-size: 1.28rem;
+    line-height: 0.98;
+
+    letter-spacing: -0.025em;
+
+    white-space: normal;
+  }
+
+
+  /* Description */
+
+  .fmm-review-slide__description {
+    width: 100%;
+    max-width: 31ch;
+
+    margin-top: 0.28rem;
+
+    font-size: 0.56rem;
+    line-height: 1.34;
+
+    overflow: visible;
+  }
+
+
+  /* Features */
+
+  .fmm-review-slide__features {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 0.22rem;
+
+    margin-top: 0.32rem;
+  }
+
+
+  /* Trust information */
+
+  .fmm-review-slide__trust {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 0.22rem 0.45rem;
+
+    margin-top: 0.3rem;
+
+    font-size: 0.40rem;
+
+    line-height: 1.15;
+  }
+
+
+  /* ---------------------------------------------
+     RIGHT PHONE AREA
+     --------------------------------------------- */
+
+  .fmm-review-slide__preview {
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 76px;
+    height: 100%;
+
+    min-width: 0;
+    min-height: 0;
+
+    align-self: center;
+
+    margin: 0;
+    padding: 0;
+
+    overflow: visible;
+  }
+
+
+  /* ---------------------------------------------
+     COMPACT PHONE CONTAINER
+
+     This targets the wrapper from
+     WelcomePhonePreview().
+     --------------------------------------------- */
+
+  .fmm-review-slide__preview > div {
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 100%;
+    height: 100%;
+
+    min-width: 0;
+    min-height: 0;
+  }
+
+
+  /* ---------------------------------------------
+     ACTUAL PHONE
+
+     SMALL + COMPLETE
+     --------------------------------------------- */
+
+  .fmm-review-slide__preview
+  .relative.mx-auto {
+    width: 62px !important;
+
+    max-width: 62px !important;
+
+    height: auto;
+
+    max-height: 170px;
+
+    flex-shrink: 0;
+
+    transform: none !important;
+  }
+
+
+  /* Prevent the screen contents from forcing
+     the phone taller than intended */
+
+  .fmm-review-slide__preview
+  .relative.mx-auto
+  > .relative {
+    max-height: 164px;
+
+    overflow: hidden;
+  }
+
+
+  /* ---------------------------------------------
+     KEEP PHONE CENTERED VERTICALLY
+     --------------------------------------------- */
+
+  .fmm-review-slide__preview
+  .relative.mx-auto {
+    align-self: center;
+  }
+
+
+  /* ---------------------------------------------
+     DOTS
+     --------------------------------------------- */
 
   .fmm-flyer-hero-dots {
-    bottom: 0.46rem;
-    gap: 0.24rem;
+    left: 50%;
+
+    bottom: 0.42rem;
+
+    gap: 0.22rem;
+
+    z-index: 5;
   }
 
   .fmm-flyer-hero-dot {
-    width: 0.36rem;
-    height: 0.36rem;
+    width: 0.32rem;
+    height: 0.32rem;
   }
 
   .fmm-flyer-hero-dot.is-active {
-    width: 0.92rem;
-  }
-}
-
-
-.fmm-review-slide__grid {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  height: 100%;
-  grid-template-columns: minmax(0, 1fr) 92px;
-  align-items: start;
-  gap: 0.5rem;
-  padding: 0.85rem 0.8rem 2rem;
-}
-
-.fmm-review-slide__content {
-  align-self: start;
-}
-
-.fmm-review-slide__title {
-  font-size: 1.55rem;
-}
-
-.fmm-review-slide__description {
-  max-width: 34ch;
-  font-size: 0.79rem;
-  line-height: 1.45;
-}
-
-.fmm-review-slide__features {
-  gap: 0.38rem;
-}
-
-.fmm-review-slide__trust {
-  gap: 0.45rem 0.9rem;
-  font-size: 0.46rem;
-}
-
-.fmm-review-slide__preview {
-  height: 100%;
-  align-self: end;
-}
-
-@media (min-width: 640px) {
-  .fmm-review-slide__grid {
-    grid-template-columns: minmax(0, 1fr) 118px;
-    gap: 0.85rem;
-    padding: 1rem 1rem 2.1rem;
-  }
-
-  .fmm-review-slide__title {
-    font-size: 1.8rem;
-  }
-
-  .fmm-review-slide__description {
-    font-size: 0.9rem;
-  }
-
-  .fmm-review-slide__trust {
-    font-size: 0.52rem;
-  }
-}
-
-@media (min-width: 768px) {
-  .fmm-review-slide__grid {
-    grid-template-columns: minmax(0, 1.36fr) 176px;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 1rem 1.75rem 2.4rem;
-  }
-
-  .fmm-review-slide__content {
-    align-self: center;
-    padding-bottom: 0.5rem;
-  }
-
-  .fmm-review-slide__title {
-    font-size: 1.625rem;
-    max-width: 20ch;
-  }
-
-  .fmm-review-slide__description {
-    max-width: 62ch;
-    font-size: 0.75rem;
-    line-height: 1.65;
-  }
-
-  .fmm-review-slide__features {
-    gap: 0.5rem;
-  }
-
-  .fmm-review-slide__trust {
-    gap: 0.45rem 1rem;
-    font-size: 0.625rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .fmm-review-slide__grid {
-    grid-template-columns: minmax(0, 1.48fr) 188px;
-    padding: 1rem 2rem 2.5rem;
-  }
-
-  .fmm-review-slide__title {
-    font-size: 2rem;
-    max-width: none;
-    white-space: nowrap;
-  }
-
-  .fmm-review-slide__description {
-    max-width: 74ch;
-    font-size: 0.8125rem;
-  }
-
-  .fmm-review-slide__trust {
-    font-size: 0.6875rem;
-  }
-}
-
-@media (max-width: 767px) {
-  .fmm-flyer-hero-frame.is-review-slide {
-    height: clamp(300px, 84vw, 340px);
-    min-height: clamp(300px, 84vw, 340px);
-  }
-
-  .fmm-review-slide__grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.75rem;
-    padding: 1rem 1rem 2.25rem;
-  }
-
-  .fmm-review-slide__title {
-    font-size: 2rem;
-    line-height: 1;
-  }
-
-  .fmm-review-slide__description {
-    max-width: none;
-    font-size: 0.82rem;
-    line-height: 1.48;
-  }
-
-  .fmm-review-slide__features {
-    gap: 0.45rem;
-  }
-
-  .fmm-review-slide__preview {
-    justify-self: end;
-    margin-right: 0.1rem;
-  }
-
-  .fmm-review-slide__trust {
-    font-size: 0.62rem;
+    width: 0.82rem;
   }
 }

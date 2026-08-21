@@ -176,7 +176,7 @@ const BUILT_IN_BANNERS = [
   },
 ];
 
-function <WelcomePhonePreview products={products || []} />
+function WelcomePhonePreview({ products = [] }) {
   const heroProducts = products.length
     ? products.slice(0, 4)
     : [

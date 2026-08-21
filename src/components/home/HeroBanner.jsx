@@ -185,19 +185,19 @@ function WelcomePhonePreview() {
 
       {/* REALISTIC COMPACT iPHONE */}
       <div
-className="
-  relative
-  w-[72px]
-  sm:w-[88px]
-  md:w-[106px]
-  lg:w-[114px]
-  shrink-0
-  rounded-[1.55rem]
-  border-[3px]
-  border-[#20242c]
-  bg-[#11151c]
-  p-[3px]
-  shadow-[0_18px_35px_rgba(0,0,0,0.42)]
+        className="
+          relative
+          w-[88px]
+          sm:w-[96px]
+          md:w-[106px]
+          lg:w-[114px]
+          shrink-0
+          rounded-[1.55rem]
+          border-[3px]
+          border-[#20242c]
+          bg-[#11151c]
+          p-[3px]
+          shadow-[0_18px_35px_rgba(0,0,0,0.42)]
         "
       >
 

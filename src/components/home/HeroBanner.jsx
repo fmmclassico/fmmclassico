@@ -210,7 +210,7 @@ function WelcomePhonePreview() {
       <div className="absolute -bottom-3 left-1/2 h-5 w-[72%] -translate-x-1/2 rounded-full bg-black/40 blur-xl" />
 
       {/* iPhone body */}
-      <div className="relative mx-auto w-[112px] rounded-[1.9rem] border-[3px] border-[#222936] bg-[#11151d] p-[3px] shadow-[0_22px_45px_rgba(0,0,0,0.42)] sm:w-[126px] sm:rounded-[2.1rem] md:w-[140px] md:rounded-[2.3rem] md:p-[4px] lg:w-[148px]">
+      <div className="relative mx-auto w-[150px] rounded-[2.2rem] border-[3px] border-[#222936] bg-[#11151d] p-[4px] shadow-[0_25px_55px_rgba(0,0,0,0.45)] sm:w-[175px] sm:rounded-[2.5rem] md:w-[205px] md:rounded-[2.8rem] md:p-[5px] lg:w-[225px] lg:rounded-[3rem]">
 
         {/* Side buttons */}
         <div className="absolute -left-[4px] top-[42px] h-[22px] w-[2px] rounded-l-full bg-[#343b48]" />
@@ -364,54 +364,124 @@ function WelcomePhonePreview() {
 
 function ReviewBannerSlide({ slide }) {
   return (
-    <div className="fmm-review-slide relative h-full w-full overflow-hidden bg-[#03143f]">
+    <div className="relative h-full w-full overflow-hidden bg-[#03143f]">
+      {/* Keep the existing FMM CLASSICO blue background */}
       <div className="absolute inset-0 bg-gradient-to-r from-[#03143f] via-[#082a6f] to-[#0b3ea9]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.10),transparent_30%),radial-gradient(circle_at_84%_18%,rgba(255,255,255,0.08),transparent_24%),radial-gradient(circle_at_80%_84%,rgba(46,134,193,0.16),transparent_22%)]" />
 
-      <div className="fmm-review-slide__grid">
-        <div className="fmm-review-slide__content min-w-0 text-white">
-          {slide.eyebrow ? (
-            <span className="inline-flex items-center rounded-full border border-[#5daeff]/35 bg-[#0d2f79]/55 px-2.5 py-1 text-[7px] font-bold uppercase tracking-[0.18em] text-[#d9ecff] sm:text-[8px] md:px-3 md:py-1.5 md:text-[10px]">
-              {slide.eyebrow}
-            </span>
-          ) : null}
+      {/* Soft background lighting */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(255,255,255,0.10),transparent_32%),radial-gradient(circle_at_82%_20%,rgba(255,255,255,0.07),transparent_25%),radial-gradient(circle_at_80%_85%,rgba(46,134,193,0.18),transparent_28%)]" />
 
-          <h2 className="fmm-review-slide__title mt-2 font-black leading-[1.08] tracking-[-0.03em] text-white">
-            <span className="block sm:inline">{slide.titleLead} </span>
-            <span className="block text-[#8dc3ff] sm:inline">{slide.titleAccent}</span>
+      <div className="relative z-10 grid h-full grid-cols-[1.55fr_0.85fr] items-center gap-2 px-5 py-4 sm:px-7 md:grid-cols-[1.45fr_0.85fr] md:px-10 lg:px-12">
+
+        {/* LEFT SIDE */}
+        <div className="min-w-0 text-white">
+
+          {/* Welcome */}
+          <h2 className="font-light leading-none tracking-tight text-white
+            text-[25px]
+            sm:text-[34px]
+            md:text-[45px]
+            lg:text-[52px]"
+          >
+            {slide.titleLead}
           </h2>
 
-          <p className="fmm-review-slide__description mt-2 text-white/86">
+          {/* FMM CLASSICO */}
+          <h3 className="mt-1 font-black leading-none tracking-[-0.035em] text-[#8dc3ff]
+            text-[31px]
+            sm:text-[43px]
+            md:text-[57px]
+            lg:text-[66px]"
+          >
+            {slide.titleAccent}
+          </h3>
+
+          {/* Description */}
+          <p className="mt-3 max-w-[720px] font-normal leading-snug text-white/95
+            text-[10px]
+            sm:text-[12px]
+            md:text-[15px]
+            lg:text-[17px]"
+          >
             {slide.description}
           </p>
 
-          <div className="fmm-review-slide__features mt-3 grid grid-cols-3 md:mt-4 lg:mt-5">
+          {/* Feature grid */}
+          <div className="mt-4 grid max-w-[680px] grid-cols-2 gap-x-5 gap-y-2.5
+            sm:mt-5 sm:gap-x-8 sm:gap-y-3
+            md:mt-6 md:gap-x-10 md:gap-y-3.5"
+          >
             {slide.features.map((feature) => {
               const Icon = feature.icon;
+
               return (
-                <div key={feature.title} className="rounded-xl border border-white/12 bg-white/8 px-1.5 py-1.5 text-white/94 backdrop-blur-[2px] md:rounded-2xl md:px-2 md:py-2">
-                  <div className="flex items-center gap-1 md:gap-1.5">
-                    <Icon className="h-2.5 w-2.5 text-[#8dc3ff] md:h-3.5 md:w-3.5" />
-                    <span className="text-[5.9px] font-semibold leading-tight sm:text-[6.2px] md:text-[9px] lg:text-[10px]">{feature.title}</span>
+                <div
+                  key={feature.title}
+                  className="flex items-center gap-2 text-white"
+                >
+                  {/* Circular icon */}
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0b5fc7] shadow-[0_4px_12px_rgba(0,0,0,0.18)]
+                    sm:h-8 sm:w-8
+                    md:h-9 md:w-9"
+                  >
+                    <Icon
+                      className="h-3.5 w-3.5 text-white
+                        sm:h-4 sm:w-4
+                        md:h-4.5 md:w-4.5"
+                    />
                   </div>
+
+                  <span className="font-medium leading-tight
+                    text-[8px]
+                    sm:text-[9px]
+                    md:text-[11px]
+                    lg:text-[13px]"
+                  >
+                    {feature.title}
+                  </span>
                 </div>
               );
             })}
           </div>
 
-          <div className="fmm-review-slide__trust mt-2 flex flex-wrap items-center text-white/80 sm:text-[7.5px] md:mt-3 md:text-[10px] lg:text-[11px]">
-            {slide.trustItems.map((item) => (
-              <div key={item} className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-2.5 w-2.5 text-[#8dc3ff] md:h-3.5 md:w-3.5" />
-                <span>{item}</span>
-              </div>
-            ))}
+          {/* Bottom trust categories */}
+          <div className="mt-4 border-t border-[#3d8bd4]/70 pt-3
+            sm:mt-5 sm:pt-3.5
+            md:mt-6 md:pt-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+
+              {slide.trustItems.map((item) => (
+                <div
+                  key={item}
+                  className="flex min-w-0 items-center gap-1.5 text-white"
+                >
+                  <CheckCircle2
+                    className="h-4 w-4 shrink-0 text-[#8dc3ff]
+                      sm:h-4.5 sm:w-4.5
+                      md:h-5 md:w-5"
+                  />
+
+                  <span className="truncate font-medium
+                    text-[7px]
+                    sm:text-[8px]
+                    md:text-[10px]
+                    lg:text-[12px]"
+                  >
+                    {item}
+                  </span>
+                </div>
+              ))}
+
+            </div>
           </div>
         </div>
 
-        <div className="fmm-review-slide__preview flex items-center justify-center md:justify-end">
+        {/* RIGHT SIDE — IPHONE */}
+        <div className="flex h-full items-center justify-center md:justify-end">
           <WelcomePhonePreview />
         </div>
+
       </div>
     </div>
   );

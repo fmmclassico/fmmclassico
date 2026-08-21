@@ -1,3 +1,8 @@
+/* =========================================================
+   FMM CLASSICO HERO BANNER
+   Responsive hero with complete iPhone mockup
+   ========================================================= */
+
 .fmm-flyer-hero-shell {
   width: 100%;
   padding: 0;
@@ -9,115 +14,554 @@
   width: 100%;
   height: 198px;
   min-height: 198px;
-  border-radius: 0;
   overflow: hidden;
-  background: #031725;
+  border-radius: 0;
+
+  background:
+    linear-gradient(
+      135deg,
+      #03143f 0%,
+      #06286d 52%,
+      #0b3ea9 100%
+    );
 }
 
-.fmm-flyer-hero-static {
-  display: block;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  cursor: default;
-}
-
-@media (min-width: 640px) {
-  .fmm-flyer-hero-frame {
-    height: 248px;
-    min-height: 248px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .fmm-flyer-hero-frame {
-    height: 304px;
-    min-height: 304px;
-    max-height: 304px;
-    aspect-ratio: unset;
-  }
-}
-
-@media (min-width: 1280px) {
-  .fmm-flyer-hero-frame {
-    height: 332px;
-    min-height: 332px;
-    max-height: 332px;
-  }
-}
+/* =========================================================
+   SLIDE
+   ========================================================= */
 
 .fmm-flyer-hero-slide {
   position: absolute;
   inset: 0;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
 }
+
+
+/* =========================================================
+   BACKDROP
+   ========================================================= */
 
 .fmm-flyer-hero-backdrop {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: -5%;
+
+  width: 110%;
+  height: 110%;
+
   object-fit: cover;
   object-position: center;
+
   filter: blur(26px);
-  opacity: 0.22;
+  opacity: 0.18;
+
   transform: scale(1.08);
+
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   STATIC / OTHER HERO IMAGES
+   ========================================================= */
+
+.fmm-flyer-hero-static {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  pointer-events: none;
+  cursor: default;
 }
 
 .fmm-flyer-hero-image {
   position: relative;
   z-index: 1;
+
+  display: block;
+
   width: 100%;
   height: 100%;
-  display: block;
+
   object-fit: contain;
   object-position: center;
-  background: linear-gradient(135deg, #03143f, #082a6f, #2E86C1);
-  padding: clamp(4px, 1vw, 10px);
+
+  padding: 0;
+
+  background:
+    linear-gradient(
+      135deg,
+      #03143f,
+      #082a6f,
+      #2E86C1
+    );
 }
+
+
+/* =========================================================
+   FIRST HERO
+   ========================================================= */
+
+.fmm-flyer-hero-frame.is-review-slide {
+  background:
+    linear-gradient(
+      135deg,
+      #03143f 0%,
+      #06286d 52%,
+      #0b3ea9 100%
+    );
+}
+
+
+/* =========================================================
+   REVIEW HERO GRID
+
+   LEFT  = information
+   RIGHT = complete phone
+   ========================================================= */
+
+.fmm-review-slide__grid {
+  position: relative;
+  z-index: 2;
+
+  display: grid;
+
+  /*
+     Desktop:
+     Information gets most of the space.
+     Phone gets a controlled area.
+  */
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 25%);
+
+  align-items: center;
+
+  width: 100%;
+  height: 100%;
+
+  padding: 14px 4%;
+
+  gap: 2%;
+
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   LEFT INFORMATION
+   ========================================================= */
+
+.fmm-review-slide__content {
+  position: relative;
+
+  min-width: 0;
+  width: 100%;
+
+  align-self: center;
+
+  overflow: visible;
+}
+
+
+/* Welcome to */
+
+.fmm-review-slide__title {
+  margin: 0;
+
+  max-width: 100%;
+
+  font-size: clamp(1.45rem, 3.1vw, 3.2rem);
+  line-height: 0.95;
+
+  font-weight: 300;
+
+  letter-spacing: -0.035em;
+
+  color: #ffffff;
+
+  white-space: normal;
+}
+
+
+/* FMM CLASSICO */
+
+.fmm-review-slide__title-accent {
+  display: block;
+
+  margin-top: 2px;
+
+  font-size: clamp(2rem, 4.4vw, 4.5rem);
+  line-height: 0.9;
+
+  font-weight: 900;
+
+  letter-spacing: -0.045em;
+
+  color: #8dc3ff;
+
+  white-space: nowrap;
+}
+
+
+/* Description */
+
+.fmm-review-slide__description {
+  width: 100%;
+  max-width: 780px;
+
+  margin-top: clamp(7px, 1vw, 13px);
+
+  font-size: clamp(0.62rem, 1.15vw, 1rem);
+  line-height: 1.35;
+
+  color: rgba(255,255,255,0.96);
+
+  overflow: visible;
+}
+
+
+/* =========================================================
+   FEATURES
+
+   TWO COLUMNS
+   ========================================================= */
+
+.fmm-review-slide__features {
+  display: grid;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  width: 100%;
+  max-width: 700px;
+
+  margin-top: clamp(10px, 1.5vw, 18px);
+
+  column-gap: clamp(18px, 4vw, 60px);
+  row-gap: clamp(5px, 0.8vw, 10px);
+}
+
+
+/* Individual feature */
+
+.fmm-review-slide__feature {
+  display: flex;
+
+  align-items: center;
+
+  min-width: 0;
+
+  gap: clamp(6px, 0.8vw, 10px);
+
+  color: #ffffff;
+}
+
+
+/* Feature circle */
+
+.fmm-review-slide__feature-icon {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: clamp(23px, 3vw, 38px);
+  height: clamp(23px, 3vw, 38px);
+
+  border-radius: 999px;
+
+  background: #0b63c7;
+
+  box-shadow:
+    0 4px 14px rgba(0,0,0,0.20);
+}
+
+
+/* Feature text */
+
+.fmm-review-slide__feature-title {
+  min-width: 0;
+
+  font-size: clamp(0.48rem, 0.85vw, 0.78rem);
+  line-height: 1.1;
+
+  font-weight: 600;
+
+  color: #ffffff;
+}
+
+
+/* =========================================================
+   TRUST ITEMS
+   ========================================================= */
+
+.fmm-review-slide__trust {
+  display: flex;
+
+  align-items: center;
+
+  width: 100%;
+
+  margin-top: clamp(8px, 1vw, 14px);
+
+  padding-top: clamp(7px, 0.9vw, 12px);
+
+  border-top: 1px solid rgba(92,166,235,0.65);
+
+  gap: clamp(8px, 2.5vw, 35px);
+
+  color: #ffffff;
+}
+
+.fmm-review-slide__trust-item {
+  display: flex;
+
+  align-items: center;
+
+  gap: 4px;
+
+  min-width: 0;
+
+  white-space: nowrap;
+
+  font-size: clamp(0.42rem, 0.75vw, 0.68rem);
+  line-height: 1.1;
+}
+
+
+/* =========================================================
+   PHONE AREA
+   ========================================================= */
+
+.fmm-review-slide__preview {
+  position: relative;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
+  overflow: visible;
+}
+
+
+/* =========================================================
+   IMPORTANT:
+
+   SIZE THE PHONE BY HEIGHT, NOT WIDTH.
+
+   This is what prevents the phone from being cropped.
+   ========================================================= */
+
+.fmm-review-slide__preview
+.relative.mx-auto {
+  position: relative;
+
+  /*
+     The hero height controls the phone.
+     The phone can never become taller than the hero.
+  */
+  height: calc(100% - 14px) !important;
+
+  width: auto !important;
+
+  max-width: 100% !important;
+
+  max-height: calc(100% - 14px) !important;
+
+  min-height: 0 !important;
+
+  flex-shrink: 1;
+
+  margin: 0 auto !important;
+
+  transform: none !important;
+
+  box-sizing: border-box;
+
+  overflow: hidden;
+}
+
+
+/* Phone inner screen */
+
+.fmm-review-slide__preview
+.relative.mx-auto
+> .relative {
+  height: 100%;
+
+  max-height: 100%;
+
+  overflow: hidden;
+}
+
+
+/* =========================================================
+   DOTS
+   ========================================================= */
 
 .fmm-flyer-hero-dots {
   position: absolute;
+
   left: 50%;
-  bottom: 0.72rem;
+  bottom: 9px;
+
   transform: translateX(-50%);
+
   display: flex;
-  gap: 0.32rem;
-  z-index: 3;
+  align-items: center;
+
+  gap: 5px;
+
+  z-index: 10;
 }
 
 .fmm-flyer-hero-dot {
-  width: 0.42rem;
-  height: 0.42rem;
+  width: 7px;
+  height: 7px;
+
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.58);
-  transition: all 0.2s ease;
+
+  background: rgba(255,255,255,0.58);
+
+  transition:
+    width 0.2s ease,
+    background 0.2s ease;
 }
 
 .fmm-flyer-hero-dot.is-active {
-  width: 1.1rem;
+  width: 22px;
+
   background: #ffffff;
 }
 
+
 /* =========================================================
-   FIRST HERO ONLY — MOBILE HORIZONTAL LAYOUT
-   LEFT  = all welcome information
-   RIGHT = complete compact phone mockup
+   TABLET
+   ========================================================= */
+
+@media (min-width: 640px) {
+
+  .fmm-flyer-hero-frame {
+    height: 248px;
+    min-height: 248px;
+  }
+
+  .fmm-review-slide__grid {
+    grid-template-columns: minmax(0, 1fr) 25%;
+
+    padding-left: 4%;
+    padding-right: 4%;
+
+    gap: 2%;
+  }
+
+  .fmm-review-slide__description {
+    max-width: 650px;
+  }
+}
+
+
+/* =========================================================
+   DESKTOP
+   ========================================================= */
+
+@media (min-width: 1024px) {
+
+  .fmm-flyer-hero-frame {
+    height: 304px;
+    min-height: 304px;
+    max-height: 304px;
+  }
+
+  .fmm-review-slide__grid {
+    grid-template-columns: minmax(0, 1fr) 24%;
+
+    padding:
+      12px
+      5%;
+
+    gap: 2%;
+  }
+
+  /*
+     Phone now gets its height from the banner.
+     No cropping.
+  */
+  .fmm-review-slide__preview
+  .relative.mx-auto {
+    height: calc(100% - 8px) !important;
+
+    max-height: calc(100% - 8px) !important;
+  }
+
+  .fmm-review-slide__features {
+    max-width: 680px;
+  }
+}
+
+
+/* =========================================================
+   LARGE DESKTOP
+   ========================================================= */
+
+@media (min-width: 1280px) {
+
+  .fmm-flyer-hero-frame {
+    height: 332px;
+    min-height: 332px;
+    max-height: 332px;
+  }
+
+  .fmm-review-slide__grid {
+    grid-template-columns: minmax(0, 1fr) 23%;
+
+    padding-left: 5.5%;
+    padding-right: 5.5%;
+  }
+
+  .fmm-review-slide__preview
+  .relative.mx-auto {
+    height: calc(100% - 8px) !important;
+
+    max-height: calc(100% - 8px) !important;
+  }
+}
+
+
+/* =========================================================
+   MOBILE
    ========================================================= */
 
 @media (max-width: 767px) {
 
-  /* ---------------------------------------------
-     HERO FRAME
-     --------------------------------------------- */
+  /*
+     Slightly increase the mobile hero height.
+     198px was too short for BOTH:
+     - all information
+     - a complete phone
+  */
 
+  .fmm-flyer-hero-frame,
   .fmm-flyer-hero-frame.is-review-slide {
     width: 100%;
-    height: 198px;
-    min-height: 198px;
-    max-height: 198px;
+
+    height: 235px;
+    min-height: 235px;
+    max-height: 235px;
 
     overflow: hidden;
 
@@ -131,64 +575,70 @@
   }
 
 
-  /* ---------------------------------------------
-     HORIZONTAL HERO GRID
-     LEFT = INFORMATION
-     RIGHT = PHONE
-     --------------------------------------------- */
+  /* =======================================================
+     MOBILE GRID
+     ======================================================= */
 
   .fmm-review-slide__grid {
-    position: relative;
-    z-index: 1;
-
-    display: grid;
 
     /*
-      1fr = information
-      76px = phone area
+       Give the information enough space.
+       Phone gets ~30%.
     */
-    grid-template-columns: minmax(0, 1fr) 76px;
+    grid-template-columns: minmax(0, 70%) minmax(0, 30%);
 
     align-items: center;
 
     width: 100%;
     height: 100%;
 
-    gap: 0.35rem;
+    gap: 0;
 
     padding:
-      0.55rem
-      0.55rem
-      1.55rem;
+      10px
+      10px
+      24px;
+
+    box-sizing: border-box;
   }
 
 
-  /* ---------------------------------------------
-     LEFT INFORMATION AREA
-     --------------------------------------------- */
+  /* =======================================================
+     MOBILE INFORMATION
+     ======================================================= */
 
   .fmm-review-slide__content {
-    min-width: 0;
-
     width: 100%;
 
-    align-self: center;
+    min-width: 0;
 
-    padding: 0;
+    align-self: center;
   }
 
 
-  /* Welcome heading */
+  /* Welcome */
 
   .fmm-review-slide__title {
-    margin: 0;
+    max-width: 100%;
 
-    max-width: 15ch;
+    font-size: clamp(1rem, 4.5vw, 1.45rem);
 
-    font-size: 1.28rem;
-    line-height: 0.98;
+    line-height: 0.96;
 
     letter-spacing: -0.025em;
+  }
+
+
+  /* FMM CLASSICO */
+
+  .fmm-review-slide__title-accent {
+    margin-top: 2px;
+
+    font-size: clamp(1.45rem, 6.2vw, 2.1rem);
+
+    line-height: 0.9;
+
+    letter-spacing: -0.04em;
 
     white-space: normal;
   }
@@ -198,50 +648,88 @@
 
   .fmm-review-slide__description {
     width: 100%;
-    max-width: 31ch;
 
-    margin-top: 0.28rem;
+    max-width: 100%;
 
-    font-size: 0.56rem;
-    line-height: 1.34;
+    margin-top: 7px;
 
-    overflow: visible;
+    font-size: clamp(0.47rem, 1.95vw, 0.62rem);
+
+    line-height: 1.27;
   }
 
 
-  /* Features */
+  /* =======================================================
+     MOBILE FEATURES
+
+     Keep ALL features visible in two columns.
+     ======================================================= */
 
   .fmm-review-slide__features {
-    display: flex;
+    display: grid;
 
-    flex-wrap: wrap;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 
-    gap: 0.22rem;
+    width: 100%;
 
-    margin-top: 0.32rem;
+    margin-top: 8px;
+
+    column-gap: 7px;
+    row-gap: 5px;
   }
 
 
-  /* Trust information */
+  .fmm-review-slide__feature {
+    gap: 4px;
+
+    min-width: 0;
+  }
+
+
+  .fmm-review-slide__feature-icon {
+    width: 19px;
+    height: 19px;
+
+    flex: 0 0 19px;
+  }
+
+
+  .fmm-review-slide__feature-title {
+    font-size: 0.43rem;
+
+    line-height: 1.05;
+
+    white-space: nowrap;
+  }
+
+
+  /* =======================================================
+     MOBILE TRUST ITEMS
+     ======================================================= */
 
   .fmm-review-slide__trust {
     display: flex;
 
     flex-wrap: wrap;
 
-    gap: 0.22rem 0.45rem;
+    margin-top: 7px;
 
-    margin-top: 0.3rem;
+    padding-top: 6px;
 
-    font-size: 0.40rem;
-
-    line-height: 1.15;
+    gap: 4px 8px;
   }
 
 
-  /* ---------------------------------------------
-     RIGHT PHONE AREA
-     --------------------------------------------- */
+  .fmm-review-slide__trust-item {
+    font-size: 0.38rem;
+
+    gap: 2px;
+  }
+
+
+  /* =======================================================
+     MOBILE PHONE AREA
+     ======================================================= */
 
   .fmm-review-slide__preview {
     position: relative;
@@ -249,38 +737,6 @@
     display: flex;
 
     align-items: center;
-
-    justify-content: center;
-
-    width: 76px;
-    height: 100%;
-
-    min-width: 0;
-    min-height: 0;
-
-    align-self: center;
-
-    margin: 0;
-    padding: 0;
-
-    overflow: visible;
-  }
-
-
-  /* ---------------------------------------------
-     COMPACT PHONE CONTAINER
-
-     This targets the wrapper from
-     WelcomePhonePreview().
-     --------------------------------------------- */
-
-  .fmm-review-slide__preview > div {
-    position: relative;
-
-    display: flex;
-
-    align-items: center;
-
     justify-content: center;
 
     width: 100%;
@@ -288,73 +744,128 @@
 
     min-width: 0;
     min-height: 0;
-  }
-
-
-  /* ---------------------------------------------
-     ACTUAL PHONE
-
-     SMALL + COMPLETE
-     --------------------------------------------- */
-
-  .fmm-review-slide__preview
-  .relative.mx-auto {
-    width: 62px !important;
-
-    max-width: 62px !important;
-
-    height: auto;
-
-    max-height: 170px;
-
-    flex-shrink: 0;
-
-    transform: none !important;
-  }
-
-
-  /* Prevent the screen contents from forcing
-     the phone taller than intended */
-
-  .fmm-review-slide__preview
-  .relative.mx-auto
-  > .relative {
-    max-height: 164px;
 
     overflow: hidden;
   }
 
 
-  /* ---------------------------------------------
-     KEEP PHONE CENTERED VERTICALLY
-     --------------------------------------------- */
+  /*
+     THE IMPORTANT FIX:
+
+     The phone is now HEIGHT BASED.
+
+     235px hero
+     minus top/bottom breathing room
+     = complete phone.
+  */
 
   .fmm-review-slide__preview
   .relative.mx-auto {
-    align-self: center;
+
+    height: calc(100% - 8px) !important;
+
+    width: auto !important;
+
+    max-width: 100% !important;
+
+    max-height: calc(100% - 8px) !important;
+
+    min-height: 0 !important;
+
+    margin: 0 auto !important;
+
+    transform: none !important;
+
+    flex-shrink: 1;
+
+    overflow: hidden;
   }
 
 
-  /* ---------------------------------------------
-     DOTS
-     --------------------------------------------- */
+  /*
+     Phone screen cannot force the outer phone
+     to become taller.
+  */
+
+  .fmm-review-slide__preview
+  .relative.mx-auto
+  > .relative {
+
+    height: 100%;
+
+    max-height: 100%;
+
+    overflow: hidden;
+  }
+
+
+  /* =======================================================
+     MOBILE DOTS
+     ======================================================= */
 
   .fmm-flyer-hero-dots {
     left: 50%;
 
-    bottom: 0.42rem;
+    bottom: 7px;
 
-    gap: 0.22rem;
+    gap: 4px;
 
-    z-index: 5;
+    z-index: 20;
   }
+
 
   .fmm-flyer-hero-dot {
-    width: 0.32rem;
-    height: 0.32rem;
+    width: 5px;
+    height: 5px;
   }
 
+
   .fmm-flyer-hero-dot.is-active {
-    width: 0.82rem;
+    width: 16px;
+  }
+}
+
+
+/* =========================================================
+   VERY SMALL PHONES
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+  .fmm-flyer-hero-frame,
+  .fmm-flyer-hero-frame.is-review-slide {
+    height: 225px;
+    min-height: 225px;
+    max-height: 225px;
+  }
+
+  .fmm-review-slide__grid {
+    grid-template-columns: 69% 31%;
+
+    padding:
+      8px
+      7px
+      22px;
+  }
+
+  .fmm-review-slide__description {
+    font-size: 0.43rem;
+
+    line-height: 1.23;
+  }
+
+  .fmm-review-slide__feature-icon {
+    width: 17px;
+    height: 17px;
+
+    flex-basis: 17px;
+  }
+
+  .fmm-review-slide__feature-title {
+    font-size: 0.39rem;
+  }
+
+  .fmm-review-slide__trust-item {
+    font-size: 0.34rem;
   }
 }
